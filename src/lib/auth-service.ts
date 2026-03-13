@@ -33,7 +33,7 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 export const authService = {
   /** Google OAuth — giriş */
   async googleLogin(idToken: string): Promise<GoogleUserResponse> {
-    const { data } = await api.post<GoogleUserResponse>("/auth/google/login", { idToken }, noAuth());
+    const { data } = await api.post<GoogleUserResponse>("/basicauth/google/login", { idToken }, noAuth());
     setStoredUser(mapGoogleUserToStoredUser(data));
     return data;
   },
