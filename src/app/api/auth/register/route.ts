@@ -19,7 +19,14 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
 
-    const data = await upstream.json();
+    const raw = await upstream.text();
+    let data: { message?: string; accessToken?: string; refreshToken?: string; access_token?: string; refresh_token?: string } = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { message: raw || "Beklenmeyen yanıt" };
+    }
+
     if (!upstream.ok) {
       return NextResponse.json(
         { message: data?.message || "Kayıt başarısız" },
@@ -56,7 +63,8 @@ export async function POST(req: Request) {
     }
 
     return response;
-  } catch {
-    return NextResponse.json({ message: "Sunucu hatası" }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Sunucu hatası";
+    return NextResponse.json({ message: "Kayıt sırasında hata: " + message }, { status: 500 });
   }
 }

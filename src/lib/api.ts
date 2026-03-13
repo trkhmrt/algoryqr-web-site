@@ -4,15 +4,12 @@ import { GATEWAY_BASE } from "./config";
 const USER_KEY = "algory_user";
 const hasWindow = typeof window !== "undefined";
 
-
 export interface StoredUser {
   id?: string;
   email: string;
   first_name?: string;
   last_name?: string;
 }
-
-
 
 export function setStoredUser(user: StoredUser) {
   if (!hasWindow) return;
@@ -23,7 +20,11 @@ export function getStoredUser(): StoredUser | null {
   if (!hasWindow) return null;
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  try {
+    return JSON.parse(raw) as StoredUser;
+  } catch {
+    return null;
+  }
 }
 
 export function clearStoredUser() {
@@ -31,12 +32,9 @@ export function clearStoredUser() {
   localStorage.removeItem(USER_KEY);
 }
 
-
-// Custom error class for backward compatibility
 export class ApiError extends Error {
   status: number;
   data: unknown;
-
   constructor(status: number, message: string, data?: unknown) {
     super(message);
     this.status = status;
@@ -44,7 +42,6 @@ export class ApiError extends Error {
   }
 }
 
-// Axios instance
 export const api = axios.create({
   baseURL: GATEWAY_BASE,
   headers: { "Content-Type": "application/json" },
@@ -53,16 +50,11 @@ export const api = axios.create({
 });
 
 api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    const status = error.response?.status || 0;
-    const errorData = error.response?.data as any;
-    const message = errorData?.message || error.message || "Bir hata oluştu";
-
-    if (status === 401 && hasWindow) {
-      window.location.href = "/login";
-    }
-
-    return Promise.reject(new ApiError(status, message, errorData));
+  (r) => r,
+  (err: AxiosError) => {
+    const status = err.response?.status ?? 0;
+    const msg = (err.response?.data as { message?: string })?.message ?? err.message ?? "Bir hata oluştu";
+    if (status === 401 && hasWindow) window.location.href = "/login";
+    return Promise.reject(new ApiError(status, msg, err.response?.data));
   }
 );
