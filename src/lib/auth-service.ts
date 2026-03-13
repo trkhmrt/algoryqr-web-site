@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import { ApiError, setStoredUser } from "./api";
+import { API_BASE } from "./config";
 
 interface AuthResponse {
   accessToken?: string;
@@ -34,7 +35,7 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 export const authService = {
   /** Google OAuth — giriş */
   async googleLogin(idToken: string): Promise<GoogleUserResponse> {
-    const { data } = await axios.post<GoogleUserResponse>("/api/auth/google/login", { idToken }, { withCredentials: true });
+    const { data } = await axios.post<GoogleUserResponse>(`${API_BASE}/basicauth/google/login`, { idToken }, { withCredentials: true });
     setStoredUser(mapGoogleUserToStoredUser(data));
     return data;
   },
@@ -76,7 +77,7 @@ export const authService = {
     password: string;
   }): Promise<AuthResponse> {
     try {
-      const { data } = await axios.post<AuthResponse>("/api/auth/register", params, { withCredentials: true });
+      const { data } = await axios.post<AuthResponse>(`${API_BASE}/basicauth/register`, params, { withCredentials: true });
       if (data.user) setStoredUser(data.user);
       return data;
     } catch (error) {
