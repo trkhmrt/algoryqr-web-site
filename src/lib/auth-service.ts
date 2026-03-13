@@ -33,10 +33,10 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 }
 
 export const authService = {
-  /** Google OAuth — giriş (Next route cookie set eder) */
+  /** Google OAuth — giriş (doğrudan auth.algorycode.com) */
   async googleLogin(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
     try {
-      const { data } = await axios.post<GoogleUserResponse & AuthResponse>("/api/auth/google/login", idToken, {
+      const { data } = await axios.post<GoogleUserResponse & AuthResponse>(`${API_BASE}/basicauth/google/login`, idToken, {
         headers: { "Content-Type": "text/plain" },
         transformRequest: [(data) => data],
         withCredentials: true,
