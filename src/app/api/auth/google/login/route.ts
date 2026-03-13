@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
 import { AUTH_BASE } from "@/lib/config";
 
-type GoogleLoginBody = {
-  idToken?: string;
-};
-
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as GoogleLoginBody;
+    const body = await req.text();
+    const token = body.startsWith("{") ? (JSON.parse(body) as { idToken?: string })?.idToken ?? "" : body;
     const upstream = await fetch(`${AUTH_BASE}/basicauth/google/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers: { "Content-Type": "text/plain" },
+      body: token,
       cache: "no-store",
     });
 
-    const data = await upstream.json();
+    const raw = await upstream.text();
+    let data: any = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = { message: raw || "Beklenmeyen yanıt" };
+    }
+
     if (!upstream.ok) {
       return NextResponse.json(
         { message: data?.message || "Google ile giriş başarısız" },

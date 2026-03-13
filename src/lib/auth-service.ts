@@ -33,24 +33,53 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 }
 
 export const authService = {
-  /** Google OAuth — giriş */
-  async googleLogin(idToken: string): Promise<GoogleUserResponse> {
-    const { data } = await axios.post<GoogleUserResponse>(`${API_BASE}/basicauth/google/login`, { idToken }, { withCredentials: true });
-    setStoredUser(mapGoogleUserToStoredUser(data));
-    return data;
+  /** Google OAuth — giriş (Next route cookie set eder) */
+  async googleLogin(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
+    try {
+      const { data } = await axios.post<GoogleUserResponse & AuthResponse>("/api/auth/google/login", idToken, {
+        headers: { "Content-Type": "text/plain" },
+        transformRequest: [(data) => data],
+        withCredentials: true,
+      });
+      const accessToken = data.accessToken || data.access_token;
+      const refreshToken = data.refreshToken || data.refresh_token;
+
+      if (!accessToken && !refreshToken) {
+        throw new ApiError(500, "Google giriş yanıtında token bulunamadı.");
+      }
+
+      if (data.user) {
+        setStoredUser(data.user);
+      } else if (data.userId != null || data.email) {
+        setStoredUser(mapGoogleUserToStoredUser(data as GoogleUserResponse));
+      }
+      return data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      const status = axiosError.response?.status || 0;
+      const message = axiosError.response?.data?.message || axiosError.message || "Google ile giriş başarısız";
+      throw new ApiError(status, message, axiosError.response?.data);
+    }
   },
 
   /** Google OAuth — kayıt */
   async googleRegister(idToken: string): Promise<GoogleUserResponse> {
-    const { data } = await axios.post<GoogleUserResponse>("/api/auth/google/register", { idToken }, { withCredentials: true });
-    setStoredUser(mapGoogleUserToStoredUser(data));
-    return data;
+    try {
+      const { data } = await axios.post<GoogleUserResponse>(`${API_BASE}/auth/google/register`, { idToken }, { withCredentials: true });
+      setStoredUser(mapGoogleUserToStoredUser(data));
+      return data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      const status = axiosError.response?.status || 0;
+      const message = axiosError.response?.data?.message || axiosError.message || "Google ile kayıt başarısız";
+      throw new ApiError(status, message, axiosError.response?.data);
+    }
   },
 
   /** E-posta / şifre ile giriş */
   async login(params: { email: string; password: string }): Promise<AuthResponse> {
     try {
-      const { data } = await axios.post<AuthResponse>("/api/auth/login", params, { withCredentials: true });
+      const { data } = await axios.post<AuthResponse>(`${API_BASE}/basicauth/login`, params, { withCredentials: true });
       if (data.user) {
         setStoredUser(data.user);
       } else if (params.email) {

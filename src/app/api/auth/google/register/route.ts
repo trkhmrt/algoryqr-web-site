@@ -8,7 +8,7 @@ type GoogleRegisterBody = {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as GoogleRegisterBody;
-    const upstream = await fetch(`${AUTH_BASE}/auth/google/register`, {
+    const upstream = await fetch(`${AUTH_BASE}/basicauth/google/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
