@@ -11,7 +11,6 @@ import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,13 +19,13 @@ const Login = () => {
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !email || !password) {
+    if (!email || !password) {
       toast({ title: "Hata", description: "Lütfen tüm alanları doldurun.", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      await authService.login({ username, email, password });
+      await authService.login({ email, password });
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
       router.push("/dashboard");
     } catch (err) {
@@ -97,16 +96,6 @@ const Login = () => {
 
           {/* Email Login */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Kullanıcı Adı</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="kullaniciadi"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-posta</Label>
               <Input id="email" type="email" placeholder="ornek@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />

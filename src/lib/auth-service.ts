@@ -45,8 +45,8 @@ export const authService = {
     return data;
   },
 
-  /** Kullanıcı adı / e-posta / şifre ile giriş */
-  async login(params: { username: string; email: string; password: string }): Promise<AuthResponse> {
+  /** E-posta / şifre ile giriş */
+  async login(params: { email: string; password: string }): Promise<AuthResponse> {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,7 +67,6 @@ export const authService = {
       setStoredUser({
         id: params.email,
         email: params.email,
-        first_name: params.username,
       });
     }
     return data;

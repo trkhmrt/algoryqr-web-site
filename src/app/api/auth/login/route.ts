@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { API_BASE } from "@/lib/config";
 
 type LoginBody = {
-  username?: string;
   email?: string;
   password?: string;
 };
