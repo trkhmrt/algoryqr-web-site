@@ -1,3 +1,5 @@
+"use client";
+
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { QrCode, BarChart3, Palette, Zap, Globe, Shield } from "lucide-react";

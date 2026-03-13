@@ -8,11 +8,16 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import PricingSection from "@/components/PricingSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import type { StoredUser } from "@/lib/api";
 
-const Index = () => {
+interface IndexProps {
+  initialUser?: StoredUser | null;
+}
+
+const Index = ({ initialUser = null }: IndexProps) => {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Navbar initialUser={initialUser} />
       <HeroSection />
       <FeaturesSection />
       <AnimatedBeam />

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QrCode, BarChart3, Palette, Zap, ChevronDown } from "lucide-react";

@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
 import { AUTH_BASE } from "@/lib/config";
 
-type LoginBody = {
-  email?: string;
-  password?: string;
+type GoogleRegisterBody = {
+  idToken?: string;
 };
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as LoginBody;
-    const upstream = await fetch(`${AUTH_BASE}/basicauth/login`, {
+    const body = (await req.json()) as GoogleRegisterBody;
+    const upstream = await fetch(`${AUTH_BASE}/auth/google/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -19,14 +18,13 @@ export async function POST(req: Request) {
     const data = await upstream.json();
     if (!upstream.ok) {
       return NextResponse.json(
-        { message: data?.message || "Giriş başarısız" },
-        { status: upstream.status || 401 },
+        { message: data?.message || "Google ile kayıt başarısız" },
+        { status: upstream.status || 400 },
       );
     }
 
     const accessToken = data?.accessToken || data?.access_token;
     const refreshToken = data?.refreshToken || data?.refresh_token;
-
     const response = NextResponse.json(data, { status: 200 });
 
     if (accessToken) {

@@ -1,3 +1,5 @@
+"use client";
+
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, useInView } from "framer-motion";
 import { QrCode, Globe, Smartphone, Mail, Wifi, CreditCard, MapPin } from "lucide-react";

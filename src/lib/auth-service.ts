@@ -1,4 +1,5 @@
-import { ApiError, api, noAuth, setTokens, clearTokens, setStoredUser } from "./api";
+import axios, { AxiosError } from "axios";
+import { ApiError, setStoredUser } from "./api";
 
 interface AuthResponse {
   accessToken?: string;
@@ -33,63 +34,56 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 export const authService = {
   /** Google OAuth — giriş */
   async googleLogin(idToken: string): Promise<GoogleUserResponse> {
-    const { data } = await api.post<GoogleUserResponse>("/basicauth/google/login", { idToken }, noAuth());
+    const { data } = await axios.post<GoogleUserResponse>("/api/auth/google/login", { idToken }, { withCredentials: true });
     setStoredUser(mapGoogleUserToStoredUser(data));
     return data;
   },
 
   /** Google OAuth — kayıt */
   async googleRegister(idToken: string): Promise<GoogleUserResponse> {
-    const { data } = await api.post<GoogleUserResponse>("/auth/google/register", { idToken }, noAuth());
+    const { data } = await axios.post<GoogleUserResponse>("/api/auth/google/register", { idToken }, { withCredentials: true });
     setStoredUser(mapGoogleUserToStoredUser(data));
     return data;
   },
 
   /** E-posta / şifre ile giriş */
   async login(params: { email: string; password: string }): Promise<AuthResponse> {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-      credentials: "include",
-    });
-    const data = (await res.json()) as AuthResponse & { message?: string };
-    if (!res.ok) {
-      throw new ApiError(res.status, data.message || "Giriş başarısız", data);
+    try {
+      const { data } = await axios.post<AuthResponse>("/api/auth/login", params, { withCredentials: true });
+      if (data.user) {
+        setStoredUser(data.user);
+      } else if (params.email) {
+        setStoredUser({
+          id: params.email,
+          email: params.email,
+        });
+      }
+      return data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      const status = axiosError.response?.status || 0;
+      const message = axiosError.response?.data?.message || axiosError.message || "Giriş başarısız";
+      throw new ApiError(status, message, axiosError.response?.data);
     }
-    const accessToken = data.accessToken || data.access_token;
-    const refreshToken = data.refreshToken || data.refresh_token;
-    // httpOnly cookie SSR tarafta yazılıyor; sadece local fallback tutuyoruz.
-    if (accessToken) setTokens(accessToken, refreshToken);
-    if (data.user) {
-      setStoredUser(data.user);
-    } else if (params.email) {
-      setStoredUser({
-        id: params.email,
-        email: params.email,
-      });
-    }
-    return data;
   },
 
   /** Kayıt ol */
   async register(params: {
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    phone: string;
+    phoneNumber: string;
     password: string;
   }): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>("/auth/register", params, noAuth());
-    const accessToken = data.accessToken || data.access_token;
-    const refreshToken = data.refreshToken || data.refresh_token;
-    if (accessToken) setTokens(accessToken, refreshToken);
-    if (data.user) setStoredUser(data.user);
-    return data;
-  },
-
-  /** Çıkış */
-  logout() {
-    clearTokens();
+    try {
+      const { data } = await axios.post<AuthResponse>("/api/auth/register", params, { withCredentials: true });
+      if (data.user) setStoredUser(data.user);
+      return data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      const status = axiosError.response?.status || 0;
+      const message = axiosError.response?.data?.message || axiosError.message || "Kayıt başarısız";
+      throw new ApiError(status, message, axiosError.response?.data);
+    }
   },
 };

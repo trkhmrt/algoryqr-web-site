@@ -28,10 +28,10 @@ const Register = () => {
     setLoading(true);
     try {
       await authService.register({
-        first_name: form.firstName,
-        last_name: form.lastName,
+        firstName: form.firstName,
+        lastName: form.lastName,
         email: form.email,
-        phone: form.phone,
+        phoneNumber: form.phone,
         password: form.password,
       });
       toast({ title: "Başarılı", description: "Hesabınız oluşturuldu!" });

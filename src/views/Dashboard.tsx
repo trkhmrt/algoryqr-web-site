@@ -1,6 +1,8 @@
+"use client";
+
 import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { getStoredUser, clearTokens } from "@/lib/api";
+import { getStoredUser, StoredUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +34,7 @@ import {
   OverviewSkeleton, AnalyticsSkeleton, QRCodesSkeleton, CreateQRSkeleton,
 } from "@/components/dashboard/DashboardSkeletons";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 // ── Fake data ──────────────────────────────────────────
 const fakeQRCodes = [
@@ -88,10 +91,14 @@ const qrTypes = [
   { value: "location", label: "Konum", icon: MapPin, desc: "GPS koordinatları" },
 ];
 
-const Dashboard = () => {
+interface DashboardProps {
+  initialUser?: StoredUser | null;
+}
+
+const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const tooltipStyle = useTooltipStyle();
   const router = useRouter();
-  const user = useMemo(() => getStoredUser(), []);
+  const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
   const userInitials = useMemo(() => {
     if (!user) return "?";
     return ((user.first_name?.[0] || "") + (user.last_name?.[0] || "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
@@ -227,7 +234,14 @@ const Dashboard = () => {
             variant="ghost"
             size="sm"
             className="w-full justify-start gap-2 text-muted-foreground"
-            onClick={() => { clearTokens(); router.push("/login"); }}
+            onClick={async () => {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("algory_user");
+              }
+              await axios.post("/api/auth/logout", undefined, { withCredentials: true }).catch(() => undefined);
+              router.push("/login");
+              router.refresh();
+            }}
           >
             <LogOut className="h-4 w-4" />
             Çıkış Yap
