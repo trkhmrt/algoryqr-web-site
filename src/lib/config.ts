@@ -1,13 +1,8 @@
-/** Development'ta varsayılan local backend; production'da canlı. .env.local ile AUTH_BASE override edilebilir. */
-const AUTH_BASE_DEFAULT =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:8099"
-    : "https://auth.algorycode.com";
-
+/** Canlı auth backend. Local test için .env.local ile AUTH_BASE=http://localhost:8099 override edilebilir. */
 export const AUTH_BASE =
   process.env.AUTH_BASE ||
   process.env.NEXT_PUBLIC_AUTH_BASE ||
-  AUTH_BASE_DEFAULT;
+  "https://auth.algorycode.com";
 export const API_BASE = AUTH_BASE;
 
 export const GATEWAY_BASE =
