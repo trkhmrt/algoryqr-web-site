@@ -6,6 +6,8 @@ interface AuthResponse {
   refreshToken?: string;
   access_token?: string;
   refresh_token?: string;
+  /** JWT exp, saniye cinsinden epoch; client sayacı için */
+  accessTokenExpiresAt?: number;
   user?: {
     id: string;
     email: string;

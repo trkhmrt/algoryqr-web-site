@@ -1,4 +1,8 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,17 +13,59 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages, Monitor,
-  Copy, Eye, EyeOff, Plus, Trash2, RefreshCw,
+  Copy, Eye, EyeOff, Plus, Trash2, RefreshCw, LogOut, Timer,
 } from "lucide-react";
+import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
 
-type SettingsPage = "main" | "profile" | "security" | "notifications" | "appearance" | "api";
+type SettingsPage = "main" | "profile" | "security" | "notifications" | "appearance" | "api" | "session";
 
 interface SettingsTabProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
 }
 
+function formatCountdown(expiresAt: number): string {
+  const now = Math.floor(Date.now() / 1000);
+  const sec = Math.max(0, expiresAt - now);
+  if (sec === 0) return "Süre doldu";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    if (h >= 24) {
+      const d = Math.floor(h / 24);
+      const hh = h % 24;
+      return `${d} gün ${hh} sa ${mm} dk ${s} sn`;
+    }
+    return `${h} sa ${mm} dk ${s} sn`;
+  }
+  return `${m} dk ${s} sn`;
+}
+
+/** Kalan ms için "X dk Y sn sonra" metni */
+function formatRefreshIn(remainingMs: number): string {
+  const sec = Math.max(0, Math.ceil(remainingMs / 1000));
+  if (sec === 0) return "şimdi gönderilecek";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m} dk ${s} sn sonra`;
+}
+
 export default function SettingsTab({ onNotify }: SettingsTabProps) {
+  const router = useRouter();
   const [page, setPage] = useState<SettingsPage>("main");
+
+  // Token / session state (session sayfası için)
+  const [accessTokenExpiresAt, setAccessTokenExpiresAt] = useState<number | null>(null);
+  const [refreshTokenExpiresAt, setRefreshTokenExpiresAt] = useState<number | null>(null);
+  const [countdownLabel, setCountdownLabel] = useState<string>("—");
+  const [refreshCountdownLabel, setRefreshCountdownLabel] = useState<string>("—");
+  const [nextRefreshAt, setNextRefreshAt] = useState<number | null>(null);
+  const [nextRefreshInLabel, setNextRefreshInLabel] = useState<string>("—");
+  const refreshTriggeredRef = useRef(false);
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [revokeLoading, setRevokeLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
 
   // Profile state
   const [firstName, setFirstName] = useState("Ahmet");
@@ -48,6 +94,118 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [showApiKey, setShowApiKey] = useState(false);
   const fakeApiKey = "aqr_live_k8x2mN9pRtL4vQ7wBcD3fH6jK0sU1yZ";
 
+  const fetchTokenExp = useCallback(() => {
+    setTokenLoading(true);
+    axios
+      .get<{ accessTokenExpiresAt: number | null; refreshTokenExpiresAt: number | null }>("/api/auth/token-exp", { withCredentials: true })
+      .then((res) => {
+        const accessExp = res.data?.accessTokenExpiresAt ?? null;
+        const refreshExp = res.data?.refreshTokenExpiresAt ?? null;
+        setAccessTokenExpiresAt(accessExp);
+        setRefreshTokenExpiresAt(refreshExp);
+        setCountdownLabel(accessExp != null ? formatCountdown(accessExp) : "—");
+        setRefreshCountdownLabel(refreshExp != null ? formatCountdown(refreshExp) : "—");
+        if (accessExp != null) setNextRefreshAt(Date.now() + REFRESH_AFTER_LOGIN_MS);
+      })
+      .catch(() => {
+        setCountdownLabel("—");
+        setRefreshCountdownLabel("—");
+      })
+      .finally(() => setTokenLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (page === "session") fetchTokenExp();
+  }, [page, fetchTokenExp]);
+
+  useEffect(() => {
+    if (accessTokenExpiresAt == null || accessTokenExpiresAt <= 0) return;
+    const update = () => setCountdownLabel(formatCountdown(accessTokenExpiresAt));
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [accessTokenExpiresAt]);
+
+  useEffect(() => {
+    if (refreshTokenExpiresAt == null || refreshTokenExpiresAt <= 0) return;
+    const update = () => setRefreshCountdownLabel(formatCountdown(refreshTokenExpiresAt));
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [refreshTokenExpiresAt]);
+
+  useEffect(() => {
+    if (nextRefreshAt == null) {
+      setNextRefreshInLabel("—");
+      return;
+    }
+    const update = () => {
+      const remaining = nextRefreshAt - Date.now();
+      setNextRefreshInLabel(formatRefreshIn(remaining));
+      if (remaining <= 0 && !refreshTriggeredRef.current) {
+        refreshTriggeredRef.current = true;
+        setNextRefreshAt(null);
+        axios
+          .post<{ accessTokenExpiresAt?: number }>("/api/auth/refresh", {}, { withCredentials: true })
+          .then((res) => {
+            const exp = res.data?.accessTokenExpiresAt;
+            if (exp != null) setAccessTokenExpiresAt(exp);
+            onNotify("info", "Token otomatik yenilendi.");
+            fetchTokenExp();
+            setNextRefreshAt(Date.now() + REFRESH_AFTER_LOGIN_MS);
+          })
+          .catch((err: { response?: { status?: number } }) => {
+            if (err.response?.status === 401) {
+              onNotify("warning", "Oturum sonlandı. Tekrar giriş yapın.");
+              router.push("/login");
+              router.refresh();
+            }
+          })
+          .finally(() => {
+            refreshTriggeredRef.current = false;
+          });
+      }
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [nextRefreshAt, onNotify, router, fetchTokenExp]);
+
+  const handleRevoke = () => {
+    setRevokeLoading(true);
+    axios
+      .post("/api/auth/revoke", {}, { withCredentials: true })
+      .then(() => {
+        onNotify("info", "Refresh token iptal edildi.");
+      })
+      .catch(() => {
+        onNotify("danger", "İptal isteği başarısız.");
+      })
+      .finally(() => setRevokeLoading(false));
+  };
+
+  const handleRefreshAccess = () => {
+    setRefreshLoading(true);
+    axios
+      .post<{ accessTokenExpiresAt?: number }>("/api/auth/refresh", {}, { withCredentials: true })
+      .then((res) => {
+        const exp = res.data?.accessTokenExpiresAt;
+        if (exp != null) setAccessTokenExpiresAt(exp);
+        onNotify("info", "Access token yenilendi.");
+        fetchTokenExp();
+      })
+      .catch((err: { response?: { status?: number } }) => {
+        if (err.response?.status === 401) {
+          onNotify("warning", "Oturum sonlandı. Tekrar giriş yapın.");
+          router.push("/login");
+          router.refresh();
+        } else {
+          onNotify("danger", "Token yenilenemedi.");
+        }
+      })
+      .finally(() => setRefreshLoading(false));
+  };
+
   const backButton = (
     <button
       onClick={() => setPage("main")}
@@ -66,6 +224,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         </div>
         <div className="grid gap-4">
           {[
+            { icon: Key, title: "Oturum / Token", desc: "Access token kalan süre, yenileme ve revoke", key: "session" as SettingsPage },
             { icon: User, title: "Profil Bilgileri", desc: "Ad, soyad, e-posta ve telefon bilgilerinizi güncelleyin", key: "profile" as SettingsPage },
             { icon: Shield, title: "Güvenlik", desc: "Şifre değiştirme ve iki faktörlü doğrulama", key: "security" as SettingsPage },
             { icon: Bell, title: "Bildirimler", desc: "E-posta ve anlık bildirim tercihlerinizi yönetin", key: "notifications" as SettingsPage },
@@ -92,6 +251,74 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             </Card>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (page === "session") {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center gap-3">
+          {backButton}
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Oturum / Token</h1>
+            <p className="text-sm text-muted-foreground">Access token kalan süre, yenileme ve revoke (refresh token iptali)</p>
+          </div>
+        </div>
+
+        <Card className="glow-card">
+          <CardContent className="p-6 space-y-6">
+            <div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Timer className="h-4 w-4" />
+                Access token kalan süre
+              </div>
+              <p className="text-2xl font-mono font-semibold tabular-nums">
+                {tokenLoading ? "Yükleniyor…" : countdownLabel}
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <Timer className="h-4 w-4" />
+                Refresh token kalan süre
+              </div>
+              <p className="text-2xl font-mono font-semibold tabular-nums">
+                {tokenLoading ? "Yükleniyor…" : refreshCountdownLabel}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-4 border border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <RefreshCw className="h-4 w-4" />
+                Yenileme isteği (2 dk sonra otomatik gönderilir)
+              </div>
+              <p className="text-xl font-mono font-semibold tabular-nums text-foreground">
+                {tokenLoading ? "—" : nextRefreshInLabel}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="default"
+                onClick={handleRefreshAccess}
+                disabled={refreshLoading || tokenLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshLoading ? "animate-spin" : ""}`} />
+                {refreshLoading ? "Yenileniyor…" : "Refresh access"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRevoke}
+                disabled={revokeLoading}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                {revokeLoading ? "İptal ediliyor…" : "Revoke"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Revoke: refresh token iptal edilir, bir daha access token alınamaz (401).
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

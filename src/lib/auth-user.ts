@@ -30,6 +30,19 @@ function parseJwtPayload(token: string): JwtPayload | null {
   }
 }
 
+/**
+ * JWT access token'dan exp (saniye cinsinden epoch) döner; yoksa null.
+ * Backend exp'i bazen ms veriyor (örn. Spring 300000 ms); > 1e12 ise ms kabul edip saniyeye çeviriyoruz.
+ */
+export function getExpFromAccessToken(token?: string | null): number | null {
+  if (!token) return null;
+  const payload = parseJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return null;
+  const exp = payload.exp;
+  if (exp >= 1e12) return Math.floor(exp / 1000);
+  return exp;
+}
+
 export function getUserFromAccessToken(token?: string | null): AuthUser | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);

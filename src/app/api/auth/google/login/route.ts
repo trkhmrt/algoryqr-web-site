@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { AUTH_BASE } from "@/lib/config";
+import { AUTH_BASE, COOKIE_MAX_AGE_SECONDS } from "@/lib/config";
+import { getExpFromAccessToken } from "@/lib/auth-user";
 
 export async function POST(req: Request) {
   try {
@@ -29,7 +30,11 @@ export async function POST(req: Request) {
 
     const accessToken = data?.accessToken || data?.access_token;
     const refreshToken = data?.refreshToken || data?.refresh_token;
-    const response = NextResponse.json(data, { status: 200 });
+    const accessTokenExpiresAt = getExpFromAccessToken(accessToken) ?? undefined;
+    const response = NextResponse.json(
+      { ...data, accessTokenExpiresAt },
+      { status: 200 },
+    );
 
     if (accessToken) {
       const accessCookieOptions = {
@@ -37,7 +42,7 @@ export async function POST(req: Request) {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax" as const,
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: COOKIE_MAX_AGE_SECONDS,
       };
       response.cookies.set("algory_access_token", accessToken, accessCookieOptions);
       response.cookies.set("accessToken", accessToken, accessCookieOptions);
@@ -49,7 +54,7 @@ export async function POST(req: Request) {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax" as const,
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: COOKIE_MAX_AGE_SECONDS,
       };
       response.cookies.set("algory_refresh_token", refreshToken, refreshCookieOptions);
       response.cookies.set("refreshToken", refreshToken, refreshCookieOptions);

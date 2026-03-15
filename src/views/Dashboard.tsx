@@ -35,6 +35,7 @@ import {
 } from "@/components/dashboard/DashboardSkeletons";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useTokenRefresh } from "@/hooks/use-token-refresh";
 
 // ── Fake data ──────────────────────────────────────────
 const fakeQRCodes = [
@@ -98,6 +99,7 @@ interface DashboardProps {
 const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const tooltipStyle = useTooltipStyle();
   const router = useRouter();
+  useTokenRefresh(); // Arka planda access token süresi bitmeden refresh (şu an refresh çağrısı yorumda)
   const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
   const userInitials = useMemo(() => {
     if (!user) return "?";
