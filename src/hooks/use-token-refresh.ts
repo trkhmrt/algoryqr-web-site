@@ -12,7 +12,7 @@ const REFRESH_BUFFER_SECONDS = 30;
  * Verilmezse accessTokenExpiresAt /api/auth/token-exp ile alınır.
  */
 export function useTokenRefresh(accessTokenExpiresAt?: number) {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [expFromApi, setExpFromApi] = useState<number | null>(null);
   const exp = accessTokenExpiresAt ?? expFromApi ?? undefined;
 
