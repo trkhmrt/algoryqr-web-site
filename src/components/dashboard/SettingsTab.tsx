@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
 
+const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
+
 type SettingsPage = "main" | "profile" | "security" | "notifications" | "appearance" | "api" | "session";
 
 interface SettingsTabProps {
@@ -105,7 +107,14 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         setRefreshTokenExpiresAt(refreshExp);
         setCountdownLabel(accessExp != null ? formatCountdown(accessExp) : "—");
         setRefreshCountdownLabel(refreshExp != null ? formatCountdown(refreshExp) : "—");
-        if (accessExp != null) setNextRefreshAt(Date.now() + REFRESH_AFTER_LOGIN_MS);
+        if (accessExp != null) {
+          const stored = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(NEXT_REFRESH_AT_KEY) : null;
+          const storedAt = stored ? parseInt(stored, 10) : NaN;
+          const useStored = !isNaN(storedAt) && storedAt > Date.now();
+          const at = useStored ? storedAt : Date.now() + REFRESH_AFTER_LOGIN_MS;
+          if (!useStored && typeof sessionStorage !== "undefined") sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(at));
+          setNextRefreshAt(at);
+        }
       })
       .catch(() => {
         setCountdownLabel("—");
@@ -152,7 +161,9 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             if (exp != null) setAccessTokenExpiresAt(exp);
             onNotify("info", "Token otomatik yenilendi.");
             fetchTokenExp();
-            setNextRefreshAt(Date.now() + REFRESH_AFTER_LOGIN_MS);
+            const nextAt = Date.now() + REFRESH_AFTER_LOGIN_MS;
+            setNextRefreshAt(nextAt);
+            if (typeof sessionStorage !== "undefined") sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(nextAt));
           })
           .catch((err: { response?: { status?: number } }) => {
             if (err.response?.status === 401) {
