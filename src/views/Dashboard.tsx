@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { getStoredUser, StoredUser } from "@/lib/api";
+import { createQrRequest, getStoredUser, QrResponse, StoredUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,8 +10,6 @@ import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import ThemeToggle from "@/components/ThemeToggle";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +31,11 @@ import SettingsTab from "@/components/dashboard/SettingsTab";
 import {
   OverviewSkeleton, AnalyticsSkeleton, QRCodesSkeleton, CreateQRSkeleton,
 } from "@/components/dashboard/DashboardSkeletons";
+import {
+  QrTypeDetails,
+  QrTypeData,
+  QrTypeValue,
+} from "@/components/dashboard/qr-create/QrTypeDetails";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
@@ -83,7 +86,7 @@ function useTooltipStyle() {
   };
 }
 
-const qrTypes = [
+const qrTypes: Array<{ value: QrTypeValue; label: string; icon: typeof LinkIcon; desc: string }> = [
   { value: "url", label: "URL / Link", icon: LinkIcon, desc: "Web sitesi veya sayfa linki" },
   { value: "wifi", label: "WiFi", icon: Wifi, desc: "WiFi ağ bilgileri" },
   { value: "email", label: "E-posta", icon: Mail, desc: "E-posta adresi ve mesaj" },
@@ -91,6 +94,24 @@ const qrTypes = [
   { value: "text", label: "Metin", icon: FileText, desc: "Serbest metin içeriği" },
   { value: "location", label: "Konum", icon: MapPin, desc: "GPS koordinatları" },
 ];
+
+const createInitialQrTypeData = (): QrTypeData => ({
+  url: "",
+  wifi: { ssid: "", password: "", encryption: "wpa" },
+  email: { to: "", subject: "", body: "" },
+  phone: "",
+  text: "",
+  location: { lat: "", lng: "" },
+});
+
+const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
+  if (type === "url") return { url: data.url };
+  if (type === "wifi") return data.wifi;
+  if (type === "email") return data.email;
+  if (type === "phone") return { phone: data.phone };
+  if (type === "text") return { text: data.text };
+  return data.location;
+};
 
 interface DashboardProps {
   initialUser?: StoredUser | null;
@@ -120,12 +141,13 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const [banners, setBanners] = useState<Array<{ id: string; type: "info" | "warning" | "danger"; message: string }>>([]);
 
   // QR Creation state
-  const [selectedQrType, setSelectedQrType] = useState("url");
+  const [selectedQrType, setSelectedQrType] = useState<QrTypeValue>("url");
   const [qrName, setQrName] = useState("");
-  const [qrContent, setQrContent] = useState("");
+  const [qrTypeData, setQrTypeData] = useState<QrTypeData>(() => createInitialQrTypeData());
   const [qrColor, setQrColor] = useState("#000000");
   const [qrBgColor, setQrBgColor] = useState("#ffffff");
   const [qrTracking, setQrTracking] = useState(true);
+  const [latestQrResponse, setLatestQrResponse] = useState<QrResponse | null>(null);
 
   // QR Detail/Edit state
   const [selectedQR, setSelectedQR] = useState<typeof fakeQRCodes[0] | null>(null);
@@ -150,16 +172,40 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
     setTimeout(() => removeBanner(id), 6000);
   }, [removeBanner]);
 
-  const handleCreateQR = () => {
-    triggerNotification("info");
-    // Fake: show success banner
-    const id = Date.now().toString();
-    setBanners((prev) => [...prev, { id, type: "info" as const, message: `"${qrName || "QR Kod"}" başarıyla oluşturuldu!` }]);
-    setTimeout(() => removeBanner(id), 4000);
-    handleTabChange("codes");
-    setQrName("");
-    setQrContent("");
-  };
+  const handleCreateQR = useCallback(async () => {
+    const trimmedQrName = qrName.trim();
+    const details = getQrDetailsByType(selectedQrType, qrTypeData);
+
+    if (!trimmedQrName) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "QR kod adı zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+
+    try {
+      const response = await createQrRequest({
+        qrName: trimmedQrName,
+        type: selectedQrType,
+        details,
+      });
+      setLatestQrResponse(response.qrResponse);
+
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "info", message: `"${trimmedQrName}" başarıyla oluşturuldu!` }]);
+      setTimeout(() => removeBanner(id), 4000);
+      setQrName("");
+      setQrTypeData(createInitialQrTypeData());
+      setQrColor("#000000");
+      setQrBgColor("#ffffff");
+      setSelectedQrType("url");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "QR kod oluşturulamadı.";
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "danger", message }]);
+      setTimeout(() => removeBanner(id), 5000);
+    }
+  }, [qrName, qrTypeData, removeBanner, selectedQrType]);
 
   const bannerStyles = {
     info: "bg-blue-500/10 border-blue-500/20 text-blue-500",
@@ -712,94 +758,11 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                       />
                     </div>
 
-                    {selectedQrType === "url" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="qr-url" className="text-xs text-muted-foreground">URL</Label>
-                        <Input
-                          id="qr-url"
-                          placeholder="https://example.com"
-                          value={qrContent}
-                          onChange={(e) => setQrContent(e.target.value)}
-                          className="bg-background"
-                        />
-                      </div>
-                    )}
-
-                    {selectedQrType === "wifi" && (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Ağ Adı (SSID)</Label>
-                          <Input placeholder="MyNetwork" className="bg-background" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Şifre</Label>
-                          <Input type="password" placeholder="••••••••" className="bg-background" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Şifreleme</Label>
-                          <Select defaultValue="wpa">
-                            <SelectTrigger className="bg-background">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="wpa">WPA/WPA2</SelectItem>
-                              <SelectItem value="wep">WEP</SelectItem>
-                              <SelectItem value="none">Şifresiz</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedQrType === "email" && (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">E-posta Adresi</Label>
-                          <Input placeholder="ornek@email.com" className="bg-background" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Konu</Label>
-                          <Input placeholder="E-posta konusu" className="bg-background" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Mesaj</Label>
-                          <Textarea placeholder="Mesaj içeriği..." className="bg-background resize-none" rows={3} />
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedQrType === "phone" && (
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Telefon Numarası</Label>
-                        <Input placeholder="+90 555 123 4567" className="bg-background" />
-                      </div>
-                    )}
-
-                    {selectedQrType === "text" && (
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Metin İçeriği</Label>
-                        <Textarea
-                          placeholder="QR kodda gösterilecek metin..."
-                          className="bg-background resize-none"
-                          rows={4}
-                          value={qrContent}
-                          onChange={(e) => setQrContent(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {selectedQrType === "location" && (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Enlem</Label>
-                          <Input placeholder="41.0082" className="bg-background" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Boylam</Label>
-                          <Input placeholder="28.9784" className="bg-background" />
-                        </div>
-                      </div>
-                    )}
+                    <QrTypeDetails
+                      selectedType={selectedQrType}
+                      data={qrTypeData}
+                      onChange={setQrTypeData}
+                    />
                   </div>
 
                   {/* Customization */}
@@ -856,10 +819,18 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                       className="aspect-square rounded-lg border border-border flex items-center justify-center"
                       style={{ backgroundColor: qrBgColor }}
                     >
-                      <div className="text-center space-y-3">
-                        <QrCode className="h-24 w-24 mx-auto" style={{ color: qrColor }} />
-                        <p className="text-xs text-muted-foreground">QR Kod Önizlemesi</p>
-                      </div>
+                      {latestQrResponse?.imgSrc ? (
+                        <img
+                          src={`data:image/png;base64,${latestQrResponse.imgSrc}`}
+                          alt={`${latestQrResponse.qrName} QR kodu`}
+                          className="h-full w-full rounded-lg object-contain p-4"
+                        />
+                      ) : (
+                        <div className="text-center space-y-3">
+                          <QrCode className="h-24 w-24 mx-auto" style={{ color: qrColor }} />
+                          <p className="text-xs text-muted-foreground">QR Kod Önizlemesi</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 space-y-2 text-xs">
@@ -877,6 +848,12 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                         <span className="text-muted-foreground">Takip</span>
                         <span className="text-foreground font-medium">{qrTracking ? "Açık" : "Kapalı"}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Durum</span>
+                        <span className="text-foreground font-medium">
+                          {latestQrResponse?.status === "active" ? "Aktif" : "Hazır"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-6 flex flex-col gap-2">
@@ -892,10 +869,11 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                         className="w-full gap-2"
                         onClick={() => {
                           setQrName("");
-                          setQrContent("");
+                          setQrTypeData(createInitialQrTypeData());
                           setQrColor("#000000");
                           setQrBgColor("#ffffff");
                           setSelectedQrType("url");
+                          setLatestQrResponse(null);
                         }}
                       >
                         <RotateCcw className="h-4 w-4" />

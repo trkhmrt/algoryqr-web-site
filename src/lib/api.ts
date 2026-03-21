@@ -1,6 +1,4 @@
 import axios, { AxiosError } from "axios";
-import { GATEWAY_BASE } from "./config";
-
 const USER_KEY = "algory_user";
 const hasWindow = typeof window !== "undefined";
 
@@ -43,11 +41,133 @@ export class ApiError extends Error {
 }
 
 export const api = axios.create({
-  baseURL: GATEWAY_BASE,
+  baseURL: "/api",
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
   timeout: 15000,
 });
+
+export type QrRequestDetails =
+  | {
+      url: string;
+    }
+  | {
+      ssid: string;
+      password: string;
+      encryption: "wpa" | "wep" | "none";
+    }
+  | {
+      to: string;
+      subject: string;
+      body: string;
+    }
+  | {
+      phone: string;
+    }
+  | {
+      text: string;
+    }
+  | {
+      lat: string;
+      lng: string;
+    };
+
+export interface CreateQrRequestBody {
+  qrName: string;
+  type: string;
+  details: QrRequestDetails;
+}
+
+export interface QrResponse {
+  id: string;
+  qrName: string;
+  type: string;
+  details: QrRequestDetails;
+  imgSrc: string;
+  status: "active" | "inactive" | "draft";
+  createdAt: string;
+  updatedAt: string;
+  scans: number;
+}
+
+export interface CreateQrResponse {
+  qrResponse: QrResponse;
+}
+
+type CreateQrGatewayResponse = {
+  imgSrc: string;
+};
+
+const mapTypeForGateway = (type: string) => {
+  if (type === "url") return "link";
+  return type;
+};
+
+const isWifiDetails = (
+  details: QrRequestDetails
+): details is Extract<QrRequestDetails, { ssid: string; password: string; encryption: "wpa" | "wep" | "none" }> => {
+  return "ssid" in details && "password" in details && "encryption" in details;
+};
+
+const mapDetailsForGateway = (type: string, details: QrRequestDetails) => {
+  if (type === "url") {
+    return "url" in details ? details : { url: "" };
+  }
+
+  if (type === "wifi" && isWifiDetails(details)) {
+    return {
+      ssid: details.ssid,
+      password: details.password,
+      security:
+        details.encryption === "none"
+          ? "NONE"
+          : details.encryption.toUpperCase(),
+    };
+  }
+
+  if (type === "email") {
+    return "to" in details ? details : { to: "", subject: "", body: "" };
+  }
+
+  if (type === "phone") {
+    return "phone" in details ? details : { phone: "" };
+  }
+
+  if (type === "text") {
+    return "text" in details ? details : { text: "" };
+  }
+
+  if (type === "location") {
+    return "lat" in details && "lng" in details ? details : { lat: "", lng: "" };
+  }
+
+  return details;
+};
+
+export async function createQrRequest(payload: CreateQrRequestBody): Promise<CreateQrResponse> {
+  const gatewayType = mapTypeForGateway(payload.type);
+  const requestBody = {
+    qrName: payload.qrName,
+    type: gatewayType,
+    details: mapDetailsForGateway(payload.type, payload.details),
+  };
+  const response = await api.post<CreateQrGatewayResponse>("/qr/create", requestBody);
+  const now = new Date().toISOString();
+
+  return {
+    qrResponse: {
+      id: `temp-${Date.now()}`,
+      qrName: payload.qrName,
+      type: payload.type,
+      details: payload.details,
+      imgSrc: response.data.imgSrc,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+      scans: 0,
+    },
+  };
+}
 
 api.interceptors.response.use(
   (r) => r,
