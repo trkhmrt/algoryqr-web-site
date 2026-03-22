@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { GATEWAY_BASE } from "@/lib/config";
+import { getUserFromAccessToken } from "@/lib/auth-user";
 
 export async function POST(req: Request) {
   try {
@@ -15,16 +16,27 @@ export async function POST(req: Request) {
     }
 
     console.log("[qr/create] token found", { tokenPreview: `${accessToken.slice(0, 12)}...`, tokenLength: accessToken.length });
+    const authUser = getUserFromAccessToken(accessToken);
+    const userId = authUser?.id;
 
-    const body = await req.text();
-    console.log("[qr/create] request body", body);
+    if (!userId) {
+      console.error("[qr/create] user id missing in token");
+      return NextResponse.json({ message: "Token içinde userId yok" }, { status: 401 });
+    }
+
+    const body = await req.json() as { qrName: string; type: string; details: unknown };
+    const requestBody = JSON.stringify({
+      ...body,
+      userId: Number.isNaN(Number(userId)) ? userId : Number(userId),
+    });
+    console.log("[qr/create] request body", requestBody);
     const upstream = await fetch(`${GATEWAY_BASE}/qr/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
-      body,
+      body: requestBody,
       cache: "no-store",
     });
 

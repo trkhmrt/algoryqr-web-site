@@ -78,6 +78,7 @@ export type QrRequestDetails =
     };
 
 export interface CreateQrRequestBody {
+  userId?: number | string;
   qrName: string;
   type: string;
   details: QrRequestDetails;

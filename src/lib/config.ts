@@ -8,6 +8,7 @@ export const API_BASE = AUTH_BASE;
 export const GATEWAY_BASE =
   process.env.NEXT_PUBLIC_GATEWAY_BASE ||
   process.env.GATEWAY_BASE ||
+    //"http://localhost:8072"
   "https://gateway.algorycode.com";
 
 /** Backend ile uyumlu: access token 5 dk (JWT expiration, ms) */

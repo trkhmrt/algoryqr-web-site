@@ -139,9 +139,56 @@ const formatQrContent = (details: Record<string, unknown>) => {
   if ("phone" in details && "fullName" in details) return String(details.phone ?? "");
   if ("text" in details) return String(details.text ?? "");
   if ("latitude" in details && "longitude" in details) {
-    return `${String(details.latitude ?? "")}, ${String(details.longitude ?? "")}`;
+    const label = "label" in details ? String(details.label ?? "") : "";
+    const coords = `${String(details.latitude ?? "")}, ${String(details.longitude ?? "")}`;
+    return label ? `${label} (${coords})` : coords;
   }
-  return JSON.stringify(details);
+  return "Detay mevcut";
+};
+
+const getReadableDetailRows = (details: Record<string, unknown>) => {
+  if ("url" in details) {
+    return [{ label: "Link", value: String(details.url ?? "") }];
+  }
+
+  if ("ssid" in details) {
+    return [
+      { label: "SSID", value: String(details.ssid ?? "") },
+      { label: "Güvenlik", value: String(details.security ?? "") },
+    ];
+  }
+
+  if ("mail" in details && !("fullName" in details)) {
+    return [
+      { label: "Mail", value: String(details.mail ?? "") },
+      { label: "Konu", value: String(details.subject ?? "") },
+      { label: "Mesaj", value: String(details.body ?? "") },
+    ];
+  }
+
+  if ("fullName" in details) {
+    return [
+      { label: "Ad Soyad", value: String(details.fullName ?? "") },
+      { label: "Telefon", value: String(details.phone ?? "") },
+      { label: "Mail", value: String(details.mail ?? "") },
+      { label: "Şirket", value: String(details.company ?? "") },
+      { label: "Ünvan", value: String(details.title ?? "") },
+    ];
+  }
+
+  if ("text" in details) {
+    return [{ label: "Metin", value: String(details.text ?? "") }];
+  }
+
+  if ("latitude" in details && "longitude" in details) {
+    return [
+      { label: "Enlem", value: String(details.latitude ?? "") },
+      { label: "Boylam", value: String(details.longitude ?? "") },
+      { label: "Etiket", value: String(details.label ?? "") },
+    ];
+  }
+
+  return [];
 };
 
 const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => ({
@@ -701,6 +748,12 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                             <div key={row.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                               <span className="text-sm text-muted-foreground">{row.label}</span>
                               <span className="text-sm font-medium text-foreground">{row.value}</span>
+                            </div>
+                          ))}
+                          {getReadableDetailRows(selectedQR.details).map((row) => (
+                            <div key={row.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                              <span className="text-sm text-muted-foreground">{row.label}</span>
+                              <span className="text-sm font-medium text-foreground text-right max-w-[60%] break-words">{row.value || "—"}</span>
                             </div>
                           ))}
                         </div>
