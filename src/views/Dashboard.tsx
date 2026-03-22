@@ -578,12 +578,12 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
           {/* ── QR Codes ── */}
           {!isLoading && activeTab === "codes" && !selectedQR && (
             <div className="space-y-6 animate-fade-in">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h1 className="text-2xl font-semibold tracking-tight text-foreground">QR Kodlarım</h1>
                   <p className="text-sm text-muted-foreground">{userQrs.length} QR kod oluşturuldu</p>
                 </div>
-                <Button variant="hero" size="sm" className="gap-2" onClick={() => handleTabChange("create")}>
+                <Button variant="hero" size="sm" className="gap-2 self-start sm:self-auto" onClick={() => handleTabChange("create")}>
                   <Plus className="h-4 w-4" />
                   Yeni QR Kod
                 </Button>
@@ -596,33 +596,41 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                     className="glow-card cursor-pointer transition-colors hover:bg-accent/30"
                     onClick={() => { setSelectedQR(qr); setIsEditing(false); }}
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                            <QrCode className="h-6 w-6 text-muted-foreground" />
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0 flex items-start gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted sm:h-12 sm:w-12">
+                            {qr.imgSrc ? (
+                              <img
+                                src={`data:image/png;base64,${qr.imgSrc}`}
+                                alt={`${qr.name} QR kodu`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <QrCode className="h-6 w-6 text-muted-foreground" />
+                            )}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-sm">{qr.name}</h3>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${qr.active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+                              <h3 className="break-words pr-2 font-semibold text-sm leading-5">{qr.name}</h3>
+                              <span className={`inline-flex w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${qr.active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                                 {qr.active ? "Aktif" : "Pasif"}
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{qr.content}</p>
-                            <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{qr.scans} tarama</span>
-                              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{qr.created}</span>
-                              <span className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{qr.type}</span>
+                            <p className="mt-0.5 break-words text-xs leading-5 text-muted-foreground">{qr.content}</p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                              <span className="flex items-center gap-1 whitespace-nowrap"><Eye className="h-3 w-3" />{qr.scans} tarama</span>
+                              <span className="flex items-center gap-1 whitespace-nowrap"><Calendar className="h-3 w-3" />{qr.created}</span>
+                              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] whitespace-nowrap">{qr.type}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><Copy className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><Download className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><Share2 className="h-3.5 w-3.5" /></Button>
+                        <div className="flex flex-wrap items-center gap-1 border-t border-border/60 pt-2 lg:justify-end lg:border-0 lg:pt-0" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"><Copy className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"><Download className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"><Share2 className="h-3.5 w-3.5" /></Button>
                           <Button
-                            variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+                            variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"
                             onClick={() => {
                               setSelectedQR(qr);
                               setIsEditing(true);
@@ -633,7 +641,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive sm:h-8 sm:w-8"><Trash2 className="h-3.5 w-3.5" /></Button>
                         </div>
                       </div>
                     </CardContent>
