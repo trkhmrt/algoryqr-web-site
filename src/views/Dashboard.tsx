@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { createQrRequest, getStoredUser, QrResponse, StoredUser } from "@/lib/api";
+import { createQrRequest, getStoredUser, getUserQrsRequest, QrResponse, StoredUser, UserQrApiItem } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,14 +39,6 @@ import {
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
-
-// ── Fake data ──────────────────────────────────────────
-const fakeQRCodes = [
-  { id: 1, name: "Web Sitesi QR", url: "https://algorycode.com", scans: 1284, created: "2026-02-15", type: "URL", active: true },
-  { id: 2, name: "LinkedIn Profil", url: "https://linkedin.com/in/user", scans: 856, created: "2026-02-20", type: "URL", active: true },
-  { id: 3, name: "Menü QR", url: "https://menu.example.com", scans: 2341, created: "2026-01-10", type: "URL", active: true },
-  { id: 4, name: "WiFi QR", url: "WIFI:T:WPA;S:MyNetwork;P:pass123;;", scans: 445, created: "2026-03-01", type: "WiFi", active: false },
-];
 
 const metrics = [
   { label: "Toplam Tarama", value: "4,926", change: "+12.5%", up: true, icon: Eye },
@@ -87,28 +79,28 @@ function useTooltipStyle() {
 }
 
 const qrTypes: Array<{ value: QrTypeValue; label: string; icon: typeof LinkIcon; desc: string }> = [
-  { value: "url", label: "URL / Link", icon: LinkIcon, desc: "Web sitesi veya sayfa linki" },
+  { value: "link", label: "URL / Link", icon: LinkIcon, desc: "Web sitesi veya sayfa linki" },
   { value: "wifi", label: "WiFi", icon: Wifi, desc: "WiFi ağ bilgileri" },
-  { value: "email", label: "E-posta", icon: Mail, desc: "E-posta adresi ve mesaj" },
-  { value: "phone", label: "Telefon", icon: Phone, desc: "Telefon numarası" },
+  { value: "mail", label: "E-posta", icon: Mail, desc: "E-posta adresi ve mesaj" },
+  { value: "contact", label: "İletişim", icon: Phone, desc: "Kişi kartı bilgileri" },
   { value: "text", label: "Metin", icon: FileText, desc: "Serbest metin içeriği" },
   { value: "location", label: "Konum", icon: MapPin, desc: "GPS koordinatları" },
 ];
 
 const createInitialQrTypeData = (): QrTypeData => ({
-  url: "",
-  wifi: { ssid: "", password: "", encryption: "wpa" },
-  email: { to: "", subject: "", body: "" },
-  phone: "",
+  link: "",
+  wifi: { ssid: "", password: "", security: "WPA" },
+  mail: { mail: "", subject: "", body: "" },
+  contact: { fullName: "", phone: "", mail: "", company: "", title: "" },
   text: "",
-  location: { lat: "", lng: "" },
+  location: { latitude: "", longitude: "", label: "" },
 });
 
 const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
-  if (type === "url") return { url: data.url };
+  if (type === "link") return { url: data.link };
   if (type === "wifi") return data.wifi;
-  if (type === "email") return data.email;
-  if (type === "phone") return { phone: data.phone };
+  if (type === "mail") return data.mail;
+  if (type === "contact") return data.contact;
   if (type === "text") return { text: data.text };
   return data.location;
 };
@@ -116,6 +108,54 @@ const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
 interface DashboardProps {
   initialUser?: StoredUser | null;
 }
+
+type DashboardQrItem = {
+  id: number;
+  userId: number;
+  name: string;
+  content: string;
+  scans: number;
+  created: string;
+  type: string;
+  active: boolean;
+  imgSrc: string;
+  details: Record<string, unknown>;
+};
+
+const formatQrType = (details: Record<string, unknown>) => {
+  if ("ssid" in details) return "WiFi";
+  if ("url" in details) return "Link";
+  if ("fullName" in details) return "İletişim";
+  if ("mail" in details) return "E-Posta";
+  if ("latitude" in details) return "Konum";
+  if ("text" in details) return "Metin";
+  return "QR";
+};
+
+const formatQrContent = (details: Record<string, unknown>) => {
+  if ("url" in details) return String(details.url ?? "");
+  if ("ssid" in details) return String(details.ssid ?? "");
+  if ("mail" in details && !("fullName" in details)) return String(details.mail ?? "");
+  if ("phone" in details && "fullName" in details) return String(details.phone ?? "");
+  if ("text" in details) return String(details.text ?? "");
+  if ("latitude" in details && "longitude" in details) {
+    return `${String(details.latitude ?? "")}, ${String(details.longitude ?? "")}`;
+  }
+  return JSON.stringify(details);
+};
+
+const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => ({
+  id: qr.qrId,
+  userId: qr.userId,
+  name: qr.qrName,
+  content: formatQrContent(qr.details),
+  scans: 0,
+  created: new Date(qr.createdAt).toLocaleDateString("tr-TR"),
+  type: formatQrType(qr.details),
+  active: true,
+  imgSrc: qr.imgSrc,
+  details: qr.details,
+});
 
 const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const tooltipStyle = useTooltipStyle();
@@ -141,16 +181,17 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const [banners, setBanners] = useState<Array<{ id: string; type: "info" | "warning" | "danger"; message: string }>>([]);
 
   // QR Creation state
-  const [selectedQrType, setSelectedQrType] = useState<QrTypeValue>("url");
+  const [selectedQrType, setSelectedQrType] = useState<QrTypeValue>("link");
   const [qrName, setQrName] = useState("");
   const [qrTypeData, setQrTypeData] = useState<QrTypeData>(() => createInitialQrTypeData());
   const [qrColor, setQrColor] = useState("#000000");
   const [qrBgColor, setQrBgColor] = useState("#ffffff");
   const [qrTracking, setQrTracking] = useState(true);
   const [latestQrResponse, setLatestQrResponse] = useState<QrResponse | null>(null);
+  const [userQrs, setUserQrs] = useState<DashboardQrItem[]>([]);
 
   // QR Detail/Edit state
-  const [selectedQR, setSelectedQR] = useState<typeof fakeQRCodes[0] | null>(null);
+  const [selectedQR, setSelectedQR] = useState<DashboardQrItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
@@ -159,6 +200,29 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const removeBanner = useCallback((id: string) => {
     setBanners((prev) => prev.filter((b) => b.id !== id));
   }, []);
+
+  const fetchUserQrs = useCallback(async () => {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    try {
+      const response = await getUserQrsRequest(user.id);
+      setUserQrs(response.map(mapUserQrToDashboardItem));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "QR kodlar getirilemedi.";
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "danger", message }]);
+      setTimeout(() => removeBanner(id), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [removeBanner, user?.id]);
+
+  useEffect(() => {
+    if (activeTab === "codes") {
+      void fetchUserQrs();
+    }
+  }, [activeTab, fetchUserQrs]);
 
   const triggerNotification = useCallback((type: "info" | "warning" | "danger") => {
     const id = Date.now().toString();
@@ -198,7 +262,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
       setQrTypeData(createInitialQrTypeData());
       setQrColor("#000000");
       setQrBgColor("#ffffff");
-      setSelectedQrType("url");
+      setSelectedQrType("link");
     } catch (error) {
       const message = error instanceof Error ? error.message : "QR kod oluşturulamadı.";
       const id = Date.now().toString();
@@ -470,7 +534,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-semibold tracking-tight text-foreground">QR Kodlarım</h1>
-                  <p className="text-sm text-muted-foreground">{fakeQRCodes.length} QR kod oluşturuldu</p>
+                  <p className="text-sm text-muted-foreground">{userQrs.length} QR kod oluşturuldu</p>
                 </div>
                 <Button variant="hero" size="sm" className="gap-2" onClick={() => handleTabChange("create")}>
                   <Plus className="h-4 w-4" />
@@ -479,7 +543,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
               </div>
 
               <div className="grid gap-4">
-                {fakeQRCodes.map((qr) => (
+                {userQrs.map((qr) => (
                   <Card
                     key={qr.id}
                     className="glow-card cursor-pointer transition-colors hover:bg-accent/30"
@@ -498,7 +562,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                                 {qr.active ? "Aktif" : "Pasif"}
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{qr.url}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{qr.content}</p>
                             <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{qr.scans} tarama</span>
                               <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{qr.created}</span>
@@ -516,7 +580,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                               setSelectedQR(qr);
                               setIsEditing(true);
                               setEditName(qr.name);
-                              setEditUrl(qr.url);
+                              setEditUrl(qr.content);
                               setEditActive(qr.active);
                             }}
                           >
@@ -558,7 +622,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                     onClick={() => {
                       setIsEditing(true);
                       setEditName(selectedQR.name);
-                      setEditUrl(selectedQR.url);
+                      setEditUrl(selectedQR.content);
                       setEditActive(selectedQR.active);
                     }}
                   >
@@ -579,7 +643,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground">
-                          {selectedQR.type === "WiFi" ? "WiFi Bilgisi" : "URL"}
+                          {selectedQR.type === "WiFi" ? "WiFi Bilgisi" : "URL / İçerik"}
                         </Label>
                         <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="bg-background" />
                       </div>
@@ -629,7 +693,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                         <div className="space-y-3">
                           {[
                             { label: "Ad", value: selectedQR.name },
-                            { label: "URL / İçerik", value: selectedQR.url },
+                            { label: "URL / İçerik", value: selectedQR.content },
                             { label: "Tür", value: selectedQR.type },
                             { label: "Durum", value: selectedQR.active ? "Aktif" : "Pasif" },
                             { label: "Oluşturulma Tarihi", value: selectedQR.created },
@@ -677,8 +741,16 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                 <div className="space-y-6">
                   <div className="rounded-lg border border-border bg-card p-6 sticky top-6">
                     <h2 className="text-sm font-medium text-foreground mb-4">QR Kod</h2>
-                    <div className="aspect-square rounded-lg border border-border bg-background flex items-center justify-center">
-                      <QrCode className="h-24 w-24 text-foreground" />
+                    <div className="aspect-square rounded-lg border border-border bg-background flex items-center justify-center overflow-hidden">
+                      {selectedQR.imgSrc ? (
+                        <img
+                          src={`data:image/png;base64,${selectedQR.imgSrc}`}
+                          alt={`${selectedQR.name} QR kodu`}
+                          className="h-full w-full object-contain p-4"
+                        />
+                      ) : (
+                        <QrCode className="h-24 w-24 text-foreground" />
+                      )}
                     </div>
                     <div className="mt-4 space-y-2 text-xs">
                       <div className="flex justify-between">
@@ -872,7 +944,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                           setQrTypeData(createInitialQrTypeData());
                           setQrColor("#000000");
                           setQrBgColor("#ffffff");
-                          setSelectedQrType("url");
+                          setSelectedQrType("link");
                           setLatestQrResponse(null);
                         }}
                       >

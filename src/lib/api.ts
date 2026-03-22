@@ -54,22 +54,27 @@ export type QrRequestDetails =
   | {
       ssid: string;
       password: string;
-      encryption: "wpa" | "wep" | "none";
+      security: "WPA" | "WEP" | "NONE";
     }
   | {
-      to: string;
+      mail: string;
       subject: string;
       body: string;
     }
   | {
+      fullName: string;
       phone: string;
+      mail: string;
+      company: string;
+      title: string;
     }
   | {
       text: string;
     }
   | {
-      lat: string;
-      lng: string;
+      latitude: string;
+      longitude: string;
+      label: string;
     };
 
 export interface CreateQrRequestBody {
@@ -94,62 +99,24 @@ export interface CreateQrResponse {
   qrResponse: QrResponse;
 }
 
+export interface UserQrApiItem {
+  qrId: number;
+  userId: number;
+  qrName: string;
+  imgSrc: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
 type CreateQrGatewayResponse = {
   imgSrc: string;
 };
 
-const mapTypeForGateway = (type: string) => {
-  if (type === "url") return "link";
-  return type;
-};
-
-const isWifiDetails = (
-  details: QrRequestDetails
-): details is Extract<QrRequestDetails, { ssid: string; password: string; encryption: "wpa" | "wep" | "none" }> => {
-  return "ssid" in details && "password" in details && "encryption" in details;
-};
-
-const mapDetailsForGateway = (type: string, details: QrRequestDetails) => {
-  if (type === "url") {
-    return "url" in details ? details : { url: "" };
-  }
-
-  if (type === "wifi" && isWifiDetails(details)) {
-    return {
-      ssid: details.ssid,
-      password: details.password,
-      security:
-        details.encryption === "none"
-          ? "NONE"
-          : details.encryption.toUpperCase(),
-    };
-  }
-
-  if (type === "email") {
-    return "to" in details ? details : { to: "", subject: "", body: "" };
-  }
-
-  if (type === "phone") {
-    return "phone" in details ? details : { phone: "" };
-  }
-
-  if (type === "text") {
-    return "text" in details ? details : { text: "" };
-  }
-
-  if (type === "location") {
-    return "lat" in details && "lng" in details ? details : { lat: "", lng: "" };
-  }
-
-  return details;
-};
-
 export async function createQrRequest(payload: CreateQrRequestBody): Promise<CreateQrResponse> {
-  const gatewayType = mapTypeForGateway(payload.type);
   const requestBody = {
     qrName: payload.qrName,
-    type: gatewayType,
-    details: mapDetailsForGateway(payload.type, payload.details),
+    type: payload.type,
+    details: payload.details,
   };
   const response = await api.post<CreateQrGatewayResponse>("/qr/create", requestBody);
   const now = new Date().toISOString();
@@ -167,6 +134,11 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
       scans: 0,
     },
   };
+}
+
+export async function getUserQrsRequest(userId: number | string): Promise<UserQrApiItem[]> {
+  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`);
+  return response.data;
 }
 
 api.interceptors.response.use(
