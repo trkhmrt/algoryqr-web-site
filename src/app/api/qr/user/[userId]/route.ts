@@ -14,7 +14,7 @@ export async function GET(_req: Request, context: { params: Promise<{ userId: st
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const upstream = await fetch(`${GATEWAY_BASE}/gateway/qr/user/${userId}`, {
+    const upstream = await fetch(`${GATEWAY_BASE}/qr/user/${userId}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
