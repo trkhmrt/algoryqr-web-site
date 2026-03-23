@@ -100,6 +100,26 @@ export interface CreateQrResponse {
   qrResponse: QrResponse;
 }
 
+export interface UpdateQrRequestBody {
+  userId?: number | string;
+  qrName: string;
+  type: string;
+  details: QrRequestDetails;
+}
+
+type UpdateQrGatewayResponse = {
+  imgSrc: string;
+};
+
+export interface UpdateQrNameRequestBody {
+  qrName: string;
+}
+
+type UpdateQrNameGatewayResponse = {
+  qrName?: string;
+  id?: number | string;
+};
+
 export interface UserQrApiItem {
   qrId: number;
   userId: number;
@@ -139,6 +159,33 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
 
 export async function getUserQrsRequest(userId: number | string): Promise<UserQrApiItem[]> {
   const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`);
+  return response.data;
+}
+
+export async function deleteQrRequest(qrId: number | string): Promise<string> {
+  const response = await api.delete<string>(`/qr/delete/${qrId}`);
+  return response.data;
+}
+
+export async function updateQrRequest(
+  qrId: number | string,
+  payload: UpdateQrRequestBody
+): Promise<UpdateQrGatewayResponse> {
+  const requestBody = {
+    userId: payload.userId,
+    qrName: payload.qrName,
+    type: payload.type,
+    details: payload.details,
+  };
+  const response = await api.put<UpdateQrGatewayResponse>(`/qr/update/${qrId}`, requestBody);
+  return response.data;
+}
+
+export async function updateQrNameRequest(
+  qrId: number | string,
+  payload: UpdateQrNameRequestBody
+): Promise<UpdateQrNameGatewayResponse> {
+  const response = await api.patch<UpdateQrNameGatewayResponse>(`/qr/update-name/${qrId}`, payload);
   return response.data;
 }
 

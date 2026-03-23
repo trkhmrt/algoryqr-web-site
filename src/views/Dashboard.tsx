@@ -2,12 +2,23 @@
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { createQrRequest, getStoredUser, getUserQrsRequest, QrResponse, StoredUser, UserQrApiItem } from "@/lib/api";
+import { createQrRequest, deleteQrRequest, getStoredUser, getUserQrsRequest, QrResponse, StoredUser, updateQrNameRequest, updateQrRequest, UserQrApiItem } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTrigger,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -103,6 +114,68 @@ const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
   if (type === "contact") return data.contact;
   if (type === "text") return { text: data.text };
   return data.location;
+};
+
+const getBackendTypeFromDetails = (details: Record<string, unknown>): QrTypeValue => {
+  if ("url" in details) return "link";
+  if ("ssid" in details) return "wifi";
+  if ("mail" in details && !("fullName" in details)) return "mail";
+  if ("fullName" in details) return "contact";
+  if ("text" in details) return "text";
+  return "location";
+};
+
+const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrTypeData => {
+  const base = createInitialQrTypeData();
+  if ("url" in details) return { ...base, link: String(details.url ?? "") };
+
+  if ("ssid" in details) {
+    const securityRaw = String(details.security ?? "WPA");
+    const security = (securityRaw === "WPA" || securityRaw === "WEP" || securityRaw === "NONE") ? securityRaw : "WPA";
+    return {
+      ...base,
+      wifi: {
+        ssid: String(details.ssid ?? ""),
+        password: String(details.password ?? ""),
+        security,
+      },
+    };
+  }
+
+  if ("mail" in details && !("fullName" in details)) {
+    return {
+      ...base,
+      mail: {
+        mail: String(details.mail ?? ""),
+        subject: String(details.subject ?? ""),
+        body: String(details.body ?? ""),
+      },
+    };
+  }
+
+  if ("fullName" in details) {
+    return {
+      ...base,
+      contact: {
+        fullName: String(details.fullName ?? ""),
+        phone: String(details.phone ?? ""),
+        mail: String(details.mail ?? ""),
+        company: String(details.company ?? ""),
+        title: String(details.title ?? ""),
+      },
+    };
+  }
+
+  if ("text" in details) return { ...base, text: String(details.text ?? "") };
+
+  return {
+    ...base,
+    location: {
+      latitude: String(details.latitude ?? ""),
+      longitude: String(details.longitude ?? ""),
+      label: String(details.label ?? ""),
+    },
+  };
 };
 
 interface DashboardProps {
@@ -241,29 +314,194 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const [selectedQR, setSelectedQR] = useState<DashboardQrItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editUrl, setEditUrl] = useState("");
   const [editActive, setEditActive] = useState(true);
+  const [editQrType, setEditQrType] = useState<QrTypeValue>("link");
+  const [editQrTypeData, setEditQrTypeData] = useState<QrTypeData>(() => createInitialQrTypeData());
+
+  // UI: Kaydet butonunun hangi uyarıyı göstermesi gerektiğini belirler.
+  const editNameTrimmed = editName.trim();
+  const editOriginalType = selectedQR ? getBackendTypeFromDetails(selectedQR.details) : editQrType;
+  const editOriginalDetailsData = selectedQR ? mapDetailsToQrTypeData(selectedQR.details) : createInitialQrTypeData();
+  const nameChangedForUi = selectedQR ? editNameTrimmed !== selectedQR.name : false;
+  const activeUnchangedForUi = selectedQR ? editActive === selectedQR.active : false;
+  const detailsUnchangedForUi = selectedQR
+    ? editQrType === editOriginalType && JSON.stringify(editQrTypeData) === JSON.stringify(editOriginalDetailsData)
+    : false;
+  const nameOnlyEditForUi = selectedQR ? nameChangedForUi && activeUnchangedForUi && detailsUnchangedForUi : false;
+  const hasChangesForUi = selectedQR ? nameChangedForUi || !activeUnchangedForUi || !detailsUnchangedForUi : false;
 
   const removeBanner = useCallback((id: string) => {
     setBanners((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
-  const fetchUserQrs = useCallback(async () => {
-    if (!user?.id) return;
+  const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
+    if (!user?.id) return [];
 
     setIsLoading(true);
     try {
       const response = await getUserQrsRequest(user.id);
-      setUserQrs(response.map(mapUserQrToDashboardItem));
+      const mapped = response.map(mapUserQrToDashboardItem);
+      setUserQrs(mapped);
+      return mapped;
     } catch (error) {
       const message = error instanceof Error ? error.message : "QR kodlar getirilemedi.";
       const id = Date.now().toString();
       setBanners((prev) => [...prev, { id, type: "danger", message }]);
       setTimeout(() => removeBanner(id), 5000);
+      return [];
     } finally {
       setIsLoading(false);
     }
   }, [removeBanner, user?.id]);
+
+  const handleDeleteQr = useCallback(async (qr: DashboardQrItem) => {
+    try {
+      await deleteQrRequest(qr.id);
+      setUserQrs((prev) => prev.filter((item) => item.id !== qr.id));
+      setSelectedQR((prev) => (prev?.id === qr.id ? null : prev));
+      setIsEditing(false);
+
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "info", message: `"${qr.name}" silindi.` }]);
+      setTimeout(() => removeBanner(id), 4000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "QR kod silinemedi.";
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "danger", message }]);
+      setTimeout(() => removeBanner(id), 5000);
+    }
+  }, [removeBanner]);
+
+  const handleSaveQrEdit = useCallback(async () => {
+    if (!selectedQR) return;
+
+    const trimmedName = editName.trim();
+
+    if (!trimmedName) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "QR kod adı zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+
+    const originalType = getBackendTypeFromDetails(selectedQR.details);
+    const originalDetailsData = mapDetailsToQrTypeData(selectedQR.details);
+    const nameChanged = trimmedName !== selectedQR.name;
+    const activeUnchanged = editActive === selectedQR.active;
+    const detailsUnchanged = editQrType === originalType && JSON.stringify(editQrTypeData) === JSON.stringify(originalDetailsData);
+
+    // Hiçbir şey değişmediyse çağrı yapma.
+    if (!nameChanged && activeUnchanged && detailsUnchanged) {
+      setIsEditing(false);
+      return;
+    }
+
+    const nameOnlyEdit = nameChanged && activeUnchanged && detailsUnchanged;
+
+    // Name-only edit: PATCH /qr/update-name -> yeni QR üretmez.
+    if (nameOnlyEdit) {
+      try {
+        await updateQrNameRequest(selectedQR.id, { qrName: trimmedName });
+        const refreshedQrs = await fetchUserQrs();
+        const refreshedSelected = refreshedQrs.find((item) => item.id === selectedQR.id) || null;
+        setSelectedQR(refreshedSelected);
+        setIsEditing(false);
+        setEditActive(refreshedSelected?.active ?? selectedQR.active);
+
+        const id = Date.now().toString();
+        setBanners((prev) => [...prev, { id, type: "info", message: `"${trimmedName}" adı güncellendi.` }]);
+        setTimeout(() => removeBanner(id), 4000);
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "QR adı güncellenemedi.";
+        const id = Date.now().toString();
+        setBanners((prev) => [...prev, { id, type: "danger", message }]);
+        setTimeout(() => removeBanner(id), 5000);
+        return;
+      }
+    }
+
+    const details = getQrDetailsByType(editQrType, editQrTypeData);
+    if (editQrType === "link" && !String((details as { url?: string }).url ?? "").trim()) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "URL zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+    if (editQrType === "wifi" && !String((details as { ssid?: string }).ssid ?? "").trim()) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "WiFi SSID zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+    if (editQrType === "mail" && !String((details as { mail?: string }).mail ?? "").trim()) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "E-posta adresi zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+    if (editQrType === "contact" && !String((details as { fullName?: string }).fullName ?? "").trim()) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "Ad Soyad zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+    if (editQrType === "text" && !String((details as { text?: string }).text ?? "").trim()) {
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "warning", message: "Metin zorunlu." }]);
+      setTimeout(() => removeBanner(id), 4000);
+      return;
+    }
+    if (editQrType === "location") {
+      const latitude = String((details as { latitude?: string }).latitude ?? "").trim();
+      const longitude = String((details as { longitude?: string }).longitude ?? "").trim();
+      if (!latitude || !longitude) {
+        const id = Date.now().toString();
+        setBanners((prev) => [...prev, { id, type: "warning", message: "Enlem/Boylam zorunlu." }]);
+        setTimeout(() => removeBanner(id), 4000);
+        return;
+      }
+    }
+
+    try {
+      const updateResponse = await updateQrRequest(selectedQR.id, {
+        userId: selectedQR.userId,
+        qrName: trimmedName,
+        type: editQrType,
+        details,
+      });
+
+      const refreshedQrs = await fetchUserQrs();
+      const refreshedSelected =
+        refreshedQrs.find((item) => item.imgSrc === updateResponse.imgSrc) || refreshedQrs[0] || null;
+
+      setSelectedQR(refreshedSelected);
+      setIsEditing(false);
+      if (refreshedSelected) {
+        setEditName(refreshedSelected.name);
+        setEditActive(refreshedSelected.active);
+        const refreshedType = getBackendTypeFromDetails(refreshedSelected.details);
+        setEditQrType(refreshedType);
+        setEditQrTypeData(mapDetailsToQrTypeData(refreshedSelected.details));
+      }
+
+      const id = Date.now().toString();
+      setBanners((prev) => [
+        ...prev,
+        {
+          id,
+          type: "warning",
+          message: `"${trimmedName}" güncellendi. Güncelleme yeni bir QR oluşturur; eski QR devre dışı kalır.`,
+        },
+      ]);
+      setTimeout(() => removeBanner(id), 4000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "QR kod güncellenemedi.";
+      const id = Date.now().toString();
+      setBanners((prev) => [...prev, { id, type: "danger", message }]);
+      setTimeout(() => removeBanner(id), 5000);
+    }
+  }, [editActive, editName, editQrType, editQrTypeData, fetchUserQrs, removeBanner, selectedQR]);
 
   useEffect(() => {
     if (activeTab === "codes") {
@@ -635,13 +873,33 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                               setSelectedQR(qr);
                               setIsEditing(true);
                               setEditName(qr.name);
-                              setEditUrl(qr.content);
                               setEditActive(qr.active);
+                              const backendType = getBackendTypeFromDetails(qr.details);
+                              setEditQrType(backendType);
+                              setEditQrTypeData(mapDetailsToQrTypeData(qr.details));
                             }}
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive sm:h-8 sm:w-8"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive sm:h-8 sm:w-8">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>QR silinsin mi?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  <span className="font-medium">{qr.name}</span> QR’ını tamamen silersiniz. Bu işlem geri alınamaz.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => void handleDeleteQr(qr)}>Sil</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardContent>
@@ -677,8 +935,10 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                     onClick={() => {
                       setIsEditing(true);
                       setEditName(selectedQR.name);
-                      setEditUrl(selectedQR.content);
                       setEditActive(selectedQR.active);
+                      const backendType = getBackendTypeFromDetails(selectedQR.details);
+                      setEditQrType(backendType);
+                      setEditQrTypeData(mapDetailsToQrTypeData(selectedQR.details));
                     }}
                   >
                     <Edit className="h-3.5 w-3.5" />
@@ -697,10 +957,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-background" />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">
-                          {selectedQR.type === "WiFi" ? "WiFi Bilgisi" : "URL / İçerik"}
-                        </Label>
-                        <Input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="bg-background" />
+                        <QrTypeDetails selectedType={editQrType} data={editQrTypeData} onChange={setEditQrTypeData} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
@@ -710,18 +967,40 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                         <Switch checked={editActive} onCheckedChange={setEditActive} />
                       </div>
                       <div className="flex gap-3 pt-2">
-                        <Button
-                          className="gap-2"
-                          onClick={() => {
-                            const id = Date.now().toString();
-                            setBanners((prev) => [...prev, { id, type: "info", message: `"${editName}" başarıyla güncellendi!` }]);
-                            setTimeout(() => removeBanner(id), 4000);
-                            setIsEditing(false);
-                          }}
-                        >
-                          <Check className="h-4 w-4" />
-                          Kaydet
-                        </Button>
+                        {nameOnlyEditForUi ? (
+                          <Button className="gap-2" onClick={() => void handleSaveQrEdit()}>
+                            <Check className="h-4 w-4" />
+                            Kaydet
+                          </Button>
+                        ) : hasChangesForUi ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button className="gap-2">
+                                <Check className="h-4 w-4" />
+                                Kaydet
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Kaydet onayı</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Güncelleme yeni bir QR oluşturur; eski QR devre dışı kalır. Devam edilsin mi?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>İptal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => void handleSaveQrEdit()}>
+                                  Onayla
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <Button className="gap-2" disabled>
+                            <Check className="h-4 w-4" />
+                            Kaydet
+                          </Button>
+                        )}
                         <Button variant="outline" onClick={() => setIsEditing(false)}>
                           İptal
                         </Button>
@@ -829,7 +1108,29 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
                       <Button variant="outline" size="sm" className="gap-1.5"><Download className="h-3.5 w-3.5" /> İndir</Button>
                       <Button variant="outline" size="sm" className="gap-1.5"><Copy className="h-3.5 w-3.5" /> Kopyala</Button>
                       <Button variant="outline" size="sm" className="gap-1.5"><Share2 className="h-3.5 w-3.5" /> Paylaş</Button>
-                      <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /> Sil</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Sil
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>QR silinsin mi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              <span className="font-medium">{selectedQR.name}</span> QR’ını tamamen silersiniz. Bu işlem geri alınamaz.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => void handleDeleteQr(selectedQR)}>Sil</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </div>
