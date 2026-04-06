@@ -3,19 +3,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { invalidateMyProfile, useMyProfile } from "@/hooks/use-my-profile";
+import { getJsonErrorText } from "@/lib/api-error-text";
 import {
   User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
-  Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages, Monitor,
-  Copy, Eye, EyeOff, Plus, Trash2, RefreshCw, LogOut, Timer,
+  Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages,
+  Eye, EyeOff, RefreshCw, LogOut, Timer,
 } from "lucide-react";
 import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
+import { authService } from "@/lib/auth-service";
+import { ApiError } from "@/lib/api";
+import { useTheme } from "@/hooks/use-theme";
 
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
 
@@ -53,8 +58,26 @@ function formatRefreshIn(remainingMs: number): string {
   return `${m} dk ${s} sn sonra`;
 }
 
+function formatMemberSince(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("tr-TR", { year: "numeric", month: "long", day: "numeric" }).format(d);
+}
+
+function ComingSoonBadge() {
+  return (
+    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium shrink-0">
+      Çok yakında
+    </span>
+  );
+}
+
 export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyProfile();
+  const { theme, setTheme } = useTheme();
   const [page, setPage] = useState<SettingsPage>("main");
 
   // Token / session state (session sayfası için)
@@ -69,32 +92,38 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [revokeLoading, setRevokeLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
 
-  // Profile state
-  const [firstName, setFirstName] = useState("Ahmet");
-  const [lastName, setLastName] = useState("Yılmaz");
-  const [email, setEmail] = useState("ahmet@algorycode.com");
-  const [phone, setPhone] = useState("+90 555 123 4567");
-  const [bio, setBio] = useState("QR kod tutkunu, dijital pazarlamacı.");
+  // Profile state (sunucudan doldurulur)
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
 
   // Security state
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
-  const [sessionAlerts, setSessionAlerts] = useState(true);
+  const [currentPasswordForChange, setCurrentPasswordForChange] = useState("");
+  const [newPasswordForChange, setNewPasswordForChange] = useState("");
+  const [confirmPasswordForChange, setConfirmPasswordForChange] = useState("");
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const twoFactorEnabled = myProfile?.twoFactorEnabled ?? false;
+  const [twoFactorQrObjectUrl, setTwoFactorQrObjectUrl] = useState<string | null>(null);
+  const [twoFactorSetupLoading, setTwoFactorSetupLoading] = useState(false);
+  const [twoFactorActivateLoading, setTwoFactorActivateLoading] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpDisableCode, setTotpDisableCode] = useState("");
+  const [twoFactorDisableLoading, setTwoFactorDisableLoading] = useState(false);
 
   // Notification state
-  const [emailNotifs, setEmailNotifs] = useState(true);
-  const [pushNotifs, setPushNotifs] = useState(true);
-  const [scanAlerts, setScanAlerts] = useState(true);
+  const [emailNotifs, setEmailNotifs] = useState(false);
+  const [scanAlerts, setScanAlerts] = useState(false);
   const [weeklyReport, setWeeklyReport] = useState(false);
   const [marketingEmails, setMarketingEmails] = useState(false);
+  const [pushBrowser, setPushBrowser] = useState(false);
+  const [notificationsSaving, setNotificationsSaving] = useState(false);
 
   // Appearance state
   const [language, setLanguage] = useState("tr");
-
-  // API state
-  const [showApiKey, setShowApiKey] = useState(false);
-  const fakeApiKey = "aqr_live_k8x2mN9pRtL4vQ7wBcD3fH6jK0sU1yZ";
 
   const fetchTokenExp = useCallback(() => {
     setTokenLoading(true);
@@ -126,6 +155,23 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   useEffect(() => {
     if (page === "session") fetchTokenExp();
   }, [page, fetchTokenExp]);
+
+  useEffect(() => {
+    if (page !== "profile" || !myProfile) return;
+    setFirstName(myProfile.firstName ?? "");
+    setLastName(myProfile.lastName ?? "");
+    setEmail(myProfile.email ?? "");
+    setPhone(myProfile.phoneNumber ?? "");
+  }, [page, myProfile]);
+
+  useEffect(() => {
+    if (page !== "notifications" || !myProfile) return;
+    setEmailNotifs(myProfile.notifyEmailImportant);
+    setScanAlerts(myProfile.notifyScanAlerts);
+    setWeeklyReport(myProfile.notifyWeeklyReport);
+    setMarketingEmails(myProfile.notifyMarketingEmails);
+    setPushBrowser(myProfile.notifyPushBrowser);
+  }, [page, myProfile]);
 
   useEffect(() => {
     if (accessTokenExpiresAt == null || accessTokenExpiresAt <= 0) return;
@@ -215,6 +261,155 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         }
       })
       .finally(() => setRefreshLoading(false));
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    try {
+      await axios.patch(
+        "/api/account/myprofile",
+        { firstName, lastName, email, phoneNumber: phone },
+        { withCredentials: true }
+      );
+      await invalidateMyProfile(queryClient);
+      onNotify("info", "Profil bilgileriniz güncellendi.");
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      onNotify("danger", err.response?.data?.message ?? "Profil kaydedilemedi.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setNotificationsSaving(true);
+    try {
+      await axios.patch(
+        "/api/account/myprofile",
+        {
+          notifyEmailImportant: emailNotifs,
+          notifyScanAlerts: scanAlerts,
+          notifyWeeklyReport: weeklyReport,
+          notifyMarketingEmails: marketingEmails,
+          notifyPushBrowser: pushBrowser,
+        },
+        { withCredentials: true }
+      );
+      await invalidateMyProfile(queryClient);
+      onNotify("info", "Bildirim tercihleri kaydedildi.");
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      onNotify("danger", err.response?.data?.message ?? "Tercihler kaydedilemedi.");
+    } finally {
+      setNotificationsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    const cur = currentPasswordForChange;
+    const next = newPasswordForChange;
+    const again = confirmPasswordForChange;
+    if (!cur || !next || !again) {
+      onNotify("warning", "Tüm şifre alanlarını doldurun.");
+      return;
+    }
+    if (next.length < 8) {
+      onNotify("warning", "Yeni şifre en az 8 karakter olmalı.");
+      return;
+    }
+    if (next !== again) {
+      onNotify("warning", "Yeni şifre ile tekrarı eşleşmiyor.");
+      return;
+    }
+    setPasswordChangeLoading(true);
+    try {
+      await axios.post(
+        "/api/account/change-password",
+        { currentPassword: cur, newPassword: next },
+        { withCredentials: true }
+      );
+      setCurrentPasswordForChange("");
+      setNewPasswordForChange("");
+      setConfirmPasswordForChange("");
+      onNotify("info", "Şifreniz güncellendi.");
+    } catch (e) {
+      const err = e as { response?: { data?: unknown } };
+      onNotify("danger", getJsonErrorText(err.response?.data) || "Şifre güncellenemedi.");
+    } finally {
+      setPasswordChangeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (twoFactorQrObjectUrl) URL.revokeObjectURL(twoFactorQrObjectUrl);
+    };
+  }, [twoFactorQrObjectUrl]);
+
+  const clearTwoFactorQr = () => {
+    setTwoFactorQrObjectUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setTotpCode("");
+  };
+
+  const handleStartTwoFactorSetup = async () => {
+    setTwoFactorSetupLoading(true);
+    try {
+      const blob = await authService.fetchTwoFactorQr();
+      setTwoFactorQrObjectUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(blob);
+      });
+      setTotpCode("");
+      onNotify("info", "QR hazır. Uygulama ile tarayıp kodu girin.");
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "QR kodu alınamadı.";
+      onNotify("danger", msg);
+    } finally {
+      setTwoFactorSetupLoading(false);
+    }
+  };
+
+  const handleDisableTwoFactor = async () => {
+    const code = totpDisableCode.trim();
+    if (!/^\d{6}$/.test(code)) {
+      onNotify("warning", "Kapatmak için 6 haneli kodu girin.");
+      return;
+    }
+    setTwoFactorDisableLoading(true);
+    try {
+      await authService.disableTwoFactor(code);
+      setTotpDisableCode("");
+      await invalidateMyProfile(queryClient);
+      onNotify("info", "İki adımlı doğrulama kapatıldı.");
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "2FA kapatılamadı.";
+      onNotify("danger", msg);
+    } finally {
+      setTwoFactorDisableLoading(false);
+    }
+  };
+
+  const handleConfirmTwoFactor = async () => {
+    const code = totpCode.trim();
+    if (!/^\d{6}$/.test(code)) {
+      onNotify("warning", "Authenticator’daki 6 haneli kodu girin.");
+      return;
+    }
+    setTwoFactorActivateLoading(true);
+    try {
+      await authService.activateTwoFactor(code);
+      clearTwoFactorQr();
+      await invalidateMyProfile(queryClient);
+      onNotify("info", "İki adımlı doğrulama etkinleştirildi.");
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "Kod doğrulanamadı.";
+      onNotify("danger", msg);
+    } finally {
+      setTwoFactorActivateLoading(false);
+    }
   };
 
   const backButton = (
@@ -335,6 +530,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   }
 
   if (page === "profile") {
+    const avA = (firstName.trim() || myProfile?.firstName || "?").charAt(0).toUpperCase();
+    const avB = (lastName.trim() || myProfile?.lastName || "").charAt(0).toUpperCase();
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
@@ -345,21 +542,34 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
+        {myProfileError ? (
+          <p className="text-sm text-destructive">Profil yüklenemedi. Oturumunuzu kontrol edin.</p>
+        ) : null}
+
         {/* Avatar */}
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-5">
             <div className="relative">
               <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
-                {firstName[0]}{lastName[0]}
+                {myProfileLoading ? "…" : `${avA}${avB || ""}`}
               </div>
-              <button className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors">
+              <button
+                type="button"
+                className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors opacity-50 cursor-not-allowed"
+                disabled
+                aria-label="Fotoğraf (yakında)"
+              >
                 <Camera className="h-3.5 w-3.5" />
               </button>
             </div>
             <div>
-              <p className="font-semibold text-foreground">{firstName} {lastName}</p>
-              <p className="text-xs text-muted-foreground">{email}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Üyelik: Şubat 2026</p>
+              <p className="font-semibold text-foreground">
+                {myProfileLoading ? "Yükleniyor…" : `${firstName || myProfile?.firstName || ""} ${lastName || myProfile?.lastName || ""}`.trim() || "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">{email || myProfile?.email || "—"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Üyelik: {formatMemberSince(myProfile?.memberSince)}
+              </p>
             </div>
           </div>
         </div>
@@ -369,27 +579,43 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Ad</Label>
-              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="bg-background" />
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="bg-background"
+                disabled={myProfileLoading}
+              />
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Soyad</Label>
-              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} className="bg-background" />
+              <Input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="bg-background"
+                disabled={myProfileLoading}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">E-posta</Label>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} className="bg-background" />
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-background"
+              disabled={myProfileLoading}
+            />
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Telefon</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-background" />
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="bg-background"
+              disabled={myProfileLoading}
+            />
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Hakkında</Label>
-            <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="bg-background resize-none" rows={3} />
-          </div>
-          <Button className="gap-2" onClick={() => onNotify("info", "Profil bilgileriniz güncellendi!")}>
-            <Check className="h-4 w-4" /> Kaydet
+          <Button className="gap-2" onClick={handleSaveProfile} disabled={profileSaving || myProfileLoading || myProfileError}>
+            <Check className="h-4 w-4" /> {profileSaving ? "Kaydediliyor…" : "Kaydet"}
           </Button>
         </div>
 
@@ -424,8 +650,15 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Mevcut Şifre</Label>
             <div className="relative">
-              <Input type={showCurrentPass ? "text" : "password"} placeholder="••••••••" className="bg-background pr-10" />
-              <button onClick={() => setShowCurrentPass(!showCurrentPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <Input
+                type={showCurrentPass ? "text" : "password"}
+                placeholder="••••••••"
+                className="bg-background pr-10"
+                value={currentPasswordForChange}
+                onChange={(e) => setCurrentPasswordForChange(e.target.value)}
+                autoComplete="current-password"
+              />
+              <button type="button" onClick={() => setShowCurrentPass(!showCurrentPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
@@ -433,18 +666,32 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Yeni Şifre</Label>
             <div className="relative">
-              <Input type={showNewPass ? "text" : "password"} placeholder="••••••••" className="bg-background pr-10" />
-              <button onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <Input
+                type={showNewPass ? "text" : "password"}
+                placeholder="En az 8 karakter"
+                className="bg-background pr-10"
+                value={newPasswordForChange}
+                onChange={(e) => setNewPasswordForChange(e.target.value)}
+                autoComplete="new-password"
+              />
+              <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Yeni Şifre (Tekrar)</Label>
-            <Input type="password" placeholder="••••••••" className="bg-background" />
+            <Input
+              type="password"
+              placeholder="••••••••"
+              className="bg-background"
+              value={confirmPasswordForChange}
+              onChange={(e) => setConfirmPasswordForChange(e.target.value)}
+              autoComplete="new-password"
+            />
           </div>
-          <Button className="gap-2" onClick={() => onNotify("info", "Şifreniz başarıyla değiştirildi!")}>
-            <Key className="h-4 w-4" /> Şifreyi Güncelle
+          <Button className="gap-2" onClick={handleChangePassword} disabled={passwordChangeLoading}>
+            <Key className="h-4 w-4" /> {passwordChangeLoading ? "Güncelleniyor…" : "Şifreyi Güncelle"}
           </Button>
         </div>
 
@@ -453,19 +700,104 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
             <Smartphone className="h-4 w-4 text-muted-foreground" /> İki Faktörlü Doğrulama
           </h2>
-          <div className="flex items-center justify-between">
+          <div className="space-y-4">
             <div>
-              <p className="text-sm text-foreground">2FA</p>
-              <p className="text-xs text-muted-foreground">Giriş yaparken ek güvenlik katmanı ekleyin</p>
+              <p className="text-sm text-foreground">Authenticator (TOTP)</p>
+              <p className="text-xs text-muted-foreground">
+                Önce QR alın, Google Authenticator ile tarayın; ardından 6 haneli kodu girerek etkinleştirin. Oturum açık olmalı (access token).
+              </p>
             </div>
-            <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
+            {myProfileLoading ? (
+              <p className="text-sm text-muted-foreground">Güvenlik bilgisi yükleniyor…</p>
+            ) : twoFactorEnabled ? (
+              <div className="space-y-3 max-w-sm">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">2FA hesabınızda açık.</p>
+                <p className="text-xs text-muted-foreground">
+                  Kapatmak için Authenticator&apos;dan güncel 6 haneli kodu girin.
+                </p>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Doğrulama kodu</Label>
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="000000"
+                    className="bg-background tracking-widest font-mono"
+                    value={totpDisableCode}
+                    onChange={(e) => setTotpDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                  disabled={twoFactorDisableLoading || totpDisableCode.length !== 6}
+                  onClick={handleDisableTwoFactor}
+                >
+                  {twoFactorDisableLoading ? "Kapatılıyor…" : "2FA'yı kapat"}
+                </Button>
+              </div>
+            ) : !twoFactorQrObjectUrl ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2"
+                disabled={twoFactorSetupLoading}
+                onClick={handleStartTwoFactorSetup}
+              >
+                <Smartphone className="h-4 w-4" />
+                {twoFactorSetupLoading ? "QR hazırlanıyor…" : "QR kodu al"}
+              </Button>
+            ) : (
+              <div className="space-y-4 max-w-sm">
+                <p className="text-xs text-muted-foreground">QR&apos;ı tarayın, sonra uygulamadaki kodu yazın.</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={twoFactorQrObjectUrl}
+                  alt="İki adımlı doğrulama QR"
+                  width={200}
+                  height={200}
+                  className="rounded-md border border-border bg-white p-2"
+                />
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">6 haneli kod</Label>
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="000000"
+                    className="bg-background tracking-widest font-mono"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    className="gap-2"
+                    disabled={twoFactorActivateLoading || totpCode.length !== 6}
+                    onClick={handleConfirmTwoFactor}
+                  >
+                    <Check className="h-4 w-4" />
+                    {twoFactorActivateLoading ? "Doğrulanıyor…" : "Etkinleştir"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={clearTwoFactorQr}>
+                    İptal
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
             <div>
               <p className="text-sm text-foreground">Oturum Uyarıları</p>
               <p className="text-xs text-muted-foreground">Yeni cihazdan giriş yapıldığında bildirim alın</p>
             </div>
-            <Switch checked={sessionAlerts} onCheckedChange={setSessionAlerts} />
+            <div className="flex items-center gap-2 shrink-0">
+              <ComingSoonBadge />
+              <Switch checked={false} disabled aria-readonly />
+            </div>
           </div>
         </div>
 
@@ -505,22 +837,26 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
+        {myProfileError ? (
+          <p className="text-sm text-destructive">Bildirim ayarları yüklenemedi.</p>
+        ) : null}
+
         <div className="rounded-lg border border-border bg-card p-6 space-y-5">
           <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
             <Mail className="h-4 w-4 text-muted-foreground" /> E-posta Bildirimleri
           </h2>
           {[
-            { label: "E-posta Bildirimleri", desc: "Önemli güncellemeler için e-posta alın", state: emailNotifs, set: setEmailNotifs },
-            { label: "Tarama Uyarıları", desc: "QR kodlarınız tarandığında bildirim alın", state: scanAlerts, set: setScanAlerts },
-            { label: "Haftalık Rapor", desc: "Her pazartesi performans özeti alın", state: weeklyReport, set: setWeeklyReport },
-            { label: "Pazarlama E-postaları", desc: "Yeni özellikler ve kampanyalar hakkında bilgi alın", state: marketingEmails, set: setMarketingEmails },
+            { label: "Önemli güncellemeler", desc: "Önemli güncellemeler için e-posta alın", state: emailNotifs, set: setEmailNotifs },
+            { label: "Tarama uyarıları", desc: "QR kodlarınız tarandığında bildirim alın", state: scanAlerts, set: setScanAlerts },
+            { label: "Haftalık rapor", desc: "Her pazartesi performans özeti alın", state: weeklyReport, set: setWeeklyReport },
+            { label: "Pazarlama e-postaları", desc: "Yeni özellikler ve kampanyalar hakkında bilgi alın", state: marketingEmails, set: setMarketingEmails },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-foreground">{item.label}</p>
                 <p className="text-xs text-muted-foreground">{item.desc}</p>
               </div>
-              <Switch checked={item.state} onCheckedChange={item.set} />
+              <Switch checked={item.state} onCheckedChange={item.set} disabled={myProfileLoading} />
             </div>
           ))}
         </div>
@@ -529,17 +865,21 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
             <Bell className="h-4 w-4 text-muted-foreground" /> Anlık Bildirimler
           </h2>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-foreground">Push Bildirimleri</p>
-              <p className="text-xs text-muted-foreground">Tarayıcı üzerinden anlık bildirim alın</p>
+              <p className="text-sm text-foreground">Push bildirimleri</p>
+              <p className="text-xs text-muted-foreground">Tarayıcı üzerinden anlık bildirim tercihi (altyapı hazır olduğunda kullanılır)</p>
             </div>
-            <Switch checked={pushNotifs} onCheckedChange={setPushNotifs} />
+            <Switch checked={pushBrowser} onCheckedChange={setPushBrowser} disabled={myProfileLoading} />
           </div>
         </div>
 
-        <Button className="gap-2" onClick={() => onNotify("info", "Bildirim tercihleri kaydedildi!")}>
-          <Check className="h-4 w-4" /> Kaydet
+        <Button
+          className="gap-2"
+          onClick={handleSaveNotifications}
+          disabled={notificationsSaving || myProfileLoading || myProfileError}
+        >
+          <Check className="h-4 w-4" /> {notificationsSaving ? "Kaydediliyor…" : "Kaydet"}
         </Button>
       </div>
     );
@@ -560,20 +900,35 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
             <Sun className="h-4 w-4 text-muted-foreground" /> Tema
           </h2>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "Açık", icon: Sun, value: "light" },
-              { label: "Koyu", icon: Moon, value: "dark" },
-              { label: "Sistem", icon: Monitor, value: "system" },
-            ].map((t) => (
-              <button
-                key={t.value}
-                className="flex flex-col items-center gap-2 rounded-lg border border-border p-4 hover:bg-accent/50 transition-colors"
-              >
-                <t.icon className="h-5 w-5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground">{t.label}</span>
-              </button>
-            ))}
+          <p className="text-xs text-muted-foreground">
+            Açık veya koyu tema seçin; tercih tarayıcıda saklanır.
+          </p>
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            {(
+              [
+                { label: "Açık", icon: Sun, value: "light" as const },
+                { label: "Koyu", icon: Moon, value: "dark" as const },
+              ] as const
+            ).map((t) => {
+              const selected = theme === t.value;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setTheme(t.value)}
+                  className={`flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors ${
+                    selected
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                      : "border-border hover:bg-accent/50"
+                  }`}
+                >
+                  <t.icon className={`h-5 w-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}>
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -581,19 +936,25 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
             <Languages className="h-4 w-4 text-muted-foreground" /> Dil
           </h2>
-          <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="bg-background">
+          <p className="text-xs text-muted-foreground">Arayüz dili (çoklu dil desteği yakında).</p>
+          <Select
+            value={language === "tr" || language === "en" ? language : "tr"}
+            onValueChange={setLanguage}
+          >
+            <SelectTrigger className="bg-background max-w-md">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="tr">Türkçe</SelectItem>
               <SelectItem value="en">English</SelectItem>
-              <SelectItem value="de">Deutsch</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <Button className="gap-2" onClick={() => onNotify("info", "Görünüm ayarları kaydedildi!")}>
+        <Button
+          className="gap-2"
+          onClick={() => onNotify("info", "Dil tercihi kaydedildi. Çeviri altyapısı hazır olduğunda uygulanacak.")}
+        >
           <Check className="h-4 w-4" /> Kaydet
         </Button>
       </div>
@@ -611,76 +972,17 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-foreground">Canlı API Anahtarı</h2>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Aktif</span>
+      <div className="rounded-lg border border-dashed border-border bg-card/50 p-10 text-center space-y-4">
+        <Globe className="h-10 w-10 text-muted-foreground mx-auto opacity-60" />
+        <div>
+          <p className="text-sm font-medium text-foreground">API anahtarları ve webhooks</p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+            Programatik erişim, anahtar yönetimi ve webhook yapılandırması üzerinde çalışıyoruz.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Input
-            readOnly
-            value={showApiKey ? fakeApiKey : "aqr_live_••••••••••••••••••••••••••"}
-            className="bg-background font-mono text-xs"
-          />
-          <Button variant="outline" size="icon" className="shrink-0 h-9 w-9" onClick={() => setShowApiKey(!showApiKey)}>
-            {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          </Button>
-          <Button variant="outline" size="icon" className="shrink-0 h-9 w-9" onClick={() => onNotify("info", "API anahtarı kopyalandı!")}>
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex justify-center">
+          <ComingSoonBadge />
         </div>
-        <p className="text-xs text-muted-foreground">Oluşturulma: 15 Şubat 2026 • Son kullanım: 2 saat önce</p>
-      </div>
-
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-        <h2 className="text-sm font-medium text-foreground">Webhook URL'leri</h2>
-        {[
-          { url: "https://myapp.com/webhooks/qr-scan", events: "Tarama" },
-          { url: "https://myapp.com/webhooks/qr-created", events: "Oluşturma" },
-        ].map((wh) => (
-          <div key={wh.url} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-            <div>
-              <p className="text-sm font-mono text-foreground">{wh.url}</p>
-              <p className="text-xs text-muted-foreground">{wh.events} olayları</p>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        ))}
-        <Button variant="outline" size="sm" className="gap-2">
-          <Plus className="h-3.5 w-3.5" /> Webhook Ekle
-        </Button>
-      </div>
-
-      <div className="rounded-lg border border-border bg-card p-6 space-y-3">
-        <h2 className="text-sm font-medium text-foreground">Kullanım Limitleri</h2>
-        <div className="space-y-3">
-          {[
-            { label: "API İstekleri", used: 2340, total: 10000 },
-            { label: "QR Oluşturma", used: 42, total: 100 },
-            { label: "Webhook Çağrıları", used: 892, total: 5000 },
-          ].map((limit) => (
-            <div key={limit.label} className="space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-foreground">{limit.label}</span>
-                <span className="text-muted-foreground">{limit.used.toLocaleString()} / {limit.total.toLocaleString()}</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-accent">
-                <div
-                  className="h-1.5 rounded-full bg-foreground/30"
-                  style={{ width: `${(limit.used / limit.total) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <Button variant="outline" className="gap-2" onClick={() => onNotify("warning", "API anahtarı yeniden oluşturulacak. Mevcut anahtar geçersiz olacak!")}>
-          <RefreshCw className="h-4 w-4" /> Anahtarı Yenile
-        </Button>
       </div>
     </div>
   );

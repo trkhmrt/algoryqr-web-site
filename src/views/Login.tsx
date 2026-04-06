@@ -4,11 +4,13 @@ import { Label } from "@/components/ui/label";
 import { QrCode } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { authService } from "@/lib/auth-service";
 import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,6 +18,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +29,7 @@ const Login = () => {
     setLoading(true);
     try {
       await authService.login({ email, password });
+      queryClient.removeQueries({ queryKey: MY_PROFILE_QUERY_KEY });
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
       router.push("/dashboard");
     } catch (err) {
@@ -46,6 +50,7 @@ const Login = () => {
     setLoading(true);
     try {
       await authService.googleLogin(idToken);
+      queryClient.removeQueries({ queryKey: MY_PROFILE_QUERY_KEY });
       toast({ title: "Başarılı", description: "Google ile giriş yapıldı!" });
       router.push("/dashboard");
     } catch (err) {

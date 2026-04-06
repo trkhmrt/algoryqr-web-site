@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AUTH_BASE, COOKIE_MAX_AGE_SECONDS } from "@/lib/config";
+import { COOKIE_MAX_AGE_SECONDS, getAuthUpstreamUrl } from "@/lib/config";
 import { getExpFromAccessToken } from "@/lib/auth-user";
 
 type RegisterBody = {
@@ -13,7 +13,7 @@ type RegisterBody = {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as RegisterBody;
-    const upstream = await fetch(`${AUTH_BASE}/basicauth/register`, {
+    const upstream = await fetch(`${getAuthUpstreamUrl()}/basicauth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

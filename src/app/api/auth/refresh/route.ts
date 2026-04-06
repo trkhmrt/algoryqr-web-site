@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { AUTH_BASE, COOKIE_MAX_AGE_SECONDS } from "@/lib/config";
+import { COOKIE_MAX_AGE_SECONDS, getAuthUpstreamUrl } from "@/lib/config";
 import { getExpFromAccessToken } from "@/lib/auth-user";
 
 export async function POST() {
@@ -20,7 +20,7 @@ export async function POST() {
       return res;
     }
 
-    const upstream = await fetch(`${AUTH_BASE}/basicauth/refreshToken`, {
+    const upstream = await fetch(`${getAuthUpstreamUrl()}/basicauth/refreshToken`, {
       method: "POST",
       headers: { Cookie: `refreshToken=${refreshToken}` },
       cache: "no-store",

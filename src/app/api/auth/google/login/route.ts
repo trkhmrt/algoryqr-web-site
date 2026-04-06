@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { AUTH_BASE, COOKIE_MAX_AGE_SECONDS } from "@/lib/config";
+import { COOKIE_MAX_AGE_SECONDS, getAuthUpstreamUrl } from "@/lib/config";
 import { getExpFromAccessToken } from "@/lib/auth-user";
 
 export async function POST(req: Request) {
   try {
     const body = await req.text();
     const token = body.startsWith("{") ? (JSON.parse(body) as { idToken?: string })?.idToken ?? "" : body;
-    const upstream = await fetch(`${AUTH_BASE}/basicauth/google/login`, {
+    const upstream = await fetch(`${getAuthUpstreamUrl()}/google-auth/login`, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: token,

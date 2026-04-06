@@ -1,5 +1,10 @@
 import axios, { AxiosError } from "axios";
 import { ApiError, setStoredUser } from "./api";
+import {
+  getJsonErrorText,
+  isLikelyWrongTotpBackendText,
+  TOTP_WRONG_USER_MESSAGE,
+} from "./api-error-text";
 
 interface AuthResponse {
   accessToken?: string;
@@ -8,6 +13,11 @@ interface AuthResponse {
   refresh_token?: string;
   /** JWT exp, saniye cinsinden epoch; client sayacı için */
   accessTokenExpiresAt?: number;
+  /** AuthService TokenResponse (basicauth login / refresh) */
+  userId?: number;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
   user?: {
     id: string;
     email: string;
@@ -34,14 +44,32 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 }
 
 function toApiError(e: unknown, fallback: string): ApiError {
-  const err = e as AxiosError<{ message?: string }>;
+  const err = e as AxiosError<unknown>;
   const status = err.response?.status ?? 0;
-  const message = err.response?.data?.message ?? err.message ?? fallback;
+  const from = getJsonErrorText(err.response?.data);
+  const message = from || err.message || fallback;
   return new ApiError(status, message, err.response?.data);
 }
 
+/** 2FA kod yanlışsa (401 veya eski API’de 500 + errors içinde Invalid verification code) sade mesaj. */
+function toTotpSubmitApiError(e: unknown, fallback: string): ApiError {
+  const err = e as AxiosError<unknown>;
+  const status = err.response?.status ?? 0;
+  const from = getJsonErrorText(err.response?.data);
+  if (isLikelyWrongTotpBackendText(from)) {
+    return new ApiError(status, TOTP_WRONG_USER_MESSAGE, err.response?.data);
+  }
+  if (status === 401) {
+    if (/oturum|token|giriş|yetkisiz/i.test(from)) {
+      return new ApiError(status, from || fallback, err.response?.data);
+    }
+    return new ApiError(status, TOTP_WRONG_USER_MESSAGE, err.response?.data);
+  }
+  return toApiError(e, fallback);
+}
+
 export const authService = {
-  /** /api/auth/login → basicauth/login proxy, token cookie'ye yazılır */
+  /** /api/auth/login → Gateway `/authservice/basicauth/login` (veya AUTH_UPSTREAM), cookie'ler set edilir */
   async login(params: { email: string; password: string }): Promise<AuthResponse> {
     try {
       const { data } = await axios.post<AuthResponse>("/api/auth/login", params, {
@@ -49,14 +77,21 @@ export const authService = {
         withCredentials: true,
       });
       if (data.user) setStoredUser(data.user);
-      else if (params.email) setStoredUser({ id: params.email, email: params.email });
+      else if (data.userId != null) {
+        setStoredUser({
+          id: String(data.userId),
+          email: data.email ?? params.email,
+          first_name: data.firstName,
+          last_name: data.lastName,
+        });
+      } else if (params.email) setStoredUser({ id: params.email, email: params.email });
       return data;
     } catch (e) {
       throw toApiError(e, "Giriş başarısız");
     }
   },
 
-  /** /api/auth/register → basicauth/register proxy, token cookie'ye yazılır */
+  /** /api/auth/register → `/authservice/basicauth/register` */
   async register(params: {
     firstName: string;
     lastName: string;
@@ -76,7 +111,7 @@ export const authService = {
     }
   },
 
-  /** /api/auth/google/login → basicauth/google/login proxy, token cookie'ye yazılır. Body: sadece token string */
+  /** /api/auth/google/login → `/authservice/google-auth/login`. Body: düz idToken string */
   async googleLogin(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
     try {
       const { data } = await axios.post<GoogleUserResponse & AuthResponse>("/api/auth/google/login", idToken, {
@@ -92,7 +127,7 @@ export const authService = {
     }
   },
 
-  /** /api/auth/google/register → basicauth/google/login proxy, token cookie'ye yazılır */
+  /** /api/auth/google/register → `/authservice/google-auth/register` (JSON { idToken }) */
   async googleRegister(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
     try {
       const { data } = await axios.post<GoogleUserResponse & AuthResponse>("/api/auth/google/register", idToken, {
@@ -105,6 +140,37 @@ export const authService = {
       return data;
     } catch (e) {
       throw toApiError(e, "Google ile kayıt başarısız");
+    }
+  },
+
+  /** 2FA QR (PNG). Oturum cookie + Gateway JWT. */
+  async fetchTwoFactorQr(): Promise<Blob> {
+    const res = await fetch("/api/auth/2fa/enabled", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new ApiError(res.status, (err as { message?: string }).message || "QR alınamadı", err);
+    }
+    return res.blob();
+  },
+
+  /** 2FA'yı TOTP kodu ile aktif et. */
+  async activateTwoFactor(code: string): Promise<void> {
+    try {
+      await axios.post("/api/auth/2fa/active", { code }, { withCredentials: true });
+    } catch (e) {
+      throw toTotpSubmitApiError(e, "2FA doğrulaması başarısız");
+    }
+  },
+
+  /** 2FA'yı kapatmak için geçerli TOTP kodu gerekir. */
+  async disableTwoFactor(code: string): Promise<void> {
+    try {
+      await axios.post("/api/auth/2fa/disable", { code }, { withCredentials: true });
+    } catch (e) {
+      throw toTotpSubmitApiError(e, "2FA kapatılamadı");
     }
   },
 };

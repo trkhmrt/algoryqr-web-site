@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { AUTH_BASE } from "@/lib/config";
+import { getAuthUpstreamUrl } from "@/lib/config";
 
 /** Backend refresh token'ı iptal eder; cookie adı refresh_token. */
 export async function POST() {
@@ -14,7 +14,7 @@ export async function POST() {
       return NextResponse.json({ message: "Refresh token yok" }, { status: 401 });
     }
 
-    const upstream = await fetch(`${AUTH_BASE}/basicauth/revoke-refreshtoken`, {
+    const upstream = await fetch(`${getAuthUpstreamUrl()}/basicauth/revoke-refreshtoken`, {
       method: "POST",
       headers: { Cookie: `refresh_token=${refreshToken}` },
       cache: "no-store",

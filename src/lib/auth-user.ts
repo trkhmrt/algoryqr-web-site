@@ -43,6 +43,20 @@ export function getExpFromAccessToken(token?: string | null): number | null {
   return exp;
 }
 
+/** AuthService JWT claim `userId` (Integer). */
+export function getUserIdFromAccessToken(token?: string | null): number | null {
+  if (!token) return null;
+  const payload = parseJwtPayload(token);
+  if (!payload) return null;
+  const raw = payload.userId;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string") {
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 export function getUserFromAccessToken(token?: string | null): AuthUser | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
@@ -56,7 +70,8 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
     (payload.sub as string | number | undefined) ||
     (payload.userId as string | number | undefined);
 
-  if (!email && !firstName && !lastName) return null;
+  /** Access JWT'de e-posta yok; userId + isimler claim'de olabilir. Sadece userId ile de oturum geçerlidir. */
+  if (userId == null && !email && !firstName && !lastName) return null;
 
   return {
     id: userId != null ? String(userId) : undefined,
