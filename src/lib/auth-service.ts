@@ -18,6 +18,8 @@ interface AuthResponse {
   email?: string;
   firstName?: string;
   lastName?: string;
+  /** true ise access yok; önce POST /api/auth/2fa/login/verify ile TOTP */
+  requiresTwoFactor?: boolean;
   user?: {
     id: string;
     email: string;
@@ -85,6 +87,9 @@ export const authService = {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
       });
+      if (data.requiresTwoFactor) {
+        return data;
+      }
       if (data.user) setStoredUser(data.user);
       else if (data.userId != null) {
         setStoredUser({
@@ -97,6 +102,29 @@ export const authService = {
       return data;
     } catch (e) {
       throw toApiError(e, "Giriş başarısız");
+    }
+  },
+
+  /** Şifre/Google sonrası cookie’deki pending JWT ile 6 haneli TOTP; başarıda tam oturum. */
+  async completeTwoFactorLogin(code: string): Promise<AuthResponse> {
+    try {
+      const { data } = await axios.post<AuthResponse>(
+        "/api/auth/2fa/login/verify",
+        { code },
+        { headers: { "Content-Type": "application/json" }, withCredentials: true },
+      );
+      if (data.user) setStoredUser(data.user);
+      else if (data.userId != null) {
+        setStoredUser({
+          id: String(data.userId),
+          email: data.email ?? "",
+          first_name: data.firstName,
+          last_name: data.lastName,
+        });
+      }
+      return data;
+    } catch (e) {
+      throw toTotpSubmitApiError(e, "2FA doğrulaması başarısız");
     }
   },
 
@@ -128,6 +156,9 @@ export const authService = {
         transformRequest: [(d) => d],
         withCredentials: true,
       });
+      if (data.requiresTwoFactor) {
+        return data;
+      }
       if (data.user) setStoredUser(data.user);
       else if (data.userId != null || data.email) setStoredUser(mapGoogleUserToStoredUser(data as GoogleUserResponse));
       return data;

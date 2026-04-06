@@ -53,6 +53,8 @@ export const REFRESH_AFTER_LOGIN_MS = 2 * 60 * 1000;
 export const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 /** Cookie saklama süresi (saniye): 30 gün */
 export const COOKIE_MAX_AGE_SECONDS = REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60;
+/** 2FA bekleme JWT ile uyumlu (5 dk) */
+export const TWO_FACTOR_PENDING_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRY_SECONDS;
 
 export const GOOGLE_CLIENT_ID =
   "990624623867-o83douun4e0vke2nur5qteo9pr4mmlf8.apps.googleusercontent.com";

@@ -15,6 +15,7 @@ export async function POST() {
   response.cookies.set("algory_refresh_token", "", clearCookieOptions);
   response.cookies.set("accessToken", "", clearCookieOptions);
   response.cookies.set("refreshToken", "", clearCookieOptions);
+  response.cookies.set("algory_2fa_pending", "", clearCookieOptions);
 
   return response;
 }

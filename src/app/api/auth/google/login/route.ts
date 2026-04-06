@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { COOKIE_MAX_AGE_SECONDS, getAuthUpstreamUrl } from "@/lib/config";
+import {
+  COOKIE_MAX_AGE_SECONDS,
+  TWO_FACTOR_PENDING_COOKIE_MAX_AGE_SECONDS,
+  getAuthUpstreamUrl,
+} from "@/lib/config";
 import { getExpFromAccessToken } from "@/lib/auth-user";
 
 export async function POST(req: Request) {
@@ -26,6 +30,28 @@ export async function POST(req: Request) {
         { message: data?.message || "Google ile giriş başarısız" },
         { status: upstream.status || 401 },
       );
+    }
+
+    if (data?.requiresTwoFactor === true && data?.twoFactorToken) {
+      const response = NextResponse.json(
+        {
+          requiresTwoFactor: true,
+          userId: data.userId,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+        },
+        { status: 200 },
+      );
+      const pendingOpts = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        path: "/",
+        maxAge: TWO_FACTOR_PENDING_COOKIE_MAX_AGE_SECONDS,
+      };
+      response.cookies.set("algory_2fa_pending", data.twoFactorToken, pendingOpts);
+      return response;
     }
 
     const accessToken = data?.accessToken || data?.access_token;
