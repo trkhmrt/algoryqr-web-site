@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:start:local": "cross-env GATEWAY_BASE=http://localhost:8072 NEXT_PUBLIC_GATEWAY_BASE=http://localhost:8072 next build && cross-env GATEWAY_BASE=http://localhost:8072 NEXT_PUBLIC_GATEWAY_BASE=http://localhost:8072 next start",
+    "start:local": "cross-env GATEWAY_BASE=http://localhost:8072 NEXT_PUBLIC_GATEWAY_BASE=http://localhost:8072 next dev",
     "lint": "eslint"
   },
   "dependencies": {
@@ -67,6 +69,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.8",

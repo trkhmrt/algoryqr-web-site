@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { createQrRequest, deleteQrRequest, getStoredUser, getUserQrsRequest, QrResponse, StoredUser, updateQrNameRequest, updateQrRequest } from "@/lib/api";
+import { createQrRequest, deleteQrRequest, getStoredUser, QrResponse, StoredUser, updateQrNameRequest, updateQrRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,9 +37,7 @@ import {
 } from "recharts";
 import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
 import SettingsTab from "@/components/dashboard/SettingsTab";
-import {
-  OverviewSkeleton, AnalyticsSkeleton, QRCodesSkeleton, CreateQRSkeleton,
-} from "@/components/dashboard/DashboardSkeletons";
+import { QRCodesSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import {
   QrTypeDetails,
   QrTypeData,
@@ -53,12 +51,13 @@ import {
   getQrDetailsByType,
   getReadableDetailRows,
   mapDetailsToQrTypeData,
-  mapUserQrToDashboardItem,
 } from "@/components/dashboard/qr/qr-mappers";
 import { buildPlatformShareUrl, copyQrImageToClipboard, copyTextToClipboard, downloadQrImage, shareQr, SharePlatform } from "@/components/dashboard/qr/qr-actions";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateUserQrs, useUserQrs, userQrsQueryKey } from "@/hooks/use-user-qrs";
 
 const metrics = [
   { label: "Toplam Tarama", value: "4,926", change: "+12.5%", up: true, icon: Eye },
@@ -114,8 +113,23 @@ interface DashboardProps {
 const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const tooltipStyle = useTooltipStyle();
   const router = useRouter();
+  const queryClient = useQueryClient();
   useTokenRefresh(); // Arka planda access token süresi bitmeden refresh (şu an refresh çağrısı yorumda)
   const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
+  const userIdStr = user?.id?.trim() || undefined;
+  const {
+    data: userQrs = [],
+    isPending: qrsPending,
+    isError: qrsError,
+    error: qrsErrorObj,
+  } = useUserQrs(userIdStr);
+
+  const syncUserQrsAfterMutation = useCallback(async (): Promise<DashboardQrItem[]> => {
+    const id = userIdStr?.trim();
+    if (!id) return [];
+    await invalidateUserQrs(queryClient, id);
+    return queryClient.getQueryData<DashboardQrItem[]>(userQrsQueryKey(id)) ?? [];
+  }, [queryClient, userIdStr]);
   const userInitials = useMemo(() => {
     if (!user) return "?";
     return ((user.first_name?.[0] || "") + (user.last_name?.[0] || "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
@@ -123,13 +137,9 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const userFullName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Kullanıcı";
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Ready for API: set isLoading=true before fetch, false on response
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
-    // When API calls are added, set isLoading=true here
-    // and setIsLoading(false) in the fetch .then()/.finally()
   }, []);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [banners, setBanners] = useState<Array<{ id: string; type: "info" | "warning" | "danger"; message: string }>>([]);
@@ -139,7 +149,6 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   const [qrName, setQrName] = useState("");
   const [qrTypeData, setQrTypeData] = useState<QrTypeData>(() => createInitialQrTypeData());
   const [latestQrResponse, setLatestQrResponse] = useState<QrResponse | null>(null);
-  const [userQrs, setUserQrs] = useState<DashboardQrItem[]>([]);
   const [shareTarget, setShareTarget] = useState<DashboardQrItem | null>(null);
 
   // QR Detail/Edit state
@@ -166,32 +175,12 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
     setBanners((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
-  const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
-    if (!user?.id) return [];
-
-    setIsLoading(true);
-    try {
-      const response = await getUserQrsRequest(user.id);
-      const mapped = response.map(mapUserQrToDashboardItem);
-      setUserQrs(mapped);
-      return mapped;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "QR kodlar getirilemedi.";
-      const id = Date.now().toString();
-      setBanners((prev) => [...prev, { id, type: "danger", message }]);
-      setTimeout(() => removeBanner(id), 5000);
-      return [];
-    } finally {
-      setIsLoading(false);
-    }
-  }, [removeBanner, user?.id]);
-
   const handleDeleteQr = useCallback(async (qr: DashboardQrItem) => {
     try {
       await deleteQrRequest(qr.id);
-      setUserQrs((prev) => prev.filter((item) => item.id !== qr.id));
       setSelectedQR((prev) => (prev?.id === qr.id ? null : prev));
       setIsEditing(false);
+      await invalidateUserQrs(queryClient, userIdStr);
 
       const id = Date.now().toString();
       setBanners((prev) => [...prev, { id, type: "info", message: `"${qr.name}" silindi.` }]);
@@ -202,7 +191,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
       setBanners((prev) => [...prev, { id, type: "danger", message }]);
       setTimeout(() => removeBanner(id), 5000);
     }
-  }, [removeBanner]);
+  }, [queryClient, removeBanner, userIdStr]);
 
   const showBanner = useCallback((type: "info" | "warning" | "danger", message: string, timeout = 4000) => {
     const id = Date.now().toString();
@@ -296,7 +285,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
 
     try {
       await updateQrNameRequest(selectedQR.id, { qrName: trimmedName });
-      const refreshedQrs = await fetchUserQrs();
+      const refreshedQrs = await syncUserQrsAfterMutation();
       const refreshedSelected = refreshedQrs.find((item) => item.id === selectedQR.id) || null;
       setSelectedQR(refreshedSelected);
       setEditName(refreshedSelected?.name ?? trimmedName);
@@ -310,7 +299,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
       setBanners((prev) => [...prev, { id, type: "danger", message }]);
       setTimeout(() => removeBanner(id), 5000);
     }
-  }, [editName, fetchUserQrs, removeBanner, selectedQR]);
+  }, [editName, removeBanner, selectedQR, syncUserQrsAfterMutation]);
 
   const handleSaveQrEdit = useCallback(async () => {
     if (!selectedQR) return;
@@ -395,7 +384,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
         details,
       });
 
-      const refreshedQrs = await fetchUserQrs();
+      const refreshedQrs = await syncUserQrsAfterMutation();
       const refreshedSelected =
         refreshedQrs.find((item) => item.imgSrc === updateResponse.imgSrc) || refreshedQrs[0] || null;
 
@@ -425,13 +414,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
       setBanners((prev) => [...prev, { id, type: "danger", message }]);
       setTimeout(() => removeBanner(id), 5000);
     }
-  }, [editActive, editName, editQrType, editQrTypeData, fetchUserQrs, handleUpdateQrNameOnly, removeBanner, selectedQR]);
-
-  useEffect(() => {
-    if (activeTab === "codes") {
-      void fetchUserQrs();
-    }
-  }, [activeTab, fetchUserQrs]);
+  }, [editActive, editName, editQrType, editQrTypeData, handleUpdateQrNameOnly, removeBanner, selectedQR, syncUserQrsAfterMutation]);
 
   const triggerNotification = useCallback((type: "info" | "warning" | "danger") => {
     const id = Date.now().toString();
@@ -470,13 +453,14 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
       setQrName("");
       setQrTypeData(createInitialQrTypeData());
       setSelectedQrType("link");
+      await invalidateUserQrs(queryClient, userIdStr);
     } catch (error) {
       const message = error instanceof Error ? error.message : "QR kod oluşturulamadı.";
       const id = Date.now().toString();
       setBanners((prev) => [...prev, { id, type: "danger", message }]);
       setTimeout(() => removeBanner(id), 5000);
     }
-  }, [qrName, qrTypeData, removeBanner, selectedQrType]);
+  }, [queryClient, qrName, qrTypeData, removeBanner, selectedQrType, userIdStr]);
 
   const bannerStyles = {
     info: "bg-blue-500/10 border-blue-500/20 text-blue-500",
@@ -669,15 +653,10 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
         </div>
 
         <div className="p-6 lg:p-8 max-w-6xl mx-auto">
-          {/* Skeleton loading */}
-          {isLoading && activeTab === "overview" && <OverviewSkeleton />}
-          {isLoading && activeTab === "analytics" && <AnalyticsSkeleton />}
-          {isLoading && activeTab === "codes" && <QRCodesSkeleton />}
-          {isLoading && activeTab === "create" && <CreateQRSkeleton />}
-          {isLoading && activeTab === "settings" && <OverviewSkeleton />}
+          {activeTab === "codes" && !selectedQR && qrsPending && <QRCodesSkeleton />}
 
           {/* ── Overview ── */}
-          {!isLoading && activeTab === "overview" && (
+          {activeTab === "overview" && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex items-center justify-between">
                 <div>
@@ -754,10 +733,28 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
           )}
 
           {/* ── Analytics ── */}
-          {!isLoading && activeTab === "analytics" && <AnalyticsTab />}
+          {activeTab === "analytics" && <AnalyticsTab />}
 
-          {/* ── QR Codes ── */}
-          {!isLoading && activeTab === "codes" && !selectedQR && (
+          {/* ── QR Codes (liste) ── */}
+          {activeTab === "codes" && !selectedQR && !qrsPending && qrsError && (
+            <div className="space-y-4 animate-fade-in rounded-lg border border-destructive/20 bg-destructive/5 p-6">
+              <h1 className="text-xl font-semibold text-foreground">QR Kodlarım</h1>
+              <p className="text-sm text-destructive">
+                {qrsErrorObj instanceof Error ? qrsErrorObj.message : "QR kodlar yüklenemedi."}
+              </p>
+              {userIdStr && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void queryClient.invalidateQueries({ queryKey: userQrsQueryKey(userIdStr) })}
+                >
+                  Tekrar dene
+                </Button>
+              )}
+            </div>
+          )}
+
+          {activeTab === "codes" && !selectedQR && !qrsPending && !qrsError && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -853,7 +850,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
           )}
 
           {/* ── QR Detail / Edit ── */}
-          {!isLoading && activeTab === "codes" && selectedQR && (
+          {activeTab === "codes" && selectedQR && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex items-center gap-3">
                 <button
@@ -1092,7 +1089,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
           )}
 
           {/* ── QR Create ── */}
-          {!isLoading && activeTab === "create" && (
+          {activeTab === "create" && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex items-center gap-3">
                 <button onClick={() => handleTabChange("codes")} className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
@@ -1206,7 +1203,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
           )}
 
           {/* ── Settings ── */}
-          {!isLoading && activeTab === "settings" && (
+          {activeTab === "settings" && (
             <SettingsTab onNotify={(type, message) => {
               const id = Date.now().toString();
               setBanners((prev) => [...prev, { id, type, message }]);
