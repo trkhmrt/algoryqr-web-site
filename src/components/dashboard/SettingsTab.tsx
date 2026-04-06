@@ -15,10 +15,11 @@ import { getJsonErrorText } from "@/lib/api-error-text";
 import {
   User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages,
-  Eye, EyeOff, RefreshCw, LogOut, Timer,
+  Eye, EyeOff, RefreshCw, LogOut, Timer, Copy,
 } from "lucide-react";
 import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
-import { authService } from "@/lib/auth-service";
+import { authService, type TwoFactorSetupPayload } from "@/lib/auth-service";
+import { copyTextToClipboard } from "@/components/dashboard/qr/qr-actions";
 import { ApiError } from "@/lib/api";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -107,7 +108,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [confirmPasswordForChange, setConfirmPasswordForChange] = useState("");
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   const twoFactorEnabled = myProfile?.twoFactorEnabled ?? false;
-  const [twoFactorQrObjectUrl, setTwoFactorQrObjectUrl] = useState<string | null>(null);
+  const [twoFactorSetup, setTwoFactorSetup] = useState<TwoFactorSetupPayload | null>(null);
   const [twoFactorSetupLoading, setTwoFactorSetupLoading] = useState(false);
   const [twoFactorActivateLoading, setTwoFactorActivateLoading] = useState(false);
   const [totpCode, setTotpCode] = useState("");
@@ -340,32 +341,27 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (twoFactorQrObjectUrl) URL.revokeObjectURL(twoFactorQrObjectUrl);
-    };
-  }, [twoFactorQrObjectUrl]);
-
   const clearTwoFactorQr = () => {
-    setTwoFactorQrObjectUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
+    setTwoFactorSetup(null);
     setTotpCode("");
+  };
+
+  const handleCopyTwoFactorSecret = async () => {
+    if (!twoFactorSetup) return;
+    const ok = await copyTextToClipboard(twoFactorSetup.secret);
+    if (ok) onNotify("info", "Gizli anahtar panoya kopyalandı.");
+    else onNotify("warning", "Kopyalama başarısız.");
   };
 
   const handleStartTwoFactorSetup = async () => {
     setTwoFactorSetupLoading(true);
     try {
-      const blob = await authService.fetchTwoFactorQr();
-      setTwoFactorQrObjectUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(blob);
-      });
+      const payload = await authService.fetchTwoFactorSetup();
+      setTwoFactorSetup(payload);
       setTotpCode("");
-      onNotify("info", "QR hazır. Uygulama ile tarayıp kodu girin.");
+      onNotify("info", "Kurulum hazır. QR veya gizli anahtar ile uygulamaya ekleyin; sonra kodu girin.");
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "QR kodu alınamadı.";
+      const msg = e instanceof ApiError ? e.message : "Kurulum bilgisi alınamadı.";
       onNotify("danger", msg);
     } finally {
       setTwoFactorSetupLoading(false);
@@ -704,7 +700,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             <div>
               <p className="text-sm text-foreground">Authenticator (TOTP)</p>
               <p className="text-xs text-muted-foreground">
-                Önce QR alın, Google Authenticator ile tarayın; ardından 6 haneli kodu girerek etkinleştirin. Oturum açık olmalı (access token).
+                İki yol: başka cihazda QR taratın veya aynı telefonda aşağıdaki gizli anahtarı Authenticator’da “Kurulum anahtarını gir” ile ekleyin. Sonra üretilen 6 haneli kodu yazıp etkinleştirin.
               </p>
             </div>
             {myProfileLoading ? (
@@ -738,7 +734,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                   {twoFactorDisableLoading ? "Kapatılıyor…" : "2FA'yı kapat"}
                 </Button>
               </div>
-            ) : !twoFactorQrObjectUrl ? (
+            ) : !twoFactorSetup ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -747,19 +743,44 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                 onClick={handleStartTwoFactorSetup}
               >
                 <Smartphone className="h-4 w-4" />
-                {twoFactorSetupLoading ? "QR hazırlanıyor…" : "QR kodu al"}
+                {twoFactorSetupLoading ? "Hazırlanıyor…" : "Kurulumu başlat (QR + anahtar)"}
               </Button>
             ) : (
-              <div className="space-y-4 max-w-sm">
-                <p className="text-xs text-muted-foreground">QR&apos;ı tarayın, sonra uygulamadaki kodu yazın.</p>
+              <div className="space-y-4 max-w-md">
+                <p className="text-xs text-muted-foreground">
+                  Uygulamaya ekledikten sonra aşağıya güncel 6 haneli kodu yazın.
+                </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={twoFactorQrObjectUrl}
+                  src={`data:image/png;base64,${twoFactorSetup.qrImageBase64}`}
                   alt="İki adımlı doğrulama QR"
                   width={200}
                   height={200}
                   className="rounded-md border border-border bg-white p-2"
                 />
+                <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                  <p className="text-xs font-medium text-foreground">Tek telefonda (QR taratmadan)</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Google Authenticator / Microsoft Authenticator: <span className="text-foreground">+</span> →{" "}
+                    <span className="text-foreground">Kurulum anahtarını gir</span> → hesap adı olarak e-postanızı, anahtar
+                    olarak aşağıdaki metni kullanın; tür: zamana dayalı, 30 sn.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <code className="text-[11px] break-all rounded bg-background px-2 py-1.5 font-mono border border-border flex-1 min-w-0">
+                      {twoFactorSetup.secret}
+                    </code>
+                    <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={() => void handleCopyTwoFactorSecret()}>
+                      <Copy className="h-3.5 w-3.5" />
+                      Kopyala
+                    </Button>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" className="w-full gap-2" asChild>
+                    <a href={twoFactorSetup.otpAuthUri}>Authenticator’da açmayı dene</a>
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    “Açmayı dene” bazı cihazlarda doğrudan uygulamayı açar; açılmazsa yukarıdaki anahtarı elle girin.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">6 haneli kod</Label>
                   <Input

@@ -68,6 +68,15 @@ function toTotpSubmitApiError(e: unknown, fallback: string): ApiError {
   return toApiError(e, fallback);
 }
 
+/** POST /api/auth/2fa/setup yanıtı (AuthService /2fa/setup). */
+export interface TwoFactorSetupPayload {
+  secret: string;
+  issuer: string;
+  accountLabel: string;
+  qrImageBase64: string;
+  otpAuthUri: string;
+}
+
 export const authService = {
   /** /api/auth/login → Gateway `/authservice/basicauth/login` (veya AUTH_UPSTREAM), cookie'ler set edilir */
   async login(params: { email: string; password: string }): Promise<AuthResponse> {
@@ -143,17 +152,25 @@ export const authService = {
     }
   },
 
-  /** 2FA QR (PNG). Oturum cookie + Gateway JWT. */
-  async fetchTwoFactorQr(): Promise<Blob> {
-    const res = await fetch("/api/auth/2fa/enabled", {
+  /** 2FA kurulumu: QR (Base64), gizli anahtar, otpauth URI (tek telefonda manuel / derin bağlantı). */
+  async fetchTwoFactorSetup(): Promise<TwoFactorSetupPayload> {
+    const res = await fetch("/api/auth/2fa/setup", {
       method: "POST",
       credentials: "include",
     });
+    const raw = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new ApiError(res.status, (err as { message?: string }).message || "QR alınamadı", err);
+      throw new ApiError(res.status, (raw as { message?: string }).message || "2FA kurulumu alınamadı", raw);
     }
-    return res.blob();
+    const p = raw as TwoFactorSetupPayload;
+    if (
+      typeof p.secret !== "string" ||
+      typeof p.qrImageBase64 !== "string" ||
+      typeof p.otpAuthUri !== "string"
+    ) {
+      throw new ApiError(res.status, "Geçersiz kurulum yanıtı", raw);
+    }
+    return p;
   },
 
   /** 2FA'yı TOTP kodu ile aktif et. */
