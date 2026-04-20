@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, type QueryClient } from "@tanstack/react-query";
-import axios from "axios";
+
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 export const MY_PROFILE_QUERY_KEY = ["myProfile"] as const;
 
@@ -40,7 +41,7 @@ export function useMyProfile() {
   return useQuery({
     queryKey: MY_PROFILE_QUERY_KEY,
     queryFn: async () => {
-      const { data } = await axios.get<MyProfile>("/api/account/myprofile", { withCredentials: true });
+      const { data } = await getSiteSameOriginAxios().get<MyProfile>("/account/myprofile");
       return data;
     },
     staleTime: 5 * 60 * 1000,

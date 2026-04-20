@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -128,8 +128,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
 
   const fetchTokenExp = useCallback(() => {
     setTokenLoading(true);
-    axios
-      .get<{ accessTokenExpiresAt: number | null; refreshTokenExpiresAt: number | null }>("/api/auth/token-exp", { withCredentials: true })
+    getSiteSameOriginAxios()
+      .get<{ accessTokenExpiresAt: number | null; refreshTokenExpiresAt: number | null }>("/auth/token-exp")
       .then((res) => {
         const accessExp = res.data?.accessTokenExpiresAt ?? null;
         const refreshExp = res.data?.refreshTokenExpiresAt ?? null;
@@ -201,8 +201,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
       if (remaining <= 0 && !refreshTriggeredRef.current) {
         refreshTriggeredRef.current = true;
         setNextRefreshAt(null);
-        axios
-          .post<{ accessTokenExpiresAt?: number }>("/api/auth/refresh", {}, { withCredentials: true })
+        getSiteSameOriginAxios()
+          .post<{ accessTokenExpiresAt?: number }>("/auth/refresh", {})
           .then((res) => {
             const exp = res.data?.accessTokenExpiresAt;
             if (exp != null) setAccessTokenExpiresAt(exp);
@@ -212,8 +212,9 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             setNextRefreshAt(nextAt);
             if (typeof sessionStorage !== "undefined") sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(nextAt));
           })
-          .catch((err: { response?: { status?: number } }) => {
-            if (err.response?.status === 401) {
+          .catch((err: unknown) => {
+            const status = err instanceof ApiError ? err.status : 0;
+            if (status === 401) {
               onNotify("warning", "Oturum sonlandı. Tekrar giriş yapın.");
               router.push("/login");
               router.refresh();
@@ -231,8 +232,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
 
   const handleRevoke = () => {
     setRevokeLoading(true);
-    axios
-      .post("/api/auth/revoke", {}, { withCredentials: true })
+    getSiteSameOriginAxios()
+      .post("/auth/revoke", {})
       .then(() => {
         onNotify("info", "Refresh token iptal edildi.");
       })
@@ -244,16 +245,17 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
 
   const handleRefreshAccess = () => {
     setRefreshLoading(true);
-    axios
-      .post<{ accessTokenExpiresAt?: number }>("/api/auth/refresh", {}, { withCredentials: true })
+    getSiteSameOriginAxios()
+      .post<{ accessTokenExpiresAt?: number }>("/auth/refresh", {})
       .then((res) => {
         const exp = res.data?.accessTokenExpiresAt;
         if (exp != null) setAccessTokenExpiresAt(exp);
         onNotify("info", "Access token yenilendi.");
         fetchTokenExp();
       })
-      .catch((err: { response?: { status?: number } }) => {
-        if (err.response?.status === 401) {
+      .catch((err: unknown) => {
+        const status = err instanceof ApiError ? err.status : 0;
+        if (status === 401) {
           onNotify("warning", "Oturum sonlandı. Tekrar giriş yapın.");
           router.push("/login");
           router.refresh();
@@ -267,16 +269,20 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const handleSaveProfile = async () => {
     setProfileSaving(true);
     try {
-      await axios.patch(
-        "/api/account/myprofile",
-        { firstName, lastName, email, phoneNumber: phone },
-        { withCredentials: true }
-      );
+      await getSiteSameOriginAxios().patch("/account/myprofile", {
+        firstName,
+        lastName,
+        email,
+        phoneNumber: phone,
+      });
       await invalidateMyProfile(queryClient);
       onNotify("info", "Profil bilgileriniz güncellendi.");
     } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      onNotify("danger", err.response?.data?.message ?? "Profil kaydedilemedi.");
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : (e as { response?: { data?: { message?: string } } }).response?.data?.message;
+      onNotify("danger", msg ?? "Profil kaydedilemedi.");
     } finally {
       setProfileSaving(false);
     }
@@ -285,22 +291,21 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const handleSaveNotifications = async () => {
     setNotificationsSaving(true);
     try {
-      await axios.patch(
-        "/api/account/myprofile",
-        {
-          notifyEmailImportant: emailNotifs,
-          notifyScanAlerts: scanAlerts,
-          notifyWeeklyReport: weeklyReport,
-          notifyMarketingEmails: marketingEmails,
-          notifyPushBrowser: pushBrowser,
-        },
-        { withCredentials: true }
-      );
+      await getSiteSameOriginAxios().patch("/account/myprofile", {
+        notifyEmailImportant: emailNotifs,
+        notifyScanAlerts: scanAlerts,
+        notifyWeeklyReport: weeklyReport,
+        notifyMarketingEmails: marketingEmails,
+        notifyPushBrowser: pushBrowser,
+      });
       await invalidateMyProfile(queryClient);
       onNotify("info", "Bildirim tercihleri kaydedildi.");
     } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      onNotify("danger", err.response?.data?.message ?? "Tercihler kaydedilemedi.");
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : (e as { response?: { data?: { message?: string } } }).response?.data?.message;
+      onNotify("danger", msg ?? "Tercihler kaydedilemedi.");
     } finally {
       setNotificationsSaving(false);
     }
@@ -324,18 +329,18 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     }
     setPasswordChangeLoading(true);
     try {
-      await axios.post(
-        "/api/account/change-password",
-        { currentPassword: cur, newPassword: next },
-        { withCredentials: true }
-      );
+      await getSiteSameOriginAxios().post("/account/change-password", {
+        currentPassword: cur,
+        newPassword: next,
+      });
       setCurrentPasswordForChange("");
       setNewPasswordForChange("");
       setConfirmPasswordForChange("");
       onNotify("info", "Şifreniz güncellendi.");
     } catch (e) {
-      const err = e as { response?: { data?: unknown } };
-      onNotify("danger", getJsonErrorText(err.response?.data) || "Şifre güncellenemedi.");
+      const detail =
+        e instanceof ApiError ? getJsonErrorText(e.data) || e.message : getJsonErrorText((e as { response?: { data?: unknown } }).response?.data);
+      onNotify("danger", detail || "Şifre güncellenemedi.");
     } finally {
       setPasswordChangeLoading(false);
     }

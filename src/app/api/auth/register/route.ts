@@ -1,6 +1,10 @@
+import axios from "axios";
 import { NextResponse } from "next/server";
-import { COOKIE_MAX_AGE_SECONDS, getAuthUpstreamUrl } from "@/lib/config";
+
 import { getExpFromAccessToken } from "@/lib/auth-user";
+import { getAuthUpstreamUrl } from "@/lib/config";
+import { messageFromRegisterUpstream } from "@/lib/register-upstream-error";
+import { setAuthCookies } from "@/lib/server/auth-cookies";
 
 type RegisterBody = {
   firstName?: string;
@@ -8,64 +12,48 @@ type RegisterBody = {
   email?: string;
   phoneNumber?: string;
   password?: string;
+  registrationRole?: string;
 };
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as RegisterBody;
-    const upstream = await fetch(`${getAuthUpstreamUrl()}/basicauth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-
-    const raw = await upstream.text();
-    let data: { message?: string; accessToken?: string; refreshToken?: string; access_token?: string; refresh_token?: string } = {};
-    try {
-      data = raw ? JSON.parse(raw) : {};
-    } catch {
-      data = { message: raw || "Beklenmeyen yanıt" };
-    }
-
-    if (!upstream.ok) {
-      return NextResponse.json(
-        { message: data?.message || "Kayıt başarısız" },
-        { status: upstream.status || 400 },
-      );
-    }
-
-    const accessToken = data?.accessToken || data?.access_token;
-    const refreshToken = data?.refreshToken || data?.refresh_token;
-    const accessTokenExpiresAt = getExpFromAccessToken(accessToken) ?? undefined;
-    const response = NextResponse.json(
-      { ...data, accessTokenExpiresAt },
-      { status: 200 },
+    const upstream = await axios.post<Record<string, unknown>>(
+      `${getAuthUpstreamUrl()}/basicauth/register`,
+      body,
+      {
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        validateStatus: () => true,
+        timeout: 20_000,
+      },
     );
 
-    if (accessToken) {
-      const accessCookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_access_token", accessToken, accessCookieOptions);
-      response.cookies.set("accessToken", accessToken, accessCookieOptions);
+    const raw = upstream.data;
+    const data = (typeof raw === "object" && raw != null ? raw : {}) as {
+      message?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      access_token?: string;
+      refresh_token?: string;
+    };
+
+    if (upstream.status < 200 || upstream.status >= 300) {
+      const rawStr =
+        typeof raw === "string" ? raw : JSON.stringify(raw ?? {});
+      const message = messageFromRegisterUpstream(rawStr, upstream.status);
+      return NextResponse.json({ message }, { status: upstream.status || 400 });
     }
 
-    if (refreshToken) {
-      const refreshCookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_refresh_token", refreshToken, refreshCookieOptions);
-      response.cookies.set("refreshToken", refreshToken, refreshCookieOptions);
-    }
+    const accessToken = data?.accessToken ?? data?.access_token;
+    const refreshToken = data?.refreshToken ?? data?.refresh_token;
+    const accessTokenExpiresAt = getExpFromAccessToken(typeof accessToken === "string" ? accessToken : undefined);
+    const response = NextResponse.json({ ...data, accessTokenExpiresAt }, { status: 200 });
+
+    setAuthCookies(
+      response,
+      typeof accessToken === "string" ? accessToken : undefined,
+      typeof refreshToken === "string" ? refreshToken : undefined,
+    );
 
     return response;
   } catch (err) {

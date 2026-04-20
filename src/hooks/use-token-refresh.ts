@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import axios from "axios";
+
+import { ApiError } from "@/lib/api/errors";
 import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 /** Access token süresi dolmadan kaç saniye önce refresh atılacak */
 const REFRESH_BUFFER_SECONDS = 30;
@@ -19,8 +21,8 @@ export function useTokenRefresh(accessTokenExpiresAt?: number) {
   useEffect(() => {
     if (accessTokenExpiresAt != null) return;
     let cancelled = false;
-    axios
-      .get<{ accessTokenExpiresAt: number | null }>("/api/auth/token-exp", { withCredentials: true })
+    getSiteSameOriginAxios()
+      .get<{ accessTokenExpiresAt: number | null }>("/auth/token-exp")
       .then((res) => {
         if (!cancelled && res.data?.accessTokenExpiresAt != null)
           setExpFromApi(res.data.accessTokenExpiresAt);
@@ -42,14 +44,15 @@ export function useTokenRefresh(accessTokenExpiresAt?: number) {
     const refreshInMs = Math.min(REFRESH_AFTER_LOGIN_MS, fromExpMs);
 
     timeoutRef.current = setTimeout(() => {
-      axios
-        .post<{ accessTokenExpiresAt?: number }>("/api/auth/refresh", {}, { withCredentials: true })
+      getSiteSameOriginAxios()
+        .post<{ accessTokenExpiresAt?: number }>("/auth/refresh", {})
         .then((res) => {
           const nextExp = res.data?.accessTokenExpiresAt;
           if (nextExp != null) setExpFromApi(nextExp);
         })
-        .catch((err: { response?: { status?: number } }) => {
-          if (err.response?.status === 401 && typeof window !== "undefined") {
+        .catch((err: unknown) => {
+          const status = err instanceof ApiError ? err.status : 0;
+          if (status === 401 && typeof window !== "undefined") {
             window.location.href = "/login";
           }
         });

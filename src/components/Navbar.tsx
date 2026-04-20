@@ -7,7 +7,7 @@ import { QrCode, Menu, X, LogOut, LayoutDashboard } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { StoredUser } from "@/lib/api";
-import axios from "axios";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -38,7 +38,7 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("algory_user");
     }
-    await axios.post("/api/auth/logout", undefined, { withCredentials: true }).catch(() => undefined);
+    await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
     setUser(null);
     router.push("/login");
     router.refresh();

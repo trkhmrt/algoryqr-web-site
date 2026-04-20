@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { authService } from "@/lib/auth-service";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
@@ -25,7 +26,7 @@ const Login = () => {
   const queryClient = useQueryClient();
 
   const cancelTwoFactor = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => undefined);
+    await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
     setAwaiting2FA(false);
     setTotpCode("");
     setTwoFactorHintEmail(null);

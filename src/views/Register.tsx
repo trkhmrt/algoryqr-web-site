@@ -33,6 +33,7 @@ const Register = () => {
         email: form.email,
         phoneNumber: form.phone,
         password: form.password,
+        registrationRole: "QR_USER",
       });
       toast({ title: "Başarılı", description: "Hesabınız oluşturuldu!" });
       router.push("/");
@@ -53,7 +54,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await authService.googleRegister(idToken);
+      await authService.googleRegister(idToken, "QR_USER");
       toast({ title: "Başarılı", description: "Google ile kayıt yapıldı!" });
       router.push("/");
     } catch (err) {

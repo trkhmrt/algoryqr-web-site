@@ -1,37 +1,29 @@
-import { NextResponse } from "next/server";
+import axios from "axios";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+
 import { GATEWAY_BASE } from "@/lib/config";
+import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function GET(_req: Request, context: { params: Promise<{ userId: string }> }) {
   try {
     const { userId } = await context.params;
     const cookieStore = await cookies();
-    const accessToken =
-      cookieStore.get("algory_access_token")?.value ||
-      cookieStore.get("accessToken")?.value;
+    const accessToken = readAccessTokenFromCookies(cookieStore);
 
     if (!accessToken) {
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const upstream = await fetch(`${GATEWAY_BASE}/qr/user/${userId}`, {
-      method: "GET",
+    const upstream = await axios.get(`${GATEWAY_BASE}/qr/user/${userId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
-      cache: "no-store",
+      validateStatus: () => true,
+      timeout: 20_000,
     });
 
-    const raw = await upstream.text();
-    let data: unknown = [];
-
-    try {
-      data = raw ? JSON.parse(raw) : [];
-    } catch {
-      data = { message: raw || "Beklenmeyen yanıt" };
-    }
-
-    return NextResponse.json(data, { status: upstream.status });
+    return NextResponse.json(upstream.data ?? [], { status: upstream.status });
   } catch {
     return NextResponse.json({ message: "Sunucu hatası" }, { status: 500 });
   }

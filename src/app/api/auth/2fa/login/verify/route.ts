@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server";
+import axios from "axios";
 import { cookies } from "next/headers";
-import { COOKIE_MAX_AGE_SECONDS, getAuthUpstreamUrl } from "@/lib/config";
-import { getExpFromAccessToken } from "@/lib/auth-user";
+import { NextResponse } from "next/server";
 
-/** Gateway: POST /authservice/2fa/login/verify — Cookie algory_2fa_pending Bearer + { code }. */
+import { getExpFromAccessToken } from "@/lib/auth-user";
+import { getAuthUpstreamUrl } from "@/lib/config";
+import { setAuthCookies } from "@/lib/server/auth-cookies";
+
+/** POST /authservice/2fa/login/verify — Bearer pending JWT + { code }. */
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { code?: string };
@@ -21,25 +24,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const upstream = await fetch(`${getAuthUpstreamUrl()}/2fa/login/verify`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${pending}`,
+    const upstream = await axios.post<Record<string, unknown>>(
+      `${getAuthUpstreamUrl()}/2fa/login/verify`,
+      { code },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${pending}`,
+        },
+        validateStatus: () => true,
+        timeout: 20_000,
       },
-      body: JSON.stringify({ code }),
-      cache: "no-store",
-    });
+    );
 
-    const text = await upstream.text();
-    let data: Record<string, unknown> = {};
-    try {
-      data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
-    } catch {
-      return NextResponse.json({ message: text || "Geçersiz yanıt" }, { status: 502 });
-    }
+    const data = (typeof upstream.data === "object" && upstream.data != null ? upstream.data : {}) as Record<
+      string,
+      unknown
+    > & { message?: string };
 
-    if (!upstream.ok) {
+    if (upstream.status < 200 || upstream.status >= 300) {
       const message =
         typeof data.message === "string" ? data.message : "2FA doğrulaması başarısız";
       return NextResponse.json({ message }, { status: upstream.status || 401 });
@@ -60,29 +64,11 @@ export async function POST(req: Request) {
     };
     response.cookies.set("algory_2fa_pending", "", clearPending);
 
-    if (accessToken) {
-      const accessCookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_access_token", accessToken, accessCookieOptions);
-      response.cookies.set("accessToken", accessToken, accessCookieOptions);
-    }
-
-    if (refreshToken) {
-      const refreshCookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_refresh_token", refreshToken, refreshCookieOptions);
-      response.cookies.set("refreshToken", refreshToken, refreshCookieOptions);
-    }
+    setAuthCookies(
+      response,
+      typeof accessToken === "string" ? accessToken : undefined,
+      typeof refreshToken === "string" ? refreshToken : undefined,
+    );
 
     return response;
   } catch {

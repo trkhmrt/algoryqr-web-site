@@ -1,17 +1,18 @@
-import { NextResponse } from "next/server";
+import axios from "axios";
 import { cookies } from "next/headers";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { NextResponse } from "next/server";
+
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
+import { getAuthUpstreamUrl } from "@/lib/config";
 import { getJsonErrorText } from "@/lib/api-error-text";
+import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 type Body = { currentPassword?: string; newPassword?: string };
 
-/** Gateway: POST /authservice/account/change-password — JWT zorunlu. */
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
-    const accessToken =
-      cookieStore.get("algory_access_token")?.value || cookieStore.get("accessToken")?.value;
+    const accessToken = readAccessTokenFromCookies(cookieStore);
     if (!accessToken) {
       return NextResponse.json({ message: "Oturum gerekli" }, { status: 401 });
     }
@@ -26,29 +27,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Mevcut şifre ve yeni şifre gerekli" }, { status: 400 });
     }
 
-    const upstream = await fetch(`${getAuthUpstreamUrl()}/account/change-password`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "X-User-Id": String(userId),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const upstream = await axios.post(
+      `${getAuthUpstreamUrl()}/account/change-password`,
+      {
         currentPassword: body.currentPassword,
         newPassword: body.newPassword,
-      }),
-      cache: "no-store",
-    });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-User-Id": String(userId),
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        validateStatus: () => true,
+        timeout: 20_000,
+      },
+    );
 
-    if (!upstream.ok) {
-      const text = await upstream.text();
-      let message = text;
-      try {
-        message = getJsonErrorText(JSON.parse(text) as unknown) || text;
-      } catch {
-        /* keep text */
-      }
-      return NextResponse.json({ message: message || "Şifre değiştirilemedi" }, { status: upstream.status });
+    if (upstream.status < 200 || upstream.status >= 300) {
+      const message = getJsonErrorText(upstream.data) || String(upstream.data ?? "") || "Şifre değiştirilemedi";
+      return NextResponse.json({ message }, { status: upstream.status });
     }
 
     return new NextResponse(null, { status: 204 });

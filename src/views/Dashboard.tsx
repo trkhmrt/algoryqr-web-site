@@ -54,7 +54,7 @@ import {
 } from "@/components/dashboard/qr/qr-mappers";
 import { buildPlatformShareUrl, copyQrImageToClipboard, copyTextToClipboard, downloadQrImage, shareQr, SharePlatform } from "@/components/dashboard/qr/qr-actions";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateUserQrs, useUserQrs, userQrsQueryKey } from "@/hooks/use-user-qrs";
@@ -541,7 +541,7 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
               if (typeof window !== "undefined") {
                 localStorage.removeItem("algory_user");
               }
-              await axios.post("/api/auth/logout", undefined, { withCredentials: true }).catch(() => undefined);
+              await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
               router.push("/login");
               router.refresh();
             }}

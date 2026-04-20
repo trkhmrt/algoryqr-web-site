@@ -1,33 +1,46 @@
+import axios from "axios";
 import { NextResponse } from "next/server";
-import {
-  COOKIE_MAX_AGE_SECONDS,
-  TWO_FACTOR_PENDING_COOKIE_MAX_AGE_SECONDS,
-  getAuthUpstreamUrl,
-} from "@/lib/config";
+
 import { getExpFromAccessToken } from "@/lib/auth-user";
+import { getAuthUpstreamUrl } from "@/lib/config";
+import { setAuthCookies, setTwoFactorPendingCookie } from "@/lib/server/auth-cookies";
 
 export async function POST(req: Request) {
   try {
     const body = await req.text();
     const token = body.startsWith("{") ? (JSON.parse(body) as { idToken?: string })?.idToken ?? "" : body;
-    const upstream = await fetch(`${getAuthUpstreamUrl()}/google-auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: token,
-      cache: "no-store",
-    });
 
-    const raw = await upstream.text();
-    let data: any = {};
-    try {
-      data = raw ? JSON.parse(raw) : {};
-    } catch {
-      data = { message: raw || "Beklenmeyen yanıt" };
-    }
+    const upstream = await axios.post<Record<string, unknown>>(
+      `${getAuthUpstreamUrl()}/google-auth/login`,
+      token,
+      {
+        headers: { "Content-Type": "text/plain", Accept: "application/json" },
+        transformRequest: [(d) => (typeof d === "string" ? d : String(d))],
+        validateStatus: () => true,
+        timeout: 20_000,
+      },
+    );
 
-    if (!upstream.ok) {
+    const data = (typeof upstream.data === "object" && upstream.data != null ? upstream.data : {}) as Record<
+      string,
+      unknown
+    > & {
+      message?: string;
+      requiresTwoFactor?: boolean;
+      twoFactorToken?: string;
+      userId?: number;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      accessToken?: string;
+      access_token?: string;
+      refreshToken?: string;
+      refresh_token?: string;
+    };
+
+    if (upstream.status < 200 || upstream.status >= 300) {
       return NextResponse.json(
-        { message: data?.message || "Google ile giriş başarısız" },
+        { message: typeof data?.message === "string" ? data.message : "Google ile giriş başarısız" },
         { status: upstream.status || 401 },
       );
     }
@@ -43,48 +56,21 @@ export async function POST(req: Request) {
         },
         { status: 200 },
       );
-      const pendingOpts = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: TWO_FACTOR_PENDING_COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_2fa_pending", data.twoFactorToken, pendingOpts);
+      setTwoFactorPendingCookie(response, String(data.twoFactorToken));
       return response;
     }
 
-    const accessToken = data?.accessToken || data?.access_token;
-    const refreshToken = data?.refreshToken || data?.refresh_token;
-    const accessTokenExpiresAt = getExpFromAccessToken(accessToken) ?? undefined;
-    const response = NextResponse.json(
-      { ...data, accessTokenExpiresAt },
-      { status: 200 },
+    const accessToken = data?.accessToken ?? data?.access_token;
+    const refreshToken = data?.refreshToken ?? data?.refresh_token;
+    const accessTokenExpiresAt =
+      getExpFromAccessToken(typeof accessToken === "string" ? accessToken : undefined) ?? undefined;
+    const response = NextResponse.json({ ...data, accessTokenExpiresAt }, { status: 200 });
+
+    setAuthCookies(
+      response,
+      typeof accessToken === "string" ? accessToken : undefined,
+      typeof refreshToken === "string" ? refreshToken : undefined,
     );
-
-    if (accessToken) {
-      const accessCookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_access_token", accessToken, accessCookieOptions);
-      response.cookies.set("accessToken", accessToken, accessCookieOptions);
-    }
-
-    if (refreshToken) {
-      const refreshCookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
-        path: "/",
-        maxAge: COOKIE_MAX_AGE_SECONDS,
-      };
-      response.cookies.set("algory_refresh_token", refreshToken, refreshCookieOptions);
-      response.cookies.set("refreshToken", refreshToken, refreshCookieOptions);
-    }
 
     return response;
   } catch {

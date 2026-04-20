@@ -1,22 +1,22 @@
-import { NextResponse } from "next/server";
+import axios from "axios";
 import { cookies } from "next/headers";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { NextResponse } from "next/server";
+
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
+import { getAuthUpstreamUrl } from "@/lib/config";
 import {
   getJsonErrorText,
   isLikelyWrongTotpBackendText,
   TOTP_WRONG_USER_MESSAGE,
 } from "@/lib/api-error-text";
+import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 type Body = { code?: string };
 
-/** Gateway: POST /authservice/2fa/active → AuthService /2fa/active. JWT zorunlu. */
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
-    const accessToken =
-      cookieStore.get("algory_access_token")?.value ||
-      cookieStore.get("accessToken")?.value;
+    const accessToken = readAccessTokenFromCookies(cookieStore);
     if (!accessToken) {
       return NextResponse.json({ message: "Oturum gerekli" }, { status: 401 });
     }
@@ -31,32 +31,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Geçerli 6 haneli kod gerekli" }, { status: 400 });
     }
 
-    const upstream = await fetch(`${getAuthUpstreamUrl()}/2fa/active`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "X-User-Id": String(userId),
-        "Content-Type": "application/json",
+    const upstream = await axios.post(
+      `${getAuthUpstreamUrl()}/2fa/active`,
+      { code: String(body.code).trim() },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-User-Id": String(userId),
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        validateStatus: () => true,
+        timeout: 20_000,
       },
-      body: JSON.stringify({ code: String(body.code).trim() }),
-      cache: "no-store",
-    });
+    );
 
-    if (!upstream.ok) {
-      const text = await upstream.text();
-      let message = text;
-      try {
-        const j = JSON.parse(text) as unknown;
-        const from = getJsonErrorText(j);
-        if (from) message = from;
-      } catch {
-        /* keep text */
-      }
+    if (upstream.status < 200 || upstream.status >= 300) {
+      let message = getJsonErrorText(upstream.data) || String(upstream.data ?? "");
       if (upstream.status === 500 && isLikelyWrongTotpBackendText(message)) {
         message = TOTP_WRONG_USER_MESSAGE;
       } else if (upstream.status === 401) {
         const m = String(message).toLowerCase();
-        if (!m.trim() || !text?.trim()) {
+        if (!m.trim()) {
           message = "Oturum doğrulanamadı. Yeniden giriş yapın.";
         } else if (/oturum|token|giriş|yetkisiz/i.test(m)) {
           /* olduğu gibi */

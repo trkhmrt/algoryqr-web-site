@@ -1,24 +1,27 @@
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
+
 import { ApiError, setStoredUser } from "./api";
 import {
   getJsonErrorText,
   isLikelyWrongTotpBackendText,
   TOTP_WRONG_USER_MESSAGE,
 } from "./api-error-text";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+
+function client() {
+  return getSiteSameOriginAxios();
+}
 
 interface AuthResponse {
   accessToken?: string;
   refreshToken?: string;
   access_token?: string;
   refresh_token?: string;
-  /** JWT exp, saniye cinsinden epoch; client sayacı için */
   accessTokenExpiresAt?: number;
-  /** AuthService TokenResponse (basicauth login / refresh) */
   userId?: number;
   email?: string;
   firstName?: string;
   lastName?: string;
-  /** true ise access yok; önce POST /api/auth/2fa/login/verify ile TOTP */
   requiresTwoFactor?: boolean;
   user?: {
     id: string;
@@ -46,6 +49,7 @@ function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
 }
 
 function toApiError(e: unknown, fallback: string): ApiError {
+  if (e instanceof ApiError) return e;
   const err = e as AxiosError<unknown>;
   const status = err.response?.status ?? 0;
   const from = getJsonErrorText(err.response?.data);
@@ -53,8 +57,20 @@ function toApiError(e: unknown, fallback: string): ApiError {
   return new ApiError(status, message, err.response?.data);
 }
 
-/** 2FA kod yanlışsa (401 veya eski API’de 500 + errors içinde Invalid verification code) sade mesaj. */
 function toTotpSubmitApiError(e: unknown, fallback: string): ApiError {
+  if (e instanceof ApiError) {
+    const from = e.message;
+    if (isLikelyWrongTotpBackendText(from)) {
+      return new ApiError(e.status, TOTP_WRONG_USER_MESSAGE, e.data);
+    }
+    if (e.status === 401) {
+      if (/oturum|token|giriş|yetkisiz/i.test(from)) {
+        return e;
+      }
+      return new ApiError(e.status, TOTP_WRONG_USER_MESSAGE, e.data);
+    }
+    return e;
+  }
   const err = e as AxiosError<unknown>;
   const status = err.response?.status ?? 0;
   const from = getJsonErrorText(err.response?.data);
@@ -70,7 +86,6 @@ function toTotpSubmitApiError(e: unknown, fallback: string): ApiError {
   return toApiError(e, fallback);
 }
 
-/** POST /api/auth/2fa/setup yanıtı (AuthService /2fa/setup). */
 export interface TwoFactorSetupPayload {
   secret: string;
   issuer: string;
@@ -80,13 +95,9 @@ export interface TwoFactorSetupPayload {
 }
 
 export const authService = {
-  /** /api/auth/login → Gateway `/authservice/basicauth/login` (veya AUTH_UPSTREAM), cookie'ler set edilir */
   async login(params: { email: string; password: string }): Promise<AuthResponse> {
     try {
-      const { data } = await axios.post<AuthResponse>("/api/auth/login", params, {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      });
+      const { data } = await client().post<AuthResponse>("/auth/login", params);
       if (data.requiresTwoFactor) {
         return data;
       }
@@ -105,14 +116,9 @@ export const authService = {
     }
   },
 
-  /** Şifre/Google sonrası cookie’deki pending JWT ile 6 haneli TOTP; başarıda tam oturum. */
   async completeTwoFactorLogin(code: string): Promise<AuthResponse> {
     try {
-      const { data } = await axios.post<AuthResponse>(
-        "/api/auth/2fa/login/verify",
-        { code },
-        { headers: { "Content-Type": "application/json" }, withCredentials: true },
-      );
+      const { data } = await client().post<AuthResponse>("/auth/2fa/login/verify", { code });
       if (data.user) setStoredUser(data.user);
       else if (data.userId != null) {
         setStoredUser({
@@ -128,18 +134,18 @@ export const authService = {
     }
   },
 
-  /** /api/auth/register → `/authservice/basicauth/register` */
   async register(params: {
     firstName: string;
     lastName: string;
     email: string;
     phoneNumber: string;
     password: string;
+    registrationRole?: string;
   }): Promise<AuthResponse> {
     try {
-      const { data } = await axios.post<AuthResponse>("/api/auth/register", params, {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
+      const { data } = await client().post<AuthResponse>("/auth/register", {
+        ...params,
+        registrationRole: params.registrationRole ?? "QR_USER",
       });
       if (data.user) setStoredUser(data.user);
       return data;
@@ -148,13 +154,11 @@ export const authService = {
     }
   },
 
-  /** /api/auth/google/login → `/authservice/google-auth/login`. Body: düz idToken string */
   async googleLogin(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
     try {
-      const { data } = await axios.post<GoogleUserResponse & AuthResponse>("/api/auth/google/login", idToken, {
+      const { data } = await client().post<GoogleUserResponse & AuthResponse>("/auth/google/login", idToken, {
         headers: { "Content-Type": "text/plain" },
         transformRequest: [(d) => d],
-        withCredentials: true,
       });
       if (data.requiresTwoFactor) {
         return data;
@@ -167,13 +171,14 @@ export const authService = {
     }
   },
 
-  /** /api/auth/google/register → `/authservice/google-auth/register` (JSON { idToken }) */
-  async googleRegister(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
+  async googleRegister(
+    idToken: string,
+    registrationRole: string = "QR_USER",
+  ): Promise<GoogleUserResponse & AuthResponse> {
     try {
-      const { data } = await axios.post<GoogleUserResponse & AuthResponse>("/api/auth/google/register", idToken, {
-        headers: { "Content-Type": "text/plain" },
-        transformRequest: [(d) => d],
-        withCredentials: true,
+      const { data } = await client().post<GoogleUserResponse & AuthResponse>("/auth/google/register", {
+        idToken,
+        registrationRole,
       });
       if (data.user) setStoredUser(data.user);
       else if (data.userId != null || data.email) setStoredUser(mapGoogleUserToStoredUser(data as GoogleUserResponse));
@@ -183,40 +188,41 @@ export const authService = {
     }
   },
 
-  /** 2FA kurulumu: QR (Base64), gizli anahtar, otpauth URI (tek telefonda manuel / derin bağlantı). */
   async fetchTwoFactorSetup(): Promise<TwoFactorSetupPayload> {
-    const res = await fetch("/api/auth/2fa/setup", {
-      method: "POST",
-      credentials: "include",
-    });
-    const raw = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new ApiError(res.status, (raw as { message?: string }).message || "2FA kurulumu alınamadı", raw);
+    const { data, status } = await client().post<TwoFactorSetupPayload | { message?: string }>(
+      "/auth/2fa/setup",
+      {},
+      { validateStatus: () => true },
+    );
+    if (status !== 200 || !data) {
+      const msg =
+        typeof data === "object" && data != null && "message" in data && typeof data.message === "string"
+          ? data.message
+          : "2FA kurulumu alınamadı";
+      throw new ApiError(status, msg, data);
     }
-    const p = raw as TwoFactorSetupPayload;
+    const p = data as TwoFactorSetupPayload;
     if (
       typeof p.secret !== "string" ||
       typeof p.qrImageBase64 !== "string" ||
       typeof p.otpAuthUri !== "string"
     ) {
-      throw new ApiError(res.status, "Geçersiz kurulum yanıtı", raw);
+      throw new ApiError(status, "Geçersiz kurulum yanıtı", data);
     }
     return p;
   },
 
-  /** 2FA'yı TOTP kodu ile aktif et. */
   async activateTwoFactor(code: string): Promise<void> {
     try {
-      await axios.post("/api/auth/2fa/active", { code }, { withCredentials: true });
+      await client().post("/auth/2fa/active", { code });
     } catch (e) {
       throw toTotpSubmitApiError(e, "2FA doğrulaması başarısız");
     }
   },
 
-  /** 2FA'yı kapatmak için geçerli TOTP kodu gerekir. */
   async disableTwoFactor(code: string): Promise<void> {
     try {
-      await axios.post("/api/auth/2fa/disable", { code }, { withCredentials: true });
+      await client().post("/auth/2fa/disable", { code });
     } catch (e) {
       throw toTotpSubmitApiError(e, "2FA kapatılamadı");
     }

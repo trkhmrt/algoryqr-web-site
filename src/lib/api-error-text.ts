@@ -8,6 +8,14 @@ export function getJsonErrorText(data: unknown): string {
     const first = o.errors[0];
     if (typeof first === "string" && first.trim()) return first.trim();
   }
+
+  const fe = o.fieldErrors;
+  if (fe && typeof fe === "object") {
+    for (const v of Object.values(fe as Record<string, unknown>)) {
+      if (Array.isArray(v) && v.length > 0 && typeof v[0] === "string") return String(v[0]).trim();
+    }
+  }
+
   return "";
 }
 

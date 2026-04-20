@@ -1,15 +1,15 @@
-import { NextResponse } from "next/server";
+import axios from "axios";
 import { cookies } from "next/headers";
-import { getAuthUpstreamUrl } from "@/lib/config";
-import { getUserIdFromAccessToken } from "@/lib/auth-user";
+import { NextResponse } from "next/server";
 
-/** Gateway: POST /authservice/2fa/enabled → AuthService /2fa/enabled (PNG). JWT zorunlu. */
+import { getUserIdFromAccessToken } from "@/lib/auth-user";
+import { getAuthUpstreamUrl } from "@/lib/config";
+import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
+
 export async function POST() {
   try {
     const cookieStore = await cookies();
-    const accessToken =
-      cookieStore.get("algory_access_token")?.value ||
-      cookieStore.get("accessToken")?.value;
+    const accessToken = readAccessTokenFromCookies(cookieStore);
     if (!accessToken) {
       return NextResponse.json({ message: "Oturum gerekli" }, { status: 401 });
     }
@@ -19,31 +19,37 @@ export async function POST() {
       return NextResponse.json({ message: "Token'da kullanıcı bilgisi yok" }, { status: 401 });
     }
 
-    const upstream = await fetch(`${getAuthUpstreamUrl()}/2fa/enabled`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "X-User-Id": String(userId),
+    const upstream = await axios.post<ArrayBuffer>(
+      `${getAuthUpstreamUrl()}/2fa/enabled`,
+      undefined,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-User-Id": String(userId),
+        },
+        responseType: "arraybuffer",
+        validateStatus: () => true,
+        timeout: 20_000,
       },
-      cache: "no-store",
-    });
+    );
 
-    if (!upstream.ok) {
-      const text = await upstream.text();
-      let message = text;
+    if (upstream.status < 200 || upstream.status >= 300) {
+      let message = "2FA kurulumu başarısız";
       try {
+        const text = new TextDecoder().decode(upstream.data as ArrayBuffer);
         const j = JSON.parse(text) as { message?: string };
         if (j?.message) message = j.message;
       } catch {
-        /* keep text */
+        /* keep default */
       }
-      return NextResponse.json({ message: message || "2FA kurulumu başarısız" }, { status: upstream.status });
+      return NextResponse.json({ message }, { status: upstream.status });
     }
 
-    const buf = await upstream.arrayBuffer();
-    return new NextResponse(buf, {
+    const buf = upstream.data as ArrayBuffer;
+    const ct = String(upstream.headers["content-type"] || "image/png");
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
-      headers: { "Content-Type": upstream.headers.get("content-type") || "image/png" },
+      headers: { "Content-Type": ct },
     });
   } catch {
     return NextResponse.json({ message: "Sunucu hatası" }, { status: 500 });

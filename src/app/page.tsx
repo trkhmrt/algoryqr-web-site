@@ -5,8 +5,8 @@ import { getUserFromAccessToken } from "@/lib/auth-user";
 export default async function Home() {
   const cookieStore = await cookies();
   const accessToken =
-    cookieStore.get("algory_access_token")?.value ||
-    cookieStore.get("accessToken")?.value ||
+    cookieStore.get("accessToken")?.value?.trim() ||
+    cookieStore.get("algory_access_token")?.value?.trim() ||
     null;
   const initialUser = getUserFromAccessToken(accessToken);
 
