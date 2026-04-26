@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -24,7 +24,15 @@ export async function GET(_req: Request, context: { params: Promise<{ userId: st
     });
 
     return NextResponse.json(upstream.data ?? [], { status: upstream.status });
-  } catch {
-    return NextResponse.json({ message: "Sunucu hatası" }, { status: 500 });
+  } catch (error) {
+    if (error instanceof AxiosError) {
+      if (error.code === "ECONNABORTED") {
+        return NextResponse.json({ message: "Gateway timeout" }, { status: 504 });
+      }
+      if (error.response) {
+        return NextResponse.json(error.response.data ?? [], { status: error.response.status });
+      }
+    }
+    return NextResponse.json({ message: "Sunucu hatası", detail: String(error) }, { status: 500 });
   }
 }
