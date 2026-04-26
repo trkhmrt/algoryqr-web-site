@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getUserFromAccessToken } from "@/lib/auth-user";
-import { GATEWAY_BASE } from "@/lib/config";
+import { QR_GATEWAY_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function POST(req: Request) {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       userId: Number.isNaN(Number(userId)) ? userId : Number(userId),
     };
 
-    const upstream = await axios.post(`${GATEWAY_BASE}/qr/create`, requestBody, {
+    const upstream = await axios.post(`${QR_GATEWAY_BASE}/create`, requestBody, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
