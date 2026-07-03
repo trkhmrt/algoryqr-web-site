@@ -1,0 +1,17 @@
+services:
+  algoryqr-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GATEWAY_BASE: ${GATEWAY_BASE:-https://gateway.algorycode.com}
+        NEXT_PUBLIC_GATEWAY_BASE: ${NEXT_PUBLIC_GATEWAY_BASE:-https://gateway.algorycode.com}
+        AUTH_UPSTREAM: ${AUTH_UPSTREAM:-http://185.184.210.52:8055}
+    image: algoryqr-web-site:latest
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      GATEWAY_BASE: ${GATEWAY_BASE:-https://gateway.algorycode.com}
+      NEXT_PUBLIC_GATEWAY_BASE: ${NEXT_PUBLIC_GATEWAY_BASE:-https://gateway.algorycode.com}
+      AUTH_UPSTREAM: ${AUTH_UPSTREAM:-http://185.184.210.52:8055}
+    restart: unless-stopped
