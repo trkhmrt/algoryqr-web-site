@@ -5,8 +5,17 @@ function resolveApiBaseUrl(): string {
   return "";
 }
 
-/** Tüm upstream API istekleri bu URL'den yapılır — `API_BASE_URL` env ile verilir. */
+function resolvePaymentBaseUrl(): string {
+  const fromEnv = process.env.PAYMENT_BASE_URL;
+  if (fromEnv) return fromEnv.trim();
+  return "";
+}
+
+/** Auth, QR, paket vb. upstream istekleri — `API_BASE_URL` env ile verilir. */
 export const API_BASE_URL = resolveApiBaseUrl();
+
+/** Ödeme servisi istekleri — `PAYMENT_BASE_URL` env ile verilir. */
+export const PAYMENT_BASE_URL = resolvePaymentBaseUrl();
 
 export const QR_API_BASE = `${API_BASE_URL}/qr`;
 

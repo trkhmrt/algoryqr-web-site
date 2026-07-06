@@ -1,20 +1,23 @@
-import axios from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { API_BASE_URL } from "@/lib/config";
 import { parsePackageConversationId } from "@/lib/package-payment";
 import { grantPackageToUser } from "@/lib/server/package-purchase";
 import { setAuthCookies } from "@/lib/server/auth-cookies";
 import { takePendingThreeDsPayment } from "@/lib/server/pending-three-ds";
+import {
+  completeThreeDsPayment,
+  isPaymentPendingOnService,
+  isPaymentUpstreamSuccess,
+  paymentUpstreamErrorMessage,
+} from "@/lib/server/payment-service";
 import { resolveAccessTokenForGrant } from "@/lib/server/refresh-access-token";
 import {
   clearThreeDsPendingCookie,
   readThreeDsPendingToken,
   THREE_DS_PENDING_COOKIE,
 } from "@/lib/server/three-ds-session";
-import { isPaymentPendingOnService } from "@/lib/server/verify-payment-pending";
 
 type ResolvedPending = {
   packageId: number;
@@ -142,30 +145,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    const complete = await axios.post(
-      `${API_BASE_URL}/payments/three-ds/complete`,
-      {
-        conversationId,
-        paymentId,
-        conversationData: conversationData || undefined,
-        locale: "tr",
-      },
-      {
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        validateStatus: () => true,
-        timeout: 30_000,
-      },
-    );
+    const complete = await completeThreeDsPayment({
+      conversationId,
+      paymentId,
+      conversationData: conversationData || undefined,
+      locale: "tr",
+    });
 
-    if (complete.status < 200 || complete.status >= 300) {
-      const message =
-        (typeof complete.data === "object" &&
-          complete.data != null &&
-          "message" in complete.data &&
-          typeof (complete.data as { message?: string }).message === "string" &&
-          (complete.data as { message: string }).message) ||
-        "3DS ödeme tamamlanamadı";
-      return redirectToSubscription(origin, "failed", message);
+    if (!isPaymentUpstreamSuccess(complete.status)) {
+      return redirectToSubscription(
+        origin,
+        "failed",
+        paymentUpstreamErrorMessage(complete.data, "3DS ödeme tamamlanamadı"),
+      );
     }
 
     const tokens = await resolveAccessTokenForGrant(pending.accessToken, pending.refreshToken);

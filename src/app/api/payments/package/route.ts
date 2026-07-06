@@ -1,9 +1,9 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getUserFromAccessToken } from "@/lib/auth-user";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL, PAYMENT_BASE_URL } from "@/lib/config";
 import {
   buildPackagePaymentRequest,
   createPackageConversationId,
@@ -15,6 +15,15 @@ import { getClientIp, getAppOrigin, grantPackageToUser } from "@/lib/server/pack
 import { readAccessTokenFromCookies, readRefreshTokenFromCookies } from "@/lib/server/auth-cookies";
 import { savePendingThreeDsPaymentAliases } from "@/lib/server/pending-three-ds";
 import {
+  createPayment,
+  createThreeDsPayment,
+  isPaymentConnectionError,
+  isPaymentTimeoutError,
+  isPaymentUpstreamSuccess,
+  paymentUpstreamErrorMessage,
+  type PaymentErrorBody,
+} from "@/lib/server/payment-service";
+import {
   createThreeDsPendingToken,
   THREE_DS_PENDING_COOKIE,
   threeDsPendingCookieOptions,
@@ -25,19 +34,6 @@ type PackageCheckoutBody = {
   use3ds?: boolean;
   card?: PackagePaymentCardInput;
 };
-
-type PaymentErrorBody = {
-  message?: string;
-  errorCode?: string;
-  fieldErrors?: Record<string, string> | null;
-};
-
-function paymentErrorMessage(data: unknown): string {
-  if (typeof data !== "object" || data == null) return "Ödeme başlatılamadı";
-  const body = data as PaymentErrorBody;
-  if (typeof body.message === "string" && body.message.trim()) return body.message;
-  return "Ödeme başlatılamadı";
-}
 
 async function loadPackage(packageId: number): Promise<PlanPackageApiItem | null> {
   const upstream = await axios.get<PlanPackageApiItem[]>(`${API_BASE_URL}/packages`, {
@@ -143,18 +139,15 @@ export async function POST(req: Request) {
       callbackUrl,
     });
 
-    const paymentPath = use3ds ? "/payments/three-ds" : "/payments";
-    const upstream = await axios.post(`${API_BASE_URL}${paymentPath}`, paymentBody, {
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      validateStatus: () => true,
-      timeout: 30_000,
-    });
+    const upstream = use3ds
+      ? await createThreeDsPayment(paymentBody)
+      : await createPayment(paymentBody);
 
-    if (upstream.status < 200 || upstream.status >= 300) {
+    if (!isPaymentUpstreamSuccess(upstream.status)) {
       const err = upstream.data as PaymentErrorBody;
       return NextResponse.json(
         {
-          message: paymentErrorMessage(upstream.data),
+          message: paymentUpstreamErrorMessage(upstream.data),
           errorCode: err.errorCode ?? null,
           fieldErrors: err.fieldErrors ?? null,
         },
@@ -204,16 +197,14 @@ export async function POST(req: Request) {
       conversationId: (upstream.data as { conversationId?: string })?.conversationId ?? conversationId,
     });
   } catch (error) {
-    if (error instanceof AxiosError) {
-      if (error.code === "ECONNABORTED") {
-        return NextResponse.json({ message: "Ödeme servisi zaman aşımı" }, { status: 504 });
-      }
-      if (error.code === "ECONNREFUSED") {
-        return NextResponse.json(
-          { message: `Ödeme servisine bağlanılamadı (${API_BASE_URL})` },
-          { status: 502 },
-        );
-      }
+    if (isPaymentTimeoutError(error)) {
+      return NextResponse.json({ message: "Ödeme servisi zaman aşımı" }, { status: 504 });
+    }
+    if (isPaymentConnectionError(error)) {
+      return NextResponse.json(
+        { message: `Ödeme servisine bağlanılamadı (${PAYMENT_BASE_URL})` },
+        { status: 502 },
+      );
     }
     const message = error instanceof Error ? error.message : "Ödeme işlemi başarısız";
     return NextResponse.json({ message }, { status: 500 });
