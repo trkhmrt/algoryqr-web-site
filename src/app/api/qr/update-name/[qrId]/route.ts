@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import axios, { AxiosError } from "axios";
 import { NextResponse } from "next/server";
-import { QR_GATEWAY_BASE } from "@/lib/config";
+import { QR_API_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function PATCH(req: Request, context: { params: Promise<{ qrId: string }> }) {
@@ -15,7 +15,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ qrId: str
     }
 
     const body = await req.json();
-    const upstream = await axios.patch(`${QR_GATEWAY_BASE}/update-name/${qrId}`, body, {
+    const upstream = await axios.patch(`${QR_API_BASE}/update-name/${qrId}`, body, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,

@@ -1,30 +1,14 @@
-const trimTrailingSlash = (s: string) => s.replace(/\/$/, "");
-
-function resolveGatewayBase(): string {
-  const fromEnv =
-    process.env.NEXT_PUBLIC_GATEWAY_BASE || process.env.GATEWAY_BASE;
-  if (fromEnv) return trimTrailingSlash(fromEnv);
-  if (process.env.NODE_ENV === "development") return "http://localhost:8072";
-  return "https://gateway.algorycode.com";
+function resolveApiBaseUrl(): string {
+  const fromEnv = process.env.API_BASE_URL;
+  if (fromEnv) return fromEnv.trim();
+  if (process.env.NODE_ENV === "development") return "http://localhost:8055";
+  return "";
 }
 
-export const GATEWAY_BASE = resolveGatewayBase();
+/** Tüm upstream API istekleri bu URL'den yapılır — `API_BASE_URL` env ile verilir. */
+export const API_BASE_URL = resolveApiBaseUrl();
 
-export const QR_GATEWAY_BASE = `${GATEWAY_BASE}/qr`;
-
-export const AUTH_BASE =
-  process.env.AUTH_BASE ||
-  process.env.NEXT_PUBLIC_AUTH_BASE ||
-  "https://auth.algorycode.com";
-export const API_BASE = AUTH_BASE;
-
-export function getAuthUpstreamUrl(): string {
-  const direct =
-    process.env.AUTH_UPSTREAM || process.env.NEXT_PUBLIC_AUTH_UPSTREAM;
-  if (direct) return trimTrailingSlash(direct);
-  if (process.env.NODE_ENV === "development") return "http://185.184.210.52:8055";
-  return `${resolveGatewayBase()}/authservice`;
-}
+export const QR_API_BASE = `${API_BASE_URL}/qr`;
 
 export const ACCESS_TOKEN_EXPIRY_MS = 300_000;
 export const ACCESS_TOKEN_EXPIRY_SECONDS = ACCESS_TOKEN_EXPIRY_MS / 1000;

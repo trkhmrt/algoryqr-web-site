@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getExpFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { clearAuthCookies, readRefreshTokenFromCookies, setAuthCookies } from "@/lib/server/auth-cookies";
 
 export async function POST() {
@@ -18,7 +18,7 @@ export async function POST() {
     }
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/basicauth/refreshToken`,
+      `${API_BASE_URL}/auth/refresh`,
       { refreshToken },
       {
         headers: { Accept: "application/json", "Content-Type": "application/json" },

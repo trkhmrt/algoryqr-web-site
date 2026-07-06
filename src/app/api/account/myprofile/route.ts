@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 async function forwardToUpstream(req: Request, method: "GET" | "PATCH") {
@@ -18,7 +18,7 @@ async function forwardToUpstream(req: Request, method: "GET" | "PATCH") {
     return NextResponse.json({ message: "Token'da kullanıcı bilgisi yok" }, { status: 401 });
   }
 
-  const url = `${getAuthUpstreamUrl()}/account/myprofile`;
+  const url = `${API_BASE_URL}/account/myprofile`;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
     "X-User-Id": String(userId),

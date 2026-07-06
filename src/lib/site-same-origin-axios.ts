@@ -6,6 +6,20 @@ import { ApiError } from "@/lib/api/errors";
 
 let refreshPromise: Promise<boolean> | null = null;
 
+const PUBLIC_AUTH_API_PATHS = [
+  "/auth/login",
+  "/auth/logout",
+  "/auth/register",
+  "/auth/refresh",
+  "/auth/google/login",
+  "/auth/google/register",
+  "/auth/2fa/login/verify",
+] as const;
+
+function isPublicAuthApiPath(url: string): boolean {
+  return PUBLIC_AUTH_API_PATHS.some((path) => url.includes(path));
+}
+
 /** Aynı origin `POST /api/auth/refresh`; 401 ise logout + login. */
 export async function refreshSiteSession(): Promise<boolean> {
   if (typeof window === "undefined") return false;
@@ -60,11 +74,7 @@ export function getSiteSameOriginAxios(): AxiosInstance {
       const cfg = error.config as SiteRetryCfg | undefined;
       if (typeof window !== "undefined" && status === 401 && cfg && !cfg.__site401Retried) {
         const url = `${cfg.baseURL ?? ""}${cfg.url ?? ""}`;
-        if (
-          !url.includes("/auth/refresh") &&
-          !url.includes("/auth/login") &&
-          !url.includes("/auth/logout")
-        ) {
+        if (!isPublicAuthApiPath(url)) {
           cfg.__site401Retried = true;
           const ok = await refreshSiteSession();
           if (ok) {

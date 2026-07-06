@@ -2,7 +2,7 @@ import axios from "axios";
 import { NextResponse } from "next/server";
 
 import { getExpFromAccessToken, isoToEpochSeconds } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { setAuthCookies, setTokenExpiryCookies, setTwoFactorPendingCookie } from "@/lib/server/auth-cookies";
 
 type LoginBody = {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/auth/login`,
+      `${API_BASE_URL}/auth/login`,
       loginPayload,
       {
         headers: { "Content-Type": "application/json", Accept: "application/json" },

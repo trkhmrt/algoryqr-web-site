@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { QrCode, Menu, X, LogOut, LayoutDashboard } from "lucide-react";
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { StoredUser } from "@/lib/api";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useRouter } from "next/navigation";
+import { useMyProfile } from "@/hooks/use-my-profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,13 +27,22 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<StoredUser | null>(initialUser);
   const router = useRouter();
-  const userFullName = (user?.first_name || user?.last_name)
-    ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
-    : "Hesabım";
-  const userInitials =
-    ((user?.first_name?.[0] || "") + (user?.last_name?.[0] || "")).toUpperCase() ||
-    user?.email?.[0]?.toUpperCase() ||
-    "?";
+  const { data: profile } = useMyProfile(Boolean(user));
+  const userFullName = useMemo(() => {
+    const fromProfile = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ").trim();
+    if (fromProfile) return fromProfile;
+    const fromUser = [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+    if (fromUser) return fromUser;
+    return profile?.email || user?.email || "Kullanıcı";
+  }, [profile, user]);
+  const userInitials = useMemo(() => {
+    const first = profile?.firstName?.[0] || user?.first_name?.[0] || "";
+    const last = profile?.lastName?.[0] || user?.last_name?.[0] || "";
+    const fromName = (first + last).toUpperCase();
+    if (fromName) return fromName;
+    const email = profile?.email || user?.email;
+    return email?.[0]?.toUpperCase() || "?";
+  }, [profile, user]);
 
   const logout = async () => {
     if (typeof window !== "undefined") {
@@ -70,10 +80,6 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
           <ThemeToggle />
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-foreground leading-none">{userFullName}</p>
-                {user.email && <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>}
-              </div>
               <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -89,7 +95,7 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/genel-bakis")}>
                     <LayoutDashboard className="h-4 w-4 mr-2" />
                     Dashboard
                   </DropdownMenuItem>
@@ -140,7 +146,7 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             {user ? (
               <>
-                <Link href="/dashboard" onClick={() => setOpen(false)}>
+                <Link href="/dashboard/genel-bakis" onClick={() => setOpen(false)}>
                   <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
                     {userFullName}
                   </Button>

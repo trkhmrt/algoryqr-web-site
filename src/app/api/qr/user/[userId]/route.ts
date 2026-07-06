@@ -2,12 +2,11 @@ import axios, { AxiosError } from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { QR_GATEWAY_BASE } from "@/lib/config";
+import { QR_API_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
-export async function GET(_req: Request, context: { params: Promise<{ userId: string }> }) {
+export async function GET(_req: Request) {
   try {
-    const { userId } = await context.params;
     const cookieStore = await cookies();
     const accessToken = readAccessTokenFromCookies(cookieStore);
 
@@ -15,7 +14,7 @@ export async function GET(_req: Request, context: { params: Promise<{ userId: st
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const upstream = await axios.get(`${QR_GATEWAY_BASE}/user/${userId}`, {
+    const upstream = await axios.get(`${QR_API_BASE}/my`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

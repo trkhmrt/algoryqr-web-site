@@ -155,7 +155,7 @@ const formatQrContent = (details: Record<string, unknown>) => {
 
 export const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => ({
   id: qr.qrId,
-  userId: qr.userId,
+  userId: qr.userId ?? qr.customerId ?? 0,
   name: qr.qrName,
   content: formatQrContent(qr.details),
   scans: 0,

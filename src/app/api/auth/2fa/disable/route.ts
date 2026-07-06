@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import {
   getJsonErrorText,
   isLikelyWrongTotpBackendText,
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const upstream = await axios.post(
-      `${getAuthUpstreamUrl()}/2fa/disable`,
+      `${API_BASE_URL}/2fa/disable`,
       { code: String(body.code).trim() },
       {
         headers: {

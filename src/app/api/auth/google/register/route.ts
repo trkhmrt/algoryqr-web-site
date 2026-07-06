@@ -2,7 +2,7 @@ import axios from "axios";
 import { NextResponse } from "next/server";
 
 import { getExpFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { messageFromRegisterUpstream } from "@/lib/register-upstream-error";
 import { setAuthCookies } from "@/lib/server/auth-cookies";
 
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/google-auth/register`,
+      `${API_BASE_URL}/google-auth/register`,
       {
         idToken,
         registrationRole: registrationRole ?? "QR_USER",

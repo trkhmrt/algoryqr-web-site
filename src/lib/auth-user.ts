@@ -50,18 +50,25 @@ export function getExpFromAccessToken(token?: string | null): number | null {
   return exp;
 }
 
-/** AuthService JWT claim `userId` (Integer). */
+function parseNumericClaim(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** JWT claim `userId` veya qr-service `accountId`. */
 export function getUserIdFromAccessToken(token?: string | null): number | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
-  const raw = payload.userId;
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  if (typeof raw === "string") {
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
+  return (
+    parseNumericClaim(payload.userId) ??
+    parseNumericClaim(payload.accountId) ??
+    parseNumericClaim(payload.customerId)
+  );
 }
 
 export function getUserFromAccessToken(token?: string | null): AuthUser | null {
@@ -73,6 +80,7 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
   const firstName = (payload.firstName as string | undefined) || (payload.first_name as string | undefined);
   const lastName = (payload.lastName as string | undefined) || (payload.last_name as string | undefined);
   const userId =
+    (payload.accountId as string | number | undefined) ||
     (payload.customerId as string | number | undefined) ||
     (payload.sub as string | number | undefined) ||
     (payload.userId as string | number | undefined);

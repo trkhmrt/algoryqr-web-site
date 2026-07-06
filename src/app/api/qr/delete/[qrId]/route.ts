@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { QR_GATEWAY_BASE } from "@/lib/config";
+import { QR_API_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function DELETE(_req: Request, context: { params: Promise<{ qrId: string }> }) {
@@ -15,7 +15,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ qrId: s
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const upstream = await axios.delete(`${QR_GATEWAY_BASE}/delete/${qrId}`, {
+    const upstream = await axios.delete(`${QR_API_BASE}/delete/${qrId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
