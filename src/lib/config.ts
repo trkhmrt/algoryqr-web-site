@@ -11,11 +11,20 @@ function resolvePaymentBaseUrl(): string {
   return "";
 }
 
+function resolveAppUrl(): string {
+  const fromEnv = process.env.APP_URL;
+  if (fromEnv) return fromEnv.trim().replace(/\/$/, "");
+  return "";
+}
+
 /** Auth, QR, paket vb. upstream istekleri — `API_BASE_URL` env ile verilir. */
 export const API_BASE_URL = resolveApiBaseUrl();
 
 /** Ödeme servisi istekleri — `PAYMENT_BASE_URL` env ile verilir. */
 export const PAYMENT_BASE_URL = resolvePaymentBaseUrl();
+
+/** Tarayıcıya dönülen public site kökü — Docker/reverse proxy'de zorunlu. */
+export const APP_URL = resolveAppUrl();
 
 export const QR_API_BASE = `${API_BASE_URL}/qr`;
 

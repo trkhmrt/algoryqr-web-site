@@ -26,26 +26,24 @@ type ResolvedPending = {
   refreshToken: string | null;
 };
 
-function buildSubscriptionUrl(origin: string, status: "success" | "failed", message?: string) {
-  const url = new URL(DASHBOARD_ROUTES.accountSubscription, origin);
-  url.searchParams.set("payment", status);
-  if (message) url.searchParams.set("message", message);
-  return url.toString();
+function buildSubscriptionPath(status: "success" | "failed", message?: string): string {
+  const params = new URLSearchParams({ payment: status });
+  if (message) params.set("message", message);
+  return `${DASHBOARD_ROUTES.accountSubscription}?${params.toString()}`;
 }
 
 function redirectToSubscription(
-  origin: string,
   status: "success" | "failed",
   message?: string,
   auth?: { accessToken: string; refreshToken?: string },
 ) {
-  const targetUrl = buildSubscriptionUrl(origin, status, message);
+  const targetPath = buildSubscriptionPath(status, message);
   const html = `<!DOCTYPE html>
 <html lang="tr">
 <head><meta charset="utf-8"><title>Yönlendiriliyor…</title></head>
 <body>
 <p>Ödeme tamamlanıyor, yönlendiriliyorsunuz…</p>
-<script>window.top.location.replace(${JSON.stringify(targetUrl)});</script>
+<script>window.top.location.replace(${JSON.stringify(targetPath)});</script>
 </body>
 </html>`;
 
@@ -102,12 +100,11 @@ async function resolvePendingPayment(
 }
 
 export async function POST(req: Request) {
-  const origin = new URL(req.url).origin;
   const packageIdRaw = new URL(req.url).searchParams.get("packageId");
   const packageIdFromQuery = packageIdRaw ? Number(packageIdRaw) : NaN;
 
   if (!Number.isFinite(packageIdFromQuery)) {
-    return redirectToSubscription(origin, "failed", "Paket bilgisi eksik");
+    return redirectToSubscription("failed", "Paket bilgisi eksik");
   }
 
   const formData = await req.formData();
@@ -118,11 +115,11 @@ export async function POST(req: Request) {
   const status = String(formData.get("status") ?? "");
 
   if (mdStatus !== "1" || status !== "success") {
-    return redirectToSubscription(origin, "failed", "3D Secure doğrulaması tamamlanamadı");
+    return redirectToSubscription("failed", "3D Secure doğrulaması tamamlanamadı");
   }
 
   if (!conversationId || !paymentId) {
-    return redirectToSubscription(origin, "failed", "Ödeme bilgisi eksik");
+    return redirectToSubscription("failed", "Ödeme bilgisi eksik");
   }
 
   const cookieStore = await cookies();
@@ -133,15 +130,11 @@ export async function POST(req: Request) {
   );
 
   if (!pending) {
-    return redirectToSubscription(
-      origin,
-      "failed",
-      "Ödeme oturumu bulunamadı. Lütfen tekrar deneyin.",
-    );
+    return redirectToSubscription("failed", "Ödeme oturumu bulunamadı. Lütfen tekrar deneyin.");
   }
 
   if (pending.packageId !== packageIdFromQuery) {
-    return redirectToSubscription(origin, "failed", "Paket bilgisi uyuşmuyor");
+    return redirectToSubscription("failed", "Paket bilgisi uyuşmuyor");
   }
 
   try {
@@ -154,7 +147,6 @@ export async function POST(req: Request) {
 
     if (!isPaymentUpstreamSuccess(complete.status)) {
       return redirectToSubscription(
-        origin,
         "failed",
         paymentUpstreamErrorMessage(complete.data, "3DS ödeme tamamlanamadı"),
       );
@@ -162,12 +154,12 @@ export async function POST(req: Request) {
 
     const tokens = await resolveAccessTokenForGrant(pending.accessToken, pending.refreshToken);
     await grantPackageToUser(tokens.accessToken, pending.packageId);
-    return redirectToSubscription(origin, "success", undefined, {
+    return redirectToSubscription("success", undefined, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Ödeme tamamlanamadı";
-    return redirectToSubscription(origin, "failed", message);
+    return redirectToSubscription("failed", message);
   }
 }

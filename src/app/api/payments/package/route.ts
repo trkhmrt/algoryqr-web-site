@@ -11,7 +11,8 @@ import {
   type PackagePaymentCardInput,
 } from "@/lib/package-payment";
 import type { PlanPackageApiItem } from "@/lib/api";
-import { getClientIp, getAppOrigin, grantPackageToUser } from "@/lib/server/package-purchase";
+import { getAppOrigin } from "@/lib/server/app-origin";
+import { getClientIp, grantPackageToUser } from "@/lib/server/package-purchase";
 import { readAccessTokenFromCookies, readRefreshTokenFromCookies } from "@/lib/server/auth-cookies";
 import { savePendingThreeDsPaymentAliases } from "@/lib/server/pending-three-ds";
 import {
