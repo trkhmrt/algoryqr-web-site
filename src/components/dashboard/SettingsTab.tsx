@@ -15,8 +15,9 @@ import { getJsonErrorText } from "@/lib/api-error-text";
 import {
   User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages,
-  Eye, EyeOff, RefreshCw, LogOut, Timer, Copy,
+  Eye, EyeOff, RefreshCw, LogOut, Timer, Copy, CreditCard,
 } from "lucide-react";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
 import { authService, type TwoFactorSetupPayload } from "@/lib/auth-service";
 import { copyTextToClipboard } from "@/components/dashboard/qr/qr-actions";
@@ -26,6 +27,8 @@ import { useTheme } from "@/hooks/use-theme";
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
 
 type SettingsPage = "main" | "profile" | "security" | "notifications" | "appearance" | "api" | "session";
+
+type SettingsMenuKey = SettingsPage | "subscription";
 
 interface SettingsTabProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -92,6 +95,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [tokenLoading, setTokenLoading] = useState(false);
   const [revokeLoading, setRevokeLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   // Profile state (sunucudan doldurulur)
   const [firstName, setFirstName] = useState("");
@@ -229,6 +233,20 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [nextRefreshAt, onNotify, router, fetchTokenExp]);
+
+  const handleLogout = async () => {
+    setLogoutLoading(true);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("algory_user");
+      }
+      await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
 
   const handleRevoke = () => {
     setRevokeLoading(true);
@@ -426,22 +444,29 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ayarlar</h1>
-          <p className="text-sm text-muted-foreground">Hesap ve uygulama ayarlarınızı yönetin</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Hesabım</h1>
+          <p className="text-sm text-muted-foreground">Abonelik, profil ve uygulama ayarlarınızı yönetin</p>
         </div>
         <div className="grid gap-4">
-          {[
-            { icon: Key, title: "Oturum / Token", desc: "Access token kalan süre, yenileme ve revoke", key: "session" as SettingsPage },
-            { icon: User, title: "Profil Bilgileri", desc: "Ad, soyad, e-posta ve telefon bilgilerinizi güncelleyin", key: "profile" as SettingsPage },
-            { icon: Shield, title: "Güvenlik", desc: "Şifre değiştirme ve iki faktörlü doğrulama", key: "security" as SettingsPage },
-            { icon: Bell, title: "Bildirimler", desc: "E-posta ve anlık bildirim tercihlerinizi yönetin", key: "notifications" as SettingsPage },
-            { icon: Palette, title: "Görünüm", desc: "Tema ve dil tercihlerinizi ayarlayın", key: "appearance" as SettingsPage },
-            { icon: Globe, title: "API Anahtarları", desc: "Entegrasyon için API anahtarlarınızı yönetin", key: "api" as SettingsPage },
-          ].map((item) => (
+          {([
+            { icon: CreditCard, title: "Abonelik", desc: "Aktif paketinizi görün ve yeni paket satın alın", key: "subscription" },
+            { icon: Key, title: "Oturum / Token", desc: "Access token kalan süre, yenileme ve revoke", key: "session" },
+            { icon: User, title: "Profil Bilgileri", desc: "Ad, soyad, e-posta ve telefon bilgilerinizi güncelleyin", key: "profile" },
+            { icon: Shield, title: "Güvenlik", desc: "Şifre değiştirme ve iki faktörlü doğrulama", key: "security" },
+            { icon: Bell, title: "Bildirimler", desc: "E-posta ve anlık bildirim tercihlerinizi yönetin", key: "notifications" },
+            { icon: Palette, title: "Görünüm", desc: "Tema ve dil tercihlerinizi ayarlayın", key: "appearance" },
+            { icon: Globe, title: "API Anahtarları", desc: "Entegrasyon için API anahtarlarınızı yönetin", key: "api" },
+          ] as const satisfies ReadonlyArray<{ icon: typeof CreditCard; title: string; desc: string; key: SettingsMenuKey }>).map((item) => (
             <Card
               key={item.title}
               className="glow-card cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => setPage(item.key)}
+              onClick={() => {
+                if (item.key === "subscription") {
+                  router.push(DASHBOARD_ROUTES.accountSubscription);
+                  return;
+                }
+                setPage(item.key as SettingsPage);
+              }}
             >
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -458,6 +483,24 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             </Card>
           ))}
         </div>
+
+        <Card className="glow-card border-destructive/20">
+          <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-sm text-foreground">Çıkış Yap</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Hesabınızdan güvenli şekilde çıkış yapın</p>
+            </div>
+            <Button
+              variant="destructive"
+              className="shrink-0"
+              onClick={() => void handleLogout()}
+              disabled={logoutLoading}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              {logoutLoading ? "Çıkış yapılıyor…" : "Çıkış Yap"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

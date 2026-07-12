@@ -1,0 +1,187 @@
+"use client";
+
+import { useMemo, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import axios from "axios";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  QrCode, LogOut, TrendingUp, BarChart3, User,
+  Info, AlertTriangle, XCircle, X,
+} from "lucide-react";
+
+import ThemeToggle from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
+import {
+  DashboardBannersProvider,
+  useDashboardBannerState,
+} from "@/contexts/dashboard-banners";
+import { useTokenRefresh } from "@/hooks/use-token-refresh";
+import { DASHBOARD_NAV_ITEMS, DASHBOARD_ROUTES, isDashboardNavActive } from "@/lib/dashboard-routes";
+import type { StoredUser } from "@/lib/api";
+import { getStoredUser } from "@/lib/api";
+
+const NAV_ICONS = {
+  overview: BarChart3,
+  analytics: TrendingUp,
+  qrCodes: QrCode,
+  account: User,
+} as const;
+
+const bannerStyles = {
+  info: "bg-blue-500/10 border-blue-500/20 text-blue-500",
+  warning: "bg-warning/10 border-warning/20 text-warning",
+  danger: "bg-destructive/10 border-destructive/20 text-destructive",
+};
+
+const bannerIcons = { info: Info, warning: AlertTriangle, danger: XCircle };
+
+interface DashboardShellProps {
+  initialUser?: StoredUser | null;
+  children: ReactNode;
+}
+
+function DashboardShellInner({ initialUser = null, children }: DashboardShellProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { banners, addBanner, removeBanner } = useDashboardBannerState();
+  useTokenRefresh();
+
+  const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
+  const userInitials = useMemo(() => {
+    if (!user) return "?";
+    return ((user.first_name?.[0] || "") + (user.last_name?.[0] || "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
+  }, [user]);
+  const userFullName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Kullanıcı";
+
+  const logout = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("algory_user");
+    }
+    await axios.post("/api/auth/logout", undefined, { withCredentials: true }).catch(() => undefined);
+    router.push("/login");
+    router.refresh();
+  };
+
+  return (
+    <DashboardBannersProvider onBanner={addBanner}>
+      <div className="min-h-screen bg-background flex">
+        <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-card/50 p-6 gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <QrCode className="h-6 w-6 text-foreground" />
+            <span className="text-lg font-bold">
+              Algory<span className="text-muted-foreground">QR</span>
+            </span>
+          </Link>
+
+          <nav className="flex flex-col gap-1 flex-1">
+            {DASHBOARD_NAV_ITEMS.map((item) => {
+              const Icon = NAV_ICONS[item.key];
+              const active = isDashboardNavActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="pt-4 border-t border-border">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={logout}>
+              <LogOut className="h-4 w-4" />
+              Çıkış Yap
+            </Button>
+          </div>
+        </aside>
+
+        <main className="flex-1 overflow-auto relative">
+          <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center pointer-events-none">
+            <AnimatePresence>
+              {banners.map((banner) => {
+                const BannerIcon = bannerIcons[banner.type];
+                return (
+                  <motion.div
+                    key={banner.id}
+                    initial={{ opacity: 0, y: -60 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -60 }}
+                    className={`pointer-events-auto mt-2 mx-4 w-full max-w-lg rounded-lg border px-4 py-3 flex items-center gap-3 shadow-lg ${bannerStyles[banner.type]}`}
+                  >
+                    <BannerIcon className="h-4 w-4 shrink-0" />
+                    <p className="text-sm flex-1">{banner.message}</p>
+                    <button onClick={() => removeBanner(banner.id)} className="shrink-0 opacity-60 hover:opacity-100">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
+            <Link href="/" className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-foreground" />
+              <span className="text-base font-bold">
+                Algory<span className="text-muted-foreground">QR</span>
+              </span>
+            </Link>
+            <ThemeToggle />
+          </header>
+
+          <div className="lg:hidden border-b border-border overflow-x-auto">
+            <div className="flex min-w-full">
+              {DASHBOARD_NAV_ITEMS.map((item) => {
+                const active = isDashboardNavActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className={`flex-1 whitespace-nowrap border-b-2 px-3 py-3 text-center text-xs sm:text-sm font-medium transition-colors ${
+                      active
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {item.mobileLabel}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hidden lg:flex items-center justify-end gap-3 px-8 py-3 border-b border-border bg-card/50">
+            <ThemeToggle />
+            <div className="h-5 w-px bg-border" />
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-medium text-foreground leading-none">{userFullName}</p>
+                {user?.email && <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>}
+              </div>
+              <Link
+                href={DASHBOARD_ROUTES.account}
+                className="h-9 w-9 rounded-full bg-primary flex items-center justify-center hover:opacity-80 transition-opacity"
+              >
+                <span className="text-xs font-semibold text-primary-foreground">{userInitials}</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="p-6 lg:p-8 max-w-6xl mx-auto">{children}</div>
+        </main>
+      </div>
+    </DashboardBannersProvider>
+  );
+}
+
+export default function DashboardShell(props: DashboardShellProps) {
+  return <DashboardShellInner {...props} />;
+}

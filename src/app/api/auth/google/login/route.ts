@@ -2,7 +2,7 @@ import axios from "axios";
 import { NextResponse } from "next/server";
 
 import { getExpFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { setAuthCookies, setTwoFactorPendingCookie } from "@/lib/server/auth-cookies";
 
 export async function POST(req: Request) {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const token = body.startsWith("{") ? (JSON.parse(body) as { idToken?: string })?.idToken ?? "" : body;
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/google-auth/login`,
+      `${API_BASE_URL}/google-auth/login`,
       token,
       {
         headers: { "Content-Type": "text/plain", Accept: "application/json" },

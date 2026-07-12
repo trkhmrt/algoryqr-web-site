@@ -1,9 +1,9 @@
-import Dashboard from "@/views/Dashboard";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getUserFromAccessToken } from "@/lib/auth-user";
 
-export default async function DashboardRoute() {
+import { getUserFromAccessToken, type AuthUser } from "@/lib/auth-user";
+
+export async function requireDashboardUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies();
   const accessToken =
     cookieStore.get("accessToken")?.value?.trim() ||
@@ -18,6 +18,5 @@ export default async function DashboardRoute() {
     redirect("/login");
   }
 
-  const initialUser = getUserFromAccessToken(accessToken);
-  return <Dashboard initialUser={initialUser} />;
+  return getUserFromAccessToken(accessToken);
 }

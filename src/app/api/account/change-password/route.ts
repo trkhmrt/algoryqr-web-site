@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { getJsonErrorText } from "@/lib/api-error-text";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     const upstream = await axios.post(
-      `${getAuthUpstreamUrl()}/account/change-password`,
+      `${API_BASE_URL}/account/change-password`,
       {
         currentPassword: body.currentPassword,
         newPassword: body.newPassword,

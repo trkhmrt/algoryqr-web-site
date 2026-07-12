@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { buildUpstreamAuthHeaders, resolveSessionUserId } from "@/lib/auth-user";
-import { getQrApiBase } from "@/lib/config";
+import { QR_API_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function POST(req: Request) {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       userId,
     };
 
-    const upstream = await axios.post(`${getQrApiBase()}/create`, requestBody, {
+    const upstream = await axios.post(`${QR_API_BASE}/create`, requestBody, {
       headers: {
         "Content-Type": "application/json",
         ...buildUpstreamAuthHeaders(accessToken),

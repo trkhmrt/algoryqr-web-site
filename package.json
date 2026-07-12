@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "build:start:local": "next build && next start",
-    "start:local": "next dev",
+    "build:start:local": "cross-env API_BASE_URL=http://localhost:8055 next build && cross-env API_BASE_URL=http://localhost:8055 next start",
+    "start:local": "cross-env API_BASE_URL=http://localhost:8055 next dev",
     "lint": "eslint"
   },
   "dependencies": {

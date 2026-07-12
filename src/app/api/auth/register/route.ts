@@ -1,8 +1,9 @@
 import axios from "axios";
 import { NextResponse } from "next/server";
 
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { messageFromRegisterUpstream } from "@/lib/register-upstream-error";
+import { normalizePhoneNumber } from "@/lib/server/upstream-config";
 
 type RegisterBody = {
   firstName?: string;
@@ -20,8 +21,10 @@ export async function POST(req: Request) {
     const registerPayload = {
       firstName: typeof body?.firstName === "string" ? body.firstName.trim() : "",
       lastName: typeof body?.lastName === "string" ? body.lastName.trim() : "",
-      email: typeof body?.email === "string" ? body.email.trim() : "",
-      phone: (typeof body?.phone === "string" ? body.phone : body?.phoneNumber ?? "").trim(),
+      email: typeof body?.email === "string" ? body.email.trim().toLowerCase() : "",
+      phone: normalizePhoneNumber(
+        (typeof body?.phone === "string" ? body.phone : body?.phoneNumber ?? "").trim(),
+      ),
       password: typeof body?.password === "string" ? body.password : "",
       passwordConfirm:
         typeof body?.passwordConfirm === "string" ? body.passwordConfirm : body?.password ?? "",
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
     }
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/auth/register`,
+      `${API_BASE_URL}/auth/register`,
       registerPayload,
       {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -54,6 +57,7 @@ export async function POST(req: Request) {
     const raw = upstream.data;
     const data = (typeof raw === "object" && raw != null ? raw : {}) as {
       message?: string;
+      customerId?: number;
       userId?: number;
       email?: string;
       firstName?: string;
@@ -67,7 +71,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message }, { status: upstream.status || 400 });
     }
 
-    return NextResponse.json(data, { status: 200 });
+    return NextResponse.json(
+      {
+        ...data,
+        userId: data.customerId ?? data.userId,
+        message: data.message ?? "Kayıt başarılı",
+      },
+      { status: 200 },
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Sunucu hatası";
     return NextResponse.json({ message: "Kayıt sırasında hata: " + message }, { status: 500 });

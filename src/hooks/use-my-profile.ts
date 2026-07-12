@@ -37,14 +37,16 @@ export type MyProfilePatch = Partial<{
  * Profil, cookie'deki access JWT ile /api üzerinden çekilir; localStorage'da `id` olmasını bekleme.
  * (Dashboard zaten cookie yoksa yönlendirir.)
  */
-export function useMyProfile() {
+export function useMyProfile(enabled = true) {
   return useQuery({
     queryKey: MY_PROFILE_QUERY_KEY,
     queryFn: async () => {
       const { data } = await getSiteSameOriginAxios().get<MyProfile>("/account/myprofile");
       return data;
     },
+    enabled,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 }
 

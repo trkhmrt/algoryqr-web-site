@@ -2,17 +2,22 @@ import axios from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getAuthUpstreamUrl } from "@/lib/config";
-import { clearAuthCookies, readRefreshTokenFromCookies } from "@/lib/server/auth-cookies";
+import { API_BASE_URL } from "@/lib/config";
+import { clearAuthCookies, readAccessTokenFromCookies, readRefreshTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function POST() {
   try {
     const cookieStore = await cookies();
     const refreshToken = readRefreshTokenFromCookies(cookieStore);
-    if (refreshToken) {
+    const accessToken = readAccessTokenFromCookies(cookieStore);
+    if (refreshToken || accessToken) {
       await axios
-        .post(`${getAuthUpstreamUrl()}/auth/logout`, { refreshToken }, {
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
+        .post(`${API_BASE_URL}/auth/logout`, { refreshToken }, {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
           validateStatus: () => true,
           timeout: 15_000,
         })

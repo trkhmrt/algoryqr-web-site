@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getExpFromAccessToken } from "@/lib/auth-user";
-import { getAuthUpstreamUrl } from "@/lib/config";
+import { API_BASE_URL } from "@/lib/config";
 import { setAuthCookies } from "@/lib/server/auth-cookies";
 
 /** POST /authservice/2fa/login/verify — Bearer pending JWT + { code }. */
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/2fa/login/verify`,
+      `${API_BASE_URL}/2fa/login/verify`,
       { code },
       {
         headers: {

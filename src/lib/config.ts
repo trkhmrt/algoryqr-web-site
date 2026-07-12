@@ -12,7 +12,7 @@ function readDeployEnv(): string {
   return (process.env.APP_ENV || process.env.DEPLOY_ENV || "").trim().toLowerCase();
 }
 
-function resolveApiBase(): string {
+function resolveApiBaseUrl(): string {
   const fromEnv = readApiBaseFromEnv();
   if (fromEnv) return fromEnv;
 
@@ -20,16 +20,33 @@ function resolveApiBase(): string {
   if (deployEnv === "prod" || deployEnv === "production") return PROD_API_BASE;
   if (deployEnv === "stage" || deployEnv === "staging") return STAGE_API_BASE;
 
+  if (process.env.NODE_ENV === "development") return "http://localhost:8055";
+
   throw new Error("APP_ENV must be prod or stage, or set API_BASE_URL");
 }
 
-export function getAuthUpstreamUrl(): string {
-  return resolveApiBase();
+function resolvePaymentBaseUrl(): string {
+  const fromEnv = process.env.PAYMENT_BASE_URL?.trim();
+  if (fromEnv) return trimTrailingSlash(fromEnv);
+  return "";
 }
 
-export function getQrApiBase(): string {
-  return `${resolveApiBase()}/qr`;
+function resolveAppUrl(): string {
+  const fromEnv = process.env.APP_URL?.trim();
+  if (fromEnv) return trimTrailingSlash(fromEnv);
+  return "";
 }
+
+/** Auth, QR, paket vb. upstream istekleri — `API_BASE_URL` env ile verilir. */
+export const API_BASE_URL = resolveApiBaseUrl();
+
+/** Ödeme servisi istekleri — `PAYMENT_BASE_URL` env ile verilir. */
+export const PAYMENT_BASE_URL = resolvePaymentBaseUrl();
+
+/** Tarayıcıya dönülen public site kökü — Docker/reverse proxy'de zorunlu. */
+export const APP_URL = resolveAppUrl();
+
+export const QR_API_BASE = `${API_BASE_URL}/qr`;
 
 export const ACCESS_TOKEN_EXPIRY_MS = 300_000;
 export const ACCESS_TOKEN_EXPIRY_SECONDS = ACCESS_TOKEN_EXPIRY_MS / 1000;

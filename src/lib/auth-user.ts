@@ -50,21 +50,26 @@ export function getExpFromAccessToken(token?: string | null): number | null {
   return exp;
 }
 
-/** AuthService JWT claim `userId` (Integer). */
+function parseNumericClaim(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** JWT claim `userId`, `accountId`, `customerId` veya `id`. */
 export function getUserIdFromAccessToken(token?: string | null): number | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
-
-  const candidates = [payload.userId, payload.id, payload.customerId];
-  for (const raw of candidates) {
-    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-    if (typeof raw === "string") {
-      const n = parseInt(raw, 10);
-      if (Number.isFinite(n)) return n;
-    }
-  }
-  return null;
+  return (
+    parseNumericClaim(payload.userId) ??
+    parseNumericClaim(payload.accountId) ??
+    parseNumericClaim(payload.customerId) ??
+    parseNumericClaim(payload.id)
+  );
 }
 
 type SessionCookieStore = { get: (name: string) => { value?: string } | undefined };
@@ -92,6 +97,7 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
   const lastName = (payload.lastName as string | undefined) || (payload.last_name as string | undefined);
   const numericUserId = getUserIdFromAccessToken(token);
   const fallbackId =
+    (payload.accountId as string | number | undefined) ||
     (payload.customerId as string | number | undefined) ||
     (payload.sub as string | number | undefined);
 

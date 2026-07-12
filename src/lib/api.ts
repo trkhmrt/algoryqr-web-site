@@ -35,7 +35,6 @@ export function clearStoredUser() {
   localStorage.removeItem(USER_KEY);
 }
 
-
 export type QrRequestDetails =
   | {
       url: string;
@@ -111,11 +110,107 @@ type UpdateQrNameGatewayResponse = {
 
 export interface UserQrApiItem {
   qrId: number;
-  userId: number;
+  userId?: number;
+  customerId?: number;
   qrName: string;
   imgSrc: string;
   details: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface UserEntitlementApiItem {
+  id: number;
+  productId: number;
+  productCode: string;
+  productName: string;
+  purchaseId: number;
+  totalQuantity: number;
+  remainingQuantity: number;
+  usedQuantity: number;
+  usable: boolean;
+  expired: boolean;
+}
+
+export interface PurchaseApiItem {
+  id: number;
+  packageId?: number;
+  packageName: string;
+  packageCode: string;
+  price?: number | string;
+  currency?: string;
+  status?: string;
+  startsAt?: string;
+  expiresAt?: string;
+  purchasedAt?: string;
+  usable: boolean;
+  expired: boolean;
+}
+
+export interface PlanPackageItemApi {
+  id: number;
+  productId?: number;
+  productCode: string;
+  productName: string;
+  quantity: number;
+}
+
+export interface PlanPackageApiItem {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  price: number | string;
+  currency: string;
+  active: boolean;
+  validityDays: number;
+  items: PlanPackageItemApi[];
+}
+
+export interface PackageUsageSummary {
+  packageName: string;
+  remaining: number;
+  total: number;
+  used: number;
+}
+
+export function aggregatePackageUsage(
+  entitlements: UserEntitlementApiItem[],
+  purchases: PurchaseApiItem[],
+): PackageUsageSummary {
+  const activeEntitlements = entitlements.filter(
+    (item) => item.productCode === "QR_CREATE" && item.usable && !item.expired,
+  );
+  const remaining = activeEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
+  const total = activeEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
+  const used = activeEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
+  const activePurchase = purchases.find((item) => item.usable && !item.expired) ?? purchases[0];
+
+  return {
+    packageName: activePurchase?.packageName ?? "Ücretsiz Paket",
+    remaining,
+    total,
+    used,
+  };
+}
+
+export async function getMyEntitlementsRequest(): Promise<UserEntitlementApiItem[]> {
+  const response = await api.get<UserEntitlementApiItem[]>("/purchases/my/entitlements");
+  return response.data;
+}
+
+export async function getMyPurchasesRequest(): Promise<PurchaseApiItem[]> {
+  const response = await api.get<PurchaseApiItem[]>("/purchases/my");
+  return response.data;
+}
+
+export async function getActivePackagesRequest(): Promise<PlanPackageApiItem[]> {
+  const response = await api.get<PlanPackageApiItem[]>("/packages");
+  return response.data;
+}
+
+export async function purchasePackageRequest(packageId: number): Promise<PurchaseApiItem> {
+  const response = await api.post<PurchaseApiItem>("/purchases", { packageId });
+  return response.data;
 }
 
 type CreateQrGatewayResponse = {
