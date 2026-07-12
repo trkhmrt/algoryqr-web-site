@@ -1,4 +1,9 @@
-import axios, { AxiosError } from "axios";
+"use client";
+
+import { api } from "@/lib/api/client";
+
+export { ApiError } from "@/lib/api/errors";
+
 const USER_KEY = "algory_user";
 const hasWindow = typeof window !== "undefined";
 
@@ -30,22 +35,6 @@ export function clearStoredUser() {
   localStorage.removeItem(USER_KEY);
 }
 
-export class ApiError extends Error {
-  status: number;
-  data: unknown;
-  constructor(status: number, message: string, data?: unknown) {
-    super(message);
-    this.status = status;
-    this.data = data;
-  }
-}
-
-export const api = axios.create({
-  baseURL: "/api",
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-  timeout: 15000,
-});
 
 export type QrRequestDetails =
   | {
@@ -188,13 +177,3 @@ export async function updateQrNameRequest(
   const response = await api.patch<UpdateQrNameGatewayResponse>(`/qr/update-name/${qrId}`, payload);
   return response.data;
 }
-
-api.interceptors.response.use(
-  (r) => r,
-  (err: AxiosError) => {
-    const status = err.response?.status ?? 0;
-    const msg = (err.response?.data as { message?: string })?.message ?? err.message ?? "Bir hata oluştu";
-    if (status === 401 && hasWindow) window.location.href = "/login";
-    return Promise.reject(new ApiError(status, msg, err.response?.data));
-  }
-);

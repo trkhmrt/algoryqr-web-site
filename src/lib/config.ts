@@ -1,29 +1,34 @@
 const trimTrailingSlash = (s: string) => s.replace(/\/$/, "");
 
-function resolveGatewayBase(): string {
-  const fromEnv =
-    process.env.NEXT_PUBLIC_GATEWAY_BASE || process.env.GATEWAY_BASE;
-  if (fromEnv) return trimTrailingSlash(fromEnv);
-  if (process.env.NODE_ENV === "development") return "http://localhost:8072";
-  return "https://gateway.algorycode.com";
+const PROD_API_BASE = "https://prod.qrapi.algorycode.com";
+const STAGE_API_BASE = "https://stage.qrapi.algorycode.com";
+
+function readApiBaseFromEnv(): string | undefined {
+  const raw = process.env.API_BASE_URL?.trim() || process.env.API_UPSTREAM?.trim();
+  return raw ? trimTrailingSlash(raw) : undefined;
 }
 
-export const GATEWAY_BASE = resolveGatewayBase();
+function readDeployEnv(): string {
+  return (process.env.APP_ENV || process.env.DEPLOY_ENV || "").trim().toLowerCase();
+}
 
-export const QR_GATEWAY_BASE = `${GATEWAY_BASE}/qr`;
+function resolveApiBase(): string {
+  const fromEnv = readApiBaseFromEnv();
+  if (fromEnv) return fromEnv;
 
-export const AUTH_BASE =
-  process.env.AUTH_BASE ||
-  process.env.NEXT_PUBLIC_AUTH_BASE ||
-  "https://auth.algorycode.com";
-export const API_BASE = AUTH_BASE;
+  const deployEnv = readDeployEnv();
+  if (deployEnv === "prod" || deployEnv === "production") return PROD_API_BASE;
+  if (deployEnv === "stage" || deployEnv === "staging") return STAGE_API_BASE;
+
+  throw new Error("APP_ENV must be prod or stage, or set API_BASE_URL");
+}
 
 export function getAuthUpstreamUrl(): string {
-  const direct =
-    process.env.AUTH_UPSTREAM || process.env.NEXT_PUBLIC_AUTH_UPSTREAM;
-  if (direct) return trimTrailingSlash(direct);
-  if (process.env.NODE_ENV === "development") return "http://185.184.210.52:8055";
-  return `${resolveGatewayBase()}/authservice`;
+  return resolveApiBase();
+}
+
+export function getQrApiBase(): string {
+  return `${resolveApiBase()}/qr`;
 }
 
 export const ACCESS_TOKEN_EXPIRY_MS = 300_000;

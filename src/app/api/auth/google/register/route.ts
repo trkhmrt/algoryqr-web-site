@@ -57,6 +57,7 @@ export async function POST(req: Request) {
       response,
       typeof accessToken === "string" ? accessToken : undefined,
       typeof refreshToken === "string" ? refreshToken : undefined,
+      typeof data.userId === "number" ? data.userId : undefined,
     );
 
     return response;

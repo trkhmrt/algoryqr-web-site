@@ -11,7 +11,7 @@ export async function POST() {
     const refreshToken = readRefreshTokenFromCookies(cookieStore);
     if (refreshToken) {
       await axios
-        .post(`${getAuthUpstreamUrl()}/basicauth/logout`, { refreshToken }, {
+        .post(`${getAuthUpstreamUrl()}/auth/logout`, { refreshToken }, {
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           validateStatus: () => true,
           timeout: 15_000,

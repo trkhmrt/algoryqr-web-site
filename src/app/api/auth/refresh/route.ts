@@ -6,7 +6,7 @@ import { getExpFromAccessToken } from "@/lib/auth-user";
 import { getAuthUpstreamUrl } from "@/lib/config";
 import { clearAuthCookies, readRefreshTokenFromCookies, setAuthCookies } from "@/lib/server/auth-cookies";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
     const refreshToken = readRefreshTokenFromCookies(cookieStore);
@@ -18,7 +18,7 @@ export async function POST() {
     }
 
     const upstream = await axios.post<Record<string, unknown>>(
-      `${getAuthUpstreamUrl()}/basicauth/refreshToken`,
+      `${getAuthUpstreamUrl()}/auth/refresh`,
       { refreshToken },
       {
         headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -34,6 +34,7 @@ export async function POST() {
       refreshToken?: string;
       access_token?: string;
       refresh_token?: string;
+      userId?: number;
     };
 
     if (upstream.status < 200 || upstream.status >= 300) {
@@ -58,6 +59,7 @@ export async function POST() {
       response,
       typeof accessToken === "string" ? accessToken : undefined,
       typeof newRefresh === "string" ? newRefresh : undefined,
+      typeof data.userId === "number" ? data.userId : undefined,
     );
 
     return response;

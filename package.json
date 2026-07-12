@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "build:start:local": "cross-env GATEWAY_BASE=http://localhost:8072 NEXT_PUBLIC_GATEWAY_BASE=http://localhost:8072 next build && cross-env GATEWAY_BASE=http://localhost:8072 NEXT_PUBLIC_GATEWAY_BASE=http://localhost:8072 next start",
-    "start:local": "cross-env GATEWAY_BASE=http://localhost:8072 NEXT_PUBLIC_GATEWAY_BASE=http://localhost:8072 next dev",
+    "build:start:local": "next build && next start",
+    "start:local": "next dev",
     "lint": "eslint"
   },
   "dependencies": {

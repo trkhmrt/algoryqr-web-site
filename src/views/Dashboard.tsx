@@ -335,11 +335,9 @@ const Dashboard = ({ initialUser = null }: DashboardProps) => {
   }, []);
 
   const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
-    if (!user?.id) return [];
-
     setIsLoading(true);
     try {
-      const response = await getUserQrsRequest(user.id);
+      const response = await getUserQrsRequest(user?.id ?? "me");
       const mapped = response.map(mapUserQrToDashboardItem);
       setUserQrs(mapped);
       return mapped;

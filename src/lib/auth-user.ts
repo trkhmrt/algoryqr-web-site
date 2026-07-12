@@ -55,13 +55,31 @@ export function getUserIdFromAccessToken(token?: string | null): number | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
-  const raw = payload.userId;
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  if (typeof raw === "string") {
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) ? n : null;
+
+  const candidates = [payload.userId, payload.id, payload.customerId];
+  for (const raw of candidates) {
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string") {
+      const n = parseInt(raw, 10);
+      if (Number.isFinite(n)) return n;
+    }
   }
   return null;
+}
+
+type SessionCookieStore = { get: (name: string) => { value?: string } | undefined };
+
+export function resolveSessionUserId(
+  accessToken: string | null | undefined,
+  cookieStore?: SessionCookieStore,
+): number | null {
+  const fromToken = getUserIdFromAccessToken(accessToken);
+  if (fromToken != null) return fromToken;
+  if (!cookieStore) return null;
+  const raw = cookieStore.get("userId")?.value?.trim();
+  if (!raw) return null;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export function getUserFromAccessToken(token?: string | null): AuthUser | null {
@@ -72,18 +90,28 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
   const email = (payload.email as string | undefined) || "";
   const firstName = (payload.firstName as string | undefined) || (payload.first_name as string | undefined);
   const lastName = (payload.lastName as string | undefined) || (payload.last_name as string | undefined);
-  const userId =
+  const numericUserId = getUserIdFromAccessToken(token);
+  const fallbackId =
     (payload.customerId as string | number | undefined) ||
-    (payload.sub as string | number | undefined) ||
-    (payload.userId as string | number | undefined);
+    (payload.sub as string | number | undefined);
 
-  /** Access JWT'de e-posta yok; userId + isimler claim'de olabilir. Sadece userId ile de oturum geçerlidir. */
-  if (userId == null && !email && !firstName && !lastName) return null;
+  if (numericUserId == null && fallbackId == null && !email && !firstName && !lastName) return null;
 
   return {
-    id: userId != null ? String(userId) : undefined,
+    id: numericUserId != null ? String(numericUserId) : fallbackId != null ? String(fallbackId) : undefined,
     email: email || "",
     first_name: firstName,
     last_name: lastName,
   };
+}
+
+export function buildUpstreamAuthHeaders(accessToken: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+  };
+  const userId = getUserIdFromAccessToken(accessToken);
+  if (userId != null) {
+    headers["X-User-Id"] = String(userId);
+  }
+  return headers;
 }

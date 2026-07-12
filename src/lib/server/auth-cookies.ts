@@ -25,6 +25,13 @@ export function readRefreshTokenFromCookies(cookieStore: CookieStore): string | 
   return t || null;
 }
 
+export function readUserIdFromCookies(cookieStore: CookieStore): number | null {
+  const raw = cookieStore.get("userId")?.value?.trim();
+  if (!raw) return null;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /** Eski `algory_*` auth çerezlerini kaldır (rent-fe ile aynı strateji). */
 export function clearLegacyAlgoryAuthCookies(response: NextResponse) {
   const clear = { ...cookieOptions, maxAge: 0 };
@@ -32,12 +39,20 @@ export function clearLegacyAlgoryAuthCookies(response: NextResponse) {
   response.cookies.set("algory_refresh_token", "", clear);
 }
 
-export function setAuthCookies(response: NextResponse, accessToken?: string, refreshToken?: string) {
+export function setAuthCookies(
+  response: NextResponse,
+  accessToken?: string,
+  refreshToken?: string,
+  userId?: number,
+) {
   if (accessToken) {
     response.cookies.set("accessToken", accessToken, cookieOptions);
   }
   if (refreshToken) {
     response.cookies.set("refreshToken", refreshToken, cookieOptions);
+  }
+  if (userId != null && userId > 0) {
+    response.cookies.set("userId", String(userId), cookieOptions);
   }
   clearLegacyAlgoryAuthCookies(response);
 }
@@ -73,6 +88,7 @@ export function clearAuthCookies(response: NextResponse) {
   response.cookies.set("refreshToken", "", clearOptions);
   response.cookies.set("accessTokenExp", "", clearOptions);
   response.cookies.set("refreshTokenExp", "", clearOptions);
+  response.cookies.set("userId", "", clearOptions);
   clearLegacyAlgoryAuthCookies(response);
   response.cookies.set("algory_2fa_pending", "", { ...baseOptions, maxAge: 0 });
 }

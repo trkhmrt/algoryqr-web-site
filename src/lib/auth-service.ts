@@ -123,7 +123,7 @@ export const authService = {
           first_name: data.firstName,
           last_name: data.lastName,
         });
-      } else if (params.email) setStoredUser({ id: params.email, email: params.email });
+      }
       return data;
     } catch (e) {
       throw toApiError(e, "Giriş başarısız");

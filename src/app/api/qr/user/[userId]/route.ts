@@ -2,12 +2,12 @@ import axios, { AxiosError } from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { QR_GATEWAY_BASE } from "@/lib/config";
+import { buildUpstreamAuthHeaders, resolveSessionUserId } from "@/lib/auth-user";
+import { getQrApiBase } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
-export async function GET(_req: Request, context: { params: Promise<{ userId: string }> }) {
+export async function GET(_req: Request, _context: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = await context.params;
     const cookieStore = await cookies();
     const accessToken = readAccessTokenFromCookies(cookieStore);
 
@@ -15,10 +15,13 @@ export async function GET(_req: Request, context: { params: Promise<{ userId: st
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const upstream = await axios.get(`${QR_GATEWAY_BASE}/user/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const tokenUserId = resolveSessionUserId(accessToken, cookieStore);
+    if (tokenUserId == null) {
+      return NextResponse.json({ message: "Token içinde userId yok" }, { status: 401 });
+    }
+
+    const upstream = await axios.get(`${getQrApiBase()}/user/${tokenUserId}`, {
+      headers: buildUpstreamAuthHeaders(accessToken),
       validateStatus: () => true,
       timeout: 20_000,
     });

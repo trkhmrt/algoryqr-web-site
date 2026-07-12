@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import axios, { AxiosError } from "axios";
 import { NextResponse } from "next/server";
-import { QR_GATEWAY_BASE } from "@/lib/config";
+import { buildUpstreamAuthHeaders } from "@/lib/auth-user";
+import { getQrApiBase } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function PUT(req: Request, context: { params: Promise<{ qrId: string }> }) {
@@ -15,10 +16,10 @@ export async function PUT(req: Request, context: { params: Promise<{ qrId: strin
     }
 
     const body = await req.text();
-    const upstream = await axios.put(`${QR_GATEWAY_BASE}/update/${qrId}`, body || undefined, {
+    const upstream = await axios.put(`${getQrApiBase()}/update/${qrId}`, body || undefined, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+        ...buildUpstreamAuthHeaders(accessToken),
       },
       validateStatus: () => true,
       timeout: 20_000,
