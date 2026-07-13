@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 
 export { ApiError } from "@/lib/api/errors";
 
@@ -63,6 +64,15 @@ export type QrRequestDetails =
       latitude: string;
       longitude: string;
       label: string;
+    }
+  | {
+      businessName: string;
+      phone?: string;
+      email?: string;
+      address?: string;
+      themeId: string;
+      urlMode: string;
+      publicSlug?: string;
     };
 
 export interface CreateQrRequestBody {
@@ -86,6 +96,10 @@ export interface QrResponse {
 
 export interface CreateQrResponse {
   qrResponse: QrResponse;
+  qrId?: number;
+  publicUrl?: string;
+  menuId?: number;
+  urlMode?: string;
 }
 
 export interface UpdateQrRequestBody {
@@ -178,11 +192,12 @@ export function aggregatePackageUsage(
   purchases: PurchaseApiItem[],
 ): PackageUsageSummary {
   const activeEntitlements = entitlements.filter(
-    (item) => item.productCode === "QR_CREATE" && item.usable && !item.expired,
+    (item) => (item.productCode === "QR_CREATE" || item.productCode === "QR_MENU") && item.usable && !item.expired,
   );
-  const remaining = activeEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
-  const total = activeEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
-  const used = activeEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
+  const qrEntitlements = activeEntitlements.filter((item) => item.productCode === "QR_CREATE");
+  const remaining = qrEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
+  const total = qrEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
+  const used = qrEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
   const activePurchase = purchases.find((item) => item.usable && !item.expired) ?? purchases[0];
 
   return {
@@ -215,7 +230,119 @@ export async function purchasePackageRequest(packageId: number): Promise<Purchas
 
 type CreateQrGatewayResponse = {
   imgSrc: string;
+  qrId?: number;
+  publicUrl?: string;
+  menuId?: number;
+  urlMode?: string;
 };
+
+export interface MenuProfileApiItem {
+  menuId: number;
+  qrId: number;
+  userId: number;
+  themeId: string;
+  businessName: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  publicSlug?: string;
+  urlMode: string;
+  publicUrl: string;
+  active: boolean;
+}
+
+export interface MenuProductApiItem {
+  productId: number;
+  menuId: number;
+  name: string;
+  description?: string;
+  price?: number | string;
+  currency: string;
+  category?: string;
+  sortOrder: number;
+  imageUrl?: string;
+  available: boolean;
+}
+
+export interface PublicMenuApiResponse {
+  menu: MenuProfileApiItem;
+  products: MenuProductApiItem[];
+  themeId: string;
+}
+
+export interface MenuProductRequestBody {
+  name: string;
+  description?: string;
+  price?: number | string;
+  currency?: string;
+  category?: string;
+  sortOrder?: number;
+  imageUrl?: string;
+  available?: boolean;
+}
+
+export async function checkMenuSlugAvailabilityRequest(slug: string, excludeMenuId?: number) {
+  const params = new URLSearchParams({ slug });
+  if (excludeMenuId != null) params.set("excludeMenuId", String(excludeMenuId));
+  const response = await api.get<{ slug: string; available: boolean }>(`/menu/slug-available?${params.toString()}`);
+  return response.data;
+}
+
+export async function getMenuByQrIdRequest(qrId: number | string): Promise<MenuProfileApiItem> {
+  const response = await api.get<MenuProfileApiItem>(`/menu/by-qr/${qrId}`);
+  return response.data;
+}
+
+export async function getMenuProductsRequest(menuId: number | string): Promise<MenuProductApiItem[]> {
+  const response = await api.get<MenuProductApiItem[]>(`/menu/${menuId}/products`);
+  return response.data;
+}
+
+export async function createMenuProductRequest(
+  menuId: number | string,
+  payload: MenuProductRequestBody,
+): Promise<MenuProductApiItem> {
+  const response = await api.post<MenuProductApiItem>(`/menu/${menuId}/products`, payload);
+  return response.data;
+}
+
+export async function updateMenuProductRequest(
+  productId: number | string,
+  payload: MenuProductRequestBody,
+): Promise<MenuProductApiItem> {
+  const response = await api.put<MenuProductApiItem>(`/menu/products/${productId}`, payload);
+  return response.data;
+}
+
+export async function deleteMenuProductRequest(productId: number | string): Promise<void> {
+  await api.delete(`/menu/products/${productId}`);
+}
+
+export interface MenuUpdateRequestBody {
+  themeId?: string;
+  businessName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  urlMode?: string;
+  publicSlug?: string;
+  active?: boolean;
+}
+
+export async function updateMenuRequest(menuId: number | string, payload: MenuUpdateRequestBody): Promise<MenuProfileApiItem> {
+  const response = await api.patch<MenuProfileApiItem>(`/menu/${menuId}`, payload);
+  return response.data;
+}
+
+export async function getPublicMenuRequest(identifier: string): Promise<PublicMenuApiResponse> {
+  const response = await fetch(`/api/menu/public/${encodeURIComponent(identifier)}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Menü bulunamadı");
+  }
+  return response.json() as Promise<PublicMenuApiResponse>;
+}
 
 export async function createQrRequest(payload: CreateQrRequestBody): Promise<CreateQrResponse> {
   const requestBody = {
@@ -225,10 +352,11 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
   };
   const response = await api.post<CreateQrGatewayResponse>("/qr/create", requestBody);
   const now = new Date().toISOString();
+  const qrId = response.data.qrId;
 
   return {
     qrResponse: {
-      id: `temp-${Date.now()}`,
+      id: qrId != null ? String(qrId) : `temp-${Date.now()}`,
       qrName: payload.qrName,
       type: payload.type,
       details: payload.details,
@@ -238,6 +366,10 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
       updatedAt: now,
       scans: 0,
     },
+    qrId,
+    publicUrl: response.data.publicUrl,
+    menuId: response.data.menuId,
+    urlMode: response.data.urlMode,
   };
 }
 

@@ -16,9 +16,13 @@ export function formatPackageDate(iso?: string | null): string {
 
 export function packageFeatures(pkg: PlanPackageApiItem): string[] {
   const qrItem = pkg.items?.find((i) => i.productCode === "QR_CREATE");
+  const menuItem = pkg.items?.find((i) => i.productCode === "QR_MENU");
   const features: string[] = [];
   if (qrItem) {
     features.push(`${qrItem.quantity} QR oluşturma hakkı`);
+  }
+  if (menuItem) {
+    features.push(`${menuItem.quantity} Menü QR hakkı`);
   }
   if (pkg.validityDays > 0) {
     features.push(`${pkg.validityDays} gün geçerlilik`);

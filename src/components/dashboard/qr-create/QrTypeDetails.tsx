@@ -2,8 +2,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MenuData, MenuDetails, createInitialMenuData } from "./MenuDetails";
 
-export type QrTypeValue = "link" | "wifi" | "mail" | "contact" | "text" | "location";
+export type QrTypeValue = "link" | "wifi" | "mail" | "contact" | "text" | "location" | "menu";
 
 export type WifiData = {
   ssid: string;
@@ -38,6 +39,7 @@ export type QrTypeData = {
   contact: ContactData;
   text: string;
   location: LocationData;
+  menu: MenuData;
 };
 
 type UrlDetailsProps = {
@@ -74,6 +76,7 @@ type QrTypeDetailsProps = {
   selectedType: QrTypeValue;
   data: QrTypeData;
   onChange: (data: QrTypeData) => void;
+  menuExcludeId?: number;
 };
 
 export const UrlDetails = ({ value, onChange }: UrlDetailsProps) => (
@@ -261,7 +264,9 @@ export const LocationDetails = ({ value, onChange }: LocationDetailsProps) => (
   </div>
 );
 
-export const QrTypeDetails = ({ selectedType, data, onChange }: QrTypeDetailsProps) => {
+export { createInitialMenuData, type MenuData, type MenuThemeId, type MenuUrlMode } from "./MenuDetails";
+
+export const QrTypeDetails = ({ selectedType, data, onChange, menuExcludeId }: QrTypeDetailsProps) => {
   if (selectedType === "link") {
     return <UrlDetails value={data.link} onChange={(value) => onChange({ ...data, link: value })} />;
   }
@@ -280,6 +285,16 @@ export const QrTypeDetails = ({ selectedType, data, onChange }: QrTypeDetailsPro
 
   if (selectedType === "text") {
     return <TextDetails value={data.text} onChange={(value) => onChange({ ...data, text: value })} />;
+  }
+
+  if (selectedType === "menu") {
+    return (
+      <MenuDetails
+        value={data.menu}
+        onChange={(value) => onChange({ ...data, menu: value })}
+        excludeMenuId={menuExcludeId}
+      />
+    );
   }
 
   return <LocationDetails value={data.location} onChange={(value) => onChange({ ...data, location: value })} />;

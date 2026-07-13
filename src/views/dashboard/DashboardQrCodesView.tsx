@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   QrCode, Plus, Eye, Calendar, Download, Share2, Trash2, Edit, Copy,
-  Link as LinkIcon, Wifi, Mail, Phone, FileText, MapPin, Paintbrush, RotateCcw, Check, ArrowLeft,
+  Link as LinkIcon, Wifi, Mail, Phone, FileText, MapPin, Paintbrush, RotateCcw, Check, ArrowLeft, UtensilsCrossed,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import PackageUsageCard from "@/components/dashboard/PackageUsageCard";
@@ -29,8 +29,11 @@ import { QrTypeDetails, QrTypeData, QrTypeValue } from "@/components/dashboard/q
 import {
   createInitialQrTypeData, getQrDetailsByType, getBackendTypeFromDetails,
   mapDetailsToQrTypeData, getReadableDetailRows, mapUserQrToDashboardItem,
+  isMenuQrDetails,
   type DashboardQrItem,
 } from "@/components/dashboard/qr/qr-mappers";
+import MenuProductsPanel from "@/components/dashboard/menu/MenuProductsPanel";
+import { getMenuByQrIdRequest, updateMenuRequest } from "@/lib/api";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage, usePackageUsage } from "@/hooks/use-package-usage";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -42,6 +45,7 @@ const qrTypes = [
   { value: "contact", label: "İletişim", icon: Phone, desc: "vCard bilgileri" },
   { value: "text", label: "Metin", icon: FileText, desc: "Düz metin içeriği" },
   { value: "location", label: "Konum", icon: MapPin, desc: "GPS koordinatları" },
+  { value: "menu", label: "Menü QR", icon: UtensilsCrossed, desc: "Dijital menü sayfası" },
 ] as const;
 
 function useTooltipStyle() {
@@ -70,7 +74,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const { data: packageUsage, isLoading: isPackageUsageLoading } = usePackageUsage(true);
+  const { data: packageUsage, isLoading: isPackageUsageLoading } = usePackageUsage(mode === "create");
   const [isLoading, setIsLoading] = useState(false);
 
   // QR Creation state
@@ -90,6 +94,8 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const [editActive, setEditActive] = useState(true);
   const [editQrType, setEditQrType] = useState<QrTypeValue>("link");
   const [editQrTypeData, setEditQrTypeData] = useState<QrTypeData>(() => createInitialQrTypeData());
+  const [menuId, setMenuId] = useState<number | null>(null);
+  const [publicUrl, setPublicUrl] = useState<string | null>(null);
 
   // UI: Kaydet butonunun hangi uyarıyı göstermesi gerektiğini belirler.
   const editNameTrimmed = editName.trim();
@@ -158,6 +164,36 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
 
     const nameOnlyEdit = nameChanged && activeUnchanged && detailsUnchanged;
 
+    if (editQrType === "menu" && menuId != null && !nameOnlyEdit) {
+      const menu = editQrTypeData.menu;
+      try {
+        if (nameChanged) {
+          await updateQrNameRequest(selectedQR.id, { qrName: trimmedName });
+        }
+        const profile = await updateMenuRequest(menuId, {
+          businessName: menu.businessName,
+          phone: menu.phone,
+          email: menu.email,
+          address: menu.address,
+          themeId: menu.themeId,
+          urlMode: menu.urlMode.toUpperCase(),
+          publicSlug: menu.urlMode === "slug" ? menu.publicSlug : undefined,
+          active: editActive,
+        });
+        const refreshedQrs = await fetchUserQrs();
+        const refreshedSelected = refreshedQrs.find((item) => item.id === selectedQR.id) ?? null;
+        setSelectedQR(refreshedSelected);
+        setPublicUrl(profile.publicUrl);
+        setIsEditing(false);
+        notify("info", `"${trimmedName}" menü bilgileri güncellendi.`);
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Menü güncellenemedi.";
+        notify("danger", message);
+        return;
+      }
+    }
+
     // Name-only edit: PATCH /qr/update-name -> yeni QR üretmez.
     if (nameOnlyEdit) {
       try {
@@ -206,6 +242,17 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
         return;
       }
     }
+    if (editQrType === "menu") {
+      const menu = editQrTypeData.menu;
+      if (!menu.businessName.trim()) {
+        notify("warning", "Firma adı zorunlu.");
+        return;
+      }
+      if (menu.urlMode === "slug" && !menu.publicSlug.trim()) {
+        notify("warning", "Slug zorunlu.");
+        return;
+      }
+    }
 
     try {
       const updateResponse = await updateQrRequest(selectedQR.id, {
@@ -234,7 +281,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       const message = error instanceof Error ? error.message : "QR kod güncellenemedi.";
       notify("danger", message);
     }
-  }, [editActive, editName, editQrType, editQrTypeData, fetchUserQrs, notify, selectedQR]);
+  }, [editActive, editName, editQrType, editQrTypeData, fetchUserQrs, menuId, notify, selectedQR]);
 
   useEffect(() => {
     if (true) {
@@ -251,7 +298,23 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     setSelectedQR(found);
   }, [mode, qrId, userQrs]);
 
-
+  useEffect(() => {
+    if (!selectedQR || !isMenuQrDetails(selectedQR.details)) {
+      setMenuId(null);
+      setPublicUrl(null);
+      return;
+    }
+    void (async () => {
+      try {
+        const profile = await getMenuByQrIdRequest(selectedQR.id);
+        setMenuId(profile.menuId);
+        setPublicUrl(profile.publicUrl);
+      } catch {
+        setMenuId(null);
+        setPublicUrl(null);
+      }
+    })();
+  }, [selectedQR]);
 
   const handleCreateQR = useCallback(async () => {
     const trimmedQrName = qrName.trim();
@@ -260,6 +323,18 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     if (!trimmedQrName) {
       notify("warning", "QR kod adı zorunlu.");
       return;
+    }
+
+    if (selectedQrType === "menu") {
+      const menu = qrTypeData.menu;
+      if (!menu.businessName.trim()) {
+        notify("warning", "Firma adı zorunlu.");
+        return;
+      }
+      if (menu.urlMode === "slug" && !menu.publicSlug.trim()) {
+        notify("warning", "Slug zorunlu.");
+        return;
+      }
     }
 
     try {
@@ -277,12 +352,15 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       setQrBgColor("#ffffff");
       setSelectedQrType("link");
       void invalidatePackageUsage(queryClient);
-      void fetchUserQrs();
+      await fetchUserQrs();
+      if (response.qrId != null) {
+        router.push(DASHBOARD_ROUTES.qrCodeDetail(response.qrId));
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "QR kod oluşturulamadı.";
       notify("danger", message);
     }
-  }, [fetchUserQrs, notify, qrName, qrTypeData, queryClient, selectedQrType]);
+  }, [fetchUserQrs, notify, qrName, qrTypeData, queryClient, router, selectedQrType]);
 
   return (
     <>
@@ -303,8 +381,6 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                   </Link>
                 </Button>
               </div>
-
-              <PackageUsageCard usage={packageUsage} isLoading={isPackageUsageLoading} />
 
               <div className="grid gap-4">
                 {userQrs.map((qr) => (
@@ -430,7 +506,12 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="bg-background" />
                       </div>
                       <div className="space-y-2">
-                        <QrTypeDetails selectedType={editQrType} data={editQrTypeData} onChange={setEditQrTypeData} />
+                        <QrTypeDetails
+                          selectedType={editQrType}
+                          data={editQrTypeData}
+                          onChange={setEditQrTypeData}
+                          menuExcludeId={menuId ?? undefined}
+                        />
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
@@ -510,6 +591,14 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                               <span className="text-sm font-medium text-foreground">{row.value}</span>
                             </div>
                           ))}
+                          {publicUrl && (
+                            <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                              <span className="text-sm text-muted-foreground">Public URL</span>
+                              <a href={publicUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-primary text-right max-w-[60%] break-all">
+                                {publicUrl}
+                              </a>
+                            </div>
+                          )}
                           {getReadableDetailRows(selectedQR.details).map((row) => (
                             <div key={row.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                               <span className="text-sm text-muted-foreground">{row.label}</span>
@@ -518,6 +607,8 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                           ))}
                         </div>
                       </div>
+
+                      {menuId != null && !isEditing && <MenuProductsPanel menuId={menuId} />}
 
                       <div className="rounded-lg border border-border bg-card p-6">
                         <h2 className="mb-4 text-sm font-medium text-foreground">Son 7 Günlük Taramalar</h2>

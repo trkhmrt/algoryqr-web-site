@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { buildUpstreamAuthHeaders } from "@/lib/auth-user";
+import { buildUpstreamAuthHeaders, resolveSessionUserId } from "@/lib/auth-user";
 import { QR_API_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
@@ -15,7 +15,13 @@ export async function GET(_req: Request) {
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const upstream = await axios.get(`${QR_API_BASE}/my`, {
+    const userId = resolveSessionUserId(accessToken, cookieStore);
+
+    if (userId == null) {
+      return NextResponse.json({ message: "Token içinde userId yok" }, { status: 401 });
+    }
+
+    const upstream = await axios.get(`${QR_API_BASE}/user/${userId}`, {
       headers: buildUpstreamAuthHeaders(accessToken),
       validateStatus: () => true,
       timeout: 20_000,

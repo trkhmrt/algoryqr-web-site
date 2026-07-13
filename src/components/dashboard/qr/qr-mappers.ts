@@ -1,4 +1,5 @@
 import { UserQrApiItem } from "@/lib/api";
+import { createInitialMenuData, MenuThemeId, MenuUrlMode } from "@/components/dashboard/qr-create/MenuDetails";
 import { QrTypeData, QrTypeValue } from "@/components/dashboard/qr-create/QrTypeDetails";
 
 export type DashboardQrItem = {
@@ -12,6 +13,8 @@ export type DashboardQrItem = {
   active: boolean;
   imgSrc: string;
   details: Record<string, unknown>;
+  menuId?: number;
+  publicUrl?: string;
 };
 
 export const createInitialQrTypeData = (): QrTypeData => ({
@@ -21,6 +24,7 @@ export const createInitialQrTypeData = (): QrTypeData => ({
   contact: { fullName: "", phone: "", mail: "", company: "", title: "" },
   text: "",
   location: { latitude: "", longitude: "", label: "" },
+  menu: createInitialMenuData(),
 });
 
 export const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
@@ -29,10 +33,22 @@ export const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
   if (type === "mail") return data.mail;
   if (type === "contact") return data.contact;
   if (type === "text") return { text: data.text };
+  if (type === "menu") {
+    return {
+      businessName: data.menu.businessName,
+      phone: data.menu.phone,
+      email: data.menu.email,
+      address: data.menu.address,
+      themeId: data.menu.themeId,
+      urlMode: data.menu.urlMode.toUpperCase(),
+      ...(data.menu.urlMode === "slug" ? { publicSlug: data.menu.publicSlug } : {}),
+    };
+  }
   return data.location;
 };
 
 export const getBackendTypeFromDetails = (details: Record<string, unknown>): QrTypeValue => {
+  if ("themeId" in details && "businessName" in details) return "menu";
   if ("url" in details) return "link";
   if ("ssid" in details) return "wifi";
   if ("mail" in details && !("fullName" in details)) return "mail";
@@ -43,6 +59,26 @@ export const getBackendTypeFromDetails = (details: Record<string, unknown>): QrT
 
 export const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrTypeData => {
   const base = createInitialQrTypeData();
+  if ("themeId" in details && "businessName" in details) {
+    const urlModeRaw = String(details.urlMode ?? "ID").toLowerCase();
+    const urlMode: MenuUrlMode = urlModeRaw === "slug" ? "slug" : "id";
+    const themeRaw = String(details.themeId ?? "classic");
+    const themeId = (["classic", "modern", "minimal", "dark"] as MenuThemeId[]).includes(themeRaw as MenuThemeId)
+      ? (themeRaw as MenuThemeId)
+      : "classic";
+    return {
+      ...base,
+      menu: {
+        businessName: String(details.businessName ?? ""),
+        phone: String(details.phone ?? ""),
+        email: String(details.email ?? ""),
+        address: String(details.address ?? ""),
+        themeId,
+        urlMode,
+        publicSlug: String(details.publicSlug ?? ""),
+      },
+    };
+  }
   if ("url" in details) return { ...base, link: String(details.url ?? "") };
 
   if ("ssid" in details) {
@@ -95,6 +131,17 @@ export const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrType
 };
 
 export const getReadableDetailRows = (details: Record<string, unknown>) => {
+  if ("themeId" in details && "businessName" in details) {
+    return [
+      { label: "İşletme", value: String(details.businessName ?? "") },
+      { label: "Telefon", value: String(details.phone ?? "") },
+      { label: "E-posta", value: String(details.email ?? "") },
+      { label: "Adres", value: String(details.address ?? "") },
+      { label: "Tema", value: String(details.themeId ?? "") },
+      { label: "URL Modu", value: String(details.urlMode ?? "") },
+      ...(details.publicSlug ? [{ label: "Slug", value: String(details.publicSlug) }] : []),
+    ];
+  }
   if ("url" in details) return [{ label: "Link", value: String(details.url ?? "") }];
   if ("ssid" in details) {
     return [
@@ -130,6 +177,7 @@ export const getReadableDetailRows = (details: Record<string, unknown>) => {
 };
 
 const formatQrType = (details: Record<string, unknown>) => {
+  if ("themeId" in details && "businessName" in details) return "Menü";
   if ("ssid" in details) return "WiFi";
   if ("url" in details) return "Link";
   if ("fullName" in details) return "İletişim";
@@ -140,6 +188,7 @@ const formatQrType = (details: Record<string, unknown>) => {
 };
 
 const formatQrContent = (details: Record<string, unknown>) => {
+  if ("themeId" in details && "businessName" in details) return String(details.businessName ?? "Menü QR");
   if ("url" in details) return String(details.url ?? "");
   if ("ssid" in details) return String(details.ssid ?? "");
   if ("mail" in details && !("fullName" in details)) return String(details.mail ?? "");
@@ -165,3 +214,6 @@ export const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => 
   imgSrc: qr.imgSrc,
   details: qr.details,
 });
+
+export const isMenuQrDetails = (details: Record<string, unknown>) =>
+  "themeId" in details && "businessName" in details;
