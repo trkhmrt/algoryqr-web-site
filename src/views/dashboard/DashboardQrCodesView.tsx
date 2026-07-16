@@ -37,6 +37,8 @@ import { getMenuByQrIdRequest, updateMenuRequest } from "@/lib/api";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage, usePackageUsage } from "@/hooks/use-package-usage";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { hasScope } from "@/lib/auth-user";
+import { useAccessProfile } from "@/hooks/use-access-profile";
 
 const qrTypes = [
   { value: "link", label: "Link", icon: LinkIcon, desc: "Web sitesi veya URL" },
@@ -75,6 +77,9 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
   const { data: packageUsage, isLoading: isPackageUsageLoading } = usePackageUsage(mode === "create");
+  const { data: accessProfile } = useAccessProfile();
+  const canCreateQr = hasScope(accessProfile, "QR_CREATE_OWNER");
+  const canCreateMenu = hasScope(accessProfile, "QR_MENU_OWNER");
   const [isLoading, setIsLoading] = useState(false);
 
   // QR Creation state
@@ -317,6 +322,14 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   }, [selectedQR]);
 
   const handleCreateQR = useCallback(async () => {
+    if (!canCreateQr) {
+      notify("warning", "QR oluşturmak için uygun bir paket gerekli.");
+      return;
+    }
+    if (selectedQrType === "menu" && !canCreateMenu) {
+      notify("warning", "Menü QR oluşturmak için PRO pakete geçmelisiniz.");
+      return;
+    }
     const trimmedQrName = qrName.trim();
     const details = getQrDetailsByType(selectedQrType, qrTypeData);
 
@@ -360,7 +373,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       const message = error instanceof Error ? error.message : "QR kod oluşturulamadı.";
       notify("danger", message);
     }
-  }, [fetchUserQrs, notify, qrName, qrTypeData, queryClient, router, selectedQrType]);
+  }, [canCreateMenu, canCreateQr, fetchUserQrs, notify, qrName, qrTypeData, queryClient, router, selectedQrType]);
 
   return (
     <>
@@ -726,12 +739,20 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                       {qrTypes.map((type) => (
                         <button
                           key={type.value}
-                          onClick={() => setSelectedQrType(type.value)}
+                          onClick={() => {
+                            if (type.value === "menu" && !canCreateMenu) {
+                              notify("warning", "Menü QR oluşturmak için PRO pakete geçmelisiniz.");
+                              return;
+                            }
+                            setSelectedQrType(type.value);
+                          }}
+                          disabled={!canCreateQr || type.value === "menu" && !canCreateMenu}
+                          title={type.value === "menu" && !canCreateMenu ? "PRO paket gereklidir" : undefined}
                           className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-all ${
                             selectedQrType === type.value
                               ? "border-foreground/30 bg-accent"
                               : "border-border hover:border-foreground/15 hover:bg-accent/50"
-                          }`}
+                          } ${!canCreateQr || type.value === "menu" && !canCreateMenu ? "cursor-not-allowed opacity-50" : ""}`}
                         >
                           <type.icon className={`h-5 w-5 ${selectedQrType === type.value ? "text-foreground" : "text-muted-foreground"}`} />
                           <span className={`text-xs font-medium ${selectedQrType === type.value ? "text-foreground" : "text-muted-foreground"}`}>

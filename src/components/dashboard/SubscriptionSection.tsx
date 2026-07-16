@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, CreditCard, Zap } from "lucide-react";
 
@@ -13,6 +13,10 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatPackageDate, formatPackagePrice, packageFeatures } from "@/lib/package-display";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
+import { invalidateAccessProfile } from "@/hooks/use-access-profile";
+import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
+import { clearPendingPurchaseId, readPendingPurchaseId } from "@/lib/purchase-fulfillment";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 interface SubscriptionSectionProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -23,27 +27,73 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { data, isLoading, isError } = useSubscription();
+  const [pendingPurchaseId, setPendingPurchaseId] = useState<number | null>(null);
+  const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
+  const handledPurchaseId = useRef<number | null>(null);
+  const fulfillment = usePurchaseFulfillment(
+    pendingPurchaseId ?? data?.activePurchase?.id ?? null,
+    pendingPurchaseId ? pollStartedAt : null,
+  );
 
   useEffect(() => {
     const payment = searchParams.get("payment");
-    if (!payment) return;
-
-    const message = searchParams.get("message");
-    if (payment === "success") {
-      void Promise.all([
-        invalidateSubscription(queryClient),
-        invalidatePackageUsage(queryClient),
-      ]).then(() => {
-        onNotify("info", "3DS ödeme başarılı! Paketiniz hesabınıza tanımlandı.");
-        router.replace(DASHBOARD_ROUTES.accountSubscription);
-      });
-      return;
+    const queryPurchaseId = Number(searchParams.get("purchaseId"));
+    const purchaseId =
+      Number.isSafeInteger(queryPurchaseId) && queryPurchaseId > 0
+        ? queryPurchaseId
+        : readPendingPurchaseId();
+    if (purchaseId) {
+      const startPolling = window.setTimeout(() => {
+        setPendingPurchaseId(purchaseId);
+        setPollStartedAt(Date.now());
+      }, 0);
+      return () => window.clearTimeout(startPolling);
     }
     if (payment === "failed") {
-      onNotify("danger", message || "Ödeme tamamlanamadı.");
+      onNotify("danger", "Ödeme başarısız oldu. Lütfen tekrar deneyin.");
+      router.replace(DASHBOARD_ROUTES.accountSubscription);
+    } else if (payment === "success") {
+      onNotify("warning", "Ödeme sonucu doğrulanamadı. Abonelik durumunuzu kontrol edin.");
       router.replace(DASHBOARD_ROUTES.accountSubscription);
     }
-  }, [onNotify, queryClient, router, searchParams]);
+  }, [onNotify, router, searchParams]);
+
+  useEffect(() => {
+    const summary = fulfillment.summary.data;
+    if (
+      !summary ||
+      pendingPurchaseId !== summary.purchaseId ||
+      handledPurchaseId.current === summary.purchaseId
+    ) return;
+    if (summary.status === "ACTIVE") {
+      handledPurchaseId.current = summary.purchaseId;
+      clearPendingPurchaseId();
+      void (async () => {
+        await getSiteSameOriginAxios().post("/auth/refresh");
+        await Promise.all([
+          invalidateSubscription(queryClient),
+          invalidatePackageUsage(queryClient),
+          invalidateAccessProfile(queryClient),
+        ]);
+        onNotify("info", "Ödeme tamamlandı ve paketiniz aktif edildi.");
+        router.replace(DASHBOARD_ROUTES.accountSubscription);
+      })();
+      return;
+    }
+    if (summary.status === "FAILED" || summary.status === "CANCELLED") {
+      handledPurchaseId.current = summary.purchaseId;
+      clearPendingPurchaseId();
+      onNotify("danger", "Ödeme tamamlanamadı. Lütfen tekrar deneyin.");
+      router.replace(DASHBOARD_ROUTES.accountSubscription);
+    }
+  }, [fulfillment.summary.data, onNotify, pendingPurchaseId, queryClient, router]);
+
+  useEffect(() => {
+    if (!fulfillment.timedOut || handledPurchaseId.current === pendingPurchaseId) return;
+    handledPurchaseId.current = pendingPurchaseId;
+    onNotify("warning", "Ödeme durumu henüz kesinleşmedi. Daha sonra tekrar kontrol edin.");
+    router.replace(DASHBOARD_ROUTES.accountSubscription);
+  }, [fulfillment.timedOut, onNotify, pendingPurchaseId, router]);
 
   const activePackageId = data?.activePurchase?.packageId;
   const usedPercent =
@@ -107,6 +157,47 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
             </CardContent>
           </Card>
 
+          {fulfillment.summary.data && (
+            <Card className="glow-card">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Son ödeme
+                    </p>
+                    <p className="mt-1 font-medium text-foreground">
+                      {fulfillment.summary.data.packageName}
+                    </p>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {fulfillment.summary.data.status}
+                  </span>
+                </div>
+                {fulfillment.summary.data.status === "PENDING" && (
+                  <p className="text-xs text-muted-foreground">
+                    Ödeme sağlayıcısından kesin sonuç bekleniyor.
+                  </p>
+                )}
+                {(fulfillment.installments.data ??
+                  fulfillment.summary.data.installmentSchedule ??
+                  []).map((item) => (
+                  <div
+                    key={item.installmentNumber}
+                    className="flex items-center justify-between gap-3 border-t border-border pt-2 text-xs text-muted-foreground"
+                  >
+                    <span>
+                      {item.installmentNumber}. taksit
+                      {item.dueAt ? ` · ${formatPackageDate(item.dueAt)}` : ""}
+                    </span>
+                    <span>
+                      {formatPackagePrice(item.amount, fulfillment.summary.data?.currency ?? "TRY")} · {item.status}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <div>
             <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -146,10 +237,14 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                       <Button
                         className="mt-5 w-full gap-2"
                         variant={isActive ? "outline" : "hero"}
-                        disabled={isActive}
+                        disabled={isActive || parseFloat(String(pkg.price)) <= 0}
                         onClick={() => router.push(DASHBOARD_ROUTES.accountSubscriptionCheckout(pkg.id))}
                       >
-                        {isActive ? "Kullanımda" : "Paketi Al"}
+                        {isActive
+                          ? "Kullanımda"
+                          : parseFloat(String(pkg.price)) <= 0
+                            ? "Satın alınamaz"
+                            : "Paketi Al"}
                       </Button>
                     </CardContent>
                   </Card>

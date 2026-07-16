@@ -29,9 +29,9 @@ const NAV_ICONS = {
 } as const;
 
 const bannerStyles = {
-  info: "bg-blue-500/10 border-blue-500/20 text-blue-500",
-  warning: "bg-warning/10 border-warning/20 text-warning",
-  danger: "bg-destructive/10 border-destructive/20 text-destructive",
+  info: "bg-[color-mix(in_srgb,hsl(var(--card))_88%,hsl(217_91%_60%)_12%)] border-blue-500/20 text-blue-500 shadow-lg",
+  warning: "bg-[color-mix(in_srgb,hsl(var(--card))_88%,hsl(var(--warning))_12%)] border-warning/20 text-warning shadow-lg",
+  danger: "bg-[color-mix(in_srgb,hsl(var(--card))_88%,hsl(var(--destructive))_12%)] border-destructive/20 text-destructive shadow-lg",
 };
 
 const bannerIcons = { info: Info, warning: AlertTriangle, danger: XCircle };
@@ -104,7 +104,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
         </aside>
 
         <main className="flex-1 overflow-auto relative">
-          <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center pointer-events-none">
+          <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none">
             <AnimatePresence>
               {banners.map((banner) => {
                 const BannerIcon = bannerIcons[banner.type];

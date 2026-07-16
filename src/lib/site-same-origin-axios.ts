@@ -11,8 +11,6 @@ const PUBLIC_AUTH_API_PATHS = [
   "/auth/logout",
   "/auth/register",
   "/auth/refresh",
-  "/auth/google/login",
-  "/auth/google/register",
   "/auth/2fa/login/verify",
 ] as const;
 
@@ -20,7 +18,6 @@ function isPublicAuthApiPath(url: string): boolean {
   return PUBLIC_AUTH_API_PATHS.some((path) => url.includes(path));
 }
 
-/** Aynı origin `POST /api/auth/refresh`; 401 ise logout + login. */
 export async function refreshSiteSession(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (!refreshPromise) {
@@ -58,7 +55,6 @@ function toApiError(error: AxiosError): ApiError {
   return new ApiError(status, msg, error.response?.data);
 }
 
-/** `baseURL: /api` — httpOnly çerezler; 401 → refresh → tek retry; sonra `ApiError`. */
 export function getSiteSameOriginAxios(): AxiosInstance {
   if (siteInstance) return siteInstance;
   siteInstance = axios.create({

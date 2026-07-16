@@ -1,0 +1,93 @@
+"use client";
+
+import { Suspense, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+
+function resolvePaymentRedirect(status: string | null): "success" | "failed" | "unknown" {
+  const normalized = status?.trim().toLowerCase() ?? "";
+  if (normalized === "success" || normalized === "successful") return "success";
+  if (normalized === "failed" || normalized === "failure") return "failed";
+  return "unknown";
+}
+
+function PaymentResultContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const payment = resolvePaymentRedirect(searchParams.get("status"));
+
+  const redirectTarget = useMemo(
+    () => `${DASHBOARD_ROUTES.accountSubscription}?payment=${payment}`,
+    [payment],
+  );
+
+  useEffect(() => {
+    if (window.self !== window.top) {
+      window.top!.location.assign(redirectTarget);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      router.replace(redirectTarget);
+    }, 2500);
+
+    return () => window.clearTimeout(timer);
+  }, [redirectTarget, router]);
+
+  const isSuccess = payment === "success";
+  const isFailed = payment === "failed";
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md space-y-6 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          {isSuccess ? (
+            <CheckCircle2 className="h-8 w-8 text-primary" />
+          ) : isFailed ? (
+            <XCircle className="h-8 w-8 text-destructive" />
+          ) : (
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <h1 className="text-xl font-semibold text-foreground">
+            {isSuccess
+              ? "Ödeme başarılı"
+              : isFailed
+                ? "Ödeme başarısız"
+                : "Ödeme sonucu alınıyor"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isSuccess
+              ? "Paketiniz kısa süre içinde hesabınıza tanımlanacak. Abonelik sayfasına yönlendiriliyorsunuz…"
+              : isFailed
+                ? "Ödeme tamamlanamadı. Abonelik sayfasına yönlendiriliyorsunuz…"
+                : "Lütfen bekleyin…"}
+          </p>
+        </div>
+
+        <Button variant="outline" onClick={() => router.replace(redirectTarget)}>
+          Aboneliğe git
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default function PaymentResultPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <PaymentResultContent />
+    </Suspense>
+  );
+}

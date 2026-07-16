@@ -3,12 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QrCode } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { authService } from "@/lib/auth-service";
 import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { getGoogleAuthErrorMessage } from "@/lib/google-auth-error";
 
 const Register = () => {
   const { toast } = useToast();
@@ -22,6 +22,14 @@ const Register = () => {
     password: "",
     passwordConfirm: "",
   });
+
+  useEffect(() => {
+    const error = new URLSearchParams(window.location.search).get("error");
+    const message = getGoogleAuthErrorMessage(error);
+    if (!message) return;
+    toast({ title: "Google ile kayıt başarısız", description: message, variant: "destructive" });
+    router.replace("/register");
+  }, [router, toast]);
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -56,26 +64,6 @@ const Register = () => {
     }
   };
 
-  const handleGoogleRegisterSuccess = async (credentialResponse: CredentialResponse) => {
-    const idToken = credentialResponse.credential;
-    if (!idToken) {
-      toast({ title: "Hata", description: "Google kimlik doğrulama token'ı alınamadı.", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await authService.googleRegister(idToken, "QR_USER");
-      toast({ title: "Başarılı", description: "Google ile kayıt yapıldı!" });
-      router.push("/");
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Google ile kayıt yapılırken bir hata oluştu";
-      toast({ title: "Hata", description: message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative">
       
@@ -94,17 +82,9 @@ const Register = () => {
             <p className="text-sm text-muted-foreground">Ücretsiz hesabınızı oluşturun</p>
           </div>
 
-          {/* Google Register */}
-          <div className="w-full flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleRegisterSuccess}
-              onError={() => toast({ title: "Hata", description: "Google ile kayıt başarısız.", variant: "destructive" })}
-              theme="outline"
-              size="large"
-              text="signup_with"
-              shape="rectangular"
-            />
-          </div>
+          <Button variant="outline" size="lg" className="w-full" asChild>
+            <a href="/api/auth/google/start?intent=register">Google ile kayıt ol</a>
+          </Button>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

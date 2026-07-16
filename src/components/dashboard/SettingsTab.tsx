@@ -10,18 +10,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { invalidateMyProfile, useMyProfile } from "@/hooks/use-my-profile";
+import { invalidateMyProfile, useMyProfile, MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
+import { useAccessProfile } from "@/hooks/use-access-profile";
+import type { MyProfile } from "@/hooks/use-my-profile";
 import { getJsonErrorText } from "@/lib/api-error-text";
 import {
   User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages,
-  Eye, EyeOff, RefreshCw, LogOut, Timer, Copy, CreditCard,
+  RefreshCw, LogOut, Timer, Copy, CreditCard,
 } from "lucide-react";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
+import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config.client";
 import { authService, type TwoFactorSetupPayload } from "@/lib/auth-service";
 import { copyTextToClipboard } from "@/components/dashboard/qr/qr-actions";
+import { ChangePasswordDialog } from "@/components/dashboard/ChangePasswordDialog";
+import { ChangeEmailDialog } from "@/components/dashboard/ChangeEmailDialog";
 import { ApiError } from "@/lib/api";
+import { getStoredUser, setStoredUser } from "@/lib/api/storage";
 import { useTheme } from "@/hooks/use-theme";
 
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
@@ -81,6 +86,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyProfile();
+  const { data: accessProfile } = useAccessProfile();
+  const isGoogleAccount = accessProfile?.provider === "GOOGLE";
   const { theme, setTheme } = useTheme();
   const [page, setPage] = useState<SettingsPage>("main");
 
@@ -103,14 +110,10 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   // Security state
-  const [showCurrentPass, setShowCurrentPass] = useState(false);
-  const [showNewPass, setShowNewPass] = useState(false);
-  const [currentPasswordForChange, setCurrentPasswordForChange] = useState("");
-  const [newPasswordForChange, setNewPasswordForChange] = useState("");
-  const [confirmPasswordForChange, setConfirmPasswordForChange] = useState("");
-  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const twoFactorEnabled = myProfile?.twoFactorEnabled ?? false;
   const [twoFactorSetup, setTwoFactorSetup] = useState<TwoFactorSetupPayload | null>(null);
   const [twoFactorSetupLoading, setTwoFactorSetupLoading] = useState(false);
@@ -290,7 +293,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
       await getSiteSameOriginAxios().patch("/account/myprofile", {
         firstName,
         lastName,
-        email,
         phoneNumber: phone,
       });
       await invalidateMyProfile(queryClient);
@@ -329,38 +331,34 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     }
   };
 
-  const handleChangePassword = async () => {
-    const cur = currentPasswordForChange;
-    const next = newPasswordForChange;
-    const again = confirmPasswordForChange;
-    if (!cur || !next || !again) {
-      onNotify("warning", "Tüm şifre alanlarını doldurun.");
-      return;
-    }
-    if (next.length < 8) {
-      onNotify("warning", "Yeni şifre en az 8 karakter olmalı.");
-      return;
-    }
-    if (next !== again) {
-      onNotify("warning", "Yeni şifre ile tekrarı eşleşmiyor.");
-      return;
-    }
-    setPasswordChangeLoading(true);
+  const handlePasswordChangeSuccess = async () => {
+    await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
+    router.replace("/login");
+  };
+
+  const handleEmailChangeSuccess = async () => {
     try {
-      await getSiteSameOriginAxios().post("/account/change-password", {
-        currentPassword: cur,
-        newPassword: next,
+      await getSiteSameOriginAxios().post("/auth/refresh", {});
+      const profile = await queryClient.fetchQuery({
+        queryKey: MY_PROFILE_QUERY_KEY,
+        queryFn: async () => {
+          const { data } = await getSiteSameOriginAxios().get<MyProfile>("/account/myprofile");
+          return data;
+        },
       });
-      setCurrentPasswordForChange("");
-      setNewPasswordForChange("");
-      setConfirmPasswordForChange("");
-      onNotify("info", "Şifreniz güncellendi.");
-    } catch (e) {
-      const detail =
-        e instanceof ApiError ? getJsonErrorText(e.data) || e.message : getJsonErrorText((e as { response?: { data?: unknown } }).response?.data);
-      onNotify("danger", detail || "Şifre güncellenemedi.");
-    } finally {
-      setPasswordChangeLoading(false);
+      if (profile?.email) {
+        setEmail(profile.email);
+        const stored = getStoredUser();
+        if (stored) {
+          setStoredUser({ ...stored, email: profile.email });
+        }
+      }
+      await fetchTokenExp();
+      onNotify("info", "E-posta adresiniz güncellendi. Oturumunuz yeni e-posta ile yenilendi.");
+    } catch {
+      onNotify("warning", "E-posta güncellendi fakat oturum yenilenemedi. Lütfen tekrar giriş yapın.");
+      await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
+      router.replace("/login");
     }
   };
 
@@ -642,13 +640,36 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">E-posta</Label>
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-background"
-              disabled={myProfileLoading}
-            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={email || myProfile?.email || ""}
+                className="bg-muted"
+                disabled
+                readOnly
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2 shrink-0"
+                onClick={() => setEmailDialogOpen(true)}
+                disabled={myProfileLoading || myProfileError || isGoogleAccount}
+              >
+                <Mail className="h-4 w-4" /> E-posta Değiştir
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isGoogleAccount
+                ? "Google hesabıyla giriş yaptığınız için e-posta adresiniz değiştirilemez."
+                : "E-posta değişikliği için önce mevcut, ardından yeni adresinize 5 dakika geçerli doğrulama kodu gönderilir."}
+            </p>
           </div>
+          <ChangeEmailDialog
+            open={emailDialogOpen}
+            onOpenChange={setEmailDialogOpen}
+            currentEmail={email || myProfile?.email || ""}
+            onNotify={onNotify}
+            onSuccess={() => void handleEmailChangeSuccess()}
+          />
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Telefon</Label>
             <Input
@@ -687,57 +708,26 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         </div>
 
         {/* Password change */}
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Lock className="h-4 w-4 text-muted-foreground" /> Şifre Değiştir
-          </h2>
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Mevcut Şifre</Label>
-            <div className="relative">
-              <Input
-                type={showCurrentPass ? "text" : "password"}
-                placeholder="••••••••"
-                className="bg-background pr-10"
-                value={currentPasswordForChange}
-                onChange={(e) => setCurrentPasswordForChange(e.target.value)}
-                autoComplete="current-password"
-              />
-              <button type="button" onClick={() => setShowCurrentPass(!showCurrentPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Yeni Şifre</Label>
-            <div className="relative">
-              <Input
-                type={showNewPass ? "text" : "password"}
-                placeholder="En az 8 karakter"
-                className="bg-background pr-10"
-                value={newPasswordForChange}
-                onChange={(e) => setNewPasswordForChange(e.target.value)}
-                autoComplete="new-password"
-              />
-              <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Yeni Şifre (Tekrar)</Label>
-            <Input
-              type="password"
-              placeholder="••••••••"
-              className="bg-background"
-              value={confirmPasswordForChange}
-              onChange={(e) => setConfirmPasswordForChange(e.target.value)}
-              autoComplete="new-password"
+        {!isGoogleAccount && (
+          <div className="rounded-lg border border-border bg-card p-6 space-y-5">
+            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Lock className="h-4 w-4 text-muted-foreground" /> Şifre Değiştir
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Şifrenizi değiştirmek için e-posta adresinize 6 haneli bir doğrulama kodu gönderilir.
+              Kod 5 dakika geçerlidir. Kod doğrulandıktan sonra yeni şifrenizi belirleyebilirsiniz.
+            </p>
+            <Button className="gap-2" onClick={() => setPasswordDialogOpen(true)}>
+              <Key className="h-4 w-4" /> Şifre Değiştir
+            </Button>
+            <ChangePasswordDialog
+              open={passwordDialogOpen}
+              onOpenChange={setPasswordDialogOpen}
+              onNotify={onNotify}
+              onSuccess={() => void handlePasswordChangeSuccess()}
             />
           </div>
-          <Button className="gap-2" onClick={handleChangePassword} disabled={passwordChangeLoading}>
-            <Key className="h-4 w-4" /> {passwordChangeLoading ? "Güncelleniyor…" : "Şifreyi Güncelle"}
-          </Button>
-        </div>
+        )}
 
         {/* 2FA */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-5">

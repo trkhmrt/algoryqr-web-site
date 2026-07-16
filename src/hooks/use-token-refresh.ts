@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api/errors";
-import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config";
+import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config.client";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 /** Access token süresi dolmadan kaç saniye önce refresh atılacak */

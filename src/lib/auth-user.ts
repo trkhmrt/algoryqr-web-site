@@ -8,6 +8,19 @@ export interface AuthUser {
 
 type JwtPayload = Record<string, unknown>;
 
+export type PackageCode = "FREE_PACKAGE" | "PRO_PACKAGE";
+export type ProductCode = "QR_CREATE" | "QR_MENU" | "QR_AGENT";
+export type ProductScope = "QR_CREATE_OWNER" | "QR_MENU_OWNER";
+export type AuthProvider = "GOOGLE" | "BASIC";
+
+export interface AccessProfile {
+  activePackage: PackageCode | null;
+  products: ProductCode[];
+  scopes: ProductScope[];
+  roles: string[];
+  provider: AuthProvider | null;
+}
+
 function decodeBase64Url(input: string): string | null {
   try {
     const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
@@ -109,6 +122,50 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
     first_name: firstName,
     last_name: lastName,
   };
+}
+
+export function getAccessProfileFromToken(token?: string | null): AccessProfile {
+  const payload = token ? parseJwtPayload(token) : null;
+  if (!payload) {
+    return { activePackage: null, products: [], scopes: [], roles: [], provider: null };
+  }
+  return {
+    activePackage:
+      payload.activePackage === "FREE_PACKAGE" || payload.activePackage === "PRO_PACKAGE"
+        ? payload.activePackage
+        : null,
+    products: readStringArray(payload.products).filter(isProductCode),
+    scopes: readStringArray(payload.scopes).filter(isProductScope),
+    roles: readStringArray(payload.roles),
+    provider: parseAuthProvider(payload.provider),
+  };
+}
+
+function parseAuthProvider(value: unknown): AuthProvider | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "GOOGLE" || normalized === "BASIC") return normalized;
+  return null;
+}
+
+export function hasScope(profile: AccessProfile | null | undefined, scope: ProductScope): boolean {
+  return profile?.scopes.includes(scope) ?? false;
+}
+
+export function tokenHasScope(token: string | null | undefined, scope: ProductScope): boolean {
+  return hasScope(getAccessProfileFromToken(token), scope);
+}
+
+function readStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function isProductCode(value: string): value is ProductCode {
+  return value === "QR_CREATE" || value === "QR_MENU" || value === "QR_AGENT";
+}
+
+function isProductScope(value: string): value is ProductScope {
+  return value === "QR_CREATE_OWNER" || value === "QR_MENU_OWNER";
 }
 
 export function buildUpstreamAuthHeaders(accessToken: string): Record<string, string> {

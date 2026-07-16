@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
@@ -79,7 +79,11 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
   }
 
   if (accountRoute?.mode === "subscription") {
-    return <SubscriptionSection onNotify={notify} />;
+    return (
+      <Suspense fallback={null}>
+        <SubscriptionSection onNotify={notify} />
+      </Suspense>
+    );
   }
 
   if (pathname === DASHBOARD_ROUTES.account || accountRoute?.mode === "main") {

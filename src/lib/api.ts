@@ -141,6 +141,7 @@ export interface UserEntitlementApiItem {
   totalQuantity: number;
   remainingQuantity: number;
   usedQuantity: number;
+  unlimited: boolean;
   usable: boolean;
   expired: boolean;
 }
@@ -160,12 +161,54 @@ export interface PurchaseApiItem {
   expired: boolean;
 }
 
+export type PurchaseStatus = "PENDING" | "ACTIVE" | "FAILED" | "CANCELLED" | "EXPIRED";
+
+export interface InstallmentOptionApiItem {
+  installmentCount: number;
+  monthlyAmount?: number | string;
+  totalAmount?: number | string;
+}
+
+export interface InstallmentScheduleApiItem {
+  installmentNumber: number;
+  dueAt?: string;
+  amount: number | string;
+  currency?: string;
+  status: string;
+  startsAt?: string;
+  expiresAt?: string;
+}
+
+export interface PurchaseSummaryApiItem {
+  purchaseId: number;
+  packageId: number;
+  packageCode: string;
+  packageName: string;
+  price: number | string;
+  currency: string;
+  status: PurchaseStatus;
+  startsAt?: string;
+  expiresAt?: string;
+  purchasedAt?: string;
+  expired: boolean;
+  usable: boolean;
+  paymentMode?: "DIRECT" | "THREE_DS";
+  installmentCount?: number;
+  monthlyAmount?: number | string;
+  totalAmount?: number | string;
+  installmentSchedule?: InstallmentScheduleApiItem[];
+  installments?: InstallmentScheduleApiItem[];
+  retryPaymentAvailable?: boolean;
+  updateCardAvailable?: boolean;
+}
+
 export interface PlanPackageItemApi {
   id: number;
   productId?: number;
   productCode: string;
   productName: string;
   quantity: number;
+  unlimited: boolean;
 }
 
 export interface PlanPackageApiItem {
@@ -178,6 +221,9 @@ export interface PlanPackageApiItem {
   active: boolean;
   validityDays: number;
   items: PlanPackageItemApi[];
+  allowedPaymentModes?: Array<"DIRECT" | "THREE_DS">;
+  installmentOptions?: InstallmentOptionApiItem[];
+  allowedInstallments?: number[];
 }
 
 export interface PackageUsageSummary {
@@ -185,6 +231,7 @@ export interface PackageUsageSummary {
   remaining: number;
   total: number;
   used: number;
+  unlimited: boolean;
 }
 
 export function aggregatePackageUsage(
@@ -195,6 +242,7 @@ export function aggregatePackageUsage(
     (item) => (item.productCode === "QR_CREATE" || item.productCode === "QR_MENU") && item.usable && !item.expired,
   );
   const qrEntitlements = activeEntitlements.filter((item) => item.productCode === "QR_CREATE");
+  const unlimited = qrEntitlements.some((item) => item.unlimited);
   const remaining = qrEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
   const total = qrEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
   const used = qrEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
@@ -205,6 +253,7 @@ export function aggregatePackageUsage(
     remaining,
     total,
     used,
+    unlimited,
   };
 }
 
@@ -220,11 +269,6 @@ export async function getMyPurchasesRequest(): Promise<PurchaseApiItem[]> {
 
 export async function getActivePackagesRequest(): Promise<PlanPackageApiItem[]> {
   const response = await api.get<PlanPackageApiItem[]>("/packages");
-  return response.data;
-}
-
-export async function purchasePackageRequest(packageId: number): Promise<PurchaseApiItem> {
-  const response = await api.post<PurchaseApiItem>("/purchases", { packageId });
   return response.data;
 }
 

@@ -45,23 +45,6 @@ interface RegisterResponse {
   lastName?: string;
 }
 
-interface GoogleUserResponse {
-  userId: number;
-  firstName?: string;
-  familyName?: string;
-  email: string;
-  phoneNumber?: string;
-}
-
-function mapGoogleUserToStoredUser(user: GoogleUserResponse) {
-  return {
-    id: String(user.userId),
-    email: user.email,
-    first_name: user.firstName,
-    last_name: user.familyName,
-  };
-}
-
 function toApiError(e: unknown, fallback: string): ApiError {
   if (e instanceof ApiError) return e;
   const err = e as AxiosError<unknown>;
@@ -161,40 +144,6 @@ export const authService = {
       return data;
     } catch (e) {
       throw toApiError(e, "Kayıt başarısız");
-    }
-  },
-
-  async googleLogin(idToken: string): Promise<GoogleUserResponse & AuthResponse> {
-    try {
-      const { data } = await client().post<GoogleUserResponse & AuthResponse>("/auth/google/login", idToken, {
-        headers: { "Content-Type": "text/plain" },
-        transformRequest: [(d) => d],
-      });
-      if (data.requiresTwoFactor) {
-        return data;
-      }
-      if (data.user) setStoredUser(data.user);
-      else if (data.userId != null || data.email) setStoredUser(mapGoogleUserToStoredUser(data as GoogleUserResponse));
-      return data;
-    } catch (e) {
-      throw toApiError(e, "Google ile giriş başarısız");
-    }
-  },
-
-  async googleRegister(
-    idToken: string,
-    registrationRole: string = "QR_USER",
-  ): Promise<GoogleUserResponse & AuthResponse> {
-    try {
-      const { data } = await client().post<GoogleUserResponse & AuthResponse>("/auth/google/register", {
-        idToken,
-        registrationRole,
-      });
-      if (data.user) setStoredUser(data.user);
-      else if (data.userId != null || data.email) setStoredUser(mapGoogleUserToStoredUser(data as GoogleUserResponse));
-      return data;
-    } catch (e) {
-      throw toApiError(e, "Google ile kayıt başarısız");
     }
   },
 

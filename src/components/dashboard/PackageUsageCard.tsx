@@ -35,20 +35,22 @@ const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
               <p className="text-sm font-medium text-foreground">{usage.packageName}</p>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Aktif paketiniz · {usage.remaining} QR oluşturma hakkı kaldı
+              Aktif paketiniz · {usage.unlimited ? "Sınırsız QR oluşturma" : `${usage.remaining} QR oluşturma hakkı kaldı`}
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-2xl font-semibold tracking-tight text-foreground">{usage.remaining}</p>
-            <p className="text-[11px] text-muted-foreground">/ {usage.total} hak</p>
+            <p className="text-2xl font-semibold tracking-tight text-foreground">
+              {usage.unlimited ? "Sınırsız" : usage.remaining}
+            </p>
+            {!usage.unlimited && <p className="text-[11px] text-muted-foreground">/ {usage.total} hak</p>}
           </div>
         </div>
-        <div className="mt-4 space-y-1.5">
+        {!usage.unlimited && <div className="mt-4 space-y-1.5">
           <Progress value={usedPercent} className="h-1.5" />
           <p className="text-[11px] text-muted-foreground">
             {usage.used} kullanıldı · {usage.remaining} kalan
           </p>
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );

@@ -3,27 +3,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QrCode } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { authService } from "@/lib/auth-service";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
+import { getGoogleAuthErrorMessage } from "@/lib/google-auth-error";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  /** 2FA bekleniyor (şifre veya Google sonrası) */
   const [awaiting2FA, setAwaiting2FA] = useState(false);
   const [totpCode, setTotpCode] = useState("");
   const [twoFactorHintEmail, setTwoFactorHintEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const error = new URLSearchParams(window.location.search).get("error");
+    const message = getGoogleAuthErrorMessage(error);
+    if (!message) return;
+    toast({ title: "Google ile giriş başarısız", description: message, variant: "destructive" });
+    router.replace("/login");
+  }, [router, toast]);
 
   const cancelTwoFactor = async () => {
     await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
@@ -83,34 +90,6 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLoginSuccess = async (credentialResponse: CredentialResponse) => {
-    const idToken = credentialResponse.credential;
-    if (!idToken) {
-      toast({ title: "Hata", description: "Google kimlik doğrulama token'ı alınamadı.", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const data = await authService.googleLogin(idToken);
-      if (data.requiresTwoFactor) {
-        setTwoFactorHintEmail(data.email ?? null);
-        setAwaiting2FA(true);
-        setTotpCode("");
-        toast({ title: "İki adımlı doğrulama", description: "Authenticator uygulamanızdaki 6 haneli kodu girin." });
-        return;
-      }
-      queryClient.removeQueries({ queryKey: MY_PROFILE_QUERY_KEY });
-      toast({ title: "Başarılı", description: "Google ile giriş yapıldı!" });
-      router.push("/dashboard");
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Google ile giriş yapılırken bir hata oluştu";
-      toast({ title: "Hata", description: message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative">
 
@@ -158,17 +137,9 @@ const Login = () => {
             </form>
           ) : (
             <>
-              {/* Google Login */}
-              <div className="w-full flex justify-center">
-                <GoogleLogin
-                  onSuccess={handleGoogleLoginSuccess}
-                  onError={() => toast({ title: "Hata", description: "Google ile giriş başarısız.", variant: "destructive" })}
-                  theme="outline"
-                  size="large"
-                  text="signin_with"
-                  shape="rectangular"
-                />
-              </div>
+              <Button variant="outline" size="lg" className="w-full" asChild>
+                <a href="/api/auth/google/start?intent=login">Google ile giriş yap</a>
+              </Button>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -179,7 +150,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Email Login */}
               <form onSubmit={handleEmailLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-posta</Label>

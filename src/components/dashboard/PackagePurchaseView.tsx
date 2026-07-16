@@ -1,22 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, CreditCard, Loader2, Lock, ShieldCheck, Zap } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, CreditCard, Loader2, Lock, ShieldCheck, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatPackagePrice, packageFeatures } from "@/lib/package-display";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { invalidateAccessProfile } from "@/hooks/use-access-profile";
+import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
+import {
+  clearPendingPurchaseId,
+  getInstallmentOptions,
+  getPaymentModes,
+  storePendingPurchaseId,
+  type PaymentMode,
+  type PurchaseInitiateResponse,
+} from "@/lib/purchase-fulfillment";
 
 interface PackagePurchaseViewProps {
   packageId: number;
@@ -30,20 +40,22 @@ interface CardFormState {
   cvv: string;
 }
 
-type PackageCheckoutResponse = {
-  success?: boolean;
-  mode?: "free" | "direct" | "three-ds";
-  conversationId?: string;
-  htmlContent?: string;
-  message?: string;
-};
-
-const INITIAL_FORM: CardFormState = {
+const EMPTY_CARD_FORM: CardFormState = {
   cardholderName: "",
   cardNumber: "",
   expiry: "",
   cvv: "",
 };
+
+const DEV_CARD_FORM: CardFormState = {
+  cardholderName: "Tarık Hamarat",
+  cardNumber: "5890 0400 0000 0016",
+  expiry: "12/30",
+  cvv: "123",
+};
+
+const INITIAL_FORM: CardFormState =
+  process.env.NODE_ENV === "development" ? DEV_CARD_FORM : EMPTY_CARD_FORM;
 
 function formatCardNumber(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 16);
@@ -73,9 +85,14 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
   const queryClient = useQueryClient();
   const { data, isLoading, isError } = useSubscription();
   const [form, setForm] = useState<CardFormState>(INITIAL_FORM);
-  const [use3ds, setUse3ds] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("THREE_DS");
+  const [installmentCount, setInstallmentCount] = useState(1);
   const [isPaying, setIsPaying] = useState(false);
   const [threeDsHtml, setThreeDsHtml] = useState<string | null>(null);
+  const [purchaseId, setPurchaseId] = useState<number | null>(null);
+  const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
+  const finalizedPurchaseId = useRef<number | null>(null);
+  const fulfillment = usePurchaseFulfillment(purchaseId, pollStartedAt);
 
   const pkg = data?.packages.find((item) => item.id === packageId);
   const isActive =
@@ -83,18 +100,32 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
     data.activePurchase.usable &&
     !data.activePurchase.expired;
 
+  useEffect(() => {
+    if (!pkg) return;
+    const modes = getPaymentModes(pkg);
+    const options = getInstallmentOptions(pkg);
+    setPaymentMode((current) => (modes.includes(current) ? current : modes[0]));
+    setInstallmentCount((current) =>
+      options.some((option) => option.installmentCount === current)
+        ? current
+        : options[0].installmentCount,
+    );
+  }, [pkg]);
+
   const updateField = <K extends keyof CardFormState>(key: K, value: CardFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const finalizeSuccess = async (message: string) => {
+  const finalizeSuccess = useCallback(async (message: string) => {
+    await getSiteSameOriginAxios().post("/auth/refresh");
     await Promise.all([
       invalidateSubscription(queryClient),
       invalidatePackageUsage(queryClient),
+      invalidateAccessProfile(queryClient),
     ]);
     onNotify("info", message);
     router.push(DASHBOARD_ROUTES.accountSubscription);
-  };
+  }, [onNotify, queryClient, router]);
 
   const handlePay = async () => {
     if (!pkg || !isFormValid(form)) {
@@ -104,24 +135,39 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
 
     setIsPaying(true);
     try {
-      const response = await getSiteSameOriginAxios().post<PackageCheckoutResponse>("/payments/package", {
+      const [expireMonth, expireYearPart] = form.expiry.split("/");
+      const expireYear = expireYearPart?.length === 2 ? `20${expireYearPart}` : expireYearPart;
+      const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", {
         packageId: pkg.id,
-        use3ds,
-        card: {
-          cardholderName: form.cardholderName.trim(),
-          cardNumber: form.cardNumber,
-          expiry: form.expiry,
-          cvv: form.cvv,
+        paymentMode,
+        installmentCount,
+        identityNumber: "11111111111",
+        paymentCard: {
+          cardHolderName: form.cardholderName.trim(),
+          cardNumber: form.cardNumber.replace(/\s/g, ""),
+          expireMonth,
+          expireYear,
+          cvc: form.cvv,
+          registerCard: 0,
+        },
+        billingAddress: {
+          contactName: form.cardholderName.trim(),
+          city: "Istanbul",
+          country: "Turkey",
+          address: "Türkiye",
+          zipCode: "34000",
         },
       });
 
       const result = response.data;
-      if (result.mode === "three-ds" && result.htmlContent) {
-        setThreeDsHtml(result.htmlContent);
-        return;
+      if (!Number.isSafeInteger(result.purchaseId) || result.purchaseId <= 0) {
+        throw new Error("Satın alım kimliği alınamadı.");
       }
-
-      await finalizeSuccess(`Ödeme başarılı! "${pkg.name}" paketi hesabınıza tanımlandı.`);
+      storePendingPurchaseId(result.purchaseId);
+      setPurchaseId(result.purchaseId);
+      setPollStartedAt(Date.now());
+      const paymentHtml = result.paymentHtml ?? result.htmlContent;
+      if (paymentHtml) setThreeDsHtml(paymentHtml);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Ödeme işlemi tamamlanamadı.";
       onNotify("danger", msg);
@@ -129,6 +175,28 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
       setIsPaying(false);
     }
   };
+
+  useEffect(() => {
+    const summary = fulfillment.summary.data;
+    if (!summary || finalizedPurchaseId.current === summary.purchaseId) return;
+    if (summary.status === "ACTIVE") {
+      finalizedPurchaseId.current = summary.purchaseId;
+      clearPendingPurchaseId();
+      setThreeDsHtml(null);
+      void finalizeSuccess("Ödeme tamamlandı ve paketiniz aktif edildi.");
+      return;
+    }
+    if (summary.status === "FAILED" || summary.status === "CANCELLED") {
+      finalizedPurchaseId.current = summary.purchaseId;
+      clearPendingPurchaseId();
+      setThreeDsHtml(null);
+      onNotify("danger", "Ödeme tamamlanamadı. Kartınızdan tahsilat yapılmadıysa tekrar deneyebilirsiniz.");
+    }
+  }, [finalizeSuccess, fulfillment.summary.data, onNotify]);
+
+  useEffect(() => {
+    if (fulfillment.timedOut) setThreeDsHtml(null);
+  }, [fulfillment.timedOut]);
 
   useEffect(() => {
     if (!threeDsHtml) return;
@@ -194,6 +262,14 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
   const priceLabel = formatPackagePrice(pkg.price, pkg.currency);
   const formReady = isFormValid(form);
   const isFree = parseFloat(String(pkg.price)) <= 0;
+  const paymentModes = getPaymentModes(pkg);
+  const installmentOptions = getInstallmentOptions(pkg);
+  const selectedInstallment =
+    installmentOptions.find((option) => option.installmentCount === installmentCount) ?? installmentOptions[0];
+  const schedule =
+    fulfillment.installments.data ??
+    fulfillment.summary.data?.installmentSchedule ??
+    [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -255,7 +331,12 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
               <h3 className="text-sm font-medium text-foreground">Kart bilgileri</h3>
             </div>
 
-            {!isFree && (
+            {isFree ? (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                Bu paket ödeme ekranından satın alınamaz.
+              </div>
+            ) : (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="cardholderName">Kart üzerindeki isim</Label>
@@ -310,40 +391,127 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
                   </div>
                 </div>
 
-                <label className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/40 transition-colors">
-                  <Checkbox
-                    id="use3ds"
-                    checked={use3ds}
-                    onCheckedChange={(checked) => setUse3ds(checked === true)}
-                    disabled={isPaying || isActive}
-                  />
-                  <div className="space-y-1">
-                    <span className="text-sm font-medium text-foreground">3DS ile ödeme yapmak istiyorum</span>
-                    <p className="text-xs text-muted-foreground">
-                      Bankanızın ek doğrulama adımı ile güvenli ödeme yapılır.
-                    </p>
+                {paymentModes.length > 1 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentMode">Ödeme yöntemi</Label>
+                    <Select
+                      value={paymentMode}
+                      onValueChange={(value) => setPaymentMode(value as PaymentMode)}
+                      disabled={isPaying || isActive}
+                    >
+                      <SelectTrigger id="paymentMode">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentModes.map((mode) => (
+                          <SelectItem
+                            key={mode}
+                            value={mode}
+                            disabled={installmentCount > 1 && mode === "THREE_DS"}
+                          >
+                            {mode === "THREE_DS" ? "3D Secure" : "Doğrudan ödeme"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </label>
+                )}
+
+                {installmentOptions.length > 1 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="installmentCount">Taksit</Label>
+                    <Select
+                      value={String(installmentCount)}
+                      onValueChange={(value) => {
+                        const count = Number(value);
+                        setInstallmentCount(count);
+                        if (count > 1) setPaymentMode("DIRECT");
+                      }}
+                      disabled={isPaying || isActive}
+                    >
+                      <SelectTrigger id="installmentCount">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {installmentOptions.map((option) => (
+                          <SelectItem key={option.installmentCount} value={String(option.installmentCount)}>
+                            {option.installmentCount === 1
+                              ? "Tek çekim"
+                              : `${option.installmentCount} taksit`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedInstallment && selectedInstallment.installmentCount > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        {selectedInstallment.monthlyAmount != null
+                          ? `Aylık ${formatPackagePrice(selectedInstallment.monthlyAmount, pkg.currency)}`
+                          : `${selectedInstallment.installmentCount} eşit ödeme`}
+                        {selectedInstallment.totalAmount != null
+                          ? ` · Toplam ${formatPackagePrice(selectedInstallment.totalAmount, pkg.currency)}`
+                          : ""}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
             <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-              {use3ds ? (
+              {paymentMode === "THREE_DS" ? (
                 <ShieldCheck className="h-4 w-4 shrink-0 text-primary mt-0.5" />
               ) : (
                 <Lock className="h-4 w-4 shrink-0 text-primary mt-0.5" />
               )}
               <p>
-                {use3ds
-                  ? "Ödeme 3D Secure ile başlatılır; doğrulama sonrası paket hesabınıza tanımlanır."
-                  : "Ödeme doğrudan alınır; başarılı işlem sonrası paket hesabınıza tanımlanır."}
+                {paymentMode === "THREE_DS"
+                  ? "Ödeme 3D Secure ile doğrulanır. Paket yalnızca ödeme durumu aktif olduğunda tanımlanır."
+                  : "Paket yalnızca ödeme durumu aktif olduğunda tanımlanır."}
               </p>
             </div>
+
+            {purchaseId && fulfillment.summary.data && (
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-foreground">Ödeme durumu</span>
+                  <span className="text-muted-foreground">{fulfillment.summary.data.status}</span>
+                </div>
+                {fulfillment.summary.data.status === "PENDING" && !fulfillment.timedOut && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Ödemenin kesinleşmesi bekleniyor.
+                  </div>
+                )}
+                {fulfillment.timedOut && (
+                  <p className="text-xs text-amber-600">
+                    İşlem beklenenden uzun sürdü. Durumu abonelik ekranından yeniden kontrol edebilirsiniz.
+                  </p>
+                )}
+                {schedule.length > 0 && (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    {schedule.map((item) => (
+                      <div
+                        key={item.installmentNumber}
+                        className="flex items-center justify-between gap-3 text-xs text-muted-foreground"
+                      >
+                        <span>
+                          {item.installmentNumber}. taksit
+                          {item.dueAt ? ` · ${new Date(item.dueAt).toLocaleDateString("tr-TR")}` : ""}
+                        </span>
+                        <span>
+                          {formatPackagePrice(item.amount, pkg.currency)} · {item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <Button
               variant="hero"
               className="w-full gap-2"
-              disabled={isActive || isPaying || (!isFree && !formReady)}
+              disabled={isFree || isActive || isPaying || !formReady || purchaseId != null}
               onClick={() => void handlePay()}
             >
               {isPaying ? (
@@ -356,7 +524,7 @@ export default function PackagePurchaseView({ packageId, onNotify }: PackagePurc
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  {use3ds ? "3DS ile Öde" : "Ödeme Yap"} · {priceLabel}
+                  {paymentMode === "THREE_DS" ? "3DS ile Öde" : "Ödeme Yap"} · {priceLabel}
                 </>
               )}
             </Button>

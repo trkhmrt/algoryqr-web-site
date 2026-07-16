@@ -14,15 +14,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Access token yok" }, { status: 401 });
     }
 
-    const body = (await req.json()) as { packageId?: number };
+    const body = (await req.json()) as {
+      packageId?: number;
+      paymentMode?: "DIRECT" | "THREE_DS";
+      installmentCount?: number;
+    };
     if (body.packageId == null) {
       return NextResponse.json({ message: "Paket id zorunludur" }, { status: 400 });
     }
 
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    const realIp = req.headers.get("x-real-ip");
     const upstream = await axios.post(`${API_BASE_URL}/purchases`, body, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
+        ...(!forwardedFor && realIp ? { "X-Forwarded-For": realIp } : {}),
       },
       validateStatus: () => true,
       timeout: 20_000,
