@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,11 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { invalidateMyProfile, useMyProfile, MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import type { MyProfile } from "@/hooks/use-my-profile";
-import { getJsonErrorText } from "@/lib/api-error-text";
 import {
   User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages,
   RefreshCw, LogOut, Timer, Copy, CreditCard,
+  WalletCards, MapPin,
 } from "lucide-react";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config.client";
@@ -33,7 +34,7 @@ const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
 
 type SettingsPage = "main" | "profile" | "security" | "notifications" | "appearance" | "api" | "session";
 
-type SettingsMenuKey = SettingsPage | "subscription";
+type SettingsMenuKey = SettingsPage | "subscription" | "paymentMethods" | "billingAddresses";
 
 interface SettingsTabProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -58,7 +59,6 @@ function formatCountdown(expiresAt: number): string {
   return `${m} dk ${s} sn`;
 }
 
-/** Kalan ms için "X dk Y sn sonra" metni */
 function formatRefreshIn(remainingMs: number): string {
   const sec = Math.max(0, Math.ceil(remainingMs / 1000));
   if (sec === 0) return "şimdi gönderilecek";
@@ -91,7 +91,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const { theme, setTheme } = useTheme();
   const [page, setPage] = useState<SettingsPage>("main");
 
-  // Token / session state (session sayfası için)
   const [accessTokenExpiresAt, setAccessTokenExpiresAt] = useState<number | null>(null);
   const [refreshTokenExpiresAt, setRefreshTokenExpiresAt] = useState<number | null>(null);
   const [countdownLabel, setCountdownLabel] = useState<string>("—");
@@ -104,7 +103,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
-  // Profile state (sunucudan doldurulur)
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -112,7 +110,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [profileSaving, setProfileSaving] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
-  // Security state
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const twoFactorEnabled = myProfile?.twoFactorEnabled ?? false;
   const [twoFactorSetup, setTwoFactorSetup] = useState<TwoFactorSetupPayload | null>(null);
@@ -122,7 +119,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [totpDisableCode, setTotpDisableCode] = useState("");
   const [twoFactorDisableLoading, setTwoFactorDisableLoading] = useState(false);
 
-  // Notification state
   const [emailNotifs, setEmailNotifs] = useState(false);
   const [scanAlerts, setScanAlerts] = useState(false);
   const [weeklyReport, setWeeklyReport] = useState(false);
@@ -130,7 +126,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [pushBrowser, setPushBrowser] = useState(false);
   const [notificationsSaving, setNotificationsSaving] = useState(false);
 
-  // Appearance state
   const [language, setLanguage] = useState("tr");
 
   const fetchTokenExp = useCallback(() => {
@@ -448,6 +443,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         <div className="grid gap-4">
           {([
             { icon: CreditCard, title: "Abonelik", desc: "Aktif paketinizi görün ve yeni paket satın alın", key: "subscription" },
+            { icon: WalletCards, title: "Kayıtlı Kartlarım", desc: "Ödemelerde kullanacağınız kartları yönetin", key: "paymentMethods" },
+            { icon: MapPin, title: "Fatura Adreslerim", desc: "Fatura bilgilerinizi görüntüleyin ve düzenleyin", key: "billingAddresses" },
             { icon: Key, title: "Oturum / Token", desc: "Access token kalan süre, yenileme ve revoke", key: "session" },
             { icon: User, title: "Profil Bilgileri", desc: "Ad, soyad, e-posta ve telefon bilgilerinizi güncelleyin", key: "profile" },
             { icon: Shield, title: "Güvenlik", desc: "Şifre değiştirme ve iki faktörlü doğrulama", key: "security" },
@@ -461,6 +458,14 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
               onClick={() => {
                 if (item.key === "subscription") {
                   router.push(DASHBOARD_ROUTES.accountSubscription);
+                  return;
+                }
+                if (item.key === "paymentMethods") {
+                  router.push(DASHBOARD_ROUTES.accountPaymentMethods);
+                  return;
+                }
+                if (item.key === "billingAddresses") {
+                  router.push(DASHBOARD_ROUTES.accountBillingAddresses);
                   return;
                 }
                 setPage(item.key as SettingsPage);
@@ -588,7 +593,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <p className="text-sm text-destructive">Profil yüklenemedi. Oturumunuzu kontrol edin.</p>
         ) : null}
 
-        {/* Avatar */}
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-5">
             <div className="relative">
@@ -616,7 +620,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
-        {/* Form */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -684,7 +687,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </Button>
         </div>
 
-        {/* Danger zone */}
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 space-y-3">
           <h3 className="text-sm font-medium text-destructive">Tehlikeli Bölge</h3>
           <p className="text-xs text-muted-foreground">Hesabınızı silmek geri alınamaz. Tüm verileriniz kalıcı olarak silinir.</p>
@@ -707,7 +709,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
-        {/* Password change */}
         {!isGoogleAccount && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-5">
             <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -729,7 +730,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         )}
 
-        {/* 2FA */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-5">
           <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
             <Smartphone className="h-4 w-4 text-muted-foreground" /> İki Faktörlü Doğrulama
@@ -788,8 +788,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                 <p className="text-xs text-muted-foreground">
                   Uygulamaya ekledikten sonra aşağıya güncel 6 haneli kodu yazın.
                 </p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={`data:image/png;base64,${twoFactorSetup.qrImageBase64}`}
                   alt="İki adımlı doğrulama QR"
                   width={200}
@@ -860,7 +859,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
-        {/* Active sessions */}
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <h2 className="text-sm font-medium text-foreground">Aktif Oturumlar</h2>
           {[
@@ -1020,7 +1018,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     );
   }
 
-  // API Keys page
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">

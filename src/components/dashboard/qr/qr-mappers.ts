@@ -1,5 +1,6 @@
 import { UserQrApiItem } from "@/lib/api";
-import { createInitialMenuData, MenuThemeId, MenuUrlMode } from "@/components/dashboard/qr-create/MenuDetails";
+import { createInitialMenuData, MenuUrlMode } from "@/components/dashboard/qr-create/MenuDetails";
+import { resolveMenuThemeId } from "@/components/menu-templates/registry";
 import { QrTypeData, QrTypeValue } from "@/components/dashboard/qr-create/QrTypeDetails";
 
 export type DashboardQrItem = {
@@ -36,6 +37,7 @@ export const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
   if (type === "menu") {
     return {
       businessName: data.menu.businessName,
+      slogan: data.menu.slogan,
       phone: data.menu.phone,
       email: data.menu.email,
       address: data.menu.address,
@@ -62,14 +64,12 @@ export const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrType
   if ("themeId" in details && "businessName" in details) {
     const urlModeRaw = String(details.urlMode ?? "ID").toLowerCase();
     const urlMode: MenuUrlMode = urlModeRaw === "slug" ? "slug" : "id";
-    const themeRaw = String(details.themeId ?? "classic");
-    const themeId = (["classic", "modern", "minimal", "dark"] as MenuThemeId[]).includes(themeRaw as MenuThemeId)
-      ? (themeRaw as MenuThemeId)
-      : "classic";
+    const themeId = resolveMenuThemeId(details.themeId);
     return {
       ...base,
       menu: {
         businessName: String(details.businessName ?? ""),
+        slogan: String(details.slogan ?? ""),
         phone: String(details.phone ?? ""),
         email: String(details.email ?? ""),
         address: String(details.address ?? ""),
@@ -134,6 +134,7 @@ export const getReadableDetailRows = (details: Record<string, unknown>) => {
   if ("themeId" in details && "businessName" in details) {
     return [
       { label: "İşletme", value: String(details.businessName ?? "") },
+      { label: "Slogan", value: String(details.slogan ?? "") },
       { label: "Telefon", value: String(details.phone ?? "") },
       { label: "E-posta", value: String(details.email ?? "") },
       { label: "Adres", value: String(details.address ?? "") },
@@ -216,4 +217,6 @@ export const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => 
 });
 
 export const isMenuQrDetails = (details: Record<string, unknown>) =>
-  "themeId" in details && "businessName" in details;
+  ("themeId" in details && "businessName" in details) ||
+  ("menuId" in details && details.menuId != null) ||
+  String(details.type ?? "").toLowerCase() === "menu";

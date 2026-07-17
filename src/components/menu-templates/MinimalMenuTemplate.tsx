@@ -7,6 +7,7 @@ export function MinimalMenuTemplate({ menu, products }: MenuTemplateProps) {
     <div className="min-h-screen bg-white text-neutral-900">
       <header className="mx-auto max-w-2xl px-4 py-12 text-center">
         <h1 className="text-2xl font-light tracking-wide">{menu.businessName}</h1>
+        {menu.slogan && <p className="mt-2 text-sm text-neutral-500">{menu.slogan}</p>}
         <div className="mt-4 space-y-1 text-sm text-neutral-500">
           {menu.phone && <p>{menu.phone}</p>}
           {menu.email && <p>{menu.email}</p>}

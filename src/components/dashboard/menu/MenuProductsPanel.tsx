@@ -10,7 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   createMenuProductRequest,
   deleteMenuProductRequest,
+  flattenMenuCategories,
+  getMenuCategoriesRequest,
   getMenuProductsRequest,
+  MenuCategoryApiItem,
   MenuProductApiItem,
   MenuProductRequestBody,
   updateMenuProductRequest,
@@ -19,31 +22,45 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 
 type MenuProductsPanelProps = {
   menuId: number;
+  presetCategoryId?: number | null;
+  onPresetConsumed?: () => void;
 };
 
-const emptyForm = (): MenuProductRequestBody => ({
+const emptyForm = (categoryId?: number | null): MenuProductRequestBody => ({
   name: "",
   description: "",
   price: "",
   currency: "TRY",
-  category: "",
+  categoryId: categoryId ?? null,
   imageUrl: "",
   available: true,
 });
 
-export default function MenuProductsPanel({ menuId }: MenuProductsPanelProps) {
+export default function MenuProductsPanel({
+  menuId,
+  presetCategoryId,
+  onPresetConsumed,
+}: MenuProductsPanelProps) {
   const { notify } = useDashboardBanners();
   const [products, setProducts] = useState<MenuProductApiItem[]>([]);
+  const [categories, setCategories] = useState<MenuCategoryApiItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<MenuProductRequestBody>(emptyForm());
   const [showForm, setShowForm] = useState(false);
+  const [filterCategoryId, setFilterCategoryId] = useState<number | "all">("all");
 
-  const loadProducts = useCallback(async () => {
+  const categoryOptions = flattenMenuCategories(categories);
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getMenuProductsRequest(menuId);
-      setProducts(data);
+      const [productData, categoryData] = await Promise.all([
+        getMenuProductsRequest(menuId),
+        getMenuCategoriesRequest(menuId),
+      ]);
+      setProducts(productData);
+      setCategories(categoryData);
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "Menü ürünleri yüklenemedi.");
     } finally {
@@ -52,8 +69,17 @@ export default function MenuProductsPanel({ menuId }: MenuProductsPanelProps) {
   }, [menuId, notify]);
 
   useEffect(() => {
-    void loadProducts();
-  }, [loadProducts]);
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (presetCategoryId == null) return;
+    setForm(emptyForm(presetCategoryId));
+    setEditingId(null);
+    setShowForm(true);
+    setFilterCategoryId(presetCategoryId);
+    onPresetConsumed?.();
+  }, [presetCategoryId, onPresetConsumed]);
 
   const resetForm = () => {
     setForm(emptyForm());
@@ -76,7 +102,7 @@ export default function MenuProductsPanel({ menuId }: MenuProductsPanelProps) {
         notify("info", "Ürün eklendi.");
       }
       resetForm();
-      await loadProducts();
+      await loadData();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "İşlem başarısız.");
     }
@@ -89,7 +115,7 @@ export default function MenuProductsPanel({ menuId }: MenuProductsPanelProps) {
       description: product.description ?? "",
       price: product.price ?? "",
       currency: product.currency,
-      category: product.category ?? "",
+      categoryId: product.categoryId ?? null,
       imageUrl: product.imageUrl ?? "",
       available: product.available,
     });
@@ -100,20 +126,46 @@ export default function MenuProductsPanel({ menuId }: MenuProductsPanelProps) {
     try {
       await deleteMenuProductRequest(productId);
       notify("info", "Ürün silindi.");
-      await loadProducts();
+      await loadData();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "Ürün silinemedi.");
     }
   };
 
+  const visibleProducts =
+    filterCategoryId === "all"
+      ? products
+      : products.filter((product) => product.categoryId === filterCategoryId);
+
   return (
-    <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-medium text-foreground">Menü Ürünleri</h2>
-          <p className="text-xs text-muted-foreground">Kategorilere göre ürün ekleyin.</p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground">Kategori filtresi</Label>
+          <select
+            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            value={filterCategoryId === "all" ? "all" : String(filterCategoryId)}
+            onChange={(e) =>
+              setFilterCategoryId(e.target.value === "all" ? "all" : Number(e.target.value))
+            }
+          >
+            <option value="all">Tümü</option>
+            {categoryOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => { resetForm(); setShowForm(true); }}>
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={() => {
+            resetForm();
+            setForm(emptyForm(filterCategoryId === "all" ? null : filterCategoryId));
+            setShowForm(true);
+          }}
+        >
           <Plus className="h-3.5 w-3.5" />
           Ürün Ekle
         </Button>
@@ -128,47 +180,92 @@ export default function MenuProductsPanel({ menuId }: MenuProductsPanelProps) {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Kategori</Label>
-              <Input value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Ana Yemek" />
+              <select
+                className="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                value={form.categoryId ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    categoryId: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
+              >
+                <option value="">Kategori seçin</option>
+                {categoryOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Fiyat</Label>
-              <Input value={String(form.price ?? "")} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="120" />
+              <Input
+                value={String(form.price ?? "")}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                placeholder="120"
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label className="text-xs">Açıklama</Label>
-              <Textarea rows={2} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Textarea
+                rows={2}
+                value={form.description ?? ""}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label className="text-xs">Görsel URL</Label>
-              <Input value={form.imageUrl ?? ""} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
+              <Input
+                value={form.imageUrl ?? ""}
+                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                placeholder="https://..."
+              />
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => void handleSubmit()}>{editingId != null ? "Güncelle" : "Kaydet"}</Button>
-            <Button size="sm" variant="outline" onClick={resetForm}>İptal</Button>
+            <Button size="sm" onClick={() => void handleSubmit()}>
+              {editingId != null ? "Güncelle" : "Kaydet"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={resetForm}>
+              İptal
+            </Button>
           </div>
         </div>
       )}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Yükleniyor...</p>
-      ) : products.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Henüz ürün eklenmedi.</p>
+      ) : visibleProducts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Bu filtrede ürün yok.</p>
       ) : (
         <div className="space-y-2">
-          {products.map((product) => (
-            <div key={product.productId} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2">
+          {visibleProducts.map((product) => (
+            <div
+              key={product.productId}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2"
+            >
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{product.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {[product.category, product.price ? `${product.price} ${product.currency}` : null].filter(Boolean).join(" · ")}
+                  {[
+                    product.categoryPath || product.categoryName || product.category,
+                    product.price ? `${product.price} ${product.currency}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(product)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => void handleDelete(product.productId)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() => void handleDelete(product.productId)}
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>

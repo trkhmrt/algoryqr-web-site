@@ -9,6 +9,7 @@ import { authService } from "@/lib/auth-service";
 import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { getGoogleAuthErrorMessage } from "@/lib/google-auth-error";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const Register = () => {
   const { toast } = useToast();
@@ -83,7 +84,10 @@ const Register = () => {
           </div>
 
           <Button variant="outline" size="lg" className="w-full" asChild>
-            <a href="/api/auth/google/start?intent=register">Google ile kayıt ol</a>
+            <a href="/api/auth/google/start?intent=register">
+              <GoogleIcon className="h-5 w-5" />
+              Google ile kayıt ol
+            </a>
           </Button>
 
           <div className="relative">

@@ -18,6 +18,10 @@ export async function POST(req: Request) {
       packageId?: number;
       paymentMode?: "DIRECT" | "THREE_DS";
       installmentCount?: number;
+      paymentStyle?: "ONE_TIME" | "BANK_INSTALLMENT" | "SUBSCRIPTION";
+      bankInstallmentCount?: number;
+      billingAddressId?: number;
+      paymentMethodId?: number;
     };
     if (body.packageId == null) {
       return NextResponse.json({ message: "Paket id zorunludur" }, { status: 400 });

@@ -1,13 +1,23 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  QrCode, LogOut, TrendingUp, BarChart3, User,
-  Info, AlertTriangle, XCircle, X,
+  QrCode,
+  LogOut,
+  TrendingUp,
+  BarChart3,
+  User,
+  Info,
+  AlertTriangle,
+  XCircle,
+  X,
+  UtensilsCrossed,
+  ChevronDown,
 } from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
@@ -17,13 +27,20 @@ import {
   useDashboardBannerState,
 } from "@/contexts/dashboard-banners";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
-import { DASHBOARD_NAV_ITEMS, DASHBOARD_ROUTES, isDashboardNavActive } from "@/lib/dashboard-routes";
+import {
+  DASHBOARD_NAV_ITEMS,
+  DASHBOARD_ROUTES,
+  isDashboardNavActive,
+  isDigitalMenuSectionActive,
+} from "@/lib/dashboard-routes";
 import type { StoredUser } from "@/lib/api";
 import { getStoredUser } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const NAV_ICONS = {
   overview: BarChart3,
   analytics: TrendingUp,
+  digitalMenu: UtensilsCrossed,
   qrCodes: QrCode,
   account: User,
 } as const;
@@ -45,12 +62,29 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   const router = useRouter();
   const pathname = usePathname();
   const { banners, addBanner, removeBanner } = useDashboardBannerState();
+  const [portalReady, setPortalReady] = useState(false);
+  const [digitalMenuOpen, setDigitalMenuOpen] = useState(() => isDigitalMenuSectionActive(pathname));
   useTokenRefresh();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPortalReady(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isDigitalMenuSectionActive(pathname)) {
+      setDigitalMenuOpen(true);
+    }
+  }, [pathname]);
 
   const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
   const userInitials = useMemo(() => {
     if (!user) return "?";
-    return ((user.first_name?.[0] || "") + (user.last_name?.[0] || "")).toUpperCase() || user.email?.[0]?.toUpperCase() || "?";
+    return (
+      ((user.first_name?.[0] || "") + (user.last_name?.[0] || "")).toUpperCase() ||
+      user.email?.[0]?.toUpperCase() ||
+      "?"
+    );
   }, [user]);
   const userFullName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Kullanıcı";
 
@@ -63,10 +97,41 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
     router.refresh();
   };
 
+  const bannerPortal =
+    portalReady &&
+    createPortal(
+      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none">
+        <AnimatePresence>
+          {banners.map((banner) => {
+            const BannerIcon = bannerIcons[banner.type];
+            return (
+              <motion.div
+                key={banner.id}
+                initial={{ opacity: 0, y: -60 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -60 }}
+                className={`pointer-events-auto mt-2 mx-4 w-full max-w-lg rounded-lg border px-4 py-3 flex items-center gap-3 shadow-lg ${bannerStyles[banner.type]}`}
+              >
+                <BannerIcon className="h-4 w-4 shrink-0" />
+                <p className="text-sm flex-1">{banner.message}</p>
+                <button onClick={() => removeBanner(banner.id)} className="shrink-0 opacity-60 hover:opacity-100">
+                  <X className="h-4 w-4" />
+                </button>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>,
+      document.body,
+    );
+
+  const digitalMenuItem = DASHBOARD_NAV_ITEMS.find((item) => item.key === "digitalMenu");
+
   return (
     <DashboardBannersProvider onBanner={addBanner}>
-      <div className="min-h-screen bg-background flex">
-        <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-card/50 p-6 gap-6">
+      {bannerPortal}
+      <div className="flex min-h-screen bg-background">
+        <aside className="hidden w-64 flex-col gap-6 border-r border-border bg-card/50 p-6 lg:flex">
           <Link href="/" className="flex items-center gap-2">
             <QrCode className="h-6 w-6 text-foreground" />
             <span className="text-lg font-bold">
@@ -74,19 +139,65 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             </span>
           </Link>
 
-          <nav className="flex flex-col gap-1 flex-1">
+          <nav className="flex flex-1 flex-col gap-1">
             {DASHBOARD_NAV_ITEMS.map((item) => {
               const Icon = NAV_ICONS[item.key];
+              if (item.children?.length) {
+                const sectionActive = isDigitalMenuSectionActive(pathname);
+                return (
+                  <div key={item.key} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setDigitalMenuOpen((open) => !open)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                        sectionActive
+                          ? "bg-primary/10 text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 transition-transform", digitalMenuOpen && "rotate-180")}
+                      />
+                    </button>
+                    {digitalMenuOpen ? (
+                      <div className="ml-4 space-y-0.5 border-l border-border pl-2">
+                        {item.children.map((child) => {
+                          const childActive = isDashboardNavActive(pathname, child.href);
+                          return (
+                            <Link
+                              key={child.key}
+                              href={child.href}
+                              className={cn(
+                                "block rounded-md px-3 py-2 text-sm transition-colors",
+                                childActive
+                                  ? "bg-primary font-medium text-primary-foreground"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                              )}
+                            >
+                              {child.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
               const active = isDashboardNavActive(pathname, item.href);
               return (
                 <Link
                   key={item.key}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     active
                       ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -95,39 +206,21 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             })}
           </nav>
 
-          <div className="pt-4 border-t border-border">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={logout}>
+          <div className="border-t border-border pt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-muted-foreground"
+              onClick={logout}
+            >
               <LogOut className="h-4 w-4" />
               Çıkış Yap
             </Button>
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto relative">
-          <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none">
-            <AnimatePresence>
-              {banners.map((banner) => {
-                const BannerIcon = bannerIcons[banner.type];
-                return (
-                  <motion.div
-                    key={banner.id}
-                    initial={{ opacity: 0, y: -60 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -60 }}
-                    className={`pointer-events-auto mt-2 mx-4 w-full max-w-lg rounded-lg border px-4 py-3 flex items-center gap-3 shadow-lg ${bannerStyles[banner.type]}`}
-                  >
-                    <BannerIcon className="h-4 w-4 shrink-0" />
-                    <p className="text-sm flex-1">{banner.message}</p>
-                    <button onClick={() => removeBanner(banner.id)} className="shrink-0 opacity-60 hover:opacity-100">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-
-          <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
+        <main className="relative flex-1 overflow-auto">
+          <header className="flex items-center justify-between border-b border-border bg-card/50 px-4 py-3 lg:hidden">
             <Link href="/" className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-foreground" />
               <span className="text-base font-bold">
@@ -137,19 +230,23 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             <ThemeToggle />
           </header>
 
-          <div className="lg:hidden border-b border-border overflow-x-auto">
+          <div className="overflow-x-auto border-b border-border lg:hidden">
             <div className="flex min-w-full">
               {DASHBOARD_NAV_ITEMS.map((item) => {
-                const active = isDashboardNavActive(pathname, item.href);
+                const active =
+                  item.key === "digitalMenu"
+                    ? isDigitalMenuSectionActive(pathname)
+                    : isDashboardNavActive(pathname, item.href);
                 return (
                   <Link
                     key={item.key}
                     href={item.href}
-                    className={`flex-1 whitespace-nowrap border-b-2 px-3 py-3 text-center text-xs sm:text-sm font-medium transition-colors ${
+                    className={cn(
+                      "flex-1 whitespace-nowrap border-b-2 px-3 py-3 text-center text-xs font-medium transition-colors sm:text-sm",
                       active
                         ? "border-primary text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
                   >
                     {item.mobileLabel}
                   </Link>
@@ -158,24 +255,48 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center justify-end gap-3 px-8 py-3 border-b border-border bg-card/50">
+          {isDigitalMenuSectionActive(pathname) && digitalMenuItem?.children ? (
+            <div className="overflow-x-auto border-b border-border bg-muted/20 lg:hidden">
+              <div className="flex min-w-full">
+                {digitalMenuItem.children.map((child) => {
+                  const active = isDashboardNavActive(pathname, child.href);
+                  return (
+                    <Link
+                      key={child.key}
+                      href={child.href}
+                      className={cn(
+                        "flex-1 whitespace-nowrap px-3 py-2.5 text-center text-xs font-medium transition-colors",
+                        active
+                          ? "border-b-2 border-primary text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="hidden items-center justify-end gap-3 border-b border-border bg-card/50 px-8 py-3 lg:flex">
             <ThemeToggle />
             <div className="h-5 w-px bg-border" />
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-medium text-foreground leading-none">{userFullName}</p>
-                {user?.email && <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>}
+                <p className="text-sm font-medium leading-none text-foreground">{userFullName}</p>
+                {user?.email && <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>}
               </div>
               <Link
                 href={DASHBOARD_ROUTES.account}
-                className="h-9 w-9 rounded-full bg-primary flex items-center justify-center hover:opacity-80 transition-opacity"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-80"
               >
                 <span className="text-xs font-semibold text-primary-foreground">{userInitials}</span>
               </Link>
             </div>
           </div>
 
-          <div className="p-6 lg:p-8 max-w-6xl mx-auto">{children}</div>
+          <div className="mx-auto max-w-6xl p-6 lg:p-8">{children}</div>
         </main>
       </div>
     </DashboardBannersProvider>

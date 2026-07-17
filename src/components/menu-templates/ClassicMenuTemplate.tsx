@@ -7,6 +7,7 @@ export function ClassicMenuTemplate({ menu, products }: MenuTemplateProps) {
     <div className="min-h-screen bg-amber-50 text-amber-950">
       <header className="border-b border-amber-200 bg-amber-100/80 px-4 py-8 text-center">
         <h1 className="text-3xl font-serif font-bold">{menu.businessName}</h1>
+        {menu.slogan && <p className="mt-2 text-base text-amber-900/80">{menu.slogan}</p>}
         <div className="mt-3 space-y-1 text-sm text-amber-900/80">
           {menu.phone && <p>{menu.phone}</p>}
           {menu.email && <p>{menu.email}</p>}

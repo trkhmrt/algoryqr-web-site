@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
 import { getGoogleAuthErrorMessage } from "@/lib/google-auth-error";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -138,7 +139,10 @@ const Login = () => {
           ) : (
             <>
               <Button variant="outline" size="lg" className="w-full" asChild>
-                <a href="/api/auth/google/start?intent=login">Google ile giriş yap</a>
+                <a href="/api/auth/google/start?intent=login">
+                  <GoogleIcon className="h-5 w-5" />
+                  Google ile giriş yap
+                </a>
               </Button>
 
               <div className="relative">
@@ -167,20 +171,12 @@ const Login = () => {
           )}
 
           {!awaiting2FA && (
-            <>
-              <Link href="/dashboard" className="w-full">
-                <Button variant="heroOutline" size="lg" className="w-full">
-                  Dashboard&apos;a Git →
-                </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Hesabınız yok mu?{" "}
+              <Link href="/register" className="text-primary hover:underline font-medium">
+                Kayıt Ol
               </Link>
-
-              <p className="text-center text-xs text-muted-foreground">
-                Hesabınız yok mu?{" "}
-                <Link href="/register" className="text-primary hover:underline font-medium">
-                  Kayıt Ol
-                </Link>
-              </p>
-            </>
+            </p>
           )}
         </div>
       </div>

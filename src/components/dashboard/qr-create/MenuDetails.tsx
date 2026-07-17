@@ -1,15 +1,21 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  DEFAULT_MENU_THEME_ID,
+  getMenuTemplateOptions,
+  type MenuThemeId,
+} from "@/components/menu-templates/registry";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { checkMenuSlugAvailabilityRequest } from "@/lib/api";
 
-export type MenuThemeId = "classic" | "modern" | "minimal" | "dark";
+export type { MenuThemeId };
 export type MenuUrlMode = "id" | "slug";
 
 export type MenuData = {
   businessName: string;
+  slogan: string;
   phone: string;
   email: string;
   address: string;
@@ -20,20 +26,20 @@ export type MenuData = {
 
 export const createInitialMenuData = (): MenuData => ({
   businessName: "",
+  slogan: "",
   phone: "",
   email: "",
   address: "",
-  themeId: "classic",
+  themeId: DEFAULT_MENU_THEME_ID,
   urlMode: "id",
   publicSlug: "",
 });
 
-const THEME_OPTIONS: Array<{ id: MenuThemeId; label: string; preview: string }> = [
-  { id: "classic", label: "Klasik", preview: "bg-amber-50 text-amber-900" },
-  { id: "modern", label: "Modern", preview: "bg-slate-900 text-white" },
-  { id: "minimal", label: "Minimal", preview: "bg-white text-neutral-900 border" },
-  { id: "dark", label: "Koyu", preview: "bg-neutral-950 text-neutral-100" },
-];
+const THEME_OPTIONS = getMenuTemplateOptions().map((theme) => ({
+  id: theme.id,
+  label: theme.name,
+  preview: theme.previewClassName,
+}));
 
 type MenuDetailsProps = {
   value: MenuData;
@@ -77,6 +83,15 @@ export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps
           onChange={(e) => onChange({ ...value, businessName: e.target.value })}
         />
       </div>
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Slogan</Label>
+        <Input
+          placeholder="Lezzetin adresi"
+          className="bg-background"
+          value={value.slogan}
+          onChange={(e) => onChange({ ...value, slogan: e.target.value })}
+        />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Telefon</Label>
@@ -109,7 +124,7 @@ export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps
 
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Menü Teması</Label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {THEME_OPTIONS.map((theme) => (
             <button
               key={theme.id}

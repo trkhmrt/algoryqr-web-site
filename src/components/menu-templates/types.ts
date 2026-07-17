@@ -8,7 +8,11 @@ export type MenuTemplateProps = {
 export function groupProductsByCategory(products: MenuProductApiItem[]) {
   const groups = new Map<string, MenuProductApiItem[]>();
   for (const product of products) {
-    const key = product.category?.trim() || "Genel";
+    const key =
+      product.categoryPath?.trim() ||
+      product.categoryName?.trim() ||
+      product.category?.trim() ||
+      "Genel";
     const list = groups.get(key) ?? [];
     list.push(product);
     groups.set(key, list);

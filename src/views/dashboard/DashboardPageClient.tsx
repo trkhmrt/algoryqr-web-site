@@ -12,6 +12,13 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import type { StoredUser } from "@/lib/api";
 import DashboardOverviewView from "@/views/dashboard/DashboardOverviewView";
 import DashboardQrCodesView from "@/views/dashboard/DashboardQrCodesView";
+import BillingAddressesView from "@/views/dashboard/BillingAddressesView";
+import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
+import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
+import DigitalMenuEditorView from "@/views/dashboard/DigitalMenuEditorView";
+import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
+import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
+import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
 
 interface DashboardPageClientProps {
   initialUser?: StoredUser | null;
@@ -42,6 +49,12 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     if (pathname === DASHBOARD_ROUTES.accountSubscription) {
       return { mode: "subscription" as const };
     }
+    if (pathname === DASHBOARD_ROUTES.accountPaymentMethods) {
+      return { mode: "paymentMethods" as const };
+    }
+    if (pathname === DASHBOARD_ROUTES.accountBillingAddresses) {
+      return { mode: "billingAddresses" as const };
+    }
     const checkoutPrefix = `${DASHBOARD_ROUTES.accountSubscription}/satin-al/`;
     if (pathname.startsWith(checkoutPrefix)) {
       const slug = pathname.slice(checkoutPrefix.length).split("/")[0];
@@ -56,12 +69,64 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return null;
   }, [pathname]);
 
+  const digitalMenuCheckout = useMemo(() => {
+    const prefix = `${DASHBOARD_ROUTES.digitalMenu}/satin-al/`;
+    if (!pathname.startsWith(prefix)) return null;
+    const packageId = Number(pathname.slice(prefix.length).split("/")[0]);
+    return Number.isSafeInteger(packageId) && packageId > 0 ? packageId : null;
+  }, [pathname]);
+
+  const digitalMenuEditQrId = useMemo(() => {
+    const prefix = `${DASHBOARD_ROUTES.digitalMenu}/qr/`;
+    if (!pathname.startsWith(prefix)) return null;
+    const qrId = Number(pathname.slice(prefix.length).split("/")[0]);
+    return Number.isSafeInteger(qrId) && qrId > 0 ? qrId : null;
+  }, [pathname]);
+
   if (pathname === DASHBOARD_ROUTES.overview || pathname === DASHBOARD_ROUTES.root) {
     return <DashboardOverviewView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.analytics) {
     return <AnalyticsTab />;
+  }
+
+  if (digitalMenuCheckout) {
+    return (
+      <PackagePurchaseView
+        packageId={digitalMenuCheckout}
+        onNotify={notify}
+        returnHref={DASHBOARD_ROUTES.digitalMenu}
+      />
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenuCreate) {
+    return <DigitalMenuCreateView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenuProducts) {
+    return (
+      <Suspense fallback={null}>
+        <DigitalMenuProductsView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenuCategories) {
+    return (
+      <Suspense fallback={null}>
+        <DigitalMenuCategoriesView />
+      </Suspense>
+    );
+  }
+
+  if (digitalMenuEditQrId != null) {
+    return <DigitalMenuEditorView qrId={digitalMenuEditQrId} />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenu) {
+    return <DigitalMenuView />;
   }
 
   if (qrRoute) {
@@ -84,6 +149,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <SubscriptionSection onNotify={notify} />
       </Suspense>
     );
+  }
+
+  if (accountRoute?.mode === "paymentMethods") {
+    return <PaymentMethodsView />;
+  }
+
+  if (accountRoute?.mode === "billingAddresses") {
+    return <BillingAddressesView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.account || accountRoute?.mode === "main") {

@@ -9,6 +9,7 @@ export function ModernMenuTemplate({ menu, products }: MenuTemplateProps) {
         <div className="mx-auto max-w-3xl">
           <p className="text-xs uppercase tracking-[0.2em] text-white/70">Digital Menu</p>
           <h1 className="mt-2 text-4xl font-bold">{menu.businessName}</h1>
+          {menu.slogan && <p className="mt-2 text-base text-white/85">{menu.slogan}</p>}
           <div className="mt-4 flex flex-wrap gap-4 text-sm text-white/80">
             {menu.phone && <span>{menu.phone}</span>}
             {menu.email && <span>{menu.email}</span>}

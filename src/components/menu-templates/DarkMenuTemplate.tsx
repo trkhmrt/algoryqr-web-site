@@ -8,6 +8,7 @@ export function DarkMenuTemplate({ menu, products }: MenuTemplateProps) {
       <header className="border-b border-neutral-800 px-4 py-8">
         <div className="mx-auto max-w-3xl">
           <h1 className="text-3xl font-bold">{menu.businessName}</h1>
+          {menu.slogan && <p className="mt-2 text-base text-neutral-300">{menu.slogan}</p>}
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
             {menu.phone && <span>{menu.phone}</span>}
             {menu.email && <span>{menu.email}</span>}

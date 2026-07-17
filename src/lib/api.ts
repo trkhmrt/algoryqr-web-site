@@ -67,12 +67,23 @@ export type QrRequestDetails =
     }
   | {
       businessName: string;
+      slogan?: string;
       phone?: string;
       email?: string;
       address?: string;
       themeId: string;
       urlMode: string;
       publicSlug?: string;
+      products?: Array<{
+        name: string;
+        description?: string;
+        price?: number;
+        currency?: string;
+        category?: string;
+        imageUrl?: string;
+        available?: boolean;
+        sortOrder?: number;
+      }>;
     };
 
 export interface CreateQrRequestBody {
@@ -286,6 +297,7 @@ export interface MenuProfileApiItem {
   userId: number;
   themeId: string;
   businessName: string;
+  slogan?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -303,14 +315,39 @@ export interface MenuProductApiItem {
   price?: number | string;
   currency: string;
   category?: string;
+  categoryId?: number | null;
+  categoryName?: string;
+  categoryPath?: string;
   sortOrder: number;
   imageUrl?: string;
   available: boolean;
 }
 
+export interface MenuCategoryApiItem {
+  categoryId: number;
+  menuId: number;
+  parentId?: number | null;
+  name: string;
+  sortOrder: number;
+  children: MenuCategoryApiItem[];
+}
+
+export interface MenuCategoryRequestBody {
+  name: string;
+  parentId?: number | null;
+  sortOrder?: number;
+}
+
+export interface MenuCategoryUpdateBody {
+  name?: string;
+  parentId?: number | null;
+  sortOrder?: number;
+}
+
 export interface PublicMenuApiResponse {
   menu: MenuProfileApiItem;
   products: MenuProductApiItem[];
+  categories?: MenuCategoryApiItem[];
   themeId: string;
 }
 
@@ -320,6 +357,7 @@ export interface MenuProductRequestBody {
   price?: number | string;
   currency?: string;
   category?: string;
+  categoryId?: number | null;
   sortOrder?: number;
   imageUrl?: string;
   available?: boolean;
@@ -362,9 +400,48 @@ export async function deleteMenuProductRequest(productId: number | string): Prom
   await api.delete(`/menu/products/${productId}`);
 }
 
+export async function getMenuCategoriesRequest(menuId: number | string): Promise<MenuCategoryApiItem[]> {
+  const response = await api.get<MenuCategoryApiItem[]>(`/menu/${menuId}/categories`);
+  return response.data;
+}
+
+export async function createMenuCategoryRequest(
+  menuId: number | string,
+  payload: MenuCategoryRequestBody,
+): Promise<MenuCategoryApiItem> {
+  const response = await api.post<MenuCategoryApiItem>(`/menu/${menuId}/categories`, payload);
+  return response.data;
+}
+
+export async function updateMenuCategoryRequest(
+  categoryId: number | string,
+  payload: MenuCategoryUpdateBody,
+): Promise<MenuCategoryApiItem> {
+  const response = await api.put<MenuCategoryApiItem>(`/menu/categories/${categoryId}`, payload);
+  return response.data;
+}
+
+export async function deleteMenuCategoryRequest(categoryId: number | string): Promise<void> {
+  await api.delete(`/menu/categories/${categoryId}`);
+}
+
+export function flattenMenuCategories(
+  categories: MenuCategoryApiItem[],
+  depth = 0,
+): Array<{ id: number; label: string }> {
+  return categories.flatMap((category) => [
+    {
+      id: category.categoryId,
+      label: `${depth > 0 ? `${"— ".repeat(depth)}` : ""}${category.name}`,
+    },
+    ...flattenMenuCategories(category.children ?? [], depth + 1),
+  ]);
+}
+
 export interface MenuUpdateRequestBody {
   themeId?: string;
   businessName?: string;
+  slogan?: string;
   phone?: string;
   email?: string;
   address?: string;
