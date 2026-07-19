@@ -187,6 +187,7 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
               >
                 <MenuProductsPanel
                   menuId={menuId}
+                  qrId={qrId}
                   presetCategoryId={presetCategoryId}
                   onPresetConsumed={() => setPresetCategoryId(null)}
                 />

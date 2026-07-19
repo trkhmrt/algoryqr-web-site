@@ -3,20 +3,42 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, CreditCard, Zap } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { formatPackageDate, formatPackagePrice, packageFeatures } from "@/lib/package-display";
+import {
+  formatDaysUntilExpiry,
+  formatPackageDate,
+  formatPackagePrice,
+  packageFeatures,
+} from "@/lib/package-display";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
-import { clearPendingPurchaseId, readPendingPurchaseId } from "@/lib/purchase-fulfillment";
+import {
+  canCancelPurchase,
+  cancelPurchase,
+  clearPendingPurchaseId,
+  readPendingPurchaseId,
+} from "@/lib/purchase-fulfillment";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { ApiError } from "@/lib/api/errors";
 
 interface SubscriptionSectionProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -100,6 +122,33 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     data?.usage && data.usage.total > 0
       ? Math.round((data.usage.used / data.usage.total) * 100)
       : 0;
+  const cancellablePurchase = data?.activePurchase;
+  const showCancel = cancellablePurchase ? canCancelPurchase(cancellablePurchase) : false;
+
+  const cancelMutation = useMutation({
+    mutationFn: () => {
+      if (!cancellablePurchase?.id) {
+        throw new Error("Aktif paket bulunamadı");
+      }
+      return cancelPurchase(cancellablePurchase.id);
+    },
+    onSuccess: async () => {
+      await getSiteSameOriginAxios().post("/auth/refresh");
+      await Promise.all([
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+        invalidateAccessProfile(queryClient),
+      ]);
+      onNotify("info", "Paketiniz iptal edildi.");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Paket iptal edilemedi. Lütfen tekrar deneyin.";
+      onNotify("danger", message);
+    },
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -148,12 +197,68 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <span>{data.usage.used} kullanıldı</span>
                 {data.activePurchase?.expiresAt && (
-                  <span>Bitiş: {formatPackageDate(data.activePurchase.expiresAt)}</span>
+                  <span>
+                    Bitiş: {formatPackageDate(data.activePurchase.expiresAt)} ·{" "}
+                    {formatDaysUntilExpiry(data.activePurchase.daysUntilExpiry)}
+                  </span>
                 )}
-                {data.activePurchase?.status && (
-                  <span className="capitalize">Durum: {data.activePurchase.status.toLowerCase()}</span>
+                <span>
+                  Durum:{" "}
+                  {data.activePurchase && data.activePurchase.usable && !data.activePurchase.expired
+                    ? "aktif"
+                    : "pasif"}
+                </span>
+                {data.activePurchase?.nextPaymentDueAt && (
+                  <span>Sonraki ödeme: {formatPackageDate(data.activePurchase.nextPaymentDueAt)}</span>
                 )}
               </div>
+              {(data.activePurchase?.paymentApproaching || data.activePurchase?.expiryApproaching) && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {data.activePurchase.paymentApproaching
+                    ? "Ödeme tarihiniz yaklaşıyor."
+                    : "Paket bitiş tarihiniz yaklaşıyor."}
+                </p>
+              )}
+              {showCancel && cancellablePurchase ? (
+                <div className="flex flex-wrap items-center gap-3 border-t border-border/60 pt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                        disabled={cancelMutation.isPending}
+                      >
+                        {cancelMutation.isPending ? "İptal ediliyor..." : "Paketi iptal et"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {cancellablePurchase.packageName} paketi hemen iptal edilir. Haklarınız ve
+                          menü erişiminiz kapanır; iade otomatik yapılmaz.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => cancelMutation.mutate()}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Evet, iptal et
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Link
+                    href={DASHBOARD_ROUTES.accountPurchaseDetail(cancellablePurchase.id)}
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    Satın alma detayı
+                  </Link>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -197,6 +302,35 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
               </CardContent>
             </Card>
           )}
+
+          <div>
+            <h2 className="mb-3 text-sm font-medium text-foreground">Paket kullanım geçmişi</h2>
+            {data.purchases.length === 0 ? (
+              <p className="mb-6 text-sm text-muted-foreground">Henüz satın alma kaydı yok.</p>
+            ) : (
+              <div className="mb-6 space-y-2">
+                {data.purchases.map((purchase) => (
+                  <Link
+                    key={purchase.id}
+                    href={DASHBOARD_ROUTES.accountPurchaseDetail(purchase.id)}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card px-3 py-3 transition-colors hover:border-primary/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{purchase.packageName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatPackageDate(purchase.purchasedAt)}
+                        {purchase.status ? ` · ${purchase.status}` : ""}
+                        {purchase.paymentId ? ` · Ödeme: ${purchase.paymentId}` : ""}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-medium text-foreground">
+                      {formatPackagePrice(purchase.price ?? 0, purchase.currency)}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>
             <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">

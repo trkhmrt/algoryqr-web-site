@@ -4,6 +4,8 @@ export const DASHBOARD_ROUTES = {
   analytics: "/dashboard/analitik",
   digitalMenu: "/dashboard/dijital-menu",
   digitalMenuProducts: "/dashboard/dijital-menu/urunler",
+  digitalMenuProductDetail: (productId: number | string, qrId: number | string) =>
+    `/dashboard/dijital-menu/urunler/${productId}?qr=${qrId}`,
   digitalMenuCategories: "/dashboard/dijital-menu/kategoriler",
   digitalMenuCreate: "/dashboard/dijital-menu/olustur",
   digitalMenuEdit: (qrId: number | string) => `/dashboard/dijital-menu/qr/${qrId}`,
@@ -16,24 +18,19 @@ export const DASHBOARD_ROUTES = {
   accountSubscription: "/dashboard/hesabim/abonelik",
   accountSubscriptionCheckout: (packageId: number | string) =>
     `/dashboard/hesabim/abonelik/satin-al/${packageId}`,
+  accountPurchaseDetail: (purchaseId: number | string) =>
+    `/dashboard/hesabim/abonelik/satin-alma/${purchaseId}`,
   accountPaymentMethods: "/dashboard/hesabim/kayitli-kartlarim",
   accountBillingAddresses: "/dashboard/hesabim/fatura-adreslerim",
 } as const;
 
 export type DashboardNavKey = "overview" | "analytics" | "digitalMenu" | "qrCodes" | "account";
 
-export type DashboardNavChild = {
-  key: string;
-  label: string;
-  href: string;
-};
-
 export type DashboardNavItem = {
   key: DashboardNavKey;
   label: string;
   href: string;
   mobileLabel: string;
-  children?: DashboardNavChild[];
 };
 
 export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
@@ -44,11 +41,6 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Dijital Menü",
     mobileLabel: "Menü",
     href: DASHBOARD_ROUTES.digitalMenu,
-    children: [
-      { key: "menus", label: "Menü", href: DASHBOARD_ROUTES.digitalMenu },
-      { key: "products", label: "Ürünler", href: DASHBOARD_ROUTES.digitalMenuProducts },
-      { key: "categories", label: "Kategoriler", href: DASHBOARD_ROUTES.digitalMenuCategories },
-    ],
   },
   { key: "qrCodes", label: "QR Kodlarım", mobileLabel: "QR Kodlar", href: DASHBOARD_ROUTES.qrCodes },
   { key: "account", label: "Hesabım", mobileLabel: "Hesabım", href: DASHBOARD_ROUTES.account },
@@ -56,10 +48,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
 
 export function isDashboardNavActive(pathname: string, href: string): boolean {
   if (href === DASHBOARD_ROUTES.digitalMenu) {
-    return pathname === href;
-  }
-  if (href === DASHBOARD_ROUTES.digitalMenuProducts || href === DASHBOARD_ROUTES.digitalMenuCategories) {
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return isDigitalMenuSectionActive(pathname);
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

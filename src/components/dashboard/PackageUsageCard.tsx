@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Zap } from "lucide-react";
 import type { PackageUsageSummary } from "@/lib/api";
+import { formatDaysUntilExpiry, formatPackageDate } from "@/lib/package-display";
 
 interface PackageUsageCardProps {
   usage: PackageUsageSummary | undefined;
@@ -24,6 +25,7 @@ const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
   if (!usage) return null;
 
   const usedPercent = usage.total > 0 ? Math.round((usage.used / usage.total) * 100) : 0;
+  const activeLabel = usage.usable ? "Aktif paketiniz" : "Aktif paket yok";
 
   return (
     <Card className="glow-card">
@@ -35,8 +37,23 @@ const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
               <p className="text-sm font-medium text-foreground">{usage.packageName}</p>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Aktif paketiniz · {usage.unlimited ? "Sınırsız QR oluşturma" : `${usage.remaining} QR oluşturma hakkı kaldı`}
+              {activeLabel} · {usage.unlimited ? "Sınırsız QR oluşturma" : `${usage.remaining} QR oluşturma hakkı kaldı`}
             </p>
+            {usage.expiresAt ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Bitiş: {formatPackageDate(usage.expiresAt)} · {formatDaysUntilExpiry(usage.daysUntilExpiry)}
+              </p>
+            ) : null}
+            {usage.paymentApproaching && usage.nextPaymentDueAt ? (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                Ödeme yaklaşıyor: {formatPackageDate(usage.nextPaymentDueAt)}
+              </p>
+            ) : null}
+            {!usage.paymentApproaching && usage.expiryApproaching ? (
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                Paket süreniz yakında doluyor
+              </p>
+            ) : null}
           </div>
           <div className="shrink-0 text-right">
             <p className="text-2xl font-semibold tracking-tight text-foreground">

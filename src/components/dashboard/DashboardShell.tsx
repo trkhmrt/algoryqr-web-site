@@ -17,7 +17,6 @@ import {
   XCircle,
   X,
   UtensilsCrossed,
-  ChevronDown,
 } from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
@@ -31,7 +30,6 @@ import {
   DASHBOARD_NAV_ITEMS,
   DASHBOARD_ROUTES,
   isDashboardNavActive,
-  isDigitalMenuSectionActive,
 } from "@/lib/dashboard-routes";
 import type { StoredUser } from "@/lib/api";
 import { getStoredUser } from "@/lib/api";
@@ -63,19 +61,12 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   const pathname = usePathname();
   const { banners, addBanner, removeBanner } = useDashboardBannerState();
   const [portalReady, setPortalReady] = useState(false);
-  const [digitalMenuOpen, setDigitalMenuOpen] = useState(() => isDigitalMenuSectionActive(pathname));
   useTokenRefresh();
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPortalReady(true), 0);
     return () => window.clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (isDigitalMenuSectionActive(pathname)) {
-      setDigitalMenuOpen(true);
-    }
-  }, [pathname]);
 
   const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
   const userInitials = useMemo(() => {
@@ -125,8 +116,6 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
       document.body,
     );
 
-  const digitalMenuItem = DASHBOARD_NAV_ITEMS.find((item) => item.key === "digitalMenu");
-
   return (
     <DashboardBannersProvider onBanner={addBanner}>
       {bannerPortal}
@@ -142,51 +131,6 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
           <nav className="flex flex-1 flex-col gap-1">
             {DASHBOARD_NAV_ITEMS.map((item) => {
               const Icon = NAV_ICONS[item.key];
-              if (item.children?.length) {
-                const sectionActive = isDigitalMenuSectionActive(pathname);
-                return (
-                  <div key={item.key} className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => setDigitalMenuOpen((open) => !open)}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                        sectionActive
-                          ? "bg-primary/10 text-foreground"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="flex-1 text-left">{item.label}</span>
-                      <ChevronDown
-                        className={cn("h-4 w-4 transition-transform", digitalMenuOpen && "rotate-180")}
-                      />
-                    </button>
-                    {digitalMenuOpen ? (
-                      <div className="ml-4 space-y-0.5 border-l border-border pl-2">
-                        {item.children.map((child) => {
-                          const childActive = isDashboardNavActive(pathname, child.href);
-                          return (
-                            <Link
-                              key={child.key}
-                              href={child.href}
-                              className={cn(
-                                "block rounded-md px-3 py-2 text-sm transition-colors",
-                                childActive
-                                  ? "bg-primary font-medium text-primary-foreground"
-                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                              )}
-                            >
-                              {child.label}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }
-
               const active = isDashboardNavActive(pathname, item.href);
               return (
                 <Link
@@ -233,10 +177,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
           <div className="overflow-x-auto border-b border-border lg:hidden">
             <div className="flex min-w-full">
               {DASHBOARD_NAV_ITEMS.map((item) => {
-                const active =
-                  item.key === "digitalMenu"
-                    ? isDigitalMenuSectionActive(pathname)
-                    : isDashboardNavActive(pathname, item.href);
+                const active = isDashboardNavActive(pathname, item.href);
                 return (
                   <Link
                     key={item.key}
@@ -254,30 +195,6 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
               })}
             </div>
           </div>
-
-          {isDigitalMenuSectionActive(pathname) && digitalMenuItem?.children ? (
-            <div className="overflow-x-auto border-b border-border bg-muted/20 lg:hidden">
-              <div className="flex min-w-full">
-                {digitalMenuItem.children.map((child) => {
-                  const active = isDashboardNavActive(pathname, child.href);
-                  return (
-                    <Link
-                      key={child.key}
-                      href={child.href}
-                      className={cn(
-                        "flex-1 whitespace-nowrap px-3 py-2.5 text-center text-xs font-medium transition-colors",
-                        active
-                          ? "border-b-2 border-primary text-foreground"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {child.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
 
           <div className="hidden items-center justify-end gap-3 border-b border-border bg-card/50 px-8 py-3 lg:flex">
             <ThemeToggle />

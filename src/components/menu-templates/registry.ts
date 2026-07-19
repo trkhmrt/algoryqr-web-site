@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
 
-import { ClassicMenuTemplate } from "./ClassicMenuTemplate";
-import { DarkMenuTemplate } from "./DarkMenuTemplate";
-import { GlassyGrayMenuTemplate } from "./GlassyGrayMenuTemplate";
-import { MinimalMenuTemplate } from "./MinimalMenuTemplate";
-import { ModernMenuTemplate } from "./ModernMenuTemplate";
+import { ClassicMenuTemplate } from "./classic";
+import { DarkMenuTemplate } from "./dark";
+import { GlassyGrayMenuTemplate } from "./glassy-gray";
+import { MinimalMenuTemplate } from "./minimal";
+import { ModernMenuTemplate } from "./modern";
 import type { MenuTemplateProps } from "./types";
 
 export type MenuTemplateDefinition = {

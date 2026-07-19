@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus, Trash2, Pencil, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,15 +18,49 @@ import {
   MenuCategoryApiItem,
   MenuProductApiItem,
   MenuProductRequestBody,
+  NutritionBasis,
+  NutritionFacts,
   updateMenuProductRequest,
 } from "@/lib/api";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import {
+  buildNutritionFactsFromForm,
+  emptyNutritionFacts,
+} from "@/components/dashboard/menu/ProductNutritionPanel";
 
 type MenuProductsPanelProps = {
   menuId: number;
+  qrId?: number | null;
   presetCategoryId?: number | null;
   onPresetConsumed?: () => void;
 };
+
+type NutritionFormFields = {
+  basis: NutritionBasis;
+  energyKj: string;
+  energyKcal: string;
+  fat: string;
+  saturatedFat: string;
+  carbohydrate: string;
+  sugars: string;
+  fibre: string;
+  protein: string;
+  salt: string;
+};
+
+const emptyNutritionForm = (): NutritionFormFields => ({
+  basis: "PER_100G",
+  energyKj: "",
+  energyKcal: "",
+  fat: "",
+  saturatedFat: "",
+  carbohydrate: "",
+  sugars: "",
+  fibre: "",
+  protein: "",
+  salt: "",
+});
 
 const emptyForm = (categoryId?: number | null): MenuProductRequestBody => ({
   name: "",
@@ -34,19 +70,23 @@ const emptyForm = (categoryId?: number | null): MenuProductRequestBody => ({
   categoryId: categoryId ?? null,
   imageUrl: "",
   available: true,
+  nutrition: emptyNutritionFacts(),
 });
 
 export default function MenuProductsPanel({
   menuId,
+  qrId,
   presetCategoryId,
   onPresetConsumed,
 }: MenuProductsPanelProps) {
+  const router = useRouter();
   const { notify } = useDashboardBanners();
   const [products, setProducts] = useState<MenuProductApiItem[]>([]);
   const [categories, setCategories] = useState<MenuCategoryApiItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<MenuProductRequestBody>(emptyForm());
+  const [nutritionForm, setNutritionForm] = useState<NutritionFormFields>(emptyNutritionForm());
   const [showForm, setShowForm] = useState(false);
   const [filterCategoryId, setFilterCategoryId] = useState<number | "all">("all");
 
@@ -75,6 +115,7 @@ export default function MenuProductsPanel({
   useEffect(() => {
     if (presetCategoryId == null) return;
     setForm(emptyForm(presetCategoryId));
+    setNutritionForm(emptyNutritionForm());
     setEditingId(null);
     setShowForm(true);
     setFilterCategoryId(presetCategoryId);
@@ -83,8 +124,16 @@ export default function MenuProductsPanel({
 
   const resetForm = () => {
     setForm(emptyForm());
+    setNutritionForm(emptyNutritionForm());
     setEditingId(null);
     setShowForm(false);
+  };
+
+  const resolveNutritionPayload = (): NutritionFacts | null => {
+    if (editingId != null) {
+      return form.nutrition ?? null;
+    }
+    return buildNutritionFactsFromForm(nutritionForm);
   };
 
   const handleSubmit = async () => {
@@ -93,16 +142,32 @@ export default function MenuProductsPanel({
       return;
     }
 
+    const nutrition = resolveNutritionPayload();
+    if (editingId == null && !nutrition) {
+      notify("warning", "Zorunlu besin alanlarını doldurun.");
+      return;
+    }
+
+    const payload: MenuProductRequestBody = {
+      ...form,
+      nutrition: nutrition ?? undefined,
+    };
+
     try {
       if (editingId != null) {
-        await updateMenuProductRequest(editingId, form);
+        await updateMenuProductRequest(editingId, payload);
         notify("info", "Ürün güncellendi.");
+        resetForm();
+        await loadData();
       } else {
-        await createMenuProductRequest(menuId, form);
+        const created = await createMenuProductRequest(menuId, payload);
         notify("info", "Ürün eklendi.");
+        resetForm();
+        await loadData();
+        if (qrId != null) {
+          router.push(DASHBOARD_ROUTES.digitalMenuProductDetail(created.productId, qrId));
+        }
       }
-      resetForm();
-      await loadData();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "İşlem başarısız.");
     }
@@ -118,6 +183,7 @@ export default function MenuProductsPanel({
       categoryId: product.categoryId ?? null,
       imageUrl: product.imageUrl ?? "",
       available: product.available,
+      nutrition: product.nutrition ?? undefined,
     });
     setShowForm(true);
   };
@@ -163,6 +229,7 @@ export default function MenuProductsPanel({
           onClick={() => {
             resetForm();
             setForm(emptyForm(filterCategoryId === "all" ? null : filterCategoryId));
+            setNutritionForm(emptyNutritionForm());
             setShowForm(true);
           }}
         >
@@ -223,6 +290,79 @@ export default function MenuProductsPanel({
               />
             </div>
           </div>
+
+          {editingId == null ? (
+            <div className="space-y-3 rounded-md border border-border/60 p-3">
+              <p className="text-xs font-medium text-foreground">Besin değerleri (zorunlu)</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Birim</Label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                    value={nutritionForm.basis}
+                    onChange={(e) =>
+                      setNutritionForm({ ...nutritionForm, basis: e.target.value as NutritionBasis })
+                    }
+                  >
+                    <option value="PER_100G">100g başına</option>
+                    <option value="PER_100ML">100ml başına</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Enerji (kJ)</Label>
+                  <Input
+                    value={nutritionForm.energyKj}
+                    onChange={(e) => setNutritionForm({ ...nutritionForm, energyKj: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Enerji (kcal)</Label>
+                  <Input
+                    value={nutritionForm.energyKcal}
+                    onChange={(e) => setNutritionForm({ ...nutritionForm, energyKcal: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Yağ</Label>
+                  <Input
+                    value={nutritionForm.fat}
+                    onChange={(e) => setNutritionForm({ ...nutritionForm, fat: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Karbonhidrat</Label>
+                  <Input
+                    value={nutritionForm.carbohydrate}
+                    onChange={(e) =>
+                      setNutritionForm({ ...nutritionForm, carbohydrate: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Lif</Label>
+                  <Input
+                    value={nutritionForm.fibre}
+                    onChange={(e) => setNutritionForm({ ...nutritionForm, fibre: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Protein</Label>
+                  <Input
+                    value={nutritionForm.protein}
+                    onChange={(e) => setNutritionForm({ ...nutritionForm, protein: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tuz</Label>
+                  <Input
+                    value={nutritionForm.salt}
+                    onChange={(e) => setNutritionForm({ ...nutritionForm, salt: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex gap-2">
             <Button size="sm" onClick={() => void handleSubmit()}>
               {editingId != null ? "Güncelle" : "Kaydet"}
@@ -257,6 +397,13 @@ export default function MenuProductsPanel({
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
+                {qrId != null ? (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                    <Link href={DASHBOARD_ROUTES.digitalMenuProductDetail(product.productId, qrId)}>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                ) : null}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(product)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>

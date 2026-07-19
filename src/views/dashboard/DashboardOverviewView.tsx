@@ -5,12 +5,16 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  QrCode, Plus, TrendingUp, Eye, Clock, ArrowUpRight, ArrowDownRight,
+  QrCode, Plus, TrendingUp, Eye, Clock, ArrowUpRight, ArrowDownRight, ArrowRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import PackageUsageCard from "@/components/dashboard/PackageUsageCard";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { formatPackageDate, formatPackagePrice } from "@/lib/package-display";
+import { usePackageUsage } from "@/hooks/use-package-usage";
+import { useSubscription } from "@/hooks/use-subscription";
 
 const metrics = [
   { label: "Toplam Tarama", value: "4,926", change: "+12.5%", up: true, icon: Eye },
@@ -49,6 +53,9 @@ function useTooltipStyle() {
 
 export default function DashboardOverviewView() {
   const tooltipStyle = useTooltipStyle();
+  const packageUsage = usePackageUsage();
+  const subscription = useSubscription();
+  const recentPurchases = (subscription.data?.purchases ?? []).slice(0, 5);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -65,42 +72,84 @@ export default function DashboardOverviewView() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((m) => (
-          <Card key={m.label} className="glow-card transition-colors hover:bg-accent/30">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <m.icon className="h-4 w-4 text-muted-foreground" />
-                <span className={`flex items-center gap-0.5 text-xs font-medium ${m.up ? "text-success" : "text-destructive"}`}>
-                  {m.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {m.change}
-                </span>
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <PackageUsageCard usage={packageUsage.data} isLoading={packageUsage.isLoading} />
+        <Card className="glow-card">
+          <CardContent className="space-y-3 p-5">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">Paket geçmişi</p>
+                <p className="text-xs text-muted-foreground">Son satın almalarınız</p>
               </div>
-              <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{m.value}</p>
-              <p className="text-xs text-muted-foreground">{m.label}</p>
+              <Button variant="ghost" size="sm" className="gap-1 text-xs" asChild>
+                <Link href={DASHBOARD_ROUTES.accountSubscription}>
+                  Tümünü gör
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+            {subscription.isLoading ? (
+              <div className="h-20 animate-pulse rounded-md bg-muted" />
+            ) : recentPurchases.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Henüz satın alma kaydı yok.</p>
+            ) : (
+              <div className="space-y-2">
+                {recentPurchases.map((purchase) => (
+                  <Link
+                    key={purchase.id}
+                    href={DASHBOARD_ROUTES.accountPurchaseDetail(purchase.id)}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2 transition-colors hover:border-primary/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{purchase.packageName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatPackageDate(purchase.purchasedAt)}
+                        {purchase.paymentId ? ` · ${purchase.paymentId}` : ""}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-xs font-medium text-foreground">
+                      {formatPackagePrice(purchase.price ?? 0, purchase.currency)}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <Card key={metric.label} className="glow-card">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{metric.label}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{metric.value}</p>
+                </div>
+                <metric.icon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className={`mt-3 flex items-center gap-1 text-xs ${metric.up ? "text-emerald-500" : "text-rose-500"}`}>
+                {metric.up ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                {metric.change}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Card className="glow-card">
-        <CardContent className="p-6">
-          <h2 className="mb-4 text-sm font-medium text-foreground">Trafik</h2>
+        <CardContent className="p-5">
+          <p className="mb-4 text-sm font-medium text-foreground">Trafik</p>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trafficData}>
-                <defs>
-                  <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--foreground))" stopOpacity={0.15} />
-                    <stop offset="100%" stopColor="hsl(var(--foreground))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="views" stroke="hsl(var(--foreground))" strokeWidth={1.5} fill="url(#viewsGrad)" />
-                <Area type="monotone" dataKey="visitors" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} fill="transparent" strokeDasharray="4 4" />
+                <Area type="monotone" dataKey="views" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" />
+                <Area type="monotone" dataKey="visitors" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.4)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -108,22 +157,20 @@ export default function DashboardOverviewView() {
       </Card>
 
       <Card className="glow-card">
-        <div className="border-b border-border px-6 py-4">
-          <h2 className="text-sm font-medium text-foreground">Son İçerikler</h2>
-        </div>
-        <div className="divide-y divide-border">
-          {recentContent.map((item) => (
-            <div key={item.title} className="flex items-center justify-between px-6 py-3 transition-colors hover:bg-accent/50">
-              <span className="text-sm text-foreground">{item.title}</span>
-              <div className="flex items-center gap-4">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${item.status === "Aktif" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
-                  {item.status}
-                </span>
-                <span className="text-xs text-muted-foreground">{item.date}</span>
+        <CardContent className="p-5">
+          <p className="mb-3 text-sm font-medium text-foreground">Son İçerikler</p>
+          <div className="space-y-2">
+            {recentContent.map((item) => (
+              <div key={item.title} className="flex items-center justify-between gap-3 border-b border-border/60 py-2 last:border-0">
+                <div>
+                  <p className="text-sm text-foreground">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.date}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{item.status}</span>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

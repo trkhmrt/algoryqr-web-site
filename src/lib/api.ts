@@ -165,14 +165,33 @@ export interface PurchaseApiItem {
   price?: number | string;
   currency?: string;
   status?: string;
+  purchaseType?: string;
+  paymentMode?: string;
+  paymentStyle?: string;
+  installmentCount?: number;
+  paymentId?: string | null;
+  paymentConversationId?: string | null;
+  paymentMethodId?: number | null;
+  cardBrand?: string | null;
+  cardLastFour?: string | null;
   startsAt?: string;
   expiresAt?: string;
   purchasedAt?: string;
+  daysUntilExpiry?: number | null;
+  nextPaymentDueAt?: string | null;
+  paymentApproaching?: boolean;
+  expiryApproaching?: boolean;
   usable: boolean;
   expired: boolean;
 }
 
-export type PurchaseStatus = "PENDING" | "ACTIVE" | "FAILED" | "CANCELLED" | "EXPIRED";
+export type PurchaseStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "FAILED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "SUPERSEDED";
 
 export interface InstallmentOptionApiItem {
   installmentCount: number;
@@ -190,6 +209,19 @@ export interface InstallmentScheduleApiItem {
   expiresAt?: string;
 }
 
+export interface PurchaseBillingSnapshotApi {
+  billingAddressId?: number | null;
+  type?: string | null;
+  name?: string | null;
+  surname?: string | null;
+  legalName?: string | null;
+  city?: string | null;
+  district?: string | null;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
 export interface PurchaseSummaryApiItem {
   purchaseId: number;
   packageId: number;
@@ -198,13 +230,26 @@ export interface PurchaseSummaryApiItem {
   price: number | string;
   currency: string;
   status: PurchaseStatus;
+  purchaseType?: string;
+  paymentStyle?: string;
   startsAt?: string;
   expiresAt?: string;
   purchasedAt?: string;
+  daysUntilExpiry?: number | null;
+  nextPaymentDueAt?: string | null;
+  paymentApproaching?: boolean;
+  expiryApproaching?: boolean;
   expired: boolean;
   usable: boolean;
-  paymentMode?: "DIRECT" | "THREE_DS";
+  paymentMode?: "DIRECT" | "THREE_DS" | string;
   installmentCount?: number;
+  paymentId?: string | null;
+  paymentConversationId?: string | null;
+  paymentMethodId?: number | null;
+  cardBrand?: string | null;
+  cardLastFour?: string | null;
+  billingSnapshot?: PurchaseBillingSnapshotApi | null;
+  products?: UserEntitlementApiItem[];
   monthlyAmount?: number | string;
   totalAmount?: number | string;
   installmentSchedule?: InstallmentScheduleApiItem[];
@@ -243,6 +288,22 @@ export interface PackageUsageSummary {
   total: number;
   used: number;
   unlimited: boolean;
+  expiresAt?: string | null;
+  daysUntilExpiry?: number | null;
+  nextPaymentDueAt?: string | null;
+  paymentApproaching?: boolean;
+  expiryApproaching?: boolean;
+  usable?: boolean;
+}
+
+export function isDateUsablePurchase(purchase: PurchaseApiItem): boolean {
+  if (!purchase.usable || purchase.expired) {
+    return false;
+  }
+  if (!purchase.expiresAt) {
+    return false;
+  }
+  return new Date(purchase.expiresAt).getTime() > Date.now();
 }
 
 export function aggregatePackageUsage(
@@ -257,7 +318,10 @@ export function aggregatePackageUsage(
   const remaining = qrEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
   const total = qrEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
   const used = qrEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
-  const activePurchase = purchases.find((item) => item.usable && !item.expired) ?? purchases[0];
+  const activePurchase =
+    purchases.find((item) => isDateUsablePurchase(item)) ??
+    purchases.find((item) => item.usable && !item.expired) ??
+    null;
 
   return {
     packageName: activePurchase?.packageName ?? "Ücretsiz Paket",
@@ -265,6 +329,12 @@ export function aggregatePackageUsage(
     total,
     used,
     unlimited,
+    expiresAt: activePurchase?.expiresAt ?? null,
+    daysUntilExpiry: activePurchase?.daysUntilExpiry ?? null,
+    nextPaymentDueAt: activePurchase?.nextPaymentDueAt ?? null,
+    paymentApproaching: activePurchase?.paymentApproaching ?? false,
+    expiryApproaching: activePurchase?.expiryApproaching ?? false,
+    usable: activePurchase ? isDateUsablePurchase(activePurchase) : false,
   };
 }
 
@@ -307,6 +377,31 @@ export interface MenuProfileApiItem {
   active: boolean;
 }
 
+export type NutritionBasis = "PER_100G" | "PER_100ML";
+
+export interface NutritionNutrientEntry {
+  name: string;
+  value?: number | string | null;
+  unit?: string | null;
+}
+
+export interface NutritionFacts {
+  basis?: NutritionBasis | null;
+  energyKj?: number | string | null;
+  energyKcal?: number | string | null;
+  fat?: number | string | null;
+  saturatedFat?: number | string | null;
+  carbohydrate?: number | string | null;
+  sugars?: number | string | null;
+  polyols?: number | string | null;
+  starch?: number | string | null;
+  fibre?: number | string | null;
+  protein?: number | string | null;
+  salt?: number | string | null;
+  vitaminsAndMinerals?: NutritionNutrientEntry[] | null;
+  otherNutrients?: NutritionNutrientEntry[] | null;
+}
+
 export interface MenuProductApiItem {
   productId: number;
   menuId: number;
@@ -321,6 +416,7 @@ export interface MenuProductApiItem {
   sortOrder: number;
   imageUrl?: string;
   available: boolean;
+  nutrition?: NutritionFacts | null;
 }
 
 export interface MenuCategoryApiItem {
@@ -361,6 +457,7 @@ export interface MenuProductRequestBody {
   sortOrder?: number;
   imageUrl?: string;
   available?: boolean;
+  nutrition?: NutritionFacts;
 }
 
 export async function checkMenuSlugAvailabilityRequest(slug: string, excludeMenuId?: number) {
@@ -393,6 +490,14 @@ export async function updateMenuProductRequest(
   payload: MenuProductRequestBody,
 ): Promise<MenuProductApiItem> {
   const response = await api.put<MenuProductApiItem>(`/menu/products/${productId}`, payload);
+  return response.data;
+}
+
+export async function patchMenuProductNutritionRequest(
+  productId: number | string,
+  payload: NutritionFacts,
+): Promise<MenuProductApiItem> {
+  const response = await api.patch<MenuProductApiItem>(`/menu/products/${productId}/nutrition`, payload);
   return response.data;
 }
 

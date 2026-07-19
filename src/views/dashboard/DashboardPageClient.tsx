@@ -17,8 +17,10 @@ import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
 import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
 import DigitalMenuEditorView from "@/views/dashboard/DigitalMenuEditorView";
 import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
+import DigitalMenuProductDetailView from "@/views/dashboard/DigitalMenuProductDetailView";
 import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
 import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
+import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
 
 interface DashboardPageClientProps {
   initialUser?: StoredUser | null;
@@ -63,6 +65,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         return { mode: "checkout" as const, packageId };
       }
     }
+    const purchaseDetailPrefix = `${DASHBOARD_ROUTES.accountSubscription}/satin-alma/`;
+    if (pathname.startsWith(purchaseDetailPrefix)) {
+      const slug = pathname.slice(purchaseDetailPrefix.length).split("/")[0];
+      const purchaseId = Number(slug);
+      if (slug && Number.isSafeInteger(purchaseId) && purchaseId > 0) {
+        return { mode: "purchaseDetail" as const, purchaseId };
+      }
+    }
     if (pathname === DASHBOARD_ROUTES.account) {
       return { mode: "main" as const };
     }
@@ -81,6 +91,13 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     if (!pathname.startsWith(prefix)) return null;
     const qrId = Number(pathname.slice(prefix.length).split("/")[0]);
     return Number.isSafeInteger(qrId) && qrId > 0 ? qrId : null;
+  }, [pathname]);
+
+  const digitalMenuProductId = useMemo(() => {
+    const prefix = `${DASHBOARD_ROUTES.digitalMenuProducts}/`;
+    if (!pathname.startsWith(prefix)) return null;
+    const productId = Number(pathname.slice(prefix.length).split("/")[0]);
+    return Number.isSafeInteger(productId) && productId > 0 ? productId : null;
   }, [pathname]);
 
   if (pathname === DASHBOARD_ROUTES.overview || pathname === DASHBOARD_ROUTES.root) {
@@ -103,6 +120,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (pathname === DASHBOARD_ROUTES.digitalMenuCreate) {
     return <DigitalMenuCreateView />;
+  }
+
+  if (digitalMenuProductId != null) {
+    return (
+      <Suspense fallback={null}>
+        <DigitalMenuProductDetailView productId={digitalMenuProductId} />
+      </Suspense>
+    );
   }
 
   if (pathname === DASHBOARD_ROUTES.digitalMenuProducts) {
@@ -141,6 +166,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (accountRoute?.mode === "checkout") {
     return <PackagePurchaseView packageId={accountRoute.packageId} onNotify={notify} />;
+  }
+
+  if (accountRoute?.mode === "purchaseDetail") {
+    return <PurchaseDetailView purchaseId={accountRoute.purchaseId} />;
   }
 
   if (accountRoute?.mode === "subscription") {

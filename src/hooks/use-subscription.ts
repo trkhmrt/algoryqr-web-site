@@ -7,6 +7,7 @@ import {
   getActivePackagesRequest,
   getMyEntitlementsRequest,
   getMyPurchasesRequest,
+  isDateUsablePurchase,
   type PackageUsageSummary,
   type PlanPackageApiItem,
   type PurchaseApiItem,
@@ -31,7 +32,10 @@ export function useSubscription(enabled = true) {
         getActivePackagesRequest(),
       ]);
       const usage = aggregatePackageUsage(entitlements, purchases);
-      const activePurchase = purchases.find((p) => p.usable && !p.expired) ?? null;
+      const activePurchase =
+        purchases.find((p) => isDateUsablePurchase(p)) ??
+        purchases.find((p) => p.usable && !p.expired) ??
+        null;
       return { usage, purchases, activePurchase, packages };
     },
     enabled,

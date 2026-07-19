@@ -14,6 +14,14 @@ export function formatPackageDate(iso?: string | null): string {
   return new Intl.DateTimeFormat("tr-TR", { year: "numeric", month: "long", day: "numeric" }).format(d);
 }
 
+export function formatDaysUntilExpiry(days?: number | null): string {
+  if (days == null || !Number.isFinite(days)) return "—";
+  if (days < 0) return "Süresi doldu";
+  if (days === 0) return "Bugün bitiyor";
+  if (days === 1) return "1 gün kaldı";
+  return `${days} gün kaldı`;
+}
+
 export function packageFeatures(pkg: PlanPackageApiItem): string[] {
   const qrItem = pkg.items?.find((i) => i.productCode === "QR_CREATE");
   const menuItem = pkg.items?.find((i) => i.productCode === "QR_MENU");

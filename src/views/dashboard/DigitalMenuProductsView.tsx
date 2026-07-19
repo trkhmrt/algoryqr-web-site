@@ -55,7 +55,11 @@ export default function DigitalMenuProductsView() {
               <h2 className="text-sm font-medium text-foreground">{selection.menu.businessName}</h2>
               <p className="text-xs text-muted-foreground">Ürün listesi ve düzenleme</p>
             </div>
-            <MenuProductsPanel menuId={selection.menu.menuId} presetCategoryId={presetCategoryId} />
+            <MenuProductsPanel
+              menuId={selection.menu.menuId}
+              qrId={selection.qr.id}
+              presetCategoryId={presetCategoryId}
+            />
           </div>
         ) : null}
       </div>

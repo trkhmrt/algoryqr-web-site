@@ -63,6 +63,31 @@ export async function getPurchaseSummary(purchaseId: number): Promise<PurchaseSu
   return response.data;
 }
 
+export function canCancelPurchase(purchase: {
+  status?: string | null;
+  purchaseType?: string | null;
+  packageCode?: string | null;
+}): boolean {
+  const status = purchase.status ?? "";
+  if (status !== "ACTIVE" && status !== "PENDING") {
+    return false;
+  }
+  if (purchase.purchaseType === "FREE" || purchase.purchaseType === "SYSTEM_GRANT") {
+    return false;
+  }
+  if (purchase.packageCode === "FREE_PACKAGE") {
+    return false;
+  }
+  return true;
+}
+
+export async function cancelPurchase(purchaseId: number): Promise<PurchaseSummaryApiItem> {
+  const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
+    `/purchases/${purchaseId}/cancel`,
+  );
+  return response.data;
+}
+
 export async function getPurchaseInstallments(
   purchaseId: number,
 ): Promise<InstallmentScheduleApiItem[]> {
