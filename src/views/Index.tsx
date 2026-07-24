@@ -8,13 +8,14 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import PricingSection from "@/components/PricingSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
-import type { StoredUser } from "@/lib/api";
+import type { PlanPackageApiItem, StoredUser } from "@/lib/api";
 
 interface IndexProps {
   initialUser?: StoredUser | null;
+  packages?: PlanPackageApiItem[];
 }
 
-const Index = ({ initialUser = null }: IndexProps) => {
+const Index = ({ initialUser = null, packages = [] }: IndexProps) => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar initialUser={initialUser} />
@@ -24,7 +25,7 @@ const Index = ({ initialUser = null }: IndexProps) => {
       <StepsCombined />
       <StatsSection />
       <TestimonialsSection />
-      <PricingSection />
+      <PricingSection packages={packages} />
       <CTASection />
       <Footer />
     </div>

@@ -7,36 +7,34 @@ import {
   getActivePackagesRequest,
   getMyEntitlementsRequest,
   getMyPurchasesRequest,
-  isDateUsablePurchase,
   type PackageUsageSummary,
   type PlanPackageApiItem,
   type PurchaseApiItem,
+  type UserEntitlementApiItem,
 } from "@/lib/api";
+import { pickActivePurchase } from "@/lib/product-access";
 
 export const SUBSCRIPTION_QUERY_KEY = ["subscription"] as const;
+export const ACTIVE_PACKAGES_QUERY_KEY = ["activePackages"] as const;
 
 export interface SubscriptionData {
   usage: PackageUsageSummary;
+  entitlements: UserEntitlementApiItem[];
   purchases: PurchaseApiItem[];
   activePurchase: PurchaseApiItem | null;
-  packages: PlanPackageApiItem[];
 }
 
 export function useSubscription(enabled = true) {
   return useQuery({
     queryKey: SUBSCRIPTION_QUERY_KEY,
     queryFn: async (): Promise<SubscriptionData> => {
-      const [entitlements, purchases, packages] = await Promise.all([
+      const [entitlements, purchases] = await Promise.all([
         getMyEntitlementsRequest(),
         getMyPurchasesRequest(),
-        getActivePackagesRequest(),
       ]);
       const usage = aggregatePackageUsage(entitlements, purchases);
-      const activePurchase =
-        purchases.find((p) => isDateUsablePurchase(p)) ??
-        purchases.find((p) => p.usable && !p.expired) ??
-        null;
-      return { usage, purchases, activePurchase, packages };
+      const activePurchase = pickActivePurchase(purchases);
+      return { usage, entitlements, purchases, activePurchase };
     },
     enabled,
     staleTime: 30_000,
@@ -44,6 +42,20 @@ export function useSubscription(enabled = true) {
   });
 }
 
+export function useActivePackages(enabled = true) {
+  return useQuery({
+    queryKey: ACTIVE_PACKAGES_QUERY_KEY,
+    queryFn: (): Promise<PlanPackageApiItem[]> => getActivePackagesRequest(),
+    enabled,
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
 export function invalidateSubscription(queryClient: QueryClient) {
   return queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY, exact: false });
+}
+
+export function invalidateActivePackages(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({ queryKey: ACTIVE_PACKAGES_QUERY_KEY, exact: false });
 }

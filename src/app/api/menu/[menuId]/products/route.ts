@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { buildUpstreamAuthHeaders, tokenHasScope } from "@/lib/auth-user";
+import { buildUpstreamAuthHeaders } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
@@ -10,7 +10,6 @@ async function authHeaders() {
   const cookieStore = await cookies();
   const accessToken = readAccessTokenFromCookies(cookieStore);
   if (!accessToken) return null;
-  if (!tokenHasScope(accessToken, "QR_MENU_OWNER")) return "forbidden";
   return buildUpstreamAuthHeaders(accessToken);
 }
 
@@ -18,7 +17,6 @@ export async function GET(_req: Request, context: { params: Promise<{ menuId: st
   try {
     const headers = await authHeaders();
     if (!headers) return NextResponse.json({ message: "Access token yok" }, { status: 401 });
-    if (headers === "forbidden") return NextResponse.json({ message: "PRO paket gerekli" }, { status: 403 });
 
     const { menuId } = await context.params;
     const upstream = await axios.get(`${API_BASE_URL}/menu/${menuId}/products`, {
@@ -40,7 +38,6 @@ export async function POST(req: Request, context: { params: Promise<{ menuId: st
   try {
     const headers = await authHeaders();
     if (!headers) return NextResponse.json({ message: "Access token yok" }, { status: 401 });
-    if (headers === "forbidden") return NextResponse.json({ message: "PRO paket gerekli" }, { status: 403 });
 
     const { menuId } = await context.params;
     const body = await req.json();

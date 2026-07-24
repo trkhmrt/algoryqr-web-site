@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 
+import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import DigitalMenuEditorSection from "@/components/dashboard/menu/DigitalMenuEditorSection";
 import MenuCategoriesPanel from "@/components/dashboard/menu/MenuCategoriesPanel";
 import MenuProductsPanel from "@/components/dashboard/menu/MenuProductsPanel";
@@ -11,9 +12,7 @@ import { MenuDetails, createInitialMenuData, type MenuData, type MenuUrlMode } f
 import { resolveMenuThemeId } from "@/components/menu-templates/registry";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { useAccessProfile } from "@/hooks/use-access-profile";
 import { ApiError, getMenuByQrIdRequest, getUserQrsRequest, updateMenuRequest } from "@/lib/api";
-import { hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 type DigitalMenuEditorViewProps = {
@@ -25,8 +24,7 @@ type EditorSection = "categories" | "products" | "menu";
 export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewProps) {
   const router = useRouter();
   const { notify } = useDashboardBanners();
-  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
-  const canUseDigitalMenu = hasScope(accessProfile, "QR_MENU_OWNER");
+  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [menuId, setMenuId] = useState<number | null>(null);

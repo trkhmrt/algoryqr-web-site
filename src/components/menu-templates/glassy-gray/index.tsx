@@ -16,7 +16,12 @@ import { GlassyGrayShell } from "./GlassyGrayShell";
 import { GlassyGrayHomeView } from "./HomeView";
 import { GlassyGrayProductDetailView } from "./ProductDetailView";
 
-export function GlassyGrayMenuTemplate({ menu, products, categories = [] }: MenuTemplateProps) {
+export function GlassyGrayMenuTemplate({
+  menu,
+  products,
+  categories = [],
+  analytics,
+}: MenuTemplateProps) {
   const [view, setView] = useState<GlassyView>({ type: "home" });
   const [searchValue, setSearchValue] = useState("");
 
@@ -52,6 +57,7 @@ export function GlassyGrayMenuTemplate({ menu, products, categories = [] }: Menu
     const first = firstRootCategory(categories);
     if (first) {
       setView({ type: "category", categoryId: first.categoryId });
+      analytics?.trackCategoryView(first.categoryId);
     } else {
       setView({ type: "home" });
     }
@@ -62,15 +68,18 @@ export function GlassyGrayMenuTemplate({ menu, products, categories = [] }: Menu
   const selectCategory = (category: MenuCategoryApiItem) => {
     setSearchValue("");
     setView({ type: "category", categoryId: category.categoryId });
+    analytics?.trackCategoryView(category.categoryId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
+    const categoryId = product.categoryId ?? activeCategoryId;
     setView({
       type: "product",
       productId: product.productId,
-      categoryId: product.categoryId ?? activeCategoryId,
+      categoryId,
     });
+    analytics?.trackProductView(product.productId, categoryId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,12 +19,11 @@ import {
   invalidateBillingAddresses,
   invalidatePaymentMethods,
   useBillingAddresses,
-  useInstallmentOptions,
   usePaymentMethods,
 } from "@/hooks/use-commerce";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
+import { invalidateSubscription, useActivePackages } from "@/hooks/use-subscription";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import { ApiError } from "@/lib/api";
 import {
@@ -32,12 +31,12 @@ import {
   checkoutSchema,
   formatCardNumber,
   formatExpiry,
-  getBin,
   displayBillingName,
+  buildBillingAddressPayload,
   type BillingAddress,
   type BillingAddressForm as BillingAddressFormValues,
+  type BillingPeriod,
   type CardForm,
-  type PaymentStyle,
 } from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatPackagePrice, packageFeatures } from "@/lib/package-display";
@@ -54,6 +53,11 @@ interface PackagePurchaseViewProps {
   returnHref?: string;
 }
 
+function money(value: number | string | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function PackagePurchaseView({
   packageId,
   onNotify,
@@ -61,13 +65,12 @@ export default function PackagePurchaseView({
 }: PackagePurchaseViewProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const subscription = useSubscription();
+  const packages = useActivePackages();
   const addresses = useBillingAddresses();
   const methods = usePaymentMethods();
-  const [paymentStyle, setPaymentStyle] = useState<PaymentStyle>("ONE_TIME");
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("MONTHLY");
   const [billingAddressId, setBillingAddressId] = useState<number | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
-  const [installmentCount, setInstallmentCount] = useState(2);
   const [recurringConsent, setRecurringConsent] = useState(false);
   const [creatingAddress, setCreatingAddress] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -78,18 +81,11 @@ export default function PackagePurchaseView({
   const addressInitialized = useRef(false);
   const methodInitialized = useRef(false);
   const fulfillment = usePurchaseFulfillment(purchaseId, pollStartedAt);
-  const pkg = subscription.data?.packages.find((item) => item.id === packageId);
+  const pkg = packages.data?.find((item) => item.id === packageId);
   const cardForm = useForm<CardForm>({
     resolver: zodResolver(cardSchema),
     defaultValues: { cardHolderName: "", cardNumber: "", expiry: "", cvc: "", saveCard: false },
   });
-  const cardNumber = cardForm.watch("cardNumber");
-  const bin = getBin(cardNumber);
-  const installments = useInstallmentOptions(
-    bin,
-    pkg?.price ?? null,
-    paymentStyle === "BANK_INSTALLMENT",
-  );
 
   useEffect(() => {
     if (!addressInitialized.current && addresses.data?.length) {
@@ -99,15 +95,11 @@ export default function PackagePurchaseView({
   }, [addresses.data]);
 
   useEffect(() => {
-    if (!methodInitialized.current && methods.data?.length && paymentStyle !== "BANK_INSTALLMENT") {
+    if (!methodInitialized.current && methods.data?.length) {
       methodInitialized.current = true;
-      setPaymentMethodId((methods.data[0]).id);
+      setPaymentMethodId(methods.data[0].id);
     }
-  }, [methods.data, paymentStyle]);
-
-  useEffect(() => {
-    if (paymentStyle === "BANK_INSTALLMENT") setPaymentMethodId(null);
-  }, [paymentStyle]);
+  }, [methods.data]);
 
   const finalizeSuccess = useCallback(async () => {
     await getSiteSameOriginAxios().post("/auth/refresh");
@@ -140,7 +132,10 @@ export default function PackagePurchaseView({
 
   const createAddress = async (values: BillingAddressFormValues) => {
     try {
-      const response = await getSiteSameOriginAxios().post<BillingAddress>("/account/billing-addresses", values);
+      const response = await getSiteSameOriginAxios().post<BillingAddress>(
+        "/account/billing-addresses",
+        buildBillingAddressPayload(values),
+      );
       await invalidateBillingAddresses(queryClient);
       if (response.data?.id) setBillingAddressId(response.data.id);
       setCreatingAddress(false);
@@ -150,12 +145,27 @@ export default function PackagePurchaseView({
     }
   };
 
+  const pricing = useMemo(() => {
+    if (!pkg) {
+      return { list: 0, effective: 0, discount: 0, suffix: "/ ay" };
+    }
+    if (billingPeriod === "YEARLY") {
+      const list = money(pkg.yearlyPrice);
+      const discount = money(pkg.yearlyDiscount);
+      const effective = money(pkg.effectiveYearlyPrice ?? list - discount);
+      return { list, effective, discount, suffix: "/ yıl" };
+    }
+    const list = money(pkg.price);
+    const discount = money(pkg.monthlyDiscount);
+    const effective = money(pkg.effectiveMonthlyPrice ?? list - discount);
+    return { list, effective, discount, suffix: "/ ay" };
+  }, [billingPeriod, pkg]);
+
   const pay = async () => {
     const checkout = checkoutSchema.safeParse({
-      paymentStyle,
+      billingPeriod,
       billingAddressId,
       paymentMethodId,
-      bankInstallmentCount: installmentCount,
       recurringConsent,
     });
     if (!checkout.success) {
@@ -179,13 +189,12 @@ export default function PackagePurchaseView({
       const payload: Record<string, unknown> = {
         packageId,
         paymentMode: "THREE_DS",
-        paymentStyle,
+        paymentStyle: "SUBSCRIPTION",
+        billingPeriod,
         billingAddressId,
         paymentMethodId: paymentMethodId != null ? Number(paymentMethodId) : undefined,
-        bankInstallmentCount: paymentStyle === "BANK_INSTALLMENT" ? installmentCount : undefined,
-        installmentCount: paymentStyle === "BANK_INSTALLMENT" ? installmentCount : 1,
         identityNumber: selectedAddress?.tckn || selectedAddress?.vkn || undefined,
-        recurringConsent: paymentStyle === "SUBSCRIPTION" ? recurringConsent : undefined,
+        recurringConsent,
       };
       if (card) {
         const [expireMonth, expireYear] = card.expiry.split("/");
@@ -195,7 +204,7 @@ export default function PackagePurchaseView({
           expireMonth,
           expireYear: `20${expireYear}`,
           cvc: card.cvc,
-          registerCard: card.saveCard || paymentStyle === "SUBSCRIPTION" ? 1 : 0,
+          registerCard: 1,
         };
       }
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", payload);
@@ -225,11 +234,16 @@ export default function PackagePurchaseView({
     );
   }
 
-  if (subscription.isLoading) return <div className="h-64 animate-pulse rounded-lg bg-muted" />;
+  if (packages.isLoading) return <div className="h-64 animate-pulse rounded-lg bg-muted" />;
   if (!pkg) return <p className="text-sm text-destructive">Paket bulunamadı veya satışta değil.</p>;
 
-  const priceLabel = formatPackagePrice(pkg.price, pkg.currency);
-  const options = installments.data ?? [];
+  const priceLabel = formatPackagePrice(pricing.effective, pkg.currency);
+  const listLabel = formatPackagePrice(pricing.list, pkg.currency);
+  const nextDueLabel = (() => {
+    const next = new Date();
+    next.setMonth(next.getMonth() + (billingPeriod === "YEARLY" ? 12 : 1));
+    return next.toLocaleDateString("tr-TR");
+  })();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -249,7 +263,15 @@ export default function PackagePurchaseView({
             <div>
               <p className="text-xs uppercase text-muted-foreground">Paket</p>
               <h2 className="mt-1 text-xl font-semibold">{pkg.name}</h2>
-              <p className="mt-1 text-2xl font-bold">{priceLabel}</p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                {pricing.discount > 0 ? (
+                  <span className="text-lg text-muted-foreground line-through">{listLabel}</span>
+                ) : null}
+                <p className="text-2xl font-bold">
+                  {priceLabel}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">{pricing.suffix}</span>
+                </p>
+              </div>
             </div>
             <ul className="space-y-2 border-t pt-4">
               {packageFeatures(pkg).map((feature) => (
@@ -264,15 +286,27 @@ export default function PackagePurchaseView({
         <div className="space-y-5">
           <Card className="glow-card">
             <CardContent className="space-y-4 p-6">
-              <h2 className="font-medium">Ödeme stili</h2>
-              <Select value={paymentStyle} onValueChange={(value) => setPaymentStyle(value as PaymentStyle)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ONE_TIME">Tek çekim</SelectItem>
-                  <SelectItem value="BANK_INSTALLMENT">Banka taksiti</SelectItem>
-                  <SelectItem value="SUBSCRIPTION">Abonelik</SelectItem>
-                </SelectContent>
-              </Select>
+              <h2 className="font-medium">Faturalama periyodu</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${billingPeriod === "MONTHLY" ? "border-primary bg-primary/5" : "border-border"}`}>
+                  <input
+                    type="radio"
+                    name="billingPeriod"
+                    checked={billingPeriod === "MONTHLY"}
+                    onChange={() => setBillingPeriod("MONTHLY")}
+                  />
+                  <span className="text-sm">Aylık</span>
+                </label>
+                <label className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${billingPeriod === "YEARLY" ? "border-primary bg-primary/5" : "border-border"}`}>
+                  <input
+                    type="radio"
+                    name="billingPeriod"
+                    checked={billingPeriod === "YEARLY"}
+                    onChange={() => setBillingPeriod("YEARLY")}
+                  />
+                  <span className="text-sm">Yıllık</span>
+                </label>
+              </div>
             </CardContent>
           </Card>
 
@@ -308,7 +342,7 @@ export default function PackagePurchaseView({
                 <h2 className="font-medium">Kart bilgileri</h2>
               </div>
 
-              {methods.data?.length && paymentStyle !== "BANK_INSTALLMENT" ? (
+              {methods.data?.length ? (
                 <Select value={paymentMethodId == null ? "new" : paymentMethodId} onValueChange={(value) => setPaymentMethodId(value === "new" ? null : value)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -354,43 +388,29 @@ export default function PackagePurchaseView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="save-card"
-                      checked={cardForm.watch("saveCard") || paymentStyle === "SUBSCRIPTION"}
-                      disabled={paymentStyle === "SUBSCRIPTION"}
-                      onCheckedChange={(checked) => cardForm.setValue("saveCard", checked === true)}
-                    />
-                    <Label htmlFor="save-card" className="text-sm font-normal">Kartımı sonraki ödemeler için güvenle kaydet</Label>
+                    <Checkbox id="save-card" checked disabled />
+                    <Label htmlFor="save-card" className="text-sm font-normal">Kartım sonraki ödemeler için kaydedilir</Label>
                   </div>
                 </div>
               )}
 
-              {paymentStyle === "BANK_INSTALLMENT" && (
-                <div className="space-y-2">
-                  <Label>Taksit seçimi</Label>
-                  <Select value={String(installmentCount)} onValueChange={(value) => setInstallmentCount(Number(value))} disabled={options.length === 0}>
-                    <SelectTrigger><SelectValue placeholder={installments.isFetching ? "BIN seçenekleri yükleniyor" : "Taksit seçin"} /></SelectTrigger>
-                    <SelectContent>
-                      {options.filter((option) => option.installmentCount > 1).map((option) => (
-                        <SelectItem key={option.installmentCount} value={String(option.installmentCount)}>
-                          {option.installmentCount} taksit
-                          {option.monthlyAmount != null ? ` · ${formatPackagePrice(option.monthlyAmount, pkg.currency)}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">Seçenekler kartınızın BIN bilgisine göre bankadan yüklenir.</p>
+              <div className="space-y-3">
+                <div className="rounded-lg border border-border/70 bg-background p-3 text-xs text-muted-foreground">
+                  <p>
+                    İlk ödeme: bugün · Sonraki ödeme:{" "}
+                    <span className="font-medium text-foreground">{nextDueLabel}</span>
+                  </p>
+                  <p className="mt-1">
+                    {billingPeriod === "YEARLY" ? "Yıllık" : "Aylık"} tutar: {priceLabel}. Sonraki dönemlerde kayıtlı kartınızdan otomatik tahsil edilir.
+                  </p>
                 </div>
-              )}
-
-              {paymentStyle === "SUBSCRIPTION" && (
                 <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <Checkbox id="recurring-consent" checked={recurringConsent} onCheckedChange={(checked) => setRecurringConsent(checked === true)} />
                   <Label htmlFor="recurring-consent" className="text-xs font-normal leading-relaxed">
                     Seçtiğim kayıtlı karttan paket dönemlerinde düzenli tahsilat yapılmasını açıkça kabul ediyorum.
                   </Label>
                 </div>
-              )}
+              </div>
 
               <Button className="w-full gap-2" variant="hero" disabled={isPaying || purchaseId != null} onClick={() => void pay()}>
                 {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}

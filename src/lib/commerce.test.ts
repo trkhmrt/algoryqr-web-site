@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   billingAddressSchema,
+  buildBillingAddressPayload,
   calculateTrialDaysRemaining,
   cardSchema,
   checkoutSchema,
@@ -30,6 +31,33 @@ describe("commerce schemas and logic", () => {
     expect(result.success).toBe(true);
   });
 
+  it("nulls unused identity fields for individual addresses", () => {
+    const payload = buildBillingAddressPayload({
+      type: "INDIVIDUAL",
+      name: "Tarik",
+      surname: "Hamarat",
+      legalName: "",
+      tckn: "",
+      vkn: "",
+      taxOffice: "",
+      mersis: "",
+      country: "Turkiye",
+      city: "Istanbul",
+      district: "Kadikoy",
+      address: "Caferaga Mahallesi Moda Caddesi No 1",
+      postcode: "34710",
+      email: "tarik@example.com",
+      phone: "+905551112233",
+      taxpayerInvoice: false,
+      defaultAddress: true,
+    });
+
+    expect(payload.vkn).toBeNull();
+    expect(payload.tckn).toBeNull();
+    expect(payload.legalName).toBeNull();
+    expect(payload.name).toBe("Tarik");
+  });
+
   it("rejects incomplete card data", () => {
     const result = cardSchema.safeParse({
       cardHolderName: "A",
@@ -44,10 +72,9 @@ describe("commerce schemas and logic", () => {
 
   it("requires recurring consent for subscriptions", () => {
     const result = checkoutSchema.safeParse({
-      paymentStyle: "SUBSCRIPTION",
+      billingPeriod: "MONTHLY",
       billingAddressId: 1,
       paymentMethodId: "2",
-      bankInstallmentCount: 1,
       recurringConsent: false,
     });
 

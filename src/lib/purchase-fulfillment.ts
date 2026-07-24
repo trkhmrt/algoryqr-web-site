@@ -67,6 +67,7 @@ export function canCancelPurchase(purchase: {
   status?: string | null;
   purchaseType?: string | null;
   packageCode?: string | null;
+  paymentStyle?: string | null;
 }): boolean {
   const status = purchase.status ?? "";
   if (status !== "ACTIVE" && status !== "PENDING") {
@@ -78,12 +79,78 @@ export function canCancelPurchase(purchase: {
   if (purchase.packageCode === "FREE_PACKAGE") {
     return false;
   }
+  if (status === "ACTIVE" && purchase.paymentStyle === "SUBSCRIPTION" && purchase.purchaseType === "PAID") {
+    return false;
+  }
   return true;
+}
+
+export function canCancelAtPeriodEnd(purchase: {
+  status?: string | null;
+  purchaseType?: string | null;
+  paymentStyle?: string | null;
+  cancelAtPeriodEnd?: boolean | null;
+}): boolean {
+  return (
+    purchase.status === "ACTIVE" &&
+    purchase.paymentStyle === "SUBSCRIPTION" &&
+    purchase.purchaseType === "PAID" &&
+    !purchase.cancelAtPeriodEnd
+  );
+}
+
+export function canCancelWithRefund(purchase: {
+  status?: string | null;
+  purchaseType?: string | null;
+  paymentStyle?: string | null;
+  refundEligible?: boolean | null;
+}): boolean {
+  return (
+    purchase.status === "ACTIVE" &&
+    purchase.paymentStyle === "SUBSCRIPTION" &&
+    purchase.purchaseType === "PAID" &&
+    !!purchase.refundEligible
+  );
+}
+
+export function canResumeRenewal(purchase: {
+  status?: string | null;
+  purchaseType?: string | null;
+  paymentStyle?: string | null;
+  cancelAtPeriodEnd?: boolean | null;
+}): boolean {
+  return (
+    purchase.status === "ACTIVE" &&
+    purchase.paymentStyle === "SUBSCRIPTION" &&
+    purchase.purchaseType === "PAID" &&
+    !!purchase.cancelAtPeriodEnd
+  );
 }
 
 export async function cancelPurchase(purchaseId: number): Promise<PurchaseSummaryApiItem> {
   const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
     `/purchases/${purchaseId}/cancel`,
+  );
+  return response.data;
+}
+
+export async function cancelPurchaseAtPeriodEnd(purchaseId: number): Promise<PurchaseSummaryApiItem> {
+  const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
+    `/purchases/${purchaseId}/cancel-at-period-end`,
+  );
+  return response.data;
+}
+
+export async function cancelPurchaseWithRefund(purchaseId: number): Promise<PurchaseSummaryApiItem> {
+  const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
+    `/purchases/${purchaseId}/cancel-with-refund`,
+  );
+  return response.data;
+}
+
+export async function resumePurchaseRenewal(purchaseId: number): Promise<PurchaseSummaryApiItem> {
+  const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
+    `/purchases/${purchaseId}/resume-renewal`,
   );
   return response.data;
 }

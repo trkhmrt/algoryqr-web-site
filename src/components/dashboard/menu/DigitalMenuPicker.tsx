@@ -2,15 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
 import { isMenuQrDetails, type DashboardQrItem } from "@/components/dashboard/qr/qr-mappers";
 import { Label } from "@/components/ui/label";
-import { useAccessProfile } from "@/hooks/use-access-profile";
+import { invalidateAccessProfile, useAccessProfile } from "@/hooks/use-access-profile";
+import { useTrialStatus } from "@/hooks/use-commerce";
+import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
 import { useUserQrs } from "@/hooks/use-user-qrs";
 import { getMenuByQrIdRequest, type MenuProfileApiItem } from "@/lib/api";
-import { hasScope } from "@/lib/auth-user";
+import { hasProduct, hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { hasActiveProductAccess, hasExpiredProductAccess } from "@/lib/product-access";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 const STORAGE_KEY = "algory_selected_menu_qr_id";
 
@@ -20,10 +25,59 @@ export type DigitalMenuSelection = {
 };
 
 export function useDigitalMenuAccess() {
+  const queryClient = useQueryClient();
   const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
-  return {
+  const subscription = useSubscription();
+  const trial = useTrialStatus();
+  const entitlements = Array.isArray(subscription.data?.entitlements)
+    ? subscription.data.entitlements
+    : [];
+  const purchases = Array.isArray(subscription.data?.purchases) ? subscription.data.purchases : [];
+  const entitlementAccess = hasActiveProductAccess(entitlements, purchases, "QR_MENU");
+  const scopeAccess = hasScope(accessProfile, "QR_MENU_OWNER");
+  const productAccess = hasProduct(accessProfile, "QR_MENU");
+  const trialAccess = trial.data?.status === "ACTIVE";
+  const canUseDigitalMenu =
+    entitlementAccess || scopeAccess || productAccess || trialAccess;
+  const hadExpiredAccess =
+    !canUseDigitalMenu &&
+    (hasExpiredProductAccess(entitlements, purchases, "QR_MENU") ||
+      trial.data?.status === "TRIAL_EXPIRED");
+  const needsTokenRefresh =
+    (entitlementAccess || trialAccess || productAccess) && !scopeAccess;
+
+  useEffect(() => {
+    if (!needsTokenRefresh || subscription.isLoading || accessLoading || trial.isLoading) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        await getSiteSameOriginAxios().post("/auth/refresh");
+        if (!cancelled) {
+          await Promise.all([
+            invalidateAccessProfile(queryClient),
+            invalidateSubscription(queryClient),
+          ]);
+        }
+      } catch {
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
     accessLoading,
-    canUseDigitalMenu: hasScope(accessProfile, "QR_MENU_OWNER"),
+    needsTokenRefresh,
+    queryClient,
+    subscription.isLoading,
+    trial.isLoading,
+  ]);
+
+  return {
+    accessLoading: accessLoading || subscription.isLoading || trial.isLoading,
+    canUseDigitalMenu,
+    hadExpiredAccess,
   };
 }
 
@@ -118,18 +172,7 @@ export function DigitalMenuPicker({
   disabled?: boolean;
 }) {
   if (menuQrs.length === 0) {
-    return (
-      <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-        Henüz menü QR&apos;ınız yok.{" "}
-        <Link
-          href={DASHBOARD_ROUTES.digitalMenuCreate}
-          className="font-medium text-foreground underline-offset-2 hover:underline"
-        >
-          İlk menüyü oluşturun
-        </Link>
-        .
-      </div>
-    );
+    return null;
   }
 
   return (

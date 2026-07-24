@@ -1,11 +1,23 @@
+"use client";
+
+import { useRef } from "react";
+
 import type { MenuTemplateProps } from "../types";
 import { filterProductsByNavCategory, formatMenuPrice, resolveMenuNavCategories } from "../types";
+import { useListTemplateCategoryAnalytics } from "../use-list-template-analytics";
 
-export function ModernMenuTemplate({ menu, products, categories = [] }: MenuTemplateProps) {
+export function ModernMenuTemplate({
+  menu,
+  products,
+  categories = [],
+  analytics,
+}: MenuTemplateProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const navCategories = resolveMenuNavCategories(categories, products);
+  useListTemplateCategoryAnalytics(analytics, rootRef);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div ref={rootRef} className="min-h-screen bg-slate-950 text-white">
       <header className="bg-gradient-to-br from-indigo-600 to-violet-700 px-4 py-10">
         <div className="mx-auto max-w-3xl">
           <p className="text-xs uppercase tracking-[0.2em] text-white/70">Digital Menu</p>
@@ -22,12 +34,19 @@ export function ModernMenuTemplate({ menu, products, categories = [] }: MenuTemp
         {navCategories.map((category) => {
           const items = filterProductsByNavCategory(products, category);
           return (
-            <section key={category.key}>
+            <section
+              key={category.key}
+              data-analytics-category={category.categoryId ?? undefined}
+            >
               <h2 className="mb-4 text-lg font-semibold text-indigo-300">{category.name}</h2>
               {items.length > 0 ? (
                 <div className="grid gap-3">
                   {items.map((item) => (
-                    <article key={item.productId} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+                    <article
+                      key={item.productId}
+                      className="cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur"
+                      onClick={() => analytics?.trackProductView(item.productId, item.categoryId)}
+                    >
                       <div className="flex gap-4">
                         {item.imageUrl && (
                           <img src={item.imageUrl} alt={item.name} className="h-16 w-16 rounded-xl object-cover" />

@@ -6,18 +6,24 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Clock3, Crown, FolderTree, Loader2, Package, UtensilsCrossed } from "lucide-react";
 
-import { useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { useDigitalMenuAccess, useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { invalidateAccessProfile, useAccessProfile } from "@/hooks/use-access-profile";
-import { invalidateDigitalMenuTrial, useDigitalMenuTrialStatus } from "@/hooks/use-commerce";
-import { useSubscription } from "@/hooks/use-subscription";
+import { invalidateAccessProfile } from "@/hooks/use-access-profile";
+import {
+  invalidateDigitalMenuTrial,
+  startTrialRequest,
+  useEligibleTrialPackages,
+  useTrialStatus,
+} from "@/hooks/use-commerce";
+import { invalidateSubscription, useActivePackages } from "@/hooks/use-subscription";
 import { ApiError } from "@/lib/api";
-import { hasScope } from "@/lib/auth-user";
 import { calculateTrialDaysRemaining } from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { formatPackagePrice } from "@/lib/package-display";
+import { formatPackageDate } from "@/lib/package-display";
+import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
+import type { PlanPackageApiItem } from "@/lib/api";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 const FEATURES = [
@@ -31,47 +37,57 @@ export default function DigitalMenuView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const trial = useDigitalMenuTrialStatus();
-  const subscription = useSubscription();
-  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
+  const { accessLoading, canUseDigitalMenu, hadExpiredAccess } = useDigitalMenuAccess();
+  const trial = useTrialStatus();
+  const eligibleTrials = useEligibleTrialPackages(!canUseDigitalMenu);
+  const packages = useActivePackages(!canUseDigitalMenu);
   const { menuQrs, loading: menusLoading } = useDigitalMenuOptions();
-  const [startingTrial, setStartingTrial] = useState(false);
+  const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
   const status = trial.data?.status ?? "NOT_STARTED";
   const activeTrial = status === "ACTIVE";
   const expiredTrial = status === "TRIAL_EXPIRED";
-  const canUseDigitalMenu = hasScope(accessProfile, "QR_MENU_OWNER");
-  const menuPackage = subscription.data?.packages.find((pkg) =>
+  const needsRenewal = hadExpiredAccess || expiredTrial;
+  const menuPackage = packages.data?.find((pkg) =>
     pkg.items?.some((item) => item.productCode === "QR_MENU"),
   );
   const packageId = trial.data?.packageId ?? menuPackage?.id ?? null;
-  const packageName = trial.data?.packageName ?? menuPackage?.name ?? "Dijital Menü PRO";
-  const price = trial.data?.price ?? menuPackage?.price ?? null;
-  const currency = trial.data?.currency ?? menuPackage?.currency ?? "TRY";
+  const packageName = trial.data?.packageName ?? menuPackage?.name ?? "Dijital Menü";
   const daysRemaining = trial.data ? calculateTrialDaysRemaining(trial.data) : null;
+  const eligiblePackages = (eligibleTrials.data ?? []) as PlanPackageApiItem[];
 
-  const startTrial = async () => {
-    setStartingTrial(true);
+  const startTrial = async (selectedPackageId: number) => {
+    setStartingPackageId(selectedPackageId);
     try {
-      await getSiteSameOriginAxios().post("/trials/digital-menu-pro");
+      const started = await startTrialRequest(selectedPackageId);
       await getSiteSameOriginAxios().post("/auth/refresh");
       await Promise.all([
         invalidateDigitalMenuTrial(queryClient),
         invalidateAccessProfile(queryClient),
+        invalidateSubscription(queryClient),
       ]);
-      notify("info", "Dijital Menü PRO deneme süreniz başlatıldı.");
+      notify(
+        "info",
+        `${started.packageName ?? "Paket"} denemeniz başlatıldı` +
+          (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
+          ".",
+      );
     } catch (error) {
       notify("danger", error instanceof ApiError ? error.message : "Deneme süresi başlatılamadı.");
     } finally {
-      setStartingTrial(false);
+      setStartingPackageId(null);
     }
   };
 
-  const openCheckout = () => {
-    router.push(
-      packageId == null
-        ? DASHBOARD_ROUTES.accountSubscription
-        : DASHBOARD_ROUTES.digitalMenuCheckout(packageId),
-    );
+  const openPackages = () => {
+    router.push(DASHBOARD_ROUTES.accountPackagesHighlight("QR_MENU"));
+  };
+
+  const openRenewal = () => {
+    if (packageId == null) {
+      openPackages();
+      return;
+    }
+    router.push(DASHBOARD_ROUTES.digitalMenuCheckout(packageId));
   };
 
   if (accessLoading) {
@@ -97,8 +113,10 @@ export default function DigitalMenuView() {
           <div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
             <Clock3 className="h-4 w-4 text-emerald-600" />
             <p className="text-sm text-muted-foreground">
-              PRO denemeniz aktif
-              {daysRemaining != null ? ` — ${daysRemaining} gün kaldı` : ""}.
+              {packageName} denemeniz aktif
+              {daysRemaining != null ? ` — ${daysRemaining} gün kaldı` : ""}
+              {trial.data?.trialEndsAt ? ` · bitiş ${formatPackageDate(trial.data.trialEndsAt)}` : ""}
+              .
             </p>
           </div>
         )}
@@ -159,7 +177,11 @@ export default function DigitalMenuView() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü</h1>
-        <p className="text-sm text-muted-foreground">Dijital menü için PRO paket gerekir.</p>
+        <p className="text-sm text-muted-foreground">
+          {needsRenewal
+            ? "Paket süreniz doldu. Dijital menüye devam etmek için paketi yenileyin."
+            : "Canlı menü, anlık güncelleme ve ürün yönetimi için ücretli paket gerekir."}
+        </p>
       </div>
 
       <Card className="glow-card overflow-hidden border-primary/30">
@@ -173,13 +195,14 @@ export default function DigitalMenuView() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-semibold">{packageName}</h2>
+                      <h2 className="text-xl font-semibold">Dijital Menü</h2>
                       <Crown className="h-4 w-4 text-amber-500" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Canlı ve güncel profesyonel menü paketi</p>
+                    <p className="text-sm text-muted-foreground">
+                      Menü QR oluşturmak ve yönetmek için PRO paket gerekir.
+                    </p>
                   </div>
                 </div>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">PRO</span>
               </div>
 
               <ul className="grid gap-3 sm:grid-cols-2">
@@ -191,47 +214,47 @@ export default function DigitalMenuView() {
                 ))}
               </ul>
 
-              {expiredTrial && (
+              {needsRenewal && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Deneme süreniz sona erdi</p>
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    {expiredTrial && !hadExpiredAccess
+                      ? "Deneme süreniz sona erdi"
+                      : "Paket süreniz doldu"}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    PRO özelliklerine devam etmek için paketi satın alın.
+                    PRO özelliklerine devam etmek için paketi satın alın veya yenileyin.
                   </p>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col justify-center gap-5 border-t border-border bg-muted/30 p-6 lg:border-l lg:border-t-0 lg:p-8">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dijital Menü PRO</p>
-                <p className="mt-2 text-3xl font-bold">
-                  {price == null ? "Güncel fiyat" : formatPackagePrice(price, currency)}
-                </p>
-                {menuPackage?.validityDays ? (
-                  <p className="text-sm text-muted-foreground">/{menuPackage.validityDays} gün</p>
-                ) : null}
-              </div>
-
-              {trial.isLoading ? (
+              {trial.isLoading || eligibleTrials.isLoading ? (
                 <Button disabled className="w-full gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Durum yükleniyor
                 </Button>
               ) : (
                 <div className="space-y-3">
-                  {!expiredTrial && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      disabled={startingTrial}
-                      onClick={() => void startTrial()}
-                    >
-                      {startingTrial ? "Başlatılıyor…" : "Ücretsiz Denemeyi Başlat"}
+                  {!needsRenewal && status === "NOT_STARTED" && eligiblePackages.length > 0 && (
+                    <TrialPackagePicker
+                      packages={eligiblePackages}
+                      startingPackageId={startingPackageId}
+                      onStart={(id) => void startTrial(id)}
+                    />
+                  )}
+                  <Button
+                    variant={needsRenewal ? "outline" : "hero"}
+                    className="w-full"
+                    onClick={openPackages}
+                  >
+                    Paketleri karşılaştır
+                  </Button>
+                  {needsRenewal && (
+                    <Button variant="hero" className="w-full" onClick={openRenewal}>
+                      Paketi Yenile
                     </Button>
                   )}
-                  <Button variant="hero" className="w-full" onClick={openCheckout}>
-                    {expiredTrial ? "PRO Satın Al" : "Şimdi Satın Al"}
-                  </Button>
                 </div>
               )}
             </div>

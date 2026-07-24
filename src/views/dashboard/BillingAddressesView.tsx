@@ -11,7 +11,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidateBillingAddresses, useBillingAddresses } from "@/hooks/use-commerce";
 import { ApiError } from "@/lib/api";
-import { displayBillingName, type BillingAddressForm as BillingAddressFormValues } from "@/lib/commerce";
+import {
+  buildBillingAddressPayload,
+  displayBillingName,
+  type BillingAddressForm as BillingAddressFormValues,
+} from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
@@ -23,23 +27,10 @@ export default function BillingAddressesView() {
 
   const createAddress = async (values: BillingAddressFormValues) => {
     try {
-      const sanitizeOptional = (v: string | undefined | null) => {
-        const t = (v ?? "").trim();
-        return t.length > 0 ? t : null;
-      };
-
-      const payload = {
-        ...values,
-        name: sanitizeOptional(values.name),
-        surname: sanitizeOptional(values.surname),
-        legalName: sanitizeOptional(values.legalName),
-        taxOffice: sanitizeOptional(values.taxOffice),
-        mersis: sanitizeOptional(values.mersis),
-        tckn: values.type === "INDIVIDUAL" && values.taxpayerInvoice ? sanitizeOptional(values.tckn) : null,
-        vkn: values.type === "CORPORATE" ? sanitizeOptional(values.vkn) : null,
-      };
-
-      await getSiteSameOriginAxios().post("/account/billing-addresses", payload);
+      await getSiteSameOriginAxios().post(
+        "/account/billing-addresses",
+        buildBillingAddressPayload(values),
+      );
       await invalidateBillingAddresses(queryClient);
       setCreating(false);
       notify("info", "Fatura adresiniz kaydedildi.");

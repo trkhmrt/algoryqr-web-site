@@ -19,7 +19,9 @@ import DigitalMenuEditorView from "@/views/dashboard/DigitalMenuEditorView";
 import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
 import DigitalMenuProductDetailView from "@/views/dashboard/DigitalMenuProductDetailView";
 import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
+import PackageComparisonView from "@/views/dashboard/PackageComparisonView";
 import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
+import PlanChangeView from "@/views/dashboard/PlanChangeView";
 import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
 
 interface DashboardPageClientProps {
@@ -48,6 +50,12 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   const accountRoute = useMemo(() => {
     if (!pathname.startsWith(DASHBOARD_ROUTES.account)) return null;
+    if (pathname === DASHBOARD_ROUTES.accountPackages) {
+      return { mode: "packages" as const };
+    }
+    if (pathname === `${DASHBOARD_ROUTES.accountSubscription}/paket-degistir`) {
+      return { mode: "planChange" as const };
+    }
     if (pathname === DASHBOARD_ROUTES.accountSubscription) {
       return { mode: "subscription" as const };
     }
@@ -170,6 +178,22 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (accountRoute?.mode === "purchaseDetail") {
     return <PurchaseDetailView purchaseId={accountRoute.purchaseId} />;
+  }
+
+  if (accountRoute?.mode === "packages") {
+    return (
+      <Suspense fallback={null}>
+        <PackageComparisonView />
+      </Suspense>
+    );
+  }
+
+  if (accountRoute?.mode === "planChange") {
+    return (
+      <Suspense fallback={null}>
+        <PlanChangeView onNotify={notify} />
+      </Suspense>
+    );
   }
 
   if (accountRoute?.mode === "subscription") {

@@ -1,0 +1,126 @@
+export type ProductAccessEntitlement = {
+  productCode: string;
+  purchaseId: number;
+  usable: boolean;
+  expired: boolean;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  purchaseStatus?: string | null;
+};
+
+export type ProductAccessPurchase = {
+  id: number;
+  usable: boolean;
+  expired: boolean;
+  expiresAt?: string | null;
+  purchaseType?: string | null;
+  packageCode?: string | null;
+  status?: string | null;
+};
+
+export function isDateUsablePurchase(purchase: ProductAccessPurchase): boolean {
+  if (purchase.expired) {
+    return false;
+  }
+  if (purchase.status === "EXPIRED" || purchase.status === "CANCELLED" || purchase.status === "FAILED") {
+    return false;
+  }
+  if (purchase.usable) {
+    if (!purchase.expiresAt) {
+      return true;
+    }
+    const ms = new Date(purchase.expiresAt).getTime();
+    if (!Number.isFinite(ms)) {
+      return true;
+    }
+    return ms > Date.now();
+  }
+  return false;
+}
+
+export function pickActivePurchase<T extends ProductAccessPurchase>(purchases: T[]): T | null {
+  const usable = purchases.filter((purchase) => isDateUsablePurchase(purchase));
+  const pool =
+    usable.length > 0
+      ? usable
+      : purchases.filter(
+          (purchase) =>
+            purchase.usable &&
+            !purchase.expired &&
+            purchase.status !== "EXPIRED" &&
+            purchase.status !== "CANCELLED",
+        );
+  if (pool.length === 0) return null;
+
+  const rank = (purchase: ProductAccessPurchase) => {
+    if (purchase.purchaseType === "PAID") return 3;
+    if (purchase.purchaseType === "TRIAL") return 2;
+    if (purchase.packageCode && purchase.packageCode !== "FREE_PACKAGE") return 1;
+    return 0;
+  };
+
+  return [...pool].sort((left, right) => rank(right) - rank(left))[0] ?? null;
+}
+
+export function isDateUsableEntitlement(
+  entitlement: ProductAccessEntitlement,
+  purchase?: ProductAccessPurchase | null,
+): boolean {
+  if (!entitlement.usable || entitlement.expired) {
+    return false;
+  }
+  if (
+    entitlement.purchaseStatus === "EXPIRED" ||
+    entitlement.purchaseStatus === "CANCELLED" ||
+    entitlement.purchaseStatus === "FAILED"
+  ) {
+    return false;
+  }
+  if (purchase?.expired) {
+    return false;
+  }
+  if (purchase?.status === "EXPIRED" || purchase?.status === "CANCELLED" || purchase?.status === "FAILED") {
+    return false;
+  }
+  return true;
+}
+
+export function hasActiveProductAccess(
+  entitlements: ProductAccessEntitlement[],
+  purchases: ProductAccessPurchase[],
+  productCode: string,
+): boolean {
+  const purchasesById = new Map(
+    purchases.map((purchase) => [Number(purchase.id), purchase] as const),
+  );
+  return entitlements.some((entitlement) => {
+    if (entitlement.productCode !== productCode) return false;
+    const purchase = purchasesById.get(Number(entitlement.purchaseId)) ?? null;
+    return isDateUsableEntitlement(entitlement, purchase);
+  });
+}
+
+export function hasExpiredProductAccess(
+  entitlements: ProductAccessEntitlement[],
+  purchases: ProductAccessPurchase[],
+  productCode: string,
+): boolean {
+  if (hasActiveProductAccess(entitlements, purchases, productCode)) {
+    return false;
+  }
+  const purchasesById = new Map(
+    purchases.map((purchase) => [Number(purchase.id), purchase] as const),
+  );
+  return entitlements.some((entitlement) => {
+    if (entitlement.productCode !== productCode) return false;
+    const purchase = purchasesById.get(Number(entitlement.purchaseId));
+    if (entitlement.expired) return true;
+    if (purchase?.expired) return true;
+    if (purchase && !isDateUsablePurchase(purchase)) return true;
+    return (
+      entitlement.purchaseStatus === "EXPIRED" ||
+      entitlement.purchaseStatus === "CANCELLED" ||
+      entitlement.purchaseStatus === "FAILED"
+    );
+  });
+}

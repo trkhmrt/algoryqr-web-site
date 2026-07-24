@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export type PaymentStyle = "ONE_TIME" | "BANK_INSTALLMENT" | "SUBSCRIPTION";
+export type PaymentStyle = "SUBSCRIPTION";
+export type BillingPeriod = "MONTHLY" | "YEARLY";
 export type BillingAddressType = "INDIVIDUAL" | "CORPORATE";
 
 export interface BillingAddress {
@@ -87,6 +88,36 @@ export const billingAddressSchema = z.object({
 
 export type BillingAddressForm = z.infer<typeof billingAddressSchema>;
 
+function optionalText(value: string | undefined | null): string | null {
+  const trimmed = (value ?? "").trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function buildBillingAddressPayload(values: BillingAddressForm) {
+  return {
+    type: values.type,
+    name: optionalText(values.name),
+    surname: optionalText(values.surname),
+    legalName: optionalText(values.legalName),
+    taxOffice: optionalText(values.taxOffice),
+    mersis: optionalText(values.mersis),
+    tckn:
+      values.type === "INDIVIDUAL" && values.taxpayerInvoice
+        ? optionalText(values.tckn)
+        : null,
+    vkn: values.type === "CORPORATE" ? optionalText(values.vkn) : null,
+    country: values.country.trim(),
+    city: values.city.trim(),
+    district: values.district.trim(),
+    address: values.address.trim(),
+    postcode: values.postcode.trim(),
+    email: values.email.trim(),
+    phone: values.phone.trim(),
+    taxpayerInvoice: values.taxpayerInvoice,
+    defaultAddress: values.defaultAddress,
+  };
+}
+
 export const cardSchema = z.object({
   cardHolderName: requiredText("Kart üzerindeki isim zorunludur"),
   cardNumber: z.string().transform((value) => value.replace(/\D/g, "")).pipe(
@@ -111,16 +142,12 @@ export const savedCardSchema = z.object({
 export type SavedCardForm = z.infer<typeof savedCardSchema>;
 
 export const checkoutSchema = z.object({
-  paymentStyle: z.enum(["ONE_TIME", "BANK_INSTALLMENT", "SUBSCRIPTION"]),
+  billingPeriod: z.enum(["MONTHLY", "YEARLY"]),
   billingAddressId: z.number().int().positive("Fatura adresi seçin"),
   paymentMethodId: z.string().nullable(),
-  bankInstallmentCount: z.number().int().min(1),
   recurringConsent: z.boolean(),
 }).superRefine((value, context) => {
-  if (value.paymentStyle === "BANK_INSTALLMENT" && value.bankInstallmentCount < 2) {
-    context.addIssue({ code: "custom", path: ["bankInstallmentCount"], message: "Taksit sayısı seçin" });
-  }
-  if (value.paymentStyle === "SUBSCRIPTION" && !value.recurringConsent) {
+  if (!value.recurringConsent) {
     context.addIssue({ code: "custom", path: ["recurringConsent"], message: "Düzenli ödeme onayı zorunludur" });
   }
 });
@@ -142,6 +169,12 @@ export function mapTrialStatus(payload: {
   lifecycle?: string;
   expiresAt?: string | null;
   purchaseId?: number | null;
+  packageId?: number | null;
+  packageCode?: string | null;
+  packageName?: string | null;
+  daysUntilExpiry?: number | null;
+  price?: number | string | null;
+  currency?: string | null;
 }): DigitalMenuTrialStatus {
   const lifecycle = payload.lifecycle ?? "AVAILABLE";
   const status =
@@ -151,6 +184,11 @@ export function mapTrialStatus(payload: {
   return {
     status,
     trialEndsAt: payload.expiresAt ?? null,
+    daysRemaining: typeof payload.daysUntilExpiry === "number" ? payload.daysUntilExpiry : null,
+    packageId: payload.packageId ?? null,
+    packageName: payload.packageName ?? null,
+    price: payload.price ?? null,
+    currency: payload.currency ?? null,
     purchaseId: payload.purchaseId ?? null,
   };
 }

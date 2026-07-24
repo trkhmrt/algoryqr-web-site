@@ -1,9 +1,11 @@
+import type { MenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
 import type { MenuCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 
 export type MenuTemplateProps = {
   menu: MenuProfileApiItem;
   products: MenuProductApiItem[];
   categories?: MenuCategoryApiItem[];
+  analytics?: MenuVisitAnalytics;
 };
 
 export type MenuNavCategory = {

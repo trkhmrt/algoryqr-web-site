@@ -17,11 +17,11 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       packageId?: number;
       paymentMode?: "DIRECT" | "THREE_DS";
-      installmentCount?: number;
-      paymentStyle?: "ONE_TIME" | "BANK_INSTALLMENT" | "SUBSCRIPTION";
-      bankInstallmentCount?: number;
+      billingPeriod?: "MONTHLY" | "YEARLY";
+      paymentStyle?: "SUBSCRIPTION";
       billingAddressId?: number;
       paymentMethodId?: number;
+      recurringConsent?: boolean;
     };
     if (body.packageId == null) {
       return NextResponse.json({ message: "Paket id zorunludur" }, { status: 400 });

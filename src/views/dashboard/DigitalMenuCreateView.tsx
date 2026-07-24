@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { MenuDetails, createInitialMenuData, type MenuData } from "@/components/dashboard/qr-create/MenuDetails";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { useAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateUserQrs } from "@/hooks/use-user-qrs";
 import { ApiError, createQrRequest, getStoredUser } from "@/lib/api";
-import { hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { buildMenuCreateDetails } from "@/lib/menu-create";
 
@@ -20,8 +19,7 @@ export default function DigitalMenuCreateView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
-  const canUseDigitalMenu = hasScope(accessProfile, "QR_MENU_OWNER");
+  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const [menu, setMenu] = useState<MenuData>(createInitialMenuData());
   const [saving, setSaving] = useState(false);
 

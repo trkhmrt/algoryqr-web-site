@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatDaysUntilExpiry, formatPackageDate, formatPackagePrice } from "@/lib/package-display";
-import { canCancelPurchase, cancelPurchase, getPurchaseSummary } from "@/lib/purchase-fulfillment";
+import { canCancelPurchase, canCancelAtPeriodEnd, canCancelWithRefund, canResumeRenewal, cancelPurchase, cancelPurchaseAtPeriodEnd, cancelPurchaseWithRefund, resumePurchaseRenewal, getPurchaseSummary } from "@/lib/purchase-fulfillment";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
@@ -61,10 +61,75 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
     },
   });
 
+  const cancelAtPeriodEndMutation = useMutation({
+    mutationFn: () => cancelPurchaseAtPeriodEnd(purchaseId),
+    onSuccess: async () => {
+      setCancelError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+        invalidateAccessProfile(queryClient),
+      ]);
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Donem sonu iptal basarisiz. Lutfen tekrar deneyin.",
+      );
+    },
+  });
+
+  const cancelWithRefundMutation = useMutation({
+    mutationFn: () => cancelPurchaseWithRefund(purchaseId),
+    onSuccess: async () => {
+      setCancelError(null);
+      await getSiteSameOriginAxios().post("/auth/refresh");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+        invalidateAccessProfile(queryClient),
+      ]);
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Iade ile iptal basarisiz. Lutfen tekrar deneyin.",
+      );
+    },
+  });
+
+  const resumeRenewalMutation = useMutation({
+    mutationFn: () => resumePurchaseRenewal(purchaseId),
+    onSuccess: async () => {
+      setCancelError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+        invalidateAccessProfile(queryClient),
+      ]);
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Yenilemeyi acma basarisiz. Lutfen tekrar deneyin.",
+      );
+    },
+  });
+
   const installments = data?.installments ?? data?.installmentSchedule ?? [];
   const products = data?.products ?? [];
   const billing = data?.billingSnapshot;
-  const showCancel = data ? canCancelPurchase(data) : false;
+  const showImmediateCancel = data ? canCancelPurchase(data) : false;
+  const showCancelAtPeriodEnd = data ? canCancelAtPeriodEnd(data) : false;
+  const showCancelWithRefund = data ? canCancelWithRefund(data) : false;
+  const showResumeRenewal = data ? canResumeRenewal(data) : false;
+  const isSubscription = data?.paymentStyle === "SUBSCRIPTION";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -119,10 +184,16 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                   Bitis: {formatPackageDate(data.expiresAt)}  |  {formatDaysUntilExpiry(data.daysUntilExpiry)}
                 </p>
                 <p>Aktiflik: {data.usable && !data.expired ? "Aktif (tarihe gore)" : "Pasif"}</p>
-                <p>Sonraki odeme: {formatPackageDate(data.nextPaymentDueAt)}</p>
                 <p>Odeme modu: {data.paymentMode ?? "-"}</p>
                 <p>Odeme stili: {data.paymentStyle ?? "-"}</p>
-                <p>Taksit: {data.installmentCount ?? 1}</p>
+                {isSubscription ? (
+                  <p className="sm:col-span-2 text-foreground">
+                    Sonraki odeme:{" "}
+                    <span className="font-medium">{formatPackageDate(data.nextPaymentDueAt)}</span>
+                  </p>
+                ) : (
+                  <p>Sonraki odeme: {formatPackageDate(data.nextPaymentDueAt)}</p>
+                )}
               </div>
               {(data.paymentApproaching || data.expiryApproaching) && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -131,43 +202,122 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                     : "Paket bitis tarihiniz 7 gun icinde."}
                 </p>
               )}
-              {showCancel ? (
+              {data.cancelAtPeriodEnd ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Yenileme kapali. Erisiminiz {formatPackageDate(data.expiresAt)} tarihine kadar
+                  devam eder.
+                </p>
+              ) : null}
+              {showImmediateCancel ||
+              showCancelAtPeriodEnd ||
+              showCancelWithRefund ||
+              showResumeRenewal ? (
                 <div className="space-y-2 border-t border-border/60 pt-4">
-                  <p className="text-xs text-muted-foreground">
-                    Iptal sonrasi paket haklari hemen kapanir; iade otomatik yapilmaz. Abonelik varsa
-                    odeme tarafinda da durdurulur.
-                  </p>
                   {cancelError ? <p className="text-sm text-destructive">{cancelError}</p> : null}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+                  <div className="flex flex-wrap gap-2">
+                    {showCancelAtPeriodEnd ? (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={cancelAtPeriodEndMutation.isPending}
+                          >
+                            {cancelAtPeriodEndMutation.isPending
+                              ? "Isleniyor..."
+                              : "Donem sonunda bitir"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Yenileme kapatilsin mi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {data.packageName} paketi donem sonuna kadar acik kalir. Sonraki donem
+                              icin ucret alinmaz; iade yapilmaz.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Vazgec</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => cancelAtPeriodEndMutation.mutate()}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Donem sonunda bitir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    ) : null}
+                    {showCancelWithRefund ? (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={cancelWithRefundMutation.isPending}
+                          >
+                            {cancelWithRefundMutation.isPending
+                              ? "Iade isleniyor..."
+                              : "Hemen iptal et ve iade al"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Iade ile iptal edilsin mi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {data.packageName} paketi hemen kapanir ve bu donem odemesi iade edilir.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Vazgec</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => cancelWithRefundMutation.mutate()}>
+                              Iptal et ve iade al
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    ) : null}
+                    {showResumeRenewal ? (
                       <Button
                         type="button"
-                        variant="destructive"
-                        disabled={cancelMutation.isPending}
+                        variant="outline"
+                        disabled={resumeRenewalMutation.isPending}
+                        onClick={() => resumeRenewalMutation.mutate()}
                       >
-                        {cancelMutation.isPending ? "Iptal ediliyor..." : "Paketi iptal et"}
+                        {resumeRenewalMutation.isPending ? "Aciliyor..." : "Yenilemeyi tekrar ac"}
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {data.packageName} paketi hemen iptal edilir. Menu erisimi ve paket
-                          haklariniz kapanir. Bu islem geri alinamaz; iade icin destek ile iletisime
-                          gecmeniz gerekir.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Vazgec</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => cancelMutation.mutate()}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Evet, iptal et
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                    ) : null}
+                    {showImmediateCancel ? (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={cancelMutation.isPending}
+                          >
+                            {cancelMutation.isPending ? "Iptal ediliyor..." : "Paketi iptal et"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {data.packageName} paketi hemen iptal edilir.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Vazgec</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => cancelMutation.mutate()}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Evet, iptal et
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </CardContent>
@@ -243,31 +393,43 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
             </CardContent>
           </Card>
 
-          <Card className="glow-card">
-            <CardContent className="space-y-3 p-6">
-              <h3 className="text-sm font-medium text-foreground">Taksitler</h3>
-              {installments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Taksit kaydi yok.</p>
-              ) : (
-                <div className="space-y-2">
-                  {installments.map((item) => (
-                    <div
-                      key={`${item.installmentNumber}-${item.status}`}
-                      className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 text-sm last:border-0"
-                    >
-                      <span className="text-muted-foreground">
-                        {item.installmentNumber}. taksit
-                        {item.dueAt ? `  |  ${formatPackageDate(item.dueAt)}` : ""}
-                      </span>
-                      <span className="text-foreground">
-                        {formatPackagePrice(item.amount, item.currency ?? data.currency)}  |  {item.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {isSubscription ? (
+            <Card className="glow-card">
+              <CardContent className="space-y-3 p-6">
+                <h3 className="text-sm font-medium text-foreground">Odeme donemleri</h3>
+                <p className="text-sm text-foreground">
+                  Sonraki odeme:{" "}
+                  <span className="font-medium">{formatPackageDate(data.nextPaymentDueAt)}</span>
+                </p>
+                {installments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Donem kaydi yok.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {installments.map((item) => (
+                      <div
+                        key={`${item.installmentNumber}-${item.status}`}
+                        className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 text-sm last:border-0"
+                      >
+                        <span className="text-muted-foreground">
+                          {item.installmentNumber}. donem
+                          {item.dueAt ? `  |  ${formatPackageDate(item.dueAt)}` : ""}
+                        </span>
+                        <span className="text-foreground">
+                          {formatPackagePrice(item.amount, item.currency ?? data.currency)}
+                          {"  |  "}
+                          {item.status === "PAID"
+                            ? "Odendi"
+                            : item.status === "PENDING"
+                              ? "Bekliyor"
+                              : item.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {billing ? (
             <Card className="glow-card">

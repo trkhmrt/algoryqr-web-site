@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, CreditCard, Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Zap } from "lucide-react";
 
 import {
   AlertDialog,
@@ -20,25 +20,42 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   formatDaysUntilExpiry,
   formatPackageDate,
   formatPackagePrice,
-  packageFeatures,
 } from "@/lib/package-display";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
+import {
+  invalidateSubscription,
+  useSubscription,
+} from "@/hooks/use-subscription";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
+import {
+  invalidateDigitalMenuTrial,
+  startTrialRequest,
+  useEligibleTrialPackages,
+  useTrialStatus,
+} from "@/hooks/use-commerce";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import {
   canCancelPurchase,
+  canResumeRenewal,
   cancelPurchase,
   clearPendingPurchaseId,
   readPendingPurchaseId,
+  resumePurchaseRenewal,
 } from "@/lib/purchase-fulfillment";
+import {
+  cancelPlanChange,
+  directionLabel,
+  listMyPlanChanges,
+} from "@/lib/plan-change";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { ApiError } from "@/lib/api/errors";
+import type { PlanPackageApiItem } from "@/lib/api";
 
 interface SubscriptionSectionProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -49,8 +66,18 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { data, isLoading, isError } = useSubscription();
+  const trial = useTrialStatus();
+  const trialStatus = trial.data?.status ?? "NOT_STARTED";
+  const canStartTrial = trialStatus === "NOT_STARTED";
+  const eligibleTrials = useEligibleTrialPackages(canStartTrial);
+  const planChangesQuery = useQuery({
+    queryKey: ["planChanges"],
+    queryFn: listMyPlanChanges,
+    staleTime: 15_000,
+  });
   const [pendingPurchaseId, setPendingPurchaseId] = useState<number | null>(null);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
+  const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
   const handledPurchaseId = useRef<number | null>(null);
   const fulfillment = usePurchaseFulfillment(
     pendingPurchaseId ?? data?.activePurchase?.id ?? null,
@@ -117,13 +144,21 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     router.replace(DASHBOARD_ROUTES.accountSubscription);
   }, [fulfillment.timedOut, onNotify, pendingPurchaseId, router]);
 
-  const activePackageId = data?.activePurchase?.packageId;
   const usedPercent =
     data?.usage && data.usage.total > 0
       ? Math.round((data.usage.used / data.usage.total) * 100)
       : 0;
   const cancellablePurchase = data?.activePurchase;
-  const showCancel = cancellablePurchase ? canCancelPurchase(cancellablePurchase) : false;
+  const showImmediateCancel = cancellablePurchase ? canCancelPurchase(cancellablePurchase) : false;
+  const showResumeRenewal = cancellablePurchase ? canResumeRenewal(cancellablePurchase) : false;
+  const isActiveTrial =
+    data?.activePurchase?.purchaseType === "TRIAL" &&
+    !!data.activePurchase.usable &&
+    !data.activePurchase.expired;
+  const scheduledChange = useMemo(
+    () => planChangesQuery.data?.find((item) => item.status === "SCHEDULED") ?? null,
+    [planChangesQuery.data],
+  );
 
   const cancelMutation = useMutation({
     mutationFn: () => {
@@ -150,6 +185,74 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     },
   });
 
+  const resumeRenewalMutation = useMutation({
+    mutationFn: () => {
+      if (!cancellablePurchase?.id) {
+        throw new Error("Aktif paket bulunamadı");
+      }
+      return resumePurchaseRenewal(cancellablePurchase.id);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+        invalidateAccessProfile(queryClient),
+      ]);
+      onNotify("info", "Abonelik yenilemesi yeniden açıldı.");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Yenilemeyi açma başarısız. Lütfen tekrar deneyin.";
+      onNotify("danger", message);
+    },
+  });
+
+  const cancelPlanChangeMutation = useMutation({
+    mutationFn: (id: number) => cancelPlanChange(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["planChanges"] });
+      onNotify("info", "Planlanan paket gecisi iptal edildi.");
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Planlanan gecis iptal edilemedi.";
+      onNotify("danger", message);
+    },
+  });
+
+  const startTrial = async (selectedPackageId: number) => {
+    setStartingPackageId(selectedPackageId);
+    try {
+      const started = await startTrialRequest(selectedPackageId);
+      await getSiteSameOriginAxios().post("/auth/refresh");
+      await Promise.all([
+        invalidateDigitalMenuTrial(queryClient),
+        invalidateAccessProfile(queryClient),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+      ]);
+      onNotify(
+        "info",
+        `${started.packageName ?? "Paket"} denemeniz başlatıldı` +
+          (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
+          ".",
+      );
+    } catch (error) {
+      onNotify(
+        "danger",
+        error instanceof ApiError ? error.message : "Deneme süresi başlatılamadı.",
+      );
+    } finally {
+      setStartingPackageId(null);
+    }
+  };
+
+  const eligiblePackages = (eligibleTrials.data ?? []) as PlanPackageApiItem[];
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
@@ -161,7 +264,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
         </Link>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Abonelik</h1>
-          <p className="text-sm text-muted-foreground">Aktif paketinizi görün ve yeni paket satın alın.</p>
+          <p className="text-sm text-muted-foreground">Aktif paketinizi ve kullanım durumunuzu görün.</p>
         </div>
       </div>
 
@@ -179,14 +282,26 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
             <CardContent className="p-6 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Zap className="h-4 w-4 text-primary" />
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Aktif abonelik</p>
+                    {isActiveTrial ? (
+                      <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                        Deneme
+                      </span>
+                    ) : null}
                   </div>
                   <h2 className="mt-1 text-xl font-semibold text-foreground">{data.usage.packageName}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {data.usage.remaining} QR oluşturma hakkı kaldı
+                    {data.usage.unlimited
+                      ? "Sınırsız QR oluşturma"
+                      : `${data.usage.remaining} QR oluşturma hakkı kaldı`}
                   </p>
+                  {isActiveTrial ? (
+                    <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                      Deneme süreniz: {formatDaysUntilExpiry(data.activePurchase?.daysUntilExpiry)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-3xl font-semibold tabular-nums text-foreground">{data.usage.remaining}</p>
@@ -208,10 +323,17 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                     ? "aktif"
                     : "pasif"}
                 </span>
-                {data.activePurchase?.nextPaymentDueAt && (
-                  <span>Sonraki ödeme: {formatPackageDate(data.activePurchase.nextPaymentDueAt)}</span>
-                )}
               </div>
+              {data.activePurchase?.paymentStyle === "SUBSCRIPTION" && data.activePurchase.nextPaymentDueAt ? (
+                <p className="text-sm text-foreground">
+                  Sonraki ödeme:{" "}
+                  <span className="font-medium">{formatPackageDate(data.activePurchase.nextPaymentDueAt)}</span>
+                </p>
+              ) : data.activePurchase?.nextPaymentDueAt ? (
+                <p className="text-xs text-muted-foreground">
+                  Sonraki ödeme: {formatPackageDate(data.activePurchase.nextPaymentDueAt)}
+                </p>
+              ) : null}
               {(data.activePurchase?.paymentApproaching || data.activePurchase?.expiryApproaching) && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
                   {data.activePurchase.paymentApproaching
@@ -219,38 +341,61 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                     : "Paket bitiş tarihiniz yaklaşıyor."}
                 </p>
               )}
-              {showCancel && cancellablePurchase ? (
+              {cancellablePurchase?.subscriptionStatus === "PAST_DUE" ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Yenileme ödemesi başarısız. Dönem sonuna kadar erişiminiz devam eder; kartınızı
+                  güncelleyerek yenilemeyi sürdürebilirsiniz.
+                </p>
+              ) : null}
+              {cancellablePurchase?.cancelAtPeriodEnd ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Yenileme kapalı. Erişiminiz {formatPackageDate(cancellablePurchase.expiresAt)}{" "}
+                  tarihine kadar devam eder.
+                </p>
+              ) : null}
+              {(showImmediateCancel || showResumeRenewal) && cancellablePurchase ? (
                 <div className="flex flex-wrap items-center gap-3 border-t border-border/60 pt-4">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                        disabled={cancelMutation.isPending}
-                      >
-                        {cancelMutation.isPending ? "İptal ediliyor..." : "Paketi iptal et"}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {cancellablePurchase.packageName} paketi hemen iptal edilir. Haklarınız ve
-                          menü erişiminiz kapanır; iade otomatik yapılmaz.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => cancelMutation.mutate()}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  {showResumeRenewal ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={resumeRenewalMutation.isPending}
+                      onClick={() => resumeRenewalMutation.mutate()}
+                    >
+                      {resumeRenewalMutation.isPending ? "Açılıyor..." : "Yenilemeyi tekrar aç"}
+                    </Button>
+                  ) : null}
+                  {showImmediateCancel ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                          disabled={cancelMutation.isPending}
                         >
-                          Evet, iptal et
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          {cancelMutation.isPending ? "İptal ediliyor..." : "Paketi iptal et"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {cancellablePurchase.packageName} paketi hemen iptal edilir.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => cancelMutation.mutate()}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Evet, iptal et
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : null}
                   <Link
                     href={DASHBOARD_ROUTES.accountPurchaseDetail(cancellablePurchase.id)}
                     className="text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -261,6 +406,35 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
               ) : null}
             </CardContent>
           </Card>
+
+          {scheduledChange && (
+            <Card className="glow-card border-amber-500/30">
+              <CardContent className="p-5 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Planlanan paket gecisi
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {directionLabel(scheduledChange.direction)}:{" "}
+                    {scheduledChange.fromPackageName} → {scheduledChange.toPackageName}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatPackageDate(scheduledChange.effectiveAt)} tarihinde devreye girecek · tahsil:{" "}
+                    {formatPackagePrice(scheduledChange.chargeAmount, scheduledChange.currency)}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={cancelPlanChangeMutation.isPending}
+                  onClick={() => cancelPlanChangeMutation.mutate(scheduledChange.id)}
+                >
+                  {cancelPlanChangeMutation.isPending ? "Iptal..." : "Planlamayi iptal et"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {fulfillment.summary.data && (
             <Card className="glow-card">
@@ -303,6 +477,26 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
             </Card>
           )}
 
+          {canStartTrial && (
+            <div>
+              <h2 className="mb-1 text-sm font-medium text-foreground">Deneme paketleri</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Bir paket seçin; süre ve haklar seçtiğiniz pakete göre tanımlanır.
+              </p>
+              {eligibleTrials.isLoading || trial.isLoading ? (
+                <p className="mb-6 text-sm text-muted-foreground">Deneme paketleri yükleniyor…</p>
+              ) : (
+                <div className="mb-6">
+                  <TrialPackagePicker
+                    packages={eligiblePackages}
+                    startingPackageId={startingPackageId}
+                    onStart={(id) => void startTrial(id)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <h2 className="mb-3 text-sm font-medium text-foreground">Paket kullanım geçmişi</h2>
             {data.purchases.length === 0 ? (
@@ -332,63 +526,6 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
             )}
           </div>
 
-          <div>
-            <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-              Paketler
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {data.packages.map((pkg) => {
-                const isActive = activePackageId === pkg.id && data.activePurchase?.usable && !data.activePurchase?.expired;
-                const features = packageFeatures(pkg);
-
-                return (
-                  <Card
-                    key={pkg.id}
-                    className={`glow-card ${isActive ? "border-primary/40 ring-1 ring-primary/20" : ""}`}
-                  >
-                    <CardContent className="p-5 flex flex-col h-full">
-                      {isActive && (
-                        <span className="mb-3 inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                          Aktif paketiniz
-                        </span>
-                      )}
-                      <h3 className="text-lg font-semibold text-foreground">{pkg.name}</h3>
-                      <p className="mt-1 text-2xl font-bold text-foreground">
-                        {formatPackagePrice(pkg.price, pkg.currency)}
-                        {pkg.validityDays > 0 && parseFloat(String(pkg.price)) > 0 && (
-                          <span className="text-sm font-normal text-muted-foreground"> / {pkg.validityDays} gün</span>
-                        )}
-                      </p>
-                      <ul className="mt-4 space-y-2 flex-1">
-                        {features.map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <Check className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        className="mt-5 w-full gap-2"
-                        variant={isActive ? "outline" : "hero"}
-                        disabled={isActive || parseFloat(String(pkg.price)) <= 0}
-                        onClick={() => router.push(DASHBOARD_ROUTES.accountSubscriptionCheckout(pkg.id))}
-                      >
-                        {isActive
-                          ? "Kullanımda"
-                          : parseFloat(String(pkg.price)) <= 0
-                            ? "Satın alınamaz"
-                            : "Paketi Al"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-            {data.packages.length === 0 && (
-              <p className="text-sm text-muted-foreground">Şu an satın alınabilir paket bulunmuyor.</p>
-            )}
-          </div>
         </>
       ) : null}
     </div>

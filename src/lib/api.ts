@@ -2,8 +2,16 @@
 
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { isDateUsablePurchase, pickActivePurchase } from "@/lib/product-access";
 
 export { ApiError } from "@/lib/api/errors";
+export {
+  hasActiveProductAccess,
+  hasExpiredProductAccess,
+  isDateUsableEntitlement,
+  isDateUsablePurchase,
+  pickActivePurchase,
+} from "@/lib/product-access";
 
 const USER_KEY = "algory_user";
 const hasWindow = typeof window !== "undefined";
@@ -153,6 +161,9 @@ export interface UserEntitlementApiItem {
   remainingQuantity: number;
   usedQuantity: number;
   unlimited: boolean;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  purchaseStatus?: string | null;
   usable: boolean;
   expired: boolean;
 }
@@ -177,6 +188,15 @@ export interface PurchaseApiItem {
   startsAt?: string;
   expiresAt?: string;
   purchasedAt?: string;
+  subscriptionStatus?: string | null;
+  billingPeriod?: "MONTHLY" | "YEARLY" | string | null;
+  cancelAtPeriodEnd?: boolean;
+  currentPeriodConversationId?: string | null;
+  currentPeriodPaidAt?: string | null;
+  refundEligibleUntil?: string | null;
+  refundEligible?: boolean;
+  refundedAt?: string | null;
+  refundStatus?: string | null;
   daysUntilExpiry?: number | null;
   nextPaymentDueAt?: string | null;
   paymentApproaching?: boolean;
@@ -235,6 +255,15 @@ export interface PurchaseSummaryApiItem {
   startsAt?: string;
   expiresAt?: string;
   purchasedAt?: string;
+  subscriptionStatus?: string | null;
+  billingPeriod?: "MONTHLY" | "YEARLY" | string | null;
+  cancelAtPeriodEnd?: boolean;
+  currentPeriodConversationId?: string | null;
+  currentPeriodPaidAt?: string | null;
+  refundEligibleUntil?: string | null;
+  refundEligible?: boolean;
+  refundedAt?: string | null;
+  refundStatus?: string | null;
   daysUntilExpiry?: number | null;
   nextPaymentDueAt?: string | null;
   paymentApproaching?: boolean;
@@ -272,10 +301,17 @@ export interface PlanPackageApiItem {
   code: string;
   name: string;
   description: string;
+  features?: string[];
   price: number | string;
+  monthlyDiscount?: number | string | null;
+  yearlyPrice?: number | string | null;
+  yearlyDiscount?: number | string | null;
+  effectiveMonthlyPrice?: number | string | null;
+  effectiveYearlyPrice?: number | string | null;
   currency: string;
   active: boolean;
   validityDays: number;
+  trialEligible?: boolean;
   items: PlanPackageItemApi[];
   allowedPaymentModes?: Array<"DIRECT" | "THREE_DS">;
   installmentOptions?: InstallmentOptionApiItem[];
@@ -284,6 +320,9 @@ export interface PlanPackageApiItem {
 
 export interface PackageUsageSummary {
   packageName: string;
+  packageCode?: string | null;
+  packageId?: number | null;
+  purchaseType?: string | null;
   remaining: number;
   total: number;
   used: number;
@@ -294,16 +333,7 @@ export interface PackageUsageSummary {
   paymentApproaching?: boolean;
   expiryApproaching?: boolean;
   usable?: boolean;
-}
-
-export function isDateUsablePurchase(purchase: PurchaseApiItem): boolean {
-  if (!purchase.usable || purchase.expired) {
-    return false;
-  }
-  if (!purchase.expiresAt) {
-    return false;
-  }
-  return new Date(purchase.expiresAt).getTime() > Date.now();
+  isTrial?: boolean;
 }
 
 export function aggregatePackageUsage(
@@ -318,13 +348,13 @@ export function aggregatePackageUsage(
   const remaining = qrEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
   const total = qrEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
   const used = qrEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
-  const activePurchase =
-    purchases.find((item) => isDateUsablePurchase(item)) ??
-    purchases.find((item) => item.usable && !item.expired) ??
-    null;
+  const activePurchase = pickActivePurchase(purchases);
 
   return {
     packageName: activePurchase?.packageName ?? "Ücretsiz Paket",
+    packageCode: activePurchase?.packageCode ?? null,
+    packageId: activePurchase?.packageId ?? null,
+    purchaseType: activePurchase?.purchaseType ?? null,
     remaining,
     total,
     used,
@@ -335,17 +365,26 @@ export function aggregatePackageUsage(
     paymentApproaching: activePurchase?.paymentApproaching ?? false,
     expiryApproaching: activePurchase?.expiryApproaching ?? false,
     usable: activePurchase ? isDateUsablePurchase(activePurchase) : false,
+    isTrial: activePurchase?.purchaseType === "TRIAL",
   };
 }
 
 export async function getMyEntitlementsRequest(): Promise<UserEntitlementApiItem[]> {
-  const response = await api.get<UserEntitlementApiItem[]>("/purchases/my/entitlements");
-  return response.data;
+  const response = await api.get<UserEntitlementApiItem[] | { content?: UserEntitlementApiItem[] }>(
+    "/purchases/my/entitlements",
+  );
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.content)) return data.content;
+  return [];
 }
 
 export async function getMyPurchasesRequest(): Promise<PurchaseApiItem[]> {
-  const response = await api.get<PurchaseApiItem[]>("/purchases/my");
-  return response.data;
+  const response = await api.get<PurchaseApiItem[] | { content?: PurchaseApiItem[] }>("/purchases/my");
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.content)) return data.content;
+  return [];
 }
 
 export async function getActivePackagesRequest(): Promise<PlanPackageApiItem[]> {
@@ -628,5 +667,45 @@ export async function updateQrNameRequest(
   payload: UpdateQrNameRequestBody
 ): Promise<UpdateQrNameGatewayResponse> {
   const response = await api.patch<UpdateQrNameGatewayResponse>(`/qr/update-name/${qrId}`, payload);
+  return response.data;
+}
+
+export interface MenuAnalyticsReportKpis {
+  sessions: number;
+  menuOpens: number;
+  productViews: number;
+  categoryViews: number;
+  avgProductsPerSession: number;
+}
+
+export interface MenuAnalyticsReportResponse {
+  menuId: number;
+  menuName: string;
+  from: string;
+  to: string;
+  kpis: MenuAnalyticsReportKpis;
+  daily: { date: string; sessions: number; menuOpens: number; productViews: number }[];
+  hourly: { hour: number; views: number }[];
+  devices: { name: string; value: number }[];
+  topProducts: { productId: number; name: string; views: number }[];
+  topCategories: { categoryId: number; name: string; views: number }[];
+  categoryProductTree: { name: string; size: number; children?: { name: string; size: number }[] }[];
+  sampleJourneys: {
+    sessionId: string;
+    startedAt: string;
+    steps: { type: string; name: string; at: string }[];
+  }[];
+  funnel: { menuOpens: number; categoryViews: number; productViews: number };
+}
+
+export async function getMenuAnalyticsReportRequest(
+  menuId: number | string,
+  from: string,
+  to: string,
+): Promise<MenuAnalyticsReportResponse> {
+  const response = await api.get<MenuAnalyticsReportResponse>(
+    `/analytics/menu/${menuId}/report`,
+    { params: { from, to } },
+  );
   return response.data;
 }

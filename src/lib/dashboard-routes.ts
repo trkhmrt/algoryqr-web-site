@@ -16,6 +16,11 @@ export const DASHBOARD_ROUTES = {
   qrCodeDetail: (id: number | string) => `/dashboard/qr-kodlarim/${id}`,
   account: "/dashboard/hesabim",
   accountSubscription: "/dashboard/hesabim/abonelik",
+  accountPackages: "/dashboard/hesabim/abonelik/paketler",
+  accountPackagesHighlight: (highlight: string) =>
+    `/dashboard/hesabim/abonelik/paketler?highlight=${encodeURIComponent(highlight)}`,
+  accountPlanChange: (packageId: number | string) =>
+    `/dashboard/hesabim/abonelik/paket-degistir?to=${packageId}`,
   accountSubscriptionCheckout: (packageId: number | string) =>
     `/dashboard/hesabim/abonelik/satin-al/${packageId}`,
   accountPurchaseDetail: (purchaseId: number | string) =>

@@ -8,9 +8,9 @@ export interface AuthUser {
 
 type JwtPayload = Record<string, unknown>;
 
-export type PackageCode = "FREE_PACKAGE" | "PRO_PACKAGE";
-export type ProductCode = "QR_CREATE" | "QR_MENU" | "QR_AGENT";
-export type ProductScope = "QR_CREATE_OWNER" | "QR_MENU_OWNER";
+export type PackageCode = "FREE_PACKAGE" | "PRO_PACKAGE" | "ULTIMATE_PACKAGE";
+export type ProductCode = "QR_CREATE" | "QR_MENU" | "QR_AGENT" | "QR_ANALYTICS";
+export type ProductScope = "QR_CREATE_OWNER" | "QR_MENU_OWNER" | "QR_ANALYTICS_OWNER";
 export type AuthProvider = "GOOGLE" | "BASIC";
 
 export interface AccessProfile {
@@ -131,7 +131,9 @@ export function getAccessProfileFromToken(token?: string | null): AccessProfile 
   }
   return {
     activePackage:
-      payload.activePackage === "FREE_PACKAGE" || payload.activePackage === "PRO_PACKAGE"
+      payload.activePackage === "FREE_PACKAGE" ||
+      payload.activePackage === "PRO_PACKAGE" ||
+      payload.activePackage === "ULTIMATE_PACKAGE"
         ? payload.activePackage
         : null,
     products: readStringArray(payload.products).filter(isProductCode),
@@ -152,6 +154,10 @@ export function hasScope(profile: AccessProfile | null | undefined, scope: Produ
   return profile?.scopes.includes(scope) ?? false;
 }
 
+export function hasProduct(profile: AccessProfile | null | undefined, product: ProductCode): boolean {
+  return profile?.products.includes(product) ?? false;
+}
+
 export function tokenHasScope(token: string | null | undefined, scope: ProductScope): boolean {
   return hasScope(getAccessProfileFromToken(token), scope);
 }
@@ -161,11 +167,20 @@ function readStringArray(value: unknown): string[] {
 }
 
 function isProductCode(value: string): value is ProductCode {
-  return value === "QR_CREATE" || value === "QR_MENU" || value === "QR_AGENT";
+  return (
+    value === "QR_CREATE" ||
+    value === "QR_MENU" ||
+    value === "QR_AGENT" ||
+    value === "QR_ANALYTICS"
+  );
 }
 
 function isProductScope(value: string): value is ProductScope {
-  return value === "QR_CREATE_OWNER" || value === "QR_MENU_OWNER";
+  return (
+    value === "QR_CREATE_OWNER" ||
+    value === "QR_MENU_OWNER" ||
+    value === "QR_ANALYTICS_OWNER"
+  );
 }
 
 export function buildUpstreamAuthHeaders(accessToken: string): Record<string, string> {

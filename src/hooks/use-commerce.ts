@@ -14,6 +14,8 @@ import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 export const BILLING_ADDRESSES_QUERY_KEY = ["billingAddresses"] as const;
 export const PAYMENT_METHODS_QUERY_KEY = ["paymentMethods"] as const;
 export const DIGITAL_MENU_TRIAL_QUERY_KEY = ["digitalMenuTrial"] as const;
+export const TRIAL_STATUS_QUERY_KEY = ["trialStatus"] as const;
+export const ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY = ["eligibleTrialPackages"] as const;
 
 function listFromPayload<TEntity>(payload: unknown, keys: string[]): TEntity[] {
   if (Array.isArray(payload)) return payload as TEntity[];
@@ -56,15 +58,37 @@ export function usePaymentMethods() {
 }
 
 export function useDigitalMenuTrialStatus() {
+  return useTrialStatus();
+}
+
+export function useTrialStatus() {
   return useQuery({
-    queryKey: DIGITAL_MENU_TRIAL_QUERY_KEY,
+    queryKey: TRIAL_STATUS_QUERY_KEY,
     queryFn: async () => {
-      const response = await getSiteSameOriginAxios().get("/trials/digital-menu-pro/status");
+      const response = await getSiteSameOriginAxios().get("/trials/status");
       return mapTrialStatus(response.data) satisfies DigitalMenuTrialStatus;
     },
     staleTime: 15_000,
     retry: 1,
   });
+}
+
+export function useEligibleTrialPackages(enabled = true) {
+  return useQuery({
+    queryKey: ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY,
+    queryFn: async () => {
+      const response = await getSiteSameOriginAxios().get("/trials/eligible-packages");
+      return Array.isArray(response.data) ? response.data : [];
+    },
+    enabled,
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export async function startTrialRequest(packageId: number) {
+  const response = await getSiteSameOriginAxios().post("/trials", { packageId });
+  return mapTrialStatus(response.data);
 }
 
 export function useInstallmentOptions(bin: string, amount: number | string | null | undefined, enabled: boolean) {
@@ -102,5 +126,9 @@ export function invalidatePaymentMethods(queryClient: QueryClient) {
 }
 
 export function invalidateDigitalMenuTrial(queryClient: QueryClient) {
-  return queryClient.invalidateQueries({ queryKey: DIGITAL_MENU_TRIAL_QUERY_KEY });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: DIGITAL_MENU_TRIAL_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: TRIAL_STATUS_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY }),
+  ]);
 }

@@ -10,13 +10,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { invalidateMyProfile, useMyProfile, MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import type { MyProfile } from "@/hooks/use-my-profile";
 import {
-  User, Shield, Bell, Palette, Globe, ChevronRight, ArrowLeft,
-  Check, Camera, Key, Lock, Smartphone, Mail, Sun, Moon, Languages,
+  User, Shield, Bell, ChevronRight, ArrowLeft,
+  Check, Camera, Key, Lock, Smartphone, Mail,
   RefreshCw, LogOut, Timer, Copy, CreditCard,
   WalletCards, MapPin,
 } from "lucide-react";
@@ -28,11 +27,10 @@ import { ChangePasswordDialog } from "@/components/dashboard/ChangePasswordDialo
 import { ChangeEmailDialog } from "@/components/dashboard/ChangeEmailDialog";
 import { ApiError } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/api/storage";
-import { useTheme } from "@/hooks/use-theme";
 
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
 
-type SettingsPage = "main" | "profile" | "security" | "notifications" | "appearance" | "api" | "session";
+type SettingsPage = "main" | "profile" | "security" | "notifications" | "session";
 
 type SettingsMenuKey = SettingsPage | "subscription" | "paymentMethods" | "billingAddresses";
 
@@ -88,7 +86,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyProfile();
   const { data: accessProfile } = useAccessProfile();
   const isGoogleAccount = accessProfile?.provider === "GOOGLE";
-  const { theme, setTheme } = useTheme();
   const [page, setPage] = useState<SettingsPage>("main");
 
   const [accessTokenExpiresAt, setAccessTokenExpiresAt] = useState<number | null>(null);
@@ -120,13 +117,9 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [twoFactorDisableLoading, setTwoFactorDisableLoading] = useState(false);
 
   const [emailNotifs, setEmailNotifs] = useState(false);
-  const [scanAlerts, setScanAlerts] = useState(false);
   const [weeklyReport, setWeeklyReport] = useState(false);
   const [marketingEmails, setMarketingEmails] = useState(false);
-  const [pushBrowser, setPushBrowser] = useState(false);
   const [notificationsSaving, setNotificationsSaving] = useState(false);
-
-  const [language, setLanguage] = useState("tr");
 
   const fetchTokenExp = useCallback(() => {
     setTokenLoading(true);
@@ -170,10 +163,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   useEffect(() => {
     if (page !== "notifications" || !myProfile) return;
     setEmailNotifs(myProfile.notifyEmailImportant);
-    setScanAlerts(myProfile.notifyScanAlerts);
     setWeeklyReport(myProfile.notifyWeeklyReport);
     setMarketingEmails(myProfile.notifyMarketingEmails);
-    setPushBrowser(myProfile.notifyPushBrowser);
   }, [page, myProfile]);
 
   useEffect(() => {
@@ -308,10 +299,10 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     try {
       await getSiteSameOriginAxios().patch("/account/myprofile", {
         notifyEmailImportant: emailNotifs,
-        notifyScanAlerts: scanAlerts,
+        notifyScanAlerts: myProfile?.notifyScanAlerts ?? false,
         notifyWeeklyReport: weeklyReport,
         notifyMarketingEmails: marketingEmails,
-        notifyPushBrowser: pushBrowser,
+        notifyPushBrowser: myProfile?.notifyPushBrowser ?? false,
       });
       await invalidateMyProfile(queryClient);
       onNotify("info", "Bildirim tercihleri kaydedildi.");
@@ -448,9 +439,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             { icon: Key, title: "Oturum / Token", desc: "Access token kalan süre, yenileme ve revoke", key: "session" },
             { icon: User, title: "Profil Bilgileri", desc: "Ad, soyad, e-posta ve telefon bilgilerinizi güncelleyin", key: "profile" },
             { icon: Shield, title: "Güvenlik", desc: "Şifre değiştirme ve iki faktörlü doğrulama", key: "security" },
-            { icon: Bell, title: "Bildirimler", desc: "E-posta ve anlık bildirim tercihlerinizi yönetin", key: "notifications" },
-            { icon: Palette, title: "Görünüm", desc: "Tema ve dil tercihlerinizi ayarlayın", key: "appearance" },
-            { icon: Globe, title: "API Anahtarları", desc: "Entegrasyon için API anahtarlarınızı yönetin", key: "api" },
+            { icon: Bell, title: "Bildirimler", desc: "E-posta bildirim tercihlerinizi yönetin", key: "notifications" },
           ] as const satisfies ReadonlyArray<{ icon: typeof CreditCard; title: string; desc: string; key: SettingsMenuKey }>).map((item) => (
             <Card
               key={item.title}
@@ -904,7 +893,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </h2>
           {[
             { label: "Önemli güncellemeler", desc: "Önemli güncellemeler için e-posta alın", state: emailNotifs, set: setEmailNotifs },
-            { label: "Tarama uyarıları", desc: "QR kodlarınız tarandığında bildirim alın", state: scanAlerts, set: setScanAlerts },
             { label: "Haftalık rapor", desc: "Her pazartesi performans özeti alın", state: weeklyReport, set: setWeeklyReport },
             { label: "Pazarlama e-postaları", desc: "Yeni özellikler ve kampanyalar hakkında bilgi alın", state: marketingEmails, set: setMarketingEmails },
           ].map((item) => (
@@ -918,19 +906,6 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           ))}
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Bell className="h-4 w-4 text-muted-foreground" /> Anlık Bildirimler
-          </h2>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-foreground">Push bildirimleri</p>
-              <p className="text-xs text-muted-foreground">Tarayıcı üzerinden anlık bildirim tercihi (altyapı hazır olduğunda kullanılır)</p>
-            </div>
-            <Switch checked={pushBrowser} onCheckedChange={setPushBrowser} disabled={myProfileLoading} />
-          </div>
-        </div>
-
         <Button
           className="gap-2"
           onClick={handleSaveNotifications}
@@ -942,104 +917,5 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     );
   }
 
-  if (page === "appearance") {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-3">
-          {backButton}
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Görünüm</h1>
-            <p className="text-sm text-muted-foreground">Tema ve dil tercihlerinizi ayarlayın.</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Sun className="h-4 w-4 text-muted-foreground" /> Tema
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Açık veya koyu tema seçin; tercih tarayıcıda saklanır.
-          </p>
-          <div className="grid grid-cols-2 gap-3 max-w-md">
-            {(
-              [
-                { label: "Açık", icon: Sun, value: "light" as const },
-                { label: "Koyu", icon: Moon, value: "dark" as const },
-              ] as const
-            ).map((t) => {
-              const selected = theme === t.value;
-              return (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setTheme(t.value)}
-                  className={`flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors ${
-                    selected
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/30"
-                      : "border-border hover:bg-accent/50"
-                  }`}
-                >
-                  <t.icon className={`h-5 w-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className={`text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}>
-                    {t.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Languages className="h-4 w-4 text-muted-foreground" /> Dil
-          </h2>
-          <p className="text-xs text-muted-foreground">Arayüz dili (çoklu dil desteği yakında).</p>
-          <Select
-            value={language === "tr" || language === "en" ? language : "tr"}
-            onValueChange={setLanguage}
-          >
-            <SelectTrigger className="bg-background max-w-md">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tr">Türkçe</SelectItem>
-              <SelectItem value="en">English</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button
-          className="gap-2"
-          onClick={() => onNotify("info", "Dil tercihi kaydedildi. Çeviri altyapısı hazır olduğunda uygulanacak.")}
-        >
-          <Check className="h-4 w-4" /> Kaydet
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        {backButton}
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">API Anahtarları</h1>
-          <p className="text-sm text-muted-foreground">Entegrasyon için API anahtarlarınızı yönetin.</p>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-dashed border-border bg-card/50 p-10 text-center space-y-4">
-        <Globe className="h-10 w-10 text-muted-foreground mx-auto opacity-60" />
-        <div>
-          <p className="text-sm font-medium text-foreground">API anahtarları ve webhooks</p>
-          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-            Programatik erişim, anahtar yönetimi ve webhook yapılandırması üzerinde çalışıyoruz.
-          </p>
-        </div>
-        <div className="flex justify-center">
-          <ComingSoonBadge />
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
