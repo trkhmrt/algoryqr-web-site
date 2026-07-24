@@ -1,6 +1,8 @@
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { MenuThemePreviewDialog } from "@/components/menu-templates/MenuThemePreviewDialog";
 import {
   DEFAULT_MENU_THEME_ID,
   getMenuTemplateOptions,
@@ -49,6 +51,10 @@ type MenuDetailsProps = {
 
 export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps) {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const selectedTheme =
+    THEME_OPTIONS.find((theme) => theme.id === value.themeId) ?? THEME_OPTIONS[0];
 
   useEffect(() => {
     if (value.urlMode !== "slug") {
@@ -123,8 +129,19 @@ export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">Menü Teması</Label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-xs text-muted-foreground">Menü Teması</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setPreviewOpen(true)}
+          >
+            Önizle
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {THEME_OPTIONS.map((theme) => (
             <button
               key={theme.id}
@@ -143,6 +160,13 @@ export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps
           ))}
         </div>
       </div>
+
+      <MenuThemePreviewDialog
+        themeId={value.themeId}
+        themeName={selectedTheme.label}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
 
       <div className="space-y-3">
         <Label className="text-xs text-muted-foreground">Public URL Tercihi</Label>

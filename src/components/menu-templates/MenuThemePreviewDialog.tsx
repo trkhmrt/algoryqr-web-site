@@ -1,0 +1,56 @@
+"use client";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { getMenuTemplate } from "./registry";
+import {
+  MENU_THEME_PREVIEW_CATEGORIES,
+  MENU_THEME_PREVIEW_MENU,
+  MENU_THEME_PREVIEW_PRODUCTS,
+} from "./preview-data";
+
+type MenuThemePreviewDialogProps = {
+  themeId: string;
+  themeName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function MenuThemePreviewDialog({
+  themeId,
+  themeName,
+  open,
+  onOpenChange,
+}: MenuThemePreviewDialogProps) {
+  const { Component } = getMenuTemplate(themeId);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] w-[min(100vw-2rem,420px)] max-w-[420px] flex-col gap-3 overflow-hidden p-4 sm:rounded-xl">
+        <DialogHeader>
+          <DialogTitle>{themeName} önizleme</DialogTitle>
+          <DialogDescription>
+            Örnek menü verisiyle temayı gezinin. Gerçek menünüz farklı olabilir.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="relative mx-auto w-full max-w-[390px] isolate overflow-hidden rounded-[1.75rem] border border-border bg-background shadow-inner [transform:translateZ(0)]">
+          <div className="relative h-[min(70vh,720px)] overflow-y-auto overscroll-contain">
+            {open ? (
+              <Component
+                key={themeId}
+                menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
+                products={MENU_THEME_PREVIEW_PRODUCTS}
+                categories={MENU_THEME_PREVIEW_CATEGORIES}
+              />
+            ) : null}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

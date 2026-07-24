@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { ClassicMenuTemplate } from "./classic";
 import { DarkMenuTemplate } from "./dark";
 import { GlassyGrayMenuTemplate } from "./glassy-gray";
+import { LumiereMenuTemplate } from "./lumiere";
 import { MinimalMenuTemplate } from "./minimal";
 import { ModernMenuTemplate } from "./modern";
 import type { MenuTemplateProps } from "./types";
@@ -44,6 +45,12 @@ export const MENU_TEMPLATES = [
     name: "Glassy Gray",
     previewClassName: "bg-[#131313] text-[#ffb693]",
     Component: GlassyGrayMenuTemplate,
+  },
+  {
+    id: "lumiere",
+    name: "Lumière",
+    previewClassName: "bg-[#f8f9fb] text-[#b80035]",
+    Component: LumiereMenuTemplate,
   },
 ] as const satisfies readonly MenuTemplateDefinition[];
 
