@@ -34,17 +34,19 @@ const DEFAULT_VALUES: BillingAddressFormValues = {
 interface BillingAddressFormProps {
   submitting?: boolean;
   submitLabel?: string;
+  initialValues?: Partial<BillingAddressFormValues>;
   onSubmit: (values: BillingAddressFormValues) => Promise<void>;
 }
 
 export default function BillingAddressForm({
   submitting = false,
   submitLabel = "Adresi Kaydet",
+  initialValues,
   onSubmit,
 }: BillingAddressFormProps) {
   const form = useForm<BillingAddressFormValues>({
     resolver: zodResolver(billingAddressSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: { ...DEFAULT_VALUES, ...initialValues },
   });
   const type = form.watch("type");
   const taxpayerInvoice = form.watch("taxpayerInvoice");

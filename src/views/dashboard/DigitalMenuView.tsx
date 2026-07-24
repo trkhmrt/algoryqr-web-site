@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Clock3, Crown, FolderTree, Loader2, Package, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronRight, Clock3, Crown, Loader2, TrendingUp, UtensilsCrossed } from "lucide-react";
 
 import { useDigitalMenuAccess, useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { Button } from "@/components/ui/button";
@@ -106,7 +106,15 @@ export default function DigitalMenuView() {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü</h1>
             <p className="text-sm text-muted-foreground">Menü QR&apos;larınızı oluşturun ve yönetin.</p>
           </div>
-          <Button onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}>Menü QR Oluştur</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" className="gap-1.5" asChild>
+              <Link href={DASHBOARD_ROUTES.analytics}>
+                <TrendingUp className="h-4 w-4" />
+                Analitik
+              </Link>
+            </Button>
+            <Button onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}>Menü QR Oluştur</Button>
+          </div>
         </div>
 
         {activeTrial && (
@@ -138,33 +146,19 @@ export default function DigitalMenuView() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {menuQrs.map((menuQr) => (
-                <div key={menuQr.id} className="space-y-3 rounded-lg border border-border bg-card p-4">
-                  <div>
+                <Link
+                  key={menuQr.id}
+                  href={DASHBOARD_ROUTES.digitalMenuEdit(menuQr.id)}
+                  className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/50"
+                >
+                  <div className="min-w-0">
                     <p className="font-medium text-foreground">{menuQr.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {String(menuQr.details.businessName ?? "Menü QR")}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" className="gap-1.5" asChild>
-                      <Link href={DASHBOARD_ROUTES.digitalMenuEdit(menuQr.id)}>
-                        <Package className="h-3.5 w-3.5" />
-                        Düzenle
-                      </Link>
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" asChild>
-                      <Link href={`${DASHBOARD_ROUTES.digitalMenuCategories}?qr=${menuQr.id}`}>
-                        <FolderTree className="h-3.5 w-3.5" />
-                        Kategoriler
-                      </Link>
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5" asChild>
-                      <Link href={`${DASHBOARD_ROUTES.digitalMenuProducts}?qr=${menuQr.id}`}>
-                        Ürünler
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+                </Link>
               ))}
             </div>
           )}

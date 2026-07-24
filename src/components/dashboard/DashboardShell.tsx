@@ -9,7 +9,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   QrCode,
   LogOut,
-  TrendingUp,
   BarChart3,
   User,
   Info,
@@ -38,7 +37,6 @@ import { cn } from "@/lib/utils";
 
 const NAV_ICONS = {
   overview: BarChart3,
-  analytics: TrendingUp,
   digitalMenu: UtensilsCrossed,
   qrCodes: QrCode,
   account: User,

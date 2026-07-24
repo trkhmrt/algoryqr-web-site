@@ -1,7 +1,8 @@
 export const DASHBOARD_ROUTES = {
   root: "/dashboard",
   overview: "/dashboard/genel-bakis",
-  analytics: "/dashboard/analitik",
+  analytics: "/dashboard/dijital-menu/analitik",
+  analyticsLegacy: "/dashboard/analitik",
   digitalMenu: "/dashboard/dijital-menu",
   digitalMenuProducts: "/dashboard/dijital-menu/urunler",
   digitalMenuProductDetail: (productId: number | string, qrId: number | string) =>
@@ -29,7 +30,7 @@ export const DASHBOARD_ROUTES = {
   accountBillingAddresses: "/dashboard/hesabim/fatura-adreslerim",
 } as const;
 
-export type DashboardNavKey = "overview" | "analytics" | "digitalMenu" | "qrCodes" | "account";
+export type DashboardNavKey = "overview" | "digitalMenu" | "qrCodes" | "account";
 
 export type DashboardNavItem = {
   key: DashboardNavKey;
@@ -40,7 +41,6 @@ export type DashboardNavItem = {
 
 export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { key: "overview", label: "Genel Bakış", mobileLabel: "Genel", href: DASHBOARD_ROUTES.overview },
-  { key: "analytics", label: "Analitik", mobileLabel: "Analitik", href: DASHBOARD_ROUTES.analytics },
   {
     key: "digitalMenu",
     label: "Dijital Menü",

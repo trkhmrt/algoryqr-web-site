@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  ArrowLeft,
   Eye,
   Users,
   ShoppingBag,
@@ -160,10 +161,20 @@ export default function AnalyticsTab() {
   if (!canUse) {
     return (
       <div className="space-y-3 animate-fade-in">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analitik</h1>
-        <p className="text-sm text-muted-foreground">
-          Menü ziyaret raporları için Detaylı Raporlama (QR_ANALYTICS) paketi gerekir.
-        </p>
+        <div className="flex items-center gap-3">
+          <Link
+            href={DASHBOARD_ROUTES.digitalMenu}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analitik</h1>
+            <p className="text-sm text-muted-foreground">
+              Menü ziyaret raporları için Detaylı Raporlama (QR_ANALYTICS) paketi gerekir.
+            </p>
+          </div>
+        </div>
         <Link
           href={DASHBOARD_ROUTES.accountSubscription}
           className="inline-flex text-sm font-medium text-foreground underline-offset-2 hover:underline"
@@ -233,9 +244,17 @@ export default function AnalyticsTab() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analitik</h1>
-          <p className="text-sm text-muted-foreground">Menü QR ziyaret ve yolculuk raporları.</p>
+        <div className="flex items-center gap-3">
+          <Link
+            href={DASHBOARD_ROUTES.digitalMenu}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analitik</h1>
+            <p className="text-sm text-muted-foreground">Menü QR ziyaret ve yolculuk raporları.</p>
+          </div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <DigitalMenuPicker

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, TrendingUp } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import DigitalMenuEditorSection from "@/components/dashboard/menu/DigitalMenuEditorSection";
@@ -162,6 +163,12 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
             </a>
           </Button>
         )}
+        <Button variant="outline" size="sm" className="gap-1.5" asChild>
+          <Link href={DASHBOARD_ROUTES.analytics}>
+            <TrendingUp className="h-3.5 w-3.5" />
+            Analitik
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

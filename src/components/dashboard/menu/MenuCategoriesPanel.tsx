@@ -193,9 +193,18 @@ export default function MenuCategoriesPanel({ menuId, onAddProduct }: MenuCatego
       )}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Y\u00fckleniyor...</p>
+        <p className="text-sm text-muted-foreground">Yükleniyor...</p>
       ) : categories.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Hen\u00fcz kategori eklenmedi.</p>
+        <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+          <p className="text-sm text-muted-foreground">Henüz kategori eklenmedi.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Menünüze ürün eklemek için önce bir ana kategori oluşturun.
+          </p>
+          <Button size="sm" className="mt-4 gap-1.5" onClick={() => setForm(emptyForm(null))}>
+            <Plus className="h-3.5 w-3.5" />
+            İlk kategoriyi ekle
+          </Button>
+        </div>
       ) : (
         <div className="space-y-2">
           {categories.map((category) => (

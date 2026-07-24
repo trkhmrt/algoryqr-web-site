@@ -112,7 +112,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return <DashboardOverviewView />;
   }
 
-  if (pathname === DASHBOARD_ROUTES.analytics) {
+  if (
+    pathname === DASHBOARD_ROUTES.analytics ||
+    pathname === DASHBOARD_ROUTES.analyticsLegacy
+  ) {
     return <AnalyticsTab />;
   }
 

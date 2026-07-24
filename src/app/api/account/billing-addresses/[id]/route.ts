@@ -4,6 +4,11 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+export async function GET(request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  return proxyAuthenticatedRequest(request, `/billing-addresses/${encodeURIComponent(id)}`, "GET");
+}
+
 export async function PUT(request: Request, context: RouteContext) {
   const { id } = await context.params;
   return proxyAuthenticatedRequest(request, `/billing-addresses/${encodeURIComponent(id)}`, "PUT");

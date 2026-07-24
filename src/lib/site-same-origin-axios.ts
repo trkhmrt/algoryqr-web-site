@@ -2,6 +2,7 @@
 
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from "axios";
 
+import { getJsonErrorText } from "@/lib/api-error-text";
 import { ApiError } from "@/lib/api/errors";
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -51,7 +52,7 @@ let siteInstance: AxiosInstance | null = null;
 function toApiError(error: AxiosError): ApiError {
   const status = error.response?.status ?? 0;
   const msg =
-    (error.response?.data as { message?: string })?.message ?? error.message ?? "Bir hata oluştu";
+    getJsonErrorText(error.response?.data) || error.message || "Bir hata oluştu";
   return new ApiError(status, msg, error.response?.data);
 }
 

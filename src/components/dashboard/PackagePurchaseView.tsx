@@ -95,6 +95,17 @@ export default function PackagePurchaseView({
   }, [addresses.data]);
 
   useEffect(() => {
+    if (addresses.isError) {
+      onNotify(
+        "danger",
+        addresses.error instanceof ApiError
+          ? addresses.error.message
+          : "Fatura adresleri yüklenemedi.",
+      );
+    }
+  }, [addresses.error, addresses.isError, onNotify]);
+
+  useEffect(() => {
     if (!methodInitialized.current && methods.data?.length) {
       methodInitialized.current = true;
       setPaymentMethodId(methods.data[0].id);
@@ -318,13 +329,27 @@ export default function PackagePurchaseView({
               </div>
               {creatingAddress ? (
                 <BillingAddressForm onSubmit={createAddress} />
+              ) : addresses.isLoading ? (
+                <div className="h-10 animate-pulse rounded-md bg-muted" />
+              ) : addresses.isError ? (
+                <p className="text-sm text-destructive">
+                  {addresses.error instanceof ApiError
+                    ? addresses.error.message
+                    : "Fatura adresleri yüklenemedi."}
+                </p>
               ) : addresses.data?.length ? (
-                <Select value={billingAddressId ? String(billingAddressId) : ""} onValueChange={(value) => setBillingAddressId(Number(value))}>
-                  <SelectTrigger><SelectValue placeholder="Fatura adresi seçin" /></SelectTrigger>
+                <Select
+                  value={billingAddressId ? String(billingAddressId) : ""}
+                  onValueChange={(value) => setBillingAddressId(Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Fatura adresi seçin" />
+                  </SelectTrigger>
                   <SelectContent>
                     {addresses.data.map((address) => (
                       <SelectItem key={address.id} value={String(address.id)}>
                         {displayBillingName(address)} · {address.city}
+                        {address.defaultAddress ? " · Aktif" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
