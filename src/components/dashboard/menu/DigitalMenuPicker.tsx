@@ -1,160 +1,171 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 
-import { isMenuQrDetails, type DashboardQrItem } from "@/components/dashboard/qr/qr-mappers";
+import type { DashboardQrItem } from "@/components/dashboard/qr/qr-mappers";
+import { isMenuQrDetails, mapUserQrToDashboardItem } from "@/components/dashboard/qr/qr-mappers";
 import { Label } from "@/components/ui/label";
-import { invalidateAccessProfile, useAccessProfile } from "@/hooks/use-access-profile";
-import { useTrialStatus } from "@/hooks/use-commerce";
-import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
-import { useUserQrs } from "@/hooks/use-user-qrs";
-import { getMenuByQrIdRequest, type MenuProfileApiItem } from "@/lib/api";
+import { useAccessProfile } from "@/hooks/use-access-profile";
+import { useMenuByQr } from "@/hooks/use-menu-by-qr";
+import {
+  ApiError,
+  getMyActiveMenusRequest,
+  getUserQrsRequest,
+  type ActiveMenuSummaryApiItem,
+  type MenuProfileApiItem,
+} from "@/lib/api";
 import { hasProduct, hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { hasActiveProductAccess, hasExpiredProductAccess } from "@/lib/product-access";
-import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 const STORAGE_KEY = "algory_selected_menu_qr_id";
+
+export const MY_ACTIVE_MENUS_QUERY_KEY = ["myActiveMenus"] as const;
 
 export type DigitalMenuSelection = {
   qr: DashboardQrItem;
   menu: MenuProfileApiItem;
 };
 
-export function useDigitalMenuAccess() {
-  const queryClient = useQueryClient();
-  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
-  const subscription = useSubscription();
-  const trial = useTrialStatus();
-  const entitlements = Array.isArray(subscription.data?.entitlements)
-    ? subscription.data.entitlements
-    : [];
-  const purchases = Array.isArray(subscription.data?.purchases) ? subscription.data.purchases : [];
-  const entitlementAccess = hasActiveProductAccess(entitlements, purchases, "QR_MENU");
-  const scopeAccess = hasScope(accessProfile, "QR_MENU_OWNER");
-  const productAccess = hasProduct(accessProfile, "QR_MENU");
-  const trialAccess = trial.data?.status === "ACTIVE";
-  const canUseDigitalMenu =
-    entitlementAccess || scopeAccess || productAccess || trialAccess;
-  const hadExpiredAccess =
-    !canUseDigitalMenu &&
-    (hasExpiredProductAccess(entitlements, purchases, "QR_MENU") ||
-      trial.data?.status === "TRIAL_EXPIRED");
-  const needsTokenRefresh =
-    (entitlementAccess || trialAccess || productAccess) && !scopeAccess;
-
-  useEffect(() => {
-    if (!needsTokenRefresh || subscription.isLoading || accessLoading || trial.isLoading) {
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        await getSiteSameOriginAxios().post("/auth/refresh");
-        if (!cancelled) {
-          await Promise.all([
-            invalidateAccessProfile(queryClient),
-            invalidateSubscription(queryClient),
-          ]);
-        }
-      } catch {
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    accessLoading,
-    needsTokenRefresh,
-    queryClient,
-    subscription.isLoading,
-    trial.isLoading,
-  ]);
-
+function mapActiveMenuToDashboardItem(item: ActiveMenuSummaryApiItem): DashboardQrItem {
+  const businessName = item.businessName?.trim() || undefined;
+  const qrName = item.qr?.name?.trim() || undefined;
   return {
-    accessLoading: accessLoading || subscription.isLoading || trial.isLoading,
-    canUseDigitalMenu,
-    hadExpiredAccess,
+    id: item.qrId,
+    userId: 0,
+    name: qrName || businessName || `Menü #${item.qrId}`,
+    content: item.publicUrl ?? "",
+    scans: 0,
+    created: "",
+    type: "menu",
+    active: item.active,
+    imgSrc: null,
+    details: {
+      type: "menu",
+      businessName: businessName ?? "",
+      themeId: item.themeId ?? "",
+      menuId: item.menuId,
+    },
+    menuId: item.menuId,
+    publicUrl: item.publicUrl ?? undefined,
   };
 }
 
-export function useDigitalMenuOptions() {
-  const qrsQuery = useUserQrs("me");
-  const menuQrs = useMemo(
-    () => (qrsQuery.data ?? []).filter((item) => isMenuQrDetails(item.details)),
-    [qrsQuery.data],
-  );
-  return { menuQrs, loading: qrsQuery.isLoading || qrsQuery.isFetching };
+export function useDigitalMenuAccess() {
+  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
+  const canUseDigitalMenu =
+    hasScope(accessProfile, "QR_MENU_OWNER") || hasProduct(accessProfile, "QR_MENU");
+
+  return {
+    accessLoading,
+    canUseDigitalMenu,
+    hadExpiredAccess: false,
+  };
 }
 
-export function useDigitalMenuSelection(initialQrId?: number | null) {
-  const { menuQrs, loading: optionsLoading } = useDigitalMenuOptions();
-  const [selection, setSelection] = useState<DigitalMenuSelection | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const lastResolvedId = useRef<number | null>(null);
-
-  const selectQrId = useCallback(
-    async (qrId: number) => {
-      const qr = menuQrs.find((item) => item.id === qrId);
-      if (!qr) {
-        setSelection(null);
-        setError("Menü bulunamadı.");
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError(null);
+export function useDigitalMenuOptions(enabled = true) {
+  const query = useQuery({
+    queryKey: MY_ACTIVE_MENUS_QUERY_KEY,
+    queryFn: async (): Promise<DashboardQrItem[]> => {
       try {
-        const menu = await getMenuByQrIdRequest(qr.id);
-        setSelection({ qr, menu });
-        lastResolvedId.current = qr.id;
-        if (typeof window !== "undefined") {
-          window.sessionStorage.setItem(STORAGE_KEY, String(qr.id));
+        const items = await getMyActiveMenusRequest();
+        return items.map(mapActiveMenuToDashboardItem);
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 404) {
+          throw error;
         }
-      } catch (err) {
-        setSelection(null);
-        setError(err instanceof Error ? err.message : "Menü yüklenemedi.");
-      } finally {
-        setLoading(false);
+        const qrs = await getUserQrsRequest("me", { includeImage: false });
+        return qrs
+          .filter((qr) => isMenuQrDetails(qr.details ?? {}))
+          .map(mapUserQrToDashboardItem);
       }
     },
-    [menuQrs],
-  );
+    enabled,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+  return {
+    menuQrs: query.data ?? [],
+    loading: query.isLoading || query.isFetching,
+    error: query.error,
+  };
+}
+
+export function invalidateMyActiveMenus(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({ queryKey: MY_ACTIVE_MENUS_QUERY_KEY });
+}
+
+export function useDigitalMenuSelection(initialQrId?: number | null, enabled = true) {
+  const { menuQrs, loading: optionsLoading } = useDigitalMenuOptions(enabled);
+  const [preferredQrId, setPreferredQrId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (optionsLoading) return;
+    if (!enabled || optionsLoading) return;
     if (menuQrs.length === 0) {
-      setSelection(null);
-      setLoading(false);
-      lastResolvedId.current = null;
+      setPreferredQrId(null);
       return;
     }
 
     const stored =
       typeof window !== "undefined" ? Number(window.sessionStorage.getItem(STORAGE_KEY)) : NaN;
-    const preferredId =
+    const nextId =
       (initialQrId != null && menuQrs.some((item) => item.id === initialQrId) ? initialQrId : null) ??
-      (lastResolvedId.current != null && menuQrs.some((item) => item.id === lastResolvedId.current)
-        ? lastResolvedId.current
+      (preferredQrId != null && menuQrs.some((item) => item.id === preferredQrId)
+        ? preferredQrId
         : null) ??
       (Number.isFinite(stored) && menuQrs.some((item) => item.id === stored) ? stored : null) ??
       menuQrs[0].id;
 
-    if (lastResolvedId.current === preferredId) {
-      setLoading(false);
-      return;
+    if (nextId !== preferredQrId) {
+      setPreferredQrId(nextId);
     }
-    void selectQrId(preferredId);
-  }, [initialQrId, menuQrs, optionsLoading, selectQrId]);
+  }, [enabled, initialQrId, menuQrs, optionsLoading, preferredQrId]);
+
+  const selectQrId = useCallback(
+    async (qrId: number) => {
+      const qr = menuQrs.find((item) => item.id === qrId);
+      if (!qr) return;
+      setPreferredQrId(qr.id);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(STORAGE_KEY, String(qr.id));
+      }
+    },
+    [menuQrs],
+  );
+
+  const menuQuery = useMenuByQr(preferredQrId, enabled && !optionsLoading && preferredQrId != null);
+  const selectedQr = useMemo(
+    () => (preferredQrId != null ? menuQrs.find((item) => item.id === preferredQrId) ?? null : null),
+    [menuQrs, preferredQrId],
+  );
+
+  const selection = useMemo<DigitalMenuSelection | null>(() => {
+    if (!selectedQr || !menuQuery.data) return null;
+    return { qr: selectedQr, menu: menuQuery.data };
+  }, [menuQuery.data, selectedQr]);
+
+  useEffect(() => {
+    if (menuQuery.data && preferredQrId != null && typeof window !== "undefined") {
+      window.sessionStorage.setItem(STORAGE_KEY, String(preferredQrId));
+    }
+  }, [menuQuery.data, preferredQrId]);
+
+  const error =
+    preferredQrId != null && !selectedQr && !optionsLoading
+      ? "Menü bulunamadı."
+      : menuQuery.error instanceof Error
+        ? menuQuery.error.message
+        : menuQuery.isError
+          ? "Menü yüklenemedi."
+          : null;
 
   return {
     menuQrs,
     selection,
-    loading: optionsLoading || loading,
+    loading: optionsLoading || (preferredQrId != null && menuQuery.isLoading),
     error,
     selectQrId,
   };

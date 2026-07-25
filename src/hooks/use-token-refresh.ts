@@ -3,14 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api/errors";
-import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config.client";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
-/** Access token süresi dolmadan kaç saniye önce refresh atılacak */
 const REFRESH_BUFFER_SECONDS = 30;
 
 /**
- * Girişten sonra en geç 5 dk içinde refresh isteği atar; token daha erken bitiyorsa exp'ten 30 sn önce atar.
+ * Access token süresi dolmadan 30 sn önce refresh atar.
  * Verilmezse accessTokenExpiresAt /api/auth/token-exp ile alınır.
  */
 export function useTokenRefresh(accessTokenExpiresAt?: number) {
@@ -40,8 +38,7 @@ export function useTokenRefresh(accessTokenExpiresAt?: number) {
     const secondsUntilExp = exp - now;
     if (secondsUntilExp <= 0) return;
 
-    const fromExpMs = Math.max(1000, (secondsUntilExp - REFRESH_BUFFER_SECONDS) * 1000);
-    const refreshInMs = Math.min(REFRESH_AFTER_LOGIN_MS, fromExpMs);
+    const refreshInMs = Math.max(1000, (secondsUntilExp - REFRESH_BUFFER_SECONDS) * 1000);
 
     timeoutRef.current = setTimeout(() => {
       getSiteSameOriginAxios()

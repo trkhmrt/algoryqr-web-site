@@ -13,6 +13,7 @@ import {
   MENU_THEME_PREVIEW_MENU,
   MENU_THEME_PREVIEW_PRODUCTS,
 } from "./preview-data";
+import { MenuProductFeed } from "./shared";
 
 type MenuThemePreviewDialogProps = {
   themeId: string;
@@ -41,12 +42,18 @@ export function MenuThemePreviewDialog({
         <div className="relative mx-auto w-full max-w-[390px] isolate overflow-hidden rounded-[1.75rem] border border-border bg-background shadow-inner [transform:translateZ(0)]">
           <div className="relative h-[min(70vh,720px)] overflow-y-auto overscroll-contain">
             {open ? (
-              <Component
+              <MenuProductFeed
                 key={themeId}
-                menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
-                products={MENU_THEME_PREVIEW_PRODUCTS}
-                categories={MENU_THEME_PREVIEW_CATEGORIES}
-              />
+                menuId={MENU_THEME_PREVIEW_MENU.menuId}
+                initialProducts={MENU_THEME_PREVIEW_PRODUCTS}
+                productHasNext={false}
+              >
+                <Component
+                  menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
+                  products={MENU_THEME_PREVIEW_PRODUCTS}
+                  categories={MENU_THEME_PREVIEW_CATEGORIES}
+                />
+              </MenuProductFeed>
             ) : null}
           </div>
         </div>

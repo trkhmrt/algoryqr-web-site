@@ -2,16 +2,24 @@
 
 import { useMenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
 
+import { MenuChefFab } from "./chef";
 import { getMenuTemplate } from "./registry";
-import type { MenuTemplateProps } from "./types";
+import {
+  MenuProductFeed,
+  MenuProductNavigatorProvider,
+  useMenuProductFeed,
+} from "./shared";
+import type { MenuTemplateRendererProps } from "./types";
 
-export function MenuTemplateRenderer({
+function MenuTemplateBody({
   menu,
-  products,
   categories = [],
   themeId,
-}: MenuTemplateProps & { themeId: string }) {
-  const analytics = useMenuVisitAnalytics(menu.menuId);
+  analytics,
+}: Omit<MenuTemplateRendererProps, "products" | "productPage" | "productSize" | "productTotalElements" | "productHasNext"> & {
+  analytics: ReturnType<typeof useMenuVisitAnalytics>;
+}) {
+  const { products } = useMenuProductFeed();
   const { Component } = getMenuTemplate(themeId);
   return (
     <Component
@@ -20,5 +28,37 @@ export function MenuTemplateRenderer({
       categories={categories}
       analytics={analytics}
     />
+  );
+}
+
+export function MenuTemplateRenderer({
+  menu,
+  products,
+  categories = [],
+  themeId,
+  productPage = 0,
+  productSize = 20,
+  productHasNext = false,
+}: MenuTemplateRendererProps) {
+  const analytics = useMenuVisitAnalytics(menu.menuId);
+
+  return (
+    <MenuProductFeed
+      menuId={menu.menuId}
+      initialProducts={products}
+      productPage={productPage}
+      productSize={productSize}
+      productHasNext={productHasNext}
+    >
+      <MenuProductNavigatorProvider>
+        <MenuTemplateBody
+          menu={menu}
+          categories={categories}
+          themeId={themeId}
+          analytics={analytics}
+        />
+        <MenuChefFab menuId={menu.menuId} />
+      </MenuProductNavigatorProvider>
+    </MenuProductFeed>
   );
 }

@@ -2,12 +2,14 @@ type TopNavProps = {
   businessName: string;
   variant?: "home" | "detail";
   onBack?: () => void;
+  onHome?: () => void;
 };
 
 export function LumiereTopNav({
   businessName,
   variant = "home",
   onBack,
+  onHome,
 }: TopNavProps) {
   const title = businessName.trim() || "Menü";
 
@@ -23,7 +25,9 @@ export function LumiereTopNav({
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h1 className="lm-headline-md tracking-tighter text-[var(--lm-on-surface)]">{title}</h1>
+          <h1 className="lm-headline-md tracking-tighter text-[var(--lm-on-surface)]">
+            {title}
+          </h1>
           <div className="w-6" />
         </div>
       </header>
@@ -33,10 +37,16 @@ export function LumiereTopNav({
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--lm-outline-variant)] bg-[var(--lm-surface)]">
       <div className="mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-[var(--lm-margin)]">
-        <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onHome}
+          className="flex items-center gap-4 text-left"
+        >
           <span className="material-symbols-outlined lm-primary">restaurant_menu</span>
-          <h1 className="lm-headline-md tracking-tighter text-[var(--lm-on-surface)]">{title}</h1>
-        </div>
+          <h1 className="lm-headline-md tracking-tighter text-[var(--lm-on-surface)]">
+            {title}
+          </h1>
+        </button>
       </div>
     </header>
   );

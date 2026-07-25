@@ -15,7 +15,8 @@ export function useAccessProfile(enabled = true) {
       return response.data;
     },
     enabled,
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
     retry: 1,
   });
 }

@@ -5,8 +5,6 @@ export type LumiereView =
   | { type: "category"; categoryId: number }
   | { type: "product"; productId: number; categoryId: number | null };
 
-export type LumiereNavTab = "menu" | "search" | "specials" | "info";
-
 export function collectCategoryIds(category: MenuCategoryApiItem): number[] {
   return [
     category.categoryId,

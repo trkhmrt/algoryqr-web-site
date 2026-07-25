@@ -10,6 +10,14 @@ export const DASHBOARD_ROUTES = {
   digitalMenuCategories: "/dashboard/dijital-menu/kategoriler",
   digitalMenuCreate: "/dashboard/dijital-menu/olustur",
   digitalMenuEdit: (qrId: number | string) => `/dashboard/dijital-menu/qr/${qrId}`,
+  digitalMenuSettings: (qrId: number | string) =>
+    `/dashboard/dijital-menu/qr/${qrId}/ayarlar`,
+  digitalMenuProductsForQr: (qrId: number | string) =>
+    `/dashboard/dijital-menu/urunler?qr=${qrId}`,
+  digitalMenuCategoriesForQr: (qrId: number | string) =>
+    `/dashboard/dijital-menu/kategoriler?qr=${qrId}`,
+  digitalMenuAnalytics: (qrId: number | string) =>
+    `/dashboard/dijital-menu/analitik?qr=${qrId}`,
   digitalMenuCheckout: (packageId: number | string) =>
     `/dashboard/dijital-menu/satin-al/${packageId}`,
   qrCodes: "/dashboard/qr-kodlarim",

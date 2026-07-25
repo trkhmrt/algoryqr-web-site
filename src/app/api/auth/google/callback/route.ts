@@ -12,6 +12,7 @@ import {
   setTokenExpiryCookies,
 } from "@/lib/server/auth-cookies";
 import { getAppOrigin } from "@/lib/server/app-origin";
+import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 import {
   type GoogleAuthErrorCode,
   googleAuthErrorRedirect,
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
     const refreshTokenExpiresAt =
       readPositiveNumber(data.refreshTokenExpiresAt) ??
       isoToEpochSeconds(readString(data.refreshExpiresAt)) ??
-      undefined;
+      (await fetchCurrentSessionRefreshExpiresAt(accessToken));
     const userId =
       readPositiveNumber(data.userId) ??
       getUserIdFromAccessToken(accessToken) ??

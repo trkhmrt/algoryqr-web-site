@@ -5,6 +5,12 @@ import { useMemo, useState } from "react";
 import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
 import type { MenuTemplateProps } from "../types";
 import {
+  MenuProductScrollSentinel,
+  resolveSelectedProduct,
+  searchMenuProducts,
+  useRegisterChefOpenProduct,
+} from "../shared";
+import {
   type GlassyView,
   filterProductsForCategory,
   findCategoryById,
@@ -14,6 +20,7 @@ import {
 import { GlassyGrayCategoryView } from "./CategoryView";
 import { GlassyGrayShell } from "./GlassyGrayShell";
 import { GlassyGrayHomeView } from "./HomeView";
+import { GlassyGrayProductCard } from "./ProductCard";
 import { GlassyGrayProductDetailView } from "./ProductDetailView";
 
 export function GlassyGrayMenuTemplate({
@@ -24,6 +31,9 @@ export function GlassyGrayMenuTemplate({
 }: MenuTemplateProps) {
   const [view, setView] = useState<GlassyView>({ type: "home" });
   const [searchValue, setSearchValue] = useState("");
+  const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(
+    null,
+  );
 
   const activeCategoryId =
     view.type === "category"
@@ -42,13 +52,19 @@ export function GlassyGrayMenuTemplate({
 
   const popular = useMemo(() => popularProducts(products), [products]);
 
+  const globalResults = useMemo(
+    () => (searchValue.trim() ? searchMenuProducts(products, searchValue) : null),
+    [products, searchValue],
+  );
+
   const selectedProduct =
     view.type === "product"
-      ? products.find((p) => p.productId === view.productId) ?? null
+      ? resolveSelectedProduct(products, view.productId, pinnedProduct)
       : null;
 
   const goHome = () => {
     setSearchValue("");
+    setPinnedProduct(null);
     setView({ type: "home" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -62,11 +78,13 @@ export function GlassyGrayMenuTemplate({
       setView({ type: "home" });
     }
     setSearchValue("");
+    setPinnedProduct(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const selectCategory = (category: MenuCategoryApiItem) => {
     setSearchValue("");
+    setPinnedProduct(null);
     setView({ type: "category", categoryId: category.categoryId });
     analytics?.trackCategoryView(category.categoryId);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -74,6 +92,7 @@ export function GlassyGrayMenuTemplate({
 
   const openProduct = (product: MenuProductApiItem) => {
     const categoryId = product.categoryId ?? activeCategoryId;
+    setPinnedProduct(product);
     setView({
       type: "product",
       productId: product.productId,
@@ -83,7 +102,10 @@ export function GlassyGrayMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  useRegisterChefOpenProduct(openProduct);
+
   const backFromProduct = () => {
+    setPinnedProduct(null);
     if (view.type === "product" && view.categoryId != null) {
       setView({ type: "category", categoryId: view.categoryId });
     } else {
@@ -93,6 +115,7 @@ export function GlassyGrayMenuTemplate({
   };
 
   const activeNav: "home" | "menu" = view.type === "home" ? "home" : "menu";
+  const showSearch = view.type === "category" || view.type === "home";
 
   return (
     <GlassyGrayShell
@@ -100,15 +123,43 @@ export function GlassyGrayMenuTemplate({
       categories={categories}
       activeNav={activeNav}
       activeCategoryId={activeCategoryId}
-      showSearch={view.type === "category"}
+      showSearch={showSearch}
       searchValue={searchValue}
       onSearchChange={setSearchValue}
       onHome={goHome}
       onMenu={goMenu}
       onSelectCategory={selectCategory}
       onBack={view.type === "product" ? backFromProduct : undefined}
+      showCategoryRail={view.type === "category"}
     >
-      {view.type === "home" ? (
+      {view.type === "home" && globalResults ? (
+        <section>
+          <h2 className="gg-display mb-4 text-2xl font-bold text-white">
+            Arama sonuçları
+          </h2>
+          <p className="gg-muted mb-6 text-sm">
+            “{searchValue.trim()}” için {globalResults.length} sonuç
+          </p>
+          {globalResults.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {globalResults.map((item) => (
+                <GlassyGrayProductCard
+                  key={item.productId}
+                  item={item}
+                  onOpen={openProduct}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="gg-glass-heavy gg-muted rounded-3xl p-8 text-center">
+              Aramanızla eşleşen ürün bulunamadı.
+            </p>
+          )}
+          <MenuProductScrollSentinel className="gg-muted flex min-h-8 items-center justify-center py-6 text-sm" />
+        </section>
+      ) : null}
+
+      {view.type === "home" && !globalResults ? (
         <GlassyGrayHomeView
           menu={menu}
           popular={popular}
@@ -128,7 +179,7 @@ export function GlassyGrayMenuTemplate({
 
       {view.type === "category" && !activeCategory ? (
         <p className="gg-glass-heavy gg-muted rounded-3xl p-8 text-center">
-          Kategori bulunamadi.
+          Kategori bulunamadı.
         </p>
       ) : null}
 
@@ -138,7 +189,7 @@ export function GlassyGrayMenuTemplate({
 
       {view.type === "product" && !selectedProduct ? (
         <p className="gg-glass-heavy gg-muted rounded-3xl p-8 text-center">
-          Urun bulunamadi.
+          Ürün bulunamadı.
         </p>
       ) : null}
     </GlassyGrayShell>

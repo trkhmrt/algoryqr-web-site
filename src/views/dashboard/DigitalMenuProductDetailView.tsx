@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import {
@@ -11,9 +12,10 @@ import {
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import ProductNutritionPanel from "@/components/dashboard/menu/ProductNutritionPanel";
-import { getMenuProductsRequest, MenuProductApiItem, NutritionFacts } from "@/lib/api";
+import { MenuProductApiItem, NutritionFacts } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 
 type DigitalMenuProductDetailViewProps = {
   productId: number;
@@ -21,6 +23,7 @@ type DigitalMenuProductDetailViewProps = {
 
 export default function DigitalMenuProductDetailView({ productId }: DigitalMenuProductDetailViewProps) {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
   const initialQrId = useMemo(() => {
     const raw = Number(searchParams.get("qr"));
@@ -29,43 +32,51 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const { selection, loading: selectionLoading, error: selectionError } =
     useDigitalMenuSelection(initialQrId);
-  const [product, setProduct] = useState<MenuProductApiItem | null>(null);
-  const [loadingProduct, setLoadingProduct] = useState(true);
+  const menuId = selection?.menu.menuId ?? null;
+  const productsQuery = useMenuProducts(menuId);
+  const [productOverride, setProductOverride] = useState<MenuProductApiItem | null>(null);
 
-  const loadProduct = useCallback(async () => {
-    if (!selection?.menu.menuId) {
-      setProduct(null);
-      setLoadingProduct(false);
-      return;
-    }
-    setLoadingProduct(true);
-    try {
-      const products = await getMenuProductsRequest(selection.menu.menuId);
-      const found = products.find((item) => item.productId === productId) ?? null;
-      setProduct(found);
-      if (!found) {
-        notify("danger", "�r�n bulunamad?.");
-      }
-    } catch (error) {
-      notify("danger", error instanceof Error ? error.message : "�r�n y�klenemedi.");
-      setProduct(null);
-    } finally {
-      setLoadingProduct(false);
-    }
-  }, [notify, productId, selection?.menu.menuId]);
+  const productFromQuery = useMemo(() => {
+    const products = productsQuery.data ?? [];
+    return products.find((item) => item.productId === productId) ?? null;
+  }, [productId, productsQuery.data]);
+
+  const product = productOverride?.productId === productId ? productOverride : productFromQuery;
 
   useEffect(() => {
-    void loadProduct();
-  }, [loadProduct]);
+    setProductOverride(null);
+  }, [productId, productsQuery.dataUpdatedAt]);
+
+  useEffect(() => {
+    if (!selection?.menu.menuId || !productsQuery.isFetched || productsQuery.isFetching) return;
+    if (productsQuery.isError) {
+      notify(
+        "danger",
+        productsQuery.error instanceof Error ? productsQuery.error.message : "Ürün yüklenemedi.",
+      );
+      return;
+    }
+    if (productsQuery.isSuccess && !productFromQuery) {
+      notify("danger", "Ürün bulunamadı.");
+    }
+  }, [productId, productsQuery.dataUpdatedAt, productsQuery.isError, selection?.menu.menuId]);
 
   const backHref =
     selection?.qr.id != null
       ? `${DASHBOARD_ROUTES.digitalMenuProducts}?qr=${selection.qr.id}`
       : DASHBOARD_ROUTES.digitalMenuProducts;
 
-  const handleNutritionSaved = (nutrition: NutritionFacts) => {
-    setProduct((prev) => (prev ? { ...prev, nutrition } : prev));
+  const handleNutritionSaved = async (nutrition: NutritionFacts) => {
+    setProductOverride((prev) => {
+      const base = prev?.productId === productId ? prev : productFromQuery;
+      return base ? { ...base, nutrition } : prev;
+    });
+    if (menuId != null) {
+      await invalidateMenuProducts(queryClient, menuId);
+    }
   };
+
+  const loadingProduct = Boolean(menuId) && productsQuery.isLoading;
 
   return (
     <DigitalMenuGate accessLoading={accessLoading} canUse={canUseDigitalMenu}>
@@ -76,12 +87,12 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            �r�nlere d�n
+            Ürünlere dön
           </Link>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">�r�n detay?</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ürün detayı</h1>
             <p className="text-sm text-muted-foreground">
-              �r�n bilgilerini g�r�nt�leyin ve besin de?erlerini g�ncelleyin.
+              Ürün bilgilerini görüntüleyin ve besin değerlerini güncelleyin.
             </p>
           </div>
         </div>
@@ -89,12 +100,12 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
         {selectionLoading || loadingProduct ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            �r�n y�kleniyor�
+            Ürün yükleniyor…
           </div>
         ) : selectionError ? (
           <p className="text-sm text-destructive">{selectionError}</p>
         ) : !product ? (
-          <p className="text-sm text-muted-foreground">�r�n bulunamad?.</p>
+          <p className="text-sm text-muted-foreground">Ürün bulunamadı.</p>
         ) : (
           <div className="space-y-4">
             <div className="rounded-lg border border-border bg-card p-4 sm:p-6 space-y-3">
@@ -106,10 +117,10 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                     product.price != null && product.price !== ""
                       ? `${product.price} ${product.currency}`
                       : null,
-                    product.available ? "Sat??ta" : "Sat?? d???",
+                    product.available ? "Satışta" : "Satış dışı",
                   ]
                     .filter(Boolean)
-                    .join(" � ")}
+                    .join(" · ")}
                 </p>
               </div>
               {product.description ? (

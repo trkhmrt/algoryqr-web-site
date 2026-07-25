@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { invalidateMyActiveMenus, useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { MenuDetails, createInitialMenuData, type MenuData } from "@/components/dashboard/qr-create/MenuDetails";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
@@ -58,7 +58,10 @@ export default function DigitalMenuCreateView() {
       });
       await invalidatePackageUsage(queryClient);
       const storedUser = getStoredUser();
-      await invalidateUserQrs(queryClient, storedUser?.id != null ? String(storedUser.id) : "me");
+      await Promise.all([
+        invalidateUserQrs(queryClient, storedUser?.id != null ? String(storedUser.id) : "me"),
+        invalidateMyActiveMenus(queryClient),
+      ]);
       notify("info", "Dijital menü QR kodunuz oluşturuldu.");
       if (response.qrId != null) {
         router.push(DASHBOARD_ROUTES.digitalMenuEdit(response.qrId));

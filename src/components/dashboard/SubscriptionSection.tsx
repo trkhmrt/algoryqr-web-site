@@ -29,10 +29,8 @@ import {
 } from "@/lib/package-display";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import {
-  invalidateSubscription,
   useSubscription,
 } from "@/hooks/use-subscription";
-import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import {
   invalidateDigitalMenuTrial,
   startTrialRequest,
@@ -53,7 +51,7 @@ import {
   directionLabel,
   listMyPlanChanges,
 } from "@/lib/plan-change";
-import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { ApiError } from "@/lib/api/errors";
 import type { PlanPackageApiItem } from "@/lib/api";
 
@@ -118,12 +116,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       handledPurchaseId.current = summary.purchaseId;
       clearPendingPurchaseId();
       void (async () => {
-        await getSiteSameOriginAxios().post("/auth/refresh");
-        await Promise.all([
-          invalidateSubscription(queryClient),
-          invalidatePackageUsage(queryClient),
-          invalidateAccessProfile(queryClient),
-        ]);
+        await refreshAccessAfterEntitlementChange(queryClient);
+        await invalidatePackageUsage(queryClient);
         onNotify("info", "Ödeme tamamlandı ve paketiniz aktif edildi.");
         router.replace(DASHBOARD_ROUTES.accountSubscription);
       })();
@@ -168,12 +162,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       return cancelPurchase(cancellablePurchase.id);
     },
     onSuccess: async () => {
-      await getSiteSameOriginAxios().post("/auth/refresh");
-      await Promise.all([
-        invalidateSubscription(queryClient),
-        invalidatePackageUsage(queryClient),
-        invalidateAccessProfile(queryClient),
-      ]);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await invalidatePackageUsage(queryClient);
       onNotify("info", "Paketiniz iptal edildi.");
     },
     onError: (error: unknown) => {
@@ -193,11 +183,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       return resumePurchaseRenewal(cancellablePurchase.id);
     },
     onSuccess: async () => {
-      await Promise.all([
-        invalidateSubscription(queryClient),
-        invalidatePackageUsage(queryClient),
-        invalidateAccessProfile(queryClient),
-      ]);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await invalidatePackageUsage(queryClient);
       onNotify("info", "Abonelik yenilemesi yeniden açıldı.");
     },
     onError: (error: unknown) => {
@@ -228,11 +215,9 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     setStartingPackageId(selectedPackageId);
     try {
       const started = await startTrialRequest(selectedPackageId);
-      await getSiteSameOriginAxios().post("/auth/refresh");
+      await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
         invalidateDigitalMenuTrial(queryClient),
-        invalidateAccessProfile(queryClient),
-        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
       ]);
       onNotify(

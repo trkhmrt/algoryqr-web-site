@@ -4,7 +4,13 @@ import { NextResponse } from "next/server";
 
 import { getExpFromAccessToken } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
-import { clearAuthCookies, readRefreshTokenFromCookies, setAuthCookies } from "@/lib/server/auth-cookies";
+import {
+  clearAuthCookies,
+  readRefreshTokenFromCookies,
+  setAuthCookies,
+  setTokenExpiryCookies,
+} from "@/lib/server/auth-cookies";
+import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 
 export async function POST(req: Request) {
   try {
@@ -51,15 +57,29 @@ export async function POST(req: Request) {
 
     const accessToken = data?.accessToken ?? data?.access_token;
     const newRefresh = data?.refreshToken ?? data?.refresh_token;
-    const accessTokenExpiresAt = getExpFromAccessToken(typeof accessToken === "string" ? accessToken : undefined);
+    const accessTokenExpiresAt = getExpFromAccessToken(
+      typeof accessToken === "string" ? accessToken : undefined,
+    );
+    const refreshTokenExpiresAt =
+      typeof accessToken === "string"
+        ? await fetchCurrentSessionRefreshExpiresAt(accessToken)
+        : undefined;
 
-    const response = NextResponse.json({ ...data, accessTokenExpiresAt }, { status: 200 });
+    const response = NextResponse.json(
+      { ...data, accessTokenExpiresAt, refreshTokenExpiresAt },
+      { status: 200 },
+    );
 
     setAuthCookies(
       response,
       typeof accessToken === "string" ? accessToken : undefined,
       typeof newRefresh === "string" ? newRefresh : undefined,
       typeof data.userId === "number" ? data.userId : undefined,
+    );
+    setTokenExpiryCookies(
+      response,
+      accessTokenExpiresAt ?? undefined,
+      refreshTokenExpiresAt,
     );
 
     return response;

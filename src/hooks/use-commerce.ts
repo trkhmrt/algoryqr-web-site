@@ -61,13 +61,14 @@ export function useDigitalMenuTrialStatus() {
   return useTrialStatus();
 }
 
-export function useTrialStatus() {
+export function useTrialStatus(enabled = true) {
   return useQuery({
     queryKey: TRIAL_STATUS_QUERY_KEY,
     queryFn: async () => {
       const response = await getSiteSameOriginAxios().get("/trials/status");
       return mapTrialStatus(response.data) satisfies DigitalMenuTrialStatus;
     },
+    enabled,
     staleTime: 15_000,
     retry: 1,
   });

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, FolderPlus, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,16 @@ import { Label } from "@/components/ui/label";
 import {
   createMenuCategoryRequest,
   deleteMenuCategoryRequest,
-  getMenuCategoriesRequest,
   MenuCategoryApiItem,
   updateMenuCategoryRequest,
 } from "@/lib/api";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { invalidateMenuCategories, useMenuCategoriesByQr } from "@/hooks/use-menu-categories";
+import { invalidateMenuProducts } from "@/hooks/use-menu-products";
 
 type MenuCategoriesPanelProps = {
   menuId: number;
+  qrId: number;
   onAddProduct?: (categoryId: number) => void;
 };
 
@@ -65,7 +68,7 @@ function CategoryNode({
           {onAddProduct ? (
             <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => onAddProduct(category.categoryId)}>
               <Plus className="mr-1 h-3.5 w-3.5" />
-              {"\u00dcr\u00fcn"}
+              Ürün
             </Button>
           ) : null}
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(category)}>
@@ -96,33 +99,38 @@ function CategoryNode({
   );
 }
 
-export default function MenuCategoriesPanel({ menuId, onAddProduct }: MenuCategoriesPanelProps) {
+export default function MenuCategoriesPanel({ menuId, qrId, onAddProduct }: MenuCategoriesPanelProps) {
+  const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const [categories, setCategories] = useState<MenuCategoryApiItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const categoriesQuery = useMenuCategoriesByQr(qrId);
+  const categories = categoriesQuery.data?.categories ?? [];
+  const resolvedMenuId = categoriesQuery.data?.menuId ?? menuId;
+  const loading = categoriesQuery.isLoading;
   const [form, setForm] = useState<CategoryFormState | null>(null);
 
-  const loadCategories = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getMenuCategoriesRequest(menuId);
-      setCategories(data);
-    } catch (error) {
-      notify("danger", error instanceof Error ? error.message : "Kategoriler y\u00fcklenemedi.");
-    } finally {
-      setLoading(false);
-    }
-  }, [menuId, notify]);
-
   useEffect(() => {
-    void loadCategories();
-  }, [loadCategories]);
+    if (categoriesQuery.isError) {
+      notify(
+        "danger",
+        categoriesQuery.error instanceof Error
+          ? categoriesQuery.error.message
+          : "Kategoriler yüklenemedi.",
+      );
+    }
+  }, [categoriesQuery.error, categoriesQuery.isError, notify]);
 
   const resetForm = () => setForm(null);
 
+  const refreshAfterCategoryChange = async () => {
+    await Promise.all([
+      invalidateMenuCategories(queryClient, resolvedMenuId, qrId),
+      invalidateMenuProducts(queryClient, resolvedMenuId, qrId),
+    ]);
+  };
+
   const handleSubmit = async () => {
     if (!form || !form.name.trim()) {
-      notify("warning", "Kategori ad\u0131 zorunlu.");
+      notify("warning", "Kategori adı zorunlu.");
       return;
     }
 
@@ -134,16 +142,16 @@ export default function MenuCategoriesPanel({ menuId, onAddProduct }: MenuCatego
           parentId: current?.parentId ?? null,
           sortOrder: current?.sortOrder,
         });
-        notify("info", "Kategori g\u00fcncellendi.");
+        notify("info", "Kategori güncellendi.");
       } else {
-        await createMenuCategoryRequest(menuId, {
+        await createMenuCategoryRequest(resolvedMenuId, {
           name: form.name.trim(),
           parentId: form.parentId,
         });
         notify("info", "Kategori eklendi.");
       }
       resetForm();
-      await loadCategories();
+      await refreshAfterCategoryChange();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "Kategori kaydedilemedi.");
     }
@@ -153,7 +161,7 @@ export default function MenuCategoriesPanel({ menuId, onAddProduct }: MenuCatego
     try {
       await deleteMenuCategoryRequest(categoryId);
       notify("info", "Kategori silindi.");
-      await loadCategories();
+      await refreshAfterCategoryChange();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "Kategori silinemedi.");
     }
@@ -162,7 +170,7 @@ export default function MenuCategoriesPanel({ menuId, onAddProduct }: MenuCatego
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">Ana ve alt kategorileri y\u00f6netin.</p>
+        <p className="text-xs text-muted-foreground">Ana ve alt kategorileri yönetin.</p>
         <Button size="sm" className="gap-1.5" onClick={() => setForm(emptyForm(null))}>
           <Plus className="h-3.5 w-3.5" />
           Ana Kategori
@@ -174,19 +182,19 @@ export default function MenuCategoriesPanel({ menuId, onAddProduct }: MenuCatego
           <div className="space-y-1.5">
             <Label className="text-xs">
               {form.editingId != null
-                ? "Kategori Ad\u0131"
+                ? "Kategori Adı"
                 : form.parentId != null
-                  ? "Alt Kategori Ad\u0131"
-                  : "Ana Kategori Ad\u0131"}
+                  ? "Alt Kategori Adı"
+                  : "Ana Kategori Adı"}
             </Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => void handleSubmit()}>
-              {form.editingId != null ? "G\u00fcncelle" : "Kaydet"}
+              {form.editingId != null ? "Güncelle" : "Kaydet"}
             </Button>
             <Button size="sm" variant="outline" onClick={resetForm}>
-              {"\u0130ptal"}
+              İptal
             </Button>
           </div>
         </div>

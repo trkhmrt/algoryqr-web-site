@@ -4,12 +4,11 @@ import { useMemo, useRef, useState } from "react";
 
 import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
 import type { MenuTemplateProps } from "../types";
+import { resolveSelectedProduct, useRegisterChefOpenProduct } from "../shared";
 import {
-  type LumiereNavTab,
   type LumiereView,
   filterProductsForCategory,
   findCategoryById,
-  firstRootCategory,
 } from "./category-utils";
 import { LumiereCategoryView } from "./CategoryView";
 import { LumiereHomeView } from "./HomeView";
@@ -24,7 +23,9 @@ export function LumiereMenuTemplate({
 }: MenuTemplateProps) {
   const [view, setView] = useState<LumiereView>({ type: "home" });
   const [searchValue, setSearchValue] = useState("");
-  const [activeNav, setActiveNav] = useState<LumiereNavTab>("menu");
+  const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(
+    null,
+  );
   const infoRef = useRef<HTMLDivElement | null>(null);
 
   const displayCategories = categories;
@@ -53,18 +54,18 @@ export function LumiereMenuTemplate({
 
   const selectedProduct =
     view.type === "product"
-      ? products.find((p) => p.productId === view.productId) ?? null
+      ? resolveSelectedProduct(products, view.productId, pinnedProduct)
       : null;
 
   const goHome = () => {
     setSearchValue("");
-    setActiveNav("menu");
+    setPinnedProduct(null);
     setView({ type: "home" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const selectCategory = (category: MenuCategoryApiItem) => {
-    setActiveNav("menu");
+    setPinnedProduct(null);
     setView({ type: "category", categoryId: category.categoryId });
     analytics?.trackCategoryView(category.categoryId);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -72,7 +73,7 @@ export function LumiereMenuTemplate({
 
   const openProduct = (product: MenuProductApiItem) => {
     const categoryId = product.categoryId ?? activeCategoryId;
-    setActiveNav("menu");
+    setPinnedProduct(product);
     setView({
       type: "product",
       productId: product.productId,
@@ -82,7 +83,10 @@ export function LumiereMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  useRegisterChefOpenProduct(openProduct);
+
   const backFromNested = () => {
+    setPinnedProduct(null);
     if (view.type === "product" && view.categoryId != null) {
       setView({ type: "category", categoryId: view.categoryId });
     } else if (view.type === "category") {
@@ -93,66 +97,14 @@ export function LumiereMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const goSearch = () => {
-    const first = firstRootCategory(displayCategories);
-    setActiveNav("search");
-    if (first) {
-      setView({ type: "category", categoryId: first.categoryId });
-      analytics?.trackCategoryView(first.categoryId);
-    } else {
-      setView({ type: "home" });
-    }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const goSpecials = () => {
-    setActiveNav("specials");
-    setSearchValue("");
-    setView({ type: "home" });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const goInfo = () => {
-    setActiveNav("info");
-    setView({ type: "home" });
-    requestAnimationFrame(() => {
-      infoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  };
-
-  const onSearchSubmit = () => {
-    const q = searchValue.trim().toLowerCase();
-    if (!q) {
-      goSearch();
-      return;
-    }
-    const match = products.find(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.description?.toLowerCase().includes(q) ?? false),
-    );
-    if (match?.categoryId != null) {
-      setActiveNav("search");
-      setView({ type: "category", categoryId: match.categoryId });
-      analytics?.trackCategoryView(match.categoryId);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    goSearch();
-  };
-
   const topVariant = view.type === "home" ? "home" : "detail";
 
   return (
     <LumiereShell
       menu={menu}
-      activeNav={activeNav}
       topVariant={topVariant}
       onBack={view.type !== "home" ? backFromNested : undefined}
-      onMenu={goHome}
-      onSearch={goSearch}
-      onSpecials={goSpecials}
-      onInfo={goInfo}
+      onHome={goHome}
     >
       {view.type === "home" ? (
         <LumiereHomeView
@@ -161,12 +113,11 @@ export function LumiereMenuTemplate({
           products={products}
           searchValue={searchValue}
           onSearchChange={setSearchValue}
-          onSearchSubmit={onSearchSubmit}
           onSelectCategory={(category) => {
             setSearchValue("");
             selectCategory(category);
           }}
-          onSpecials={goSpecials}
+          onOpenProduct={openProduct}
           infoRef={infoRef}
         />
       ) : null}
@@ -174,10 +125,15 @@ export function LumiereMenuTemplate({
       {view.type === "category" && activeCategory ? (
         <LumiereCategoryView
           category={activeCategory}
+          categories={displayCategories}
           products={categoryProducts}
           searchQuery={searchValue}
           onSearchChange={setSearchValue}
           categoryIndex={categoryIndex}
+          onSelectCategory={(category) => {
+            setSearchValue("");
+            selectCategory(category);
+          }}
           onOpenProduct={openProduct}
         />
       ) : null}

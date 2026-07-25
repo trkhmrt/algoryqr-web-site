@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,6 @@ import {
   createMenuProductRequest,
   deleteMenuProductRequest,
   flattenMenuCategories,
-  getMenuCategoriesRequest,
-  getMenuProductsRequest,
-  MenuCategoryApiItem,
   MenuProductApiItem,
   MenuProductRequestBody,
   NutritionBasis,
@@ -28,10 +26,15 @@ import {
   buildNutritionFactsFromForm,
   emptyNutritionFacts,
 } from "@/components/dashboard/menu/ProductNutritionPanel";
+import { useMenuCategoriesByQr } from "@/hooks/use-menu-categories";
+import {
+  invalidateMenuProducts,
+  useMenuProductsByQr,
+} from "@/hooks/use-menu-products";
 
 type MenuProductsPanelProps = {
   menuId: number;
-  qrId?: number | null;
+  qrId: number;
   presetCategoryId?: number | null;
   onPresetConsumed?: () => void;
 };
@@ -80,10 +83,14 @@ export default function MenuProductsPanel({
   onPresetConsumed,
 }: MenuProductsPanelProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const [products, setProducts] = useState<MenuProductApiItem[]>([]);
-  const [categories, setCategories] = useState<MenuCategoryApiItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const productsQuery = useMenuProductsByQr(qrId);
+  const categoriesQuery = useMenuCategoriesByQr(qrId);
+  const products = productsQuery.data?.content ?? [];
+  const categories = categoriesQuery.data?.categories ?? [];
+  const resolvedMenuId = productsQuery.data?.menuId ?? menuId;
+  const loading = productsQuery.isLoading || categoriesQuery.isLoading;
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<MenuProductRequestBody>(emptyForm());
   const [nutritionForm, setNutritionForm] = useState<NutritionFormFields>(emptyNutritionForm());
@@ -92,25 +99,16 @@ export default function MenuProductsPanel({
 
   const categoryOptions = flattenMenuCategories(categories);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [productData, categoryData] = await Promise.all([
-        getMenuProductsRequest(menuId),
-        getMenuCategoriesRequest(menuId),
-      ]);
-      setProducts(productData);
-      setCategories(categoryData);
-    } catch (error) {
-      notify("danger", error instanceof Error ? error.message : "Menü ürünleri yüklenemedi.");
-    } finally {
-      setLoading(false);
-    }
-  }, [menuId, notify]);
-
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    if (productsQuery.isError) {
+      notify(
+        "danger",
+        productsQuery.error instanceof Error
+          ? productsQuery.error.message
+          : "Menü ürünleri yüklenemedi.",
+      );
+    }
+  }, [notify, productsQuery.error, productsQuery.isError]);
 
   useEffect(() => {
     if (presetCategoryId == null) return;
@@ -136,6 +134,8 @@ export default function MenuProductsPanel({
     return buildNutritionFactsFromForm(nutritionForm);
   };
 
+  const refreshProducts = () => invalidateMenuProducts(queryClient, resolvedMenuId, qrId);
+
   const handleSubmit = async () => {
     if (!form.name?.trim()) {
       notify("warning", "Ürün adı zorunlu.");
@@ -158,12 +158,12 @@ export default function MenuProductsPanel({
         await updateMenuProductRequest(editingId, payload);
         notify("info", "Ürün güncellendi.");
         resetForm();
-        await loadData();
+        await refreshProducts();
       } else {
-        const created = await createMenuProductRequest(menuId, payload);
+        const created = await createMenuProductRequest(resolvedMenuId, payload);
         notify("info", "Ürün eklendi.");
         resetForm();
-        await loadData();
+        await refreshProducts();
         if (qrId != null) {
           router.push(DASHBOARD_ROUTES.digitalMenuProductDetail(created.productId, qrId));
         }
@@ -192,7 +192,7 @@ export default function MenuProductsPanel({
     try {
       await deleteMenuProductRequest(productId);
       notify("info", "Ürün silindi.");
-      await loadData();
+      await refreshProducts();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "Ürün silinemedi.");
     }

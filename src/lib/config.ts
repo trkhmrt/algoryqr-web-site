@@ -50,8 +50,18 @@ export const APP_URL = resolveAppUrl();
 
 export const QR_API_BASE = `${API_BASE_URL}/qr`;
 
-export const ACCESS_TOKEN_EXPIRY_MS = 300_000;
+function resolveQrMcpBaseUrl(): string {
+  const fromEnv = process.env.QR_MCP_BASE_URL?.trim();
+  if (fromEnv) return trimTrailingSlash(fromEnv);
+  return "https://prod.qr-mcp.algorycode.com";
+}
+
+export const QR_MCP_BASE_URL = resolveQrMcpBaseUrl();
+
+export const QR_MCP_API_KEY = process.env.QR_MCP_API_KEY?.trim() ?? "";
+
+export const ACCESS_TOKEN_EXPIRY_MS = 900_000;
 export const ACCESS_TOKEN_EXPIRY_SECONDS = ACCESS_TOKEN_EXPIRY_MS / 1000;
-export const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+export const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 export const COOKIE_MAX_AGE_SECONDS = REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60;
 export const TWO_FACTOR_PENDING_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRY_SECONDS;

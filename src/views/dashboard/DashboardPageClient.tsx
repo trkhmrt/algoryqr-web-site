@@ -16,6 +16,7 @@ import BillingAddressesView from "@/views/dashboard/BillingAddressesView";
 import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
 import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
 import DigitalMenuEditorView from "@/views/dashboard/DigitalMenuEditorView";
+import DigitalMenuSettingsView from "@/views/dashboard/DigitalMenuSettingsView";
 import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
 import DigitalMenuProductDetailView from "@/views/dashboard/DigitalMenuProductDetailView";
 import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
@@ -94,10 +95,22 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return Number.isSafeInteger(packageId) && packageId > 0 ? packageId : null;
   }, [pathname]);
 
+  const digitalMenuSettingsQrId = useMemo(() => {
+    const prefix = `${DASHBOARD_ROUTES.digitalMenu}/qr/`;
+    if (!pathname.startsWith(prefix)) return null;
+    const rest = pathname.slice(prefix.length);
+    const [qrSlug, settingsSlug] = rest.split("/");
+    if (settingsSlug !== "ayarlar") return null;
+    const qrId = Number(qrSlug);
+    return Number.isSafeInteger(qrId) && qrId > 0 ? qrId : null;
+  }, [pathname]);
+
   const digitalMenuEditQrId = useMemo(() => {
     const prefix = `${DASHBOARD_ROUTES.digitalMenu}/qr/`;
     if (!pathname.startsWith(prefix)) return null;
-    const qrId = Number(pathname.slice(prefix.length).split("/")[0]);
+    const rest = pathname.slice(prefix.length);
+    if (rest.includes("/")) return null;
+    const qrId = Number(rest);
     return Number.isSafeInteger(qrId) && qrId > 0 ? qrId : null;
   }, [pathname]);
 
@@ -116,7 +129,11 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     pathname === DASHBOARD_ROUTES.analytics ||
     pathname === DASHBOARD_ROUTES.analyticsLegacy
   ) {
-    return <AnalyticsTab />;
+    return (
+      <Suspense fallback={null}>
+        <AnalyticsTab />
+      </Suspense>
+    );
   }
 
   if (digitalMenuCheckout) {
@@ -155,6 +172,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <DigitalMenuCategoriesView />
       </Suspense>
     );
+  }
+
+  if (digitalMenuSettingsQrId != null) {
+    return <DigitalMenuSettingsView qrId={digitalMenuSettingsQrId} />;
   }
 
   if (digitalMenuEditQrId != null) {

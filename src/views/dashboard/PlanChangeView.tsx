@@ -16,10 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { usePaymentMethods } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import { invalidateSubscription, useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import { ApiError } from "@/lib/api/errors";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
@@ -36,7 +35,7 @@ import {
   type PlanChangePreview,
   type PlanChangeTiming,
 } from "@/lib/plan-change";
-import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
 function optionMoneySummary(
   option: PlanChangePreview["options"][number],
@@ -118,11 +117,9 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
       });
     },
     onSuccess: async (result) => {
-      await getSiteSameOriginAxios().post("/auth/refresh");
+      await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
-        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
-        invalidateAccessProfile(queryClient),
         queryClient.invalidateQueries({ queryKey: ["planChanges"] }),
       ]);
       const charged = toAmountNumber(result.chargeAmount);

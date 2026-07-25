@@ -1,4 +1,6 @@
 import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
+
+import { searchMenuProducts, MenuProductScrollSentinel } from "../shared";
 import { GlassyGrayProductCard } from "./ProductCard";
 import { GLASSY_GRAY_CATEGORY_HERO } from "./styles";
 
@@ -15,14 +17,8 @@ export function GlassyGrayCategoryView({
   searchQuery,
   onOpenProduct,
 }: CategoryViewProps) {
-  const q = searchQuery.trim().toLowerCase();
-  const filtered = q
-    ? products.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.description?.toLowerCase().includes(q) ?? false),
-      )
-    : products;
+  const filtered = searchMenuProducts(products, searchQuery);
+  const q = searchQuery.trim();
 
   return (
     <section>
@@ -37,8 +33,7 @@ export function GlassyGrayCategoryView({
             {category.name}
           </h1>
           <p className="gg-muted max-w-xl text-lg">
-            Duyularinizi harekete gecirecek, ustalikla hazirlanmis gurme lezzetler. Her tabak bir
-            hikaye anlatir.
+            Duyularınızı harekete geçirecek, ustalıkla hazırlanmış gurme lezzetler.
           </p>
         </div>
       </div>
@@ -52,10 +47,11 @@ export function GlassyGrayCategoryView({
       ) : (
         <p className="gg-glass-heavy gg-muted rounded-3xl p-8 text-center">
           {q
-            ? `"${searchQuery}" icin sonuc bulunamadi.`
-            : `"${category.name}" kategorisinde henuz urun yok.`}
+            ? `“${searchQuery}” için sonuç bulunamadı.`
+            : `“${category.name}” kategorisinde henüz ürün yok.`}
         </p>
       )}
+      <MenuProductScrollSentinel className="gg-muted flex min-h-8 items-center justify-center py-6 text-sm" />
     </section>
   );
 }

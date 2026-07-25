@@ -21,10 +21,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatDaysUntilExpiry, formatPackageDate, formatPackagePrice } from "@/lib/package-display";
 import { canCancelPurchase, canCancelAtPeriodEnd, canCancelWithRefund, canResumeRenewal, cancelPurchase, cancelPurchaseAtPeriodEnd, cancelPurchaseWithRefund, resumePurchaseRenewal, getPurchaseSummary } from "@/lib/purchase-fulfillment";
+import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
-import { invalidateAccessProfile } from "@/hooks/use-access-profile";
-import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { ApiError } from "@/lib/api/errors";
 
 type PurchaseDetailViewProps = {
@@ -44,12 +44,10 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
     mutationFn: () => cancelPurchase(purchaseId),
     onSuccess: async () => {
       setCancelError(null);
-      await getSiteSameOriginAxios().post("/auth/refresh");
+      await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
-        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
-        invalidateAccessProfile(queryClient),
       ]);
     },
     onError: (error: unknown) => {
@@ -85,12 +83,10 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
     mutationFn: () => cancelPurchaseWithRefund(purchaseId),
     onSuccess: async () => {
       setCancelError(null);
-      await getSiteSameOriginAxios().post("/auth/refresh");
+      await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
-        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
-        invalidateAccessProfile(queryClient),
       ]);
     },
     onError: (error: unknown) => {
@@ -106,11 +102,10 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
     mutationFn: () => resumePurchaseRenewal(purchaseId),
     onSuccess: async () => {
       setCancelError(null);
+      await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
-        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
-        invalidateAccessProfile(queryClient),
       ]);
     },
     onError: (error: unknown) => {

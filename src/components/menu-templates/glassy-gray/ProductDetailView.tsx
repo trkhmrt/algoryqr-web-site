@@ -1,5 +1,7 @@
 import type { MenuProductApiItem } from "@/lib/api";
+
 import { formatMenuPrice } from "../types";
+import { MenuNutritionFacts } from "../shared";
 
 type ProductDetailViewProps = {
   product: MenuProductApiItem;
@@ -34,7 +36,7 @@ export function GlassyGrayProductDetailView({ product, onBack }: ProductDetailVi
             )}
             <div className="gg-glass absolute right-6 top-6 flex flex-col items-center rounded-2xl px-6 py-4">
               <span className="gg-muted mb-1 text-[10px] font-bold uppercase tracking-widest">
-                {product.available ? "Menu" : "Tukendi"}
+                {product.available ? "Menü" : "Tükendi"}
               </span>
               <span className="gg-display gg-primary text-3xl font-bold">
                 {formatMenuPrice(product.price, product.currency)}
@@ -57,7 +59,7 @@ export function GlassyGrayProductDetailView({ product, onBack }: ProductDetailVi
               {!product.available ? (
                 <div className="mt-4">
                   <span className="gg-badge rounded-full px-3 py-1 text-xs font-bold uppercase">
-                    Tukendi
+                    Tükendi
                   </span>
                 </div>
               ) : null}
@@ -65,10 +67,23 @@ export function GlassyGrayProductDetailView({ product, onBack }: ProductDetailVi
 
             {product.description ? (
               <div className="mb-8">
-                <h3 className="gg-display mb-2 text-xl font-semibold text-white">Aciklama</h3>
+                <h3 className="gg-display mb-2 text-xl font-semibold text-white">
+                  Açıklama
+                </h3>
                 <p className="gg-muted text-lg leading-7">{product.description}</p>
               </div>
             ) : null}
+
+            <MenuNutritionFacts
+              nutrition={product.nutrition}
+              className="mb-8 rounded-2xl border border-white/10 bg-black/20 p-5"
+              titleClassName="text-white gg-display"
+              basisClassName="text-white/50"
+              rowClassName="border-white/10"
+              labelClassName="text-white/70"
+              valueClassName="text-[var(--gg-primary)]"
+              footnoteClassName="text-white/40"
+            />
 
             <button
               type="button"

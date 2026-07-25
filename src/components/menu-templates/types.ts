@@ -8,12 +8,39 @@ export type MenuTemplateProps = {
   analytics?: MenuVisitAnalytics;
 };
 
+export type MenuTemplateRendererProps = MenuTemplateProps & {
+  themeId: string;
+  productPage?: number;
+  productSize?: number;
+  productTotalElements?: number;
+  productHasNext?: boolean;
+};
+
 export type MenuNavCategory = {
   key: string;
   categoryId: number | null;
   name: string;
   depth: number;
 };
+
+export function collectCategoryIds(category: MenuCategoryApiItem): number[] {
+  return [
+    category.categoryId,
+    ...(category.children ?? []).flatMap(collectCategoryIds),
+  ];
+}
+
+export function findCategoryById(
+  categories: MenuCategoryApiItem[],
+  categoryId: number,
+): MenuCategoryApiItem | null {
+  for (const category of categories) {
+    if (category.categoryId === categoryId) return category;
+    const nested = findCategoryById(category.children ?? [], categoryId);
+    if (nested) return nested;
+  }
+  return null;
+}
 
 export function flattenNavCategories(
   categories: MenuCategoryApiItem[],
@@ -60,9 +87,20 @@ export function resolveMenuNavCategories(
 export function filterProductsByNavCategory(
   products: MenuProductApiItem[],
   category: MenuNavCategory | null,
+  categoryTree?: MenuCategoryApiItem[],
 ): MenuProductApiItem[] {
   if (!category) return products;
   if (category.categoryId != null) {
+    const treeNode =
+      categoryTree && categoryTree.length > 0
+        ? findCategoryById(categoryTree, category.categoryId)
+        : null;
+    if (treeNode) {
+      const ids = new Set(collectCategoryIds(treeNode));
+      return products.filter(
+        (product) => product.categoryId != null && ids.has(product.categoryId),
+      );
+    }
     return products.filter((product) => product.categoryId === category.categoryId);
   }
   const name = category.name.trim().toLowerCase();

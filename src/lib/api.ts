@@ -146,7 +146,7 @@ export interface UserQrApiItem {
   userId?: number;
   customerId?: number;
   qrName: string;
-  imgSrc: string;
+  imgSrc?: string | null;
   details: Record<string, unknown>;
   createdAt: string;
 }
@@ -400,6 +400,12 @@ type CreateQrGatewayResponse = {
   urlMode?: string;
 };
 
+export interface MenuQrBriefApiItem {
+  id: number;
+  name?: string;
+  imgSrc?: string;
+}
+
 export interface MenuProfileApiItem {
   menuId: number;
   qrId: number;
@@ -414,6 +420,7 @@ export interface MenuProfileApiItem {
   urlMode: string;
   publicUrl: string;
   active: boolean;
+  qr?: MenuQrBriefApiItem | null;
 }
 
 export type NutritionBasis = "PER_100G" | "PER_100ML";
@@ -484,6 +491,19 @@ export interface PublicMenuApiResponse {
   products: MenuProductApiItem[];
   categories?: MenuCategoryApiItem[];
   themeId: string;
+  productPage?: number;
+  productSize?: number;
+  productTotalElements?: number;
+  productHasNext?: boolean;
+}
+
+export interface MenuProductPageApiResponse {
+  content: MenuProductApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
 }
 
 export interface MenuProductRequestBody {
@@ -506,14 +526,100 @@ export async function checkMenuSlugAvailabilityRequest(slug: string, excludeMenu
   return response.data;
 }
 
+export interface ActiveMenuSummaryApiItem {
+  menuId: number;
+  qrId: number;
+  businessName?: string | null;
+  themeId?: string | null;
+  publicUrl?: string | null;
+  active: boolean;
+  qr?: { id: number; name?: string | null } | null;
+}
+
 export async function getMenuByQrIdRequest(qrId: number | string): Promise<MenuProfileApiItem> {
   const response = await api.get<MenuProfileApiItem>(`/menu/by-qr/${qrId}`);
   return response.data;
 }
 
+export async function getMyActiveMenusRequest(): Promise<ActiveMenuSummaryApiItem[]> {
+  const response = await api.get<ActiveMenuSummaryApiItem[]>("/menu/my/active");
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export interface MenuProductsByQrApiResponse {
+  menuId: number;
+  qrId: number;
+  businessName?: string | null;
+  content: MenuProductApiItem[];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+  hasNext?: boolean;
+}
+
+export interface MenuCategoriesByQrApiResponse {
+  menuId: number;
+  qrId: number;
+  businessName?: string | null;
+  categories: MenuCategoryApiItem[];
+}
+
+export async function getMenuProductsByQrRequest(
+  qrId: number | string,
+): Promise<MenuProductsByQrApiResponse> {
+  const response = await api.get<MenuProductsByQrApiResponse>(`/menu/by-qr/${qrId}/products`);
+  return {
+    ...response.data,
+    content: Array.isArray(response.data?.content) ? response.data.content : [],
+  };
+}
+
+export async function getMenuCategoriesByQrRequest(
+  qrId: number | string,
+): Promise<MenuCategoriesByQrApiResponse> {
+  const response = await api.get<MenuCategoriesByQrApiResponse>(`/menu/by-qr/${qrId}/categories`);
+  return {
+    ...response.data,
+    categories: Array.isArray(response.data?.categories) ? response.data.categories : [],
+  };
+}
+
 export async function getMenuProductsRequest(menuId: number | string): Promise<MenuProductApiItem[]> {
-  const response = await api.get<MenuProductApiItem[]>(`/menu/${menuId}/products`);
-  return response.data;
+  const products: MenuProductApiItem[] = [];
+  let page = 0;
+  let hasNext = true;
+
+  while (hasNext) {
+    const response = await api.get<MenuProductPageApiResponse>(`/menu/${menuId}/products`, {
+      params: { page, size: 50 },
+    });
+    const data = response.data;
+    products.push(...(data.content ?? []));
+    hasNext = Boolean(data.hasNext);
+    page += 1;
+    if (page > 100) break;
+  }
+
+  return products;
+}
+
+export async function getPublicMenuProductsRequest(
+  menuId: number | string,
+  page = 0,
+  size = 20,
+): Promise<MenuProductPageApiResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  const response = await fetch(`/api/menu/public/${encodeURIComponent(String(menuId))}/products?${params}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Ürünler yüklenemedi");
+  }
+  return response.json() as Promise<MenuProductPageApiResponse>;
 }
 
 export async function createMenuProductRequest(
@@ -638,8 +744,14 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
   };
 }
 
-export async function getUserQrsRequest(userId: number | string): Promise<UserQrApiItem[]> {
-  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`);
+export async function getUserQrsRequest(
+  userId: number | string,
+  options?: { includeImage?: boolean },
+): Promise<UserQrApiItem[]> {
+  const includeImage = options?.includeImage === true;
+  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`, {
+    params: { includeImage },
+  });
   return response.data;
 }
 

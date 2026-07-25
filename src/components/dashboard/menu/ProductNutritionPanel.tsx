@@ -163,16 +163,16 @@ export default function ProductNutritionPanel({
   const handleSave = async () => {
     const payload = buildNutritionFactsFromForm(form);
     if (!payload) {
-      notify("warning", "Zorunlu besin alanlar?n? doldurun.");
+      notify("warning", "Zorunlu besin alanlarını doldurun.");
       return;
     }
     setSaving(true);
     try {
       const updated = await patchMenuProductNutritionRequest(productId, payload);
-      notify("info", "Besin de?erleri g�ncellendi.");
+      notify("info", "Besin değerleri güncellendi.");
       onSaved?.(updated.nutrition ?? payload);
     } catch (error) {
-      notify("danger", error instanceof Error ? error.message : "Besin de?erleri kaydedilemedi.");
+      notify("danger", error instanceof Error ? error.message : "Besin değerleri kaydedilemedi.");
     } finally {
       setSaving(false);
     }
@@ -181,9 +181,9 @@ export default function ProductNutritionPanel({
   return (
     <div className="space-y-4 rounded-lg border border-border/70 bg-background p-4">
       <div>
-        <h3 className="text-sm font-medium text-foreground">Besin de?erleri</h3>
+        <h3 className="text-sm font-medium text-foreground">Besin değerleri</h3>
         <p className="text-xs text-muted-foreground">
-          De?erler 100g veya 100ml ba??na girilir. Enerji hem kJ hem kcal olarak zorunludur.
+          Değerler 100g veya 100ml başına girilir. Enerji hem kJ hem kcal olarak zorunludur.
         </p>
       </div>
 
@@ -195,8 +195,8 @@ export default function ProductNutritionPanel({
             value={form.basis}
             onChange={(e) => updateField("basis", e.target.value as NutritionBasis)}
           >
-            <option value="PER_100G">100g ba??na</option>
-            <option value="PER_100ML">100ml ba??na</option>
+            <option value="PER_100G">100g başına</option>
+            <option value="PER_100ML">100ml başına</option>
           </select>
         </div>
         <div className="space-y-1.5">
@@ -208,11 +208,11 @@ export default function ProductNutritionPanel({
           <Input value={form.energyKcal} onChange={(e) => updateField("energyKcal", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Ya? (g)</Label>
+          <Label className="text-xs">Yağ (g)</Label>
           <Input value={form.fat} onChange={(e) => updateField("fat", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Doymu? ya? (g)</Label>
+          <Label className="text-xs">Doymuş yağ (g)</Label>
           <Input value={form.saturatedFat} onChange={(e) => updateField("saturatedFat", e.target.value)} />
         </div>
         <div className="space-y-1.5">
@@ -220,7 +220,7 @@ export default function ProductNutritionPanel({
           <Input value={form.carbohydrate} onChange={(e) => updateField("carbohydrate", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">?ekerler (g)</Label>
+          <Label className="text-xs">Şekerler (g)</Label>
           <Input value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} />
         </div>
         <div className="space-y-1.5">
@@ -228,7 +228,7 @@ export default function ProductNutritionPanel({
           <Input value={form.polyols} onChange={(e) => updateField("polyols", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Ni?asta (g)</Label>
+          <Label className="text-xs">Nişasta (g)</Label>
           <Input value={form.starch} onChange={(e) => updateField("starch", e.target.value)} />
         </div>
         <div className="space-y-1.5">
@@ -247,7 +247,7 @@ export default function ProductNutritionPanel({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs">Di?er besin �?eleri</Label>
+          <Label className="text-xs">Diğer besin öğeleri</Label>
           <Button
             type="button"
             size="sm"
@@ -262,7 +262,7 @@ export default function ProductNutritionPanel({
           </Button>
         </div>
         {form.otherNutrients.length === 0 ? (
-          <p className="text-xs text-muted-foreground">?ste?e ba?l? ek besin �?esi yok.</p>
+          <p className="text-xs text-muted-foreground">İsteğe bağlı ek besin öğesi yok.</p>
         ) : (
           form.otherNutrients.map((entry, index) => (
             <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
@@ -276,7 +276,7 @@ export default function ProductNutritionPanel({
                 }}
               />
               <Input
-                placeholder="De?er"
+                placeholder="Değer"
                 value={String(entry.value ?? "")}
                 onChange={(e) => {
                   const next = [...form.otherNutrients];
@@ -313,7 +313,7 @@ export default function ProductNutritionPanel({
       </div>
 
       <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
-        {saving ? "Kaydediliyor..." : "Besin de?erlerini kaydet"}
+        {saving ? "Kaydediliyor..." : "Besin değerlerini kaydet"}
       </Button>
     </div>
   );

@@ -20,7 +20,6 @@ import {
   WalletCards, MapPin, History, Monitor,
 } from "lucide-react";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { REFRESH_AFTER_LOGIN_MS } from "@/lib/config.client";
 import { authService, type TwoFactorSetupPayload } from "@/lib/auth-service";
 import { copyTextToClipboard } from "@/components/dashboard/qr/qr-actions";
 import { ChangePasswordDialog } from "@/components/dashboard/ChangePasswordDialog";
@@ -30,6 +29,11 @@ import { getStoredUser, setStoredUser } from "@/lib/api/storage";
 import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
 
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
+const REFRESH_BUFFER_SECONDS = 30;
+
+function nextRefreshAtFromAccessExp(accessExpSeconds: number): number {
+  return Math.max(Date.now() + 1000, accessExpSeconds * 1000 - REFRESH_BUFFER_SECONDS * 1000);
+}
 
 type SettingsPage = "main" | "profile" | "security" | "notifications" | "session";
 
@@ -175,8 +179,9 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         if (accessExp != null) {
           const stored = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(NEXT_REFRESH_AT_KEY) : null;
           const storedAt = stored ? parseInt(stored, 10) : NaN;
-          const useStored = !isNaN(storedAt) && storedAt > Date.now();
-          const at = useStored ? storedAt : Date.now() + REFRESH_AFTER_LOGIN_MS;
+          const computedAt = nextRefreshAtFromAccessExp(accessExp);
+          const useStored = !isNaN(storedAt) && storedAt > Date.now() && storedAt <= computedAt;
+          const at = useStored ? storedAt : computedAt;
           if (!useStored && typeof sessionStorage !== "undefined") sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(at));
           setNextRefreshAt(at);
         }
@@ -241,9 +246,12 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             if (exp != null) setAccessTokenExpiresAt(exp);
             onNotify("info", "Token otomatik yenilendi.");
             fetchTokenExp();
-            const nextAt = Date.now() + REFRESH_AFTER_LOGIN_MS;
+            const nextAt =
+              exp != null ? nextRefreshAtFromAccessExp(exp) : null;
             setNextRefreshAt(nextAt);
-            if (typeof sessionStorage !== "undefined") sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(nextAt));
+            if (nextAt != null && typeof sessionStorage !== "undefined") {
+              sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(nextAt));
+            }
           })
           .catch((err: unknown) => {
             const status = err instanceof ApiError ? err.status : 0;
@@ -296,7 +304,14 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
       .post<{ accessTokenExpiresAt?: number }>("/auth/refresh", {})
       .then((res) => {
         const exp = res.data?.accessTokenExpiresAt;
-        if (exp != null) setAccessTokenExpiresAt(exp);
+        if (exp != null) {
+          setAccessTokenExpiresAt(exp);
+          const nextAt = nextRefreshAtFromAccessExp(exp);
+          setNextRefreshAt(nextAt);
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem(NEXT_REFRESH_AT_KEY, String(nextAt));
+          }
+        }
         onNotify("info", "Access token yenilendi.");
         fetchTokenExp();
       })
@@ -571,7 +586,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             <div className="rounded-lg bg-muted/50 p-4 border border-border">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                 <RefreshCw className="h-4 w-4" />
-                Yenileme isteği (2 dk sonra otomatik gönderilir)
+                Yenileme isteği (access bitmeden ~30 sn önce)
               </div>
               <p className="text-xl font-mono font-semibold tabular-nums text-foreground">
                 {tokenLoading ? "—" : nextRefreshInLabel}

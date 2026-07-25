@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -29,11 +30,7 @@ import {
   Legend,
 } from "recharts";
 
-import {
-  DigitalMenuPicker,
-  useDigitalMenuOptions,
-  useDigitalMenuSelection,
-} from "@/components/dashboard/menu/DigitalMenuPicker";
+import { useDigitalMenuOptions, useDigitalMenuSelection } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import { useMenuAnalyticsReport } from "@/hooks/use-menu-analytics-report";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -140,15 +137,30 @@ function useAnalyticsAccess() {
 }
 
 export default function AnalyticsTab() {
+  const searchParams = useSearchParams();
+  const initialQrId = useMemo(() => {
+    const raw = Number(searchParams.get("qr"));
+    return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
+  }, [searchParams]);
   const [period, setPeriod] = useState<"7d" | "30d" | "90d">("30d");
   const tooltipStyle = useTooltipStyle();
   const { accessLoading, canUse } = useAnalyticsAccess();
   const { menuQrs, loading: menusLoading } = useDigitalMenuOptions();
-  const { selection, selectQrId, loading: selectionLoading } = useDigitalMenuSelection();
+  const { selection, loading: selectionLoading } = useDigitalMenuSelection(initialQrId);
   const range = useMemo(() => periodRange(period), [period]);
   const menuId = selection?.menu.menuId ?? null;
   const reportQuery = useMenuAnalyticsReport(menuId, range.from, range.to, canUse && menuId != null);
   const report = reportQuery.data;
+  const backHref =
+    selection?.qr.id != null
+      ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
+      : initialQrId != null
+        ? DASHBOARD_ROUTES.digitalMenuEdit(initialQrId)
+        : DASHBOARD_ROUTES.digitalMenu;
+  const menuLabel =
+    selection?.menu.businessName?.trim() ||
+    selection?.qr.name ||
+    null;
 
   if (accessLoading) {
     return (
@@ -163,7 +175,7 @@ export default function AnalyticsTab() {
       <div className="space-y-3 animate-fade-in">
         <div className="flex items-center gap-3">
           <Link
-            href={DASHBOARD_ROUTES.digitalMenu}
+            href={backHref}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -246,38 +258,34 @@ export default function AnalyticsTab() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href={DASHBOARD_ROUTES.digitalMenu}
+            href={backHref}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Analitik</h1>
-            <p className="text-sm text-muted-foreground">Menü QR ziyaret ve yolculuk raporları.</p>
+            <p className="text-sm text-muted-foreground">
+              {menuLabel
+                ? `${menuLabel} · menü ziyaret ve yolculuk raporları`
+                : "Menü QR ziyaret ve yolculuk raporları."}
+            </p>
           </div>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <DigitalMenuPicker
-            menuQrs={menuQrs}
-            selectedQrId={selection?.qr.id ?? null}
-            onSelectQrId={selectQrId}
-            disabled={menusLoading}
-          />
-          <div className="flex gap-1 rounded-lg border border-border bg-card p-1">
-            {(["7d", "30d", "90d"] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  period === p
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {p === "7d" ? "7 Gün" : p === "30d" ? "30 Gün" : "90 Gün"}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-1 rounded-lg border border-border bg-card p-1">
+          {(["7d", "30d", "90d"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                period === p
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p === "7d" ? "7 Gün" : p === "30d" ? "30 Gün" : "90 Gün"}
+            </button>
+          ))}
         </div>
       </div>
 

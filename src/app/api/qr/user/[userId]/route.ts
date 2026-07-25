@@ -6,7 +6,7 @@ import { buildUpstreamAuthHeaders, resolveSessionUserId } from "@/lib/auth-user"
 import { QR_API_BASE } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
-export async function GET(_req: Request) {
+export async function GET(req: Request) {
   try {
     const cookieStore = await cookies();
     const accessToken = readAccessTokenFromCookies(cookieStore);
@@ -21,8 +21,12 @@ export async function GET(_req: Request) {
       return NextResponse.json({ message: "Token içinde userId yok" }, { status: 401 });
     }
 
+    const includeImage =
+      new URL(req.url).searchParams.get("includeImage") === "true" ? "true" : "false";
+
     const upstream = await axios.get(`${QR_API_BASE}/user/${userId}`, {
       headers: buildUpstreamAuthHeaders(accessToken),
+      params: { includeImage },
       validateStatus: () => true,
       timeout: 20_000,
     });

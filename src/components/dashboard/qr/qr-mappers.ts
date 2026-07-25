@@ -12,7 +12,7 @@ export type DashboardQrItem = {
   created: string;
   type: string;
   active: boolean;
-  imgSrc: string;
+  imgSrc: string | null | undefined;
   details: Record<string, unknown>;
   menuId?: number;
   publicUrl?: string;

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getExpFromAccessToken, isoToEpochSeconds } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
 import { setAuthCookies, setTokenExpiryCookies, setTwoFactorPendingCookie } from "@/lib/server/auth-cookies";
+import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 
 type LoginBody = {
   email?: string;
@@ -79,7 +80,11 @@ export async function POST(req: Request) {
       getExpFromAccessToken(typeof accessToken === "string" ? accessToken : undefined) ??
       isoToEpochSeconds(data.accessExpiresAt) ??
       undefined;
-    const refreshTokenExpiresAt = isoToEpochSeconds(data.refreshExpiresAt) ?? undefined;
+    const refreshTokenExpiresAt =
+      isoToEpochSeconds(data.refreshExpiresAt) ??
+      (typeof accessToken === "string"
+        ? await fetchCurrentSessionRefreshExpiresAt(accessToken)
+        : undefined);
 
     const response = NextResponse.json(
       { ...data, accessTokenExpiresAt, refreshTokenExpiresAt },

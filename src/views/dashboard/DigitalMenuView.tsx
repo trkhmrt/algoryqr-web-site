@@ -4,27 +4,24 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronRight, Clock3, Crown, Loader2, TrendingUp, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronRight, Crown, Loader2, UtensilsCrossed } from "lucide-react";
 
 import { useDigitalMenuAccess, useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
+import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import {
   invalidateDigitalMenuTrial,
   startTrialRequest,
   useEligibleTrialPackages,
   useTrialStatus,
 } from "@/hooks/use-commerce";
-import { invalidateSubscription, useActivePackages } from "@/hooks/use-subscription";
-import { ApiError } from "@/lib/api";
-import { calculateTrialDaysRemaining } from "@/lib/commerce";
+import { useActivePackages } from "@/hooks/use-subscription";
+import { ApiError, type PlanPackageApiItem } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatPackageDate } from "@/lib/package-display";
-import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
-import type { PlanPackageApiItem } from "@/lib/api";
-import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
 const FEATURES = [
   "Sınırsız kategori ve ürün yönetimi",
@@ -37,34 +34,27 @@ export default function DigitalMenuView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const { accessLoading, canUseDigitalMenu, hadExpiredAccess } = useDigitalMenuAccess();
-  const trial = useTrialStatus();
-  const eligibleTrials = useEligibleTrialPackages(!canUseDigitalMenu);
-  const packages = useActivePackages(!canUseDigitalMenu);
-  const { menuQrs, loading: menusLoading } = useDigitalMenuOptions();
+  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const trial = useTrialStatus(!canUseDigitalMenu && !accessLoading);
+  const eligibleTrials = useEligibleTrialPackages(!canUseDigitalMenu && !accessLoading);
+  const packages = useActivePackages(!canUseDigitalMenu && !accessLoading);
+  const { menuQrs, loading: menusLoading } = useDigitalMenuOptions(canUseDigitalMenu);
   const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
   const status = trial.data?.status ?? "NOT_STARTED";
-  const activeTrial = status === "ACTIVE";
   const expiredTrial = status === "TRIAL_EXPIRED";
-  const needsRenewal = hadExpiredAccess || expiredTrial;
+  const needsRenewal = expiredTrial;
   const menuPackage = packages.data?.find((pkg) =>
     pkg.items?.some((item) => item.productCode === "QR_MENU"),
   );
   const packageId = trial.data?.packageId ?? menuPackage?.id ?? null;
-  const packageName = trial.data?.packageName ?? menuPackage?.name ?? "Dijital Menü";
-  const daysRemaining = trial.data ? calculateTrialDaysRemaining(trial.data) : null;
   const eligiblePackages = (eligibleTrials.data ?? []) as PlanPackageApiItem[];
 
   const startTrial = async (selectedPackageId: number) => {
     setStartingPackageId(selectedPackageId);
     try {
       const started = await startTrialRequest(selectedPackageId);
-      await getSiteSameOriginAxios().post("/auth/refresh");
-      await Promise.all([
-        invalidateDigitalMenuTrial(queryClient),
-        invalidateAccessProfile(queryClient),
-        invalidateSubscription(queryClient),
-      ]);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await invalidateDigitalMenuTrial(queryClient);
       notify(
         "info",
         `${started.packageName ?? "Paket"} denemeniz başlatıldı` +
@@ -106,28 +96,8 @@ export default function DigitalMenuView() {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü</h1>
             <p className="text-sm text-muted-foreground">Menü QR&apos;larınızı oluşturun ve yönetin.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="gap-1.5" asChild>
-              <Link href={DASHBOARD_ROUTES.analytics}>
-                <TrendingUp className="h-4 w-4" />
-                Analitik
-              </Link>
-            </Button>
-            <Button onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}>Menü QR Oluştur</Button>
-          </div>
+          <Button onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}>Menü QR Oluştur</Button>
         </div>
-
-        {activeTrial && (
-          <div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-            <Clock3 className="h-4 w-4 text-emerald-600" />
-            <p className="text-sm text-muted-foreground">
-              {packageName} denemeniz aktif
-              {daysRemaining != null ? ` — ${daysRemaining} gün kaldı` : ""}
-              {trial.data?.trialEndsAt ? ` · bitiş ${formatPackageDate(trial.data.trialEndsAt)}` : ""}
-              .
-            </p>
-          </div>
-        )}
 
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-foreground">Menülerim</h2>
@@ -211,9 +181,7 @@ export default function DigitalMenuView() {
               {needsRenewal && (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
                   <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    {expiredTrial && !hadExpiredAccess
-                      ? "Deneme süreniz sona erdi"
-                      : "Paket süreniz doldu"}
+                    Deneme süreniz sona erdi
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     PRO özelliklerine devam etmek için paketi satın alın veya yenileyin.

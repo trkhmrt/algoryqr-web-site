@@ -15,17 +15,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  invalidateBillingAddresses,
-  invalidatePaymentMethods,
-  useBillingAddresses,
-  usePaymentMethods,
-} from "@/hooks/use-commerce";
-import { invalidateAccessProfile } from "@/hooks/use-access-profile";
+import { invalidateBillingAddresses, invalidatePaymentMethods, useBillingAddresses, usePaymentMethods } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import { invalidateSubscription, useActivePackages } from "@/hooks/use-subscription";
+import { useActivePackages } from "@/hooks/use-subscription";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import { ApiError } from "@/lib/api";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import {
   cardSchema,
   checkoutSchema,
@@ -45,7 +41,6 @@ import {
   storePendingPurchaseId,
   type PurchaseInitiateResponse,
 } from "@/lib/purchase-fulfillment";
-import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 interface PackagePurchaseViewProps {
   packageId: number;
@@ -113,11 +108,9 @@ export default function PackagePurchaseView({
   }, [methods.data]);
 
   const finalizeSuccess = useCallback(async () => {
-    await getSiteSameOriginAxios().post("/auth/refresh");
+    await refreshAccessAfterEntitlementChange(queryClient);
     await Promise.all([
-      invalidateSubscription(queryClient),
       invalidatePackageUsage(queryClient),
-      invalidateAccessProfile(queryClient),
       invalidatePaymentMethods(queryClient),
     ]);
     onNotify("info", "Ödeme tamamlandı ve paketiniz aktif edildi.");

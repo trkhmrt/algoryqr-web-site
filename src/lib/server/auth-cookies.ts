@@ -75,6 +75,15 @@ export function setTokenExpiryCookies(
   }
 }
 
+export function setRefreshTokenExpiryCookie(
+  response: NextResponse,
+  refreshTokenExpiresAt: number,
+) {
+  if (refreshTokenExpiresAt > 0) {
+    response.cookies.set("refreshTokenExp", String(refreshTokenExpiresAt), cookieOptions);
+  }
+}
+
 export function setTwoFactorPendingCookie(response: NextResponse, token: string) {
   response.cookies.set("algory_2fa_pending", token, {
     ...baseOptions,

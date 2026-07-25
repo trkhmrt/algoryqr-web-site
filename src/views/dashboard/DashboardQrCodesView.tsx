@@ -113,7 +113,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
     setIsLoading(true);
     try {
-      const response = await getUserQrsRequest(user?.id ?? "me");
+      const response = await getUserQrsRequest(user?.id ?? "me", { includeImage: true });
       const mapped = response.map(mapUserQrToDashboardItem);
       setUserQrs(mapped);
       return mapped;

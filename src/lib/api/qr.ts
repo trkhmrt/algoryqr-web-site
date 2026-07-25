@@ -110,8 +110,14 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
   };
 }
 
-export async function getUserQrsRequest(userId: number | string): Promise<UserQrApiItem[]> {
-  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`);
+export async function getUserQrsRequest(
+  userId: number | string,
+  options?: { includeImage?: boolean },
+): Promise<UserQrApiItem[]> {
+  const includeImage = options?.includeImage === true;
+  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`, {
+    params: { includeImage },
+  });
   return response.data;
 }
 
