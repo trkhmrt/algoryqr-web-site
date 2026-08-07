@@ -33,7 +33,7 @@ const HeroSection = () => {
   return (
     <section className="relative flex flex-col pt-[max(5.5rem,12vw)] pb-0">
       <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <div className="max-w-3xl space-y-5 sm:space-y-7 md:space-y-8">
+        <div className="mx-auto max-w-3xl space-y-5 sm:space-y-7 md:space-y-8 text-center">
           <p className="text-[0.7rem] sm:text-sm font-medium uppercase tracking-[0.16em] sm:tracking-[0.2em] text-muted-foreground opacity-0 animate-fade-in">
             QR · Dijital Menü · Yapay Zeka
           </p>
@@ -50,7 +50,7 @@ const HeroSection = () => {
           </h1>
 
           <p
-            className="text-muted-foreground max-w-lg leading-relaxed opacity-0 animate-fade-in text-pretty"
+            className="text-muted-foreground mx-auto max-w-lg leading-relaxed opacity-0 animate-fade-in text-pretty"
             style={{
               animationDelay: "0.2s",
               fontSize: "clamp(0.95rem, 0.85rem + 0.4vw, 1.125rem)",
@@ -59,7 +59,7 @@ const HeroSection = () => {
             Dinamik QR kodlar ve dijital menü; Akıllı Özet, Akıllı Asistan ve Akıllı Raporlama ile içerik üretiminden performansa kadar tek panelde.
           </p>
 
-          <div className="flex flex-col min-[420px]:flex-row items-stretch min-[420px]:items-center gap-3 sm:gap-4 opacity-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+          <div className="flex flex-col min-[420px]:flex-row items-stretch min-[420px]:items-center justify-center gap-3 sm:gap-4 opacity-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <Link href="/register" className="w-full min-[420px]:w-auto">
               <Button variant="hero" size="lg" className="w-full min-[420px]:w-auto gap-2 min-h-11">
                 Ücretsiz Başla <ArrowRight className="h-4 w-4" />
