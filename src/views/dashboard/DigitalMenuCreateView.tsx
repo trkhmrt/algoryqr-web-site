@@ -32,10 +32,6 @@ export default function DigitalMenuCreateView() {
       notify("warning", "Firma adı zorunlu.");
       return;
     }
-    if (menu.urlMode === "slug" && !menu.publicSlug.trim()) {
-      notify("warning", "Özel adres (slug) zorunlu.");
-      return;
-    }
 
     setSaving(true);
     try {
@@ -50,8 +46,6 @@ export default function DigitalMenuCreateView() {
             email: menu.email.trim() || undefined,
             address: menu.address.trim() || undefined,
             themeId: menu.themeId,
-            urlMode: menu.urlMode,
-            publicSlug: menu.publicSlug.trim() || undefined,
           },
           [],
         ),

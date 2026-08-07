@@ -1,5 +1,5 @@
 import { UserQrApiItem } from "@/lib/api";
-import { createInitialMenuData, MenuUrlMode } from "@/components/dashboard/qr-create/MenuDetails";
+import { createInitialMenuData } from "@/components/dashboard/qr-create/MenuDetails";
 import { resolveMenuThemeId } from "@/components/menu-templates/registry";
 import { QrTypeData, QrTypeValue } from "@/components/dashboard/qr-create/QrTypeDetails";
 
@@ -42,8 +42,6 @@ export const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
       email: data.menu.email,
       address: data.menu.address,
       themeId: data.menu.themeId,
-      urlMode: data.menu.urlMode.toUpperCase(),
-      ...(data.menu.urlMode === "slug" ? { publicSlug: data.menu.publicSlug } : {}),
     };
   }
   return data.location;
@@ -62,8 +60,6 @@ export const getBackendTypeFromDetails = (details: Record<string, unknown>): QrT
 export const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrTypeData => {
   const base = createInitialQrTypeData();
   if ("themeId" in details && "businessName" in details) {
-    const urlModeRaw = String(details.urlMode ?? "ID").toLowerCase();
-    const urlMode: MenuUrlMode = urlModeRaw === "slug" ? "slug" : "id";
     const themeId = resolveMenuThemeId(details.themeId);
     return {
       ...base,
@@ -74,8 +70,6 @@ export const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrType
         email: String(details.email ?? ""),
         address: String(details.address ?? ""),
         themeId,
-        urlMode,
-        publicSlug: String(details.publicSlug ?? ""),
       },
     };
   }
@@ -139,8 +133,6 @@ export const getReadableDetailRows = (details: Record<string, unknown>) => {
       { label: "E-posta", value: String(details.email ?? "") },
       { label: "Adres", value: String(details.address ?? "") },
       { label: "Tema", value: String(details.themeId ?? "") },
-      { label: "URL Modu", value: String(details.urlMode ?? "") },
-      ...(details.publicSlug ? [{ label: "Slug", value: String(details.publicSlug) }] : []),
     ];
   }
   if ("url" in details) return [{ label: "Link", value: String(details.url ?? "") }];

@@ -85,6 +85,21 @@ export function isDateUsableEntitlement(
   return true;
 }
 
+const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
+  QR_CREATE: ["QR_CREATE"],
+  QR_MENU: ["QR_MENU"],
+  QR_AGENT: ["QR_AGENT", "SMART_ASSISTANT"],
+  QR_ANALYTICS: ["QR_ANALYTICS", "SMART_REPORTING"],
+  SMART_ASSISTANT: ["SMART_ASSISTANT", "QR_AGENT"],
+  SMART_REPORTING: ["SMART_REPORTING", "QR_ANALYTICS"],
+  SMART_SUMMARY: ["SMART_SUMMARY"],
+};
+
+export function matchesProductCode(actual: string, expected: string): boolean {
+  const aliases = PRODUCT_CODE_ALIASES[expected] ?? [expected];
+  return aliases.includes(actual);
+}
+
 export function hasActiveProductAccess(
   entitlements: ProductAccessEntitlement[],
   purchases: ProductAccessPurchase[],
@@ -94,7 +109,7 @@ export function hasActiveProductAccess(
     purchases.map((purchase) => [Number(purchase.id), purchase] as const),
   );
   return entitlements.some((entitlement) => {
-    if (entitlement.productCode !== productCode) return false;
+    if (!matchesProductCode(entitlement.productCode, productCode)) return false;
     const purchase = purchasesById.get(Number(entitlement.purchaseId)) ?? null;
     return isDateUsableEntitlement(entitlement, purchase);
   });
@@ -112,7 +127,7 @@ export function hasExpiredProductAccess(
     purchases.map((purchase) => [Number(purchase.id), purchase] as const),
   );
   return entitlements.some((entitlement) => {
-    if (entitlement.productCode !== productCode) return false;
+    if (!matchesProductCode(entitlement.productCode, productCode)) return false;
     const purchase = purchasesById.get(Number(entitlement.purchaseId));
     if (entitlement.expired) return true;
     if (purchase?.expired) return true;

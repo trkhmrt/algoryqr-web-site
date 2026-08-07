@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToastAction } from "@/components/ui/toast";
 import { QrCode } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,11 +26,40 @@ const Register = () => {
   });
 
   useEffect(() => {
-    const error = new URLSearchParams(window.location.search).get("error");
+    const params = new URLSearchParams(window.location.search);
+    const registered = params.get("registered") === "1";
+    const error = params.get("error");
     const message = getGoogleAuthErrorMessage(error);
-    if (!message) return;
-    toast({ title: "Google ile kayıt başarısız", description: message, variant: "destructive" });
-    router.replace("/register");
+    if (!registered && !message) return;
+
+    const loginAction = (
+      <ToastAction altText="Giriş yap" onClick={() => router.push("/login")}>
+        Giriş yap
+      </ToastAction>
+    );
+
+    const show = window.setTimeout(() => {
+      if (registered) {
+        toast({
+          title: "Kayıt başarılı",
+          description: "Başarılı bir şekilde kayıt oldunuz.",
+          duration: 10000,
+          action: loginAction,
+        });
+      } else if (message) {
+        const isEmailTaken = error === "account_exists" || error === "provider_conflict";
+        toast({
+          title: isEmailTaken ? "E-posta kullanımda" : "Google ile kayıt başarısız",
+          description: message,
+          variant: "destructive",
+          duration: isEmailTaken ? 10000 : undefined,
+          action: isEmailTaken ? loginAction : undefined,
+        });
+      }
+      router.replace("/register");
+    }, 0);
+
+    return () => window.clearTimeout(show);
   }, [router, toast]);
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -47,7 +77,7 @@ const Register = () => {
     }
     setLoading(true);
     try {
-      const result = await authService.register({
+      await authService.register({
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
@@ -55,11 +85,33 @@ const Register = () => {
         password: form.password,
         passwordConfirm: form.passwordConfirm,
       });
-      toast({ title: "Başarılı", description: result.message ?? "Hesabınız oluşturuldu!" });
-      router.push("/login");
+      toast({
+        title: "Kayıt başarılı",
+        description: "Başarılı bir şekilde kayıt oldunuz.",
+        duration: 10000,
+        action: (
+          <ToastAction altText="Giriş yap" onClick={() => router.push("/login")}>
+            Giriş yap
+          </ToastAction>
+        ),
+      });
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Kayıt olurken bir hata oluştu";
-      toast({ title: "Hata", description: message, variant: "destructive" });
+      if (err instanceof ApiError && err.status === 409) {
+        toast({
+          title: "E-posta kullanımda",
+          description: "Bu e-posta adresi zaten kayıtlı.",
+          variant: "destructive",
+          duration: 10000,
+          action: (
+            <ToastAction altText="Giriş yap" onClick={() => router.push("/login")}>
+              Giriş yap
+            </ToastAction>
+          ),
+        });
+      } else {
+        const message = err instanceof ApiError ? err.message : "Kayıt olurken bir hata oluştu";
+        toast({ title: "Hata", description: message, variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }

@@ -50,6 +50,9 @@ const PricingSection = ({ packages = [] }: PricingSectionProps) => {
           <h2 className="text-4xl md:text-5xl font-bold">
             Basit & <span className="text-gradient">Şeffaf</span>
           </h2>
+          <p className="text-muted-foreground max-w-lg mx-auto">
+            QR oluşturma, dijital menü ve yapay zeka özelliklerini ihtiyacınıza göre paketleyin.
+          </p>
         </div>
 
         {plans.length === 0 ? (

@@ -162,15 +162,22 @@ export function ChangeEmailDialog({
       setFormError("Geçerli bir e-posta adresi girin.");
       return;
     }
-    if (email === currentEmail.trim().toLowerCase()) {
-      setFormError("Yeni e-posta mevcut e-posta ile aynı olamaz.");
+    const current = currentEmail.trim().toLowerCase();
+    if (!current) {
+      setFormError("Mevcut e-posta bulunamadı.");
+      return;
+    }
+    if (email === current) {
+      const sameMsg = "Bu e-postalar aynı.";
+      setFormError(sameMsg);
+      onNotify("warning", sameMsg);
       return;
     }
     setLoading(true);
     try {
       const { data } = await getSiteSameOriginAxios().post<CodeResponse>(
         "/account/email-change/request-new-code",
-        { challengeId, newEmail: email },
+        { challengeId, currentEmail: current, newEmail: email },
       );
       applyCodeResponse(data);
       setNewCode("");

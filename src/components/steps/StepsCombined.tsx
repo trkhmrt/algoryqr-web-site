@@ -2,17 +2,41 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { QrCode, BarChart3, Palette, Zap, ChevronDown } from "lucide-react";
+import { QrCode, Palette, Sparkles, LineChart, ChevronDown } from "lucide-react";
 import step1 from "@/assets/step-1.jpg";
 import step2 from "@/assets/step-2.jpg";
 import step3 from "@/assets/step-3.jpg";
 import step4 from "@/assets/step-4.jpg";
 
 const steps = [
-  { icon: QrCode, title: "QR Kodunuzu Oluşturun", description: "URL, metin, vCard veya Wi-Fi bilgilerinizi girin. Saniyeler içinde dinamik QR kodunuz hazır.", image: step1.src },
-  { icon: Palette, title: "Markanıza Göre Özelleştirin", description: "Renk, logo, çerçeve ve köşe stilleri ile QR kodunuzu tamamen markanıza uygun hale getirin.", image: step2.src },
-  { icon: BarChart3, title: "Taramaları Anlık Takip Edin", description: "Konum, cihaz, zaman ve tekil kullanıcı bazında detaylı analitik paneli ile performansı ölçün.", image: step3.src },
-  { icon: Zap, title: "Toplu İşlemlerle Ölçekleyin", description: "CSV yükleme ile yüzlerce QR kodu tek seferde oluşturun. API ile entegre edin.", image: step4.src },
+  {
+    icon: QrCode,
+    title: "QR ve menünüzü oluşturun",
+    description:
+      "Dinamik QR kodunuzu oluşturun, dijital menünüzü şablonlarla yayınlayın. Saniyeler içinde misafirlerinize ulaşın.",
+    image: step1.src,
+  },
+  {
+    icon: Palette,
+    title: "Markanıza göre özelleştirin",
+    description:
+      "Renk, logo ve menü şablonlarıyla görünümü işletmenizin kimliğine uyarlayın; yazdırmadan güncelleyin.",
+    image: step2.src,
+  },
+  {
+    icon: Sparkles,
+    title: "Yapay zeka ile hızlanın",
+    description:
+      "Akıllı Özet ile ürün açıklamaları yazın, Akıllı Asistan ile menüdeki misafir sorularına yanıt verin.",
+    image: step3.src,
+  },
+  {
+    icon: LineChart,
+    title: "Akıllı raporlarla takip edin",
+    description:
+      "Ziyaret ve ürün ilgisine dayalı Akıllı Raporlama ile performansı ölçün; paketiniz büyüdükçe ölçekleyin.",
+    image: step4.src,
+  },
 ];
 
 const StepsCombined = () => {
@@ -23,7 +47,7 @@ const StepsCombined = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest mb-4">Nasıl Çalışır</p>
-          <h2 className="text-4xl md:text-5xl font-bold">4 adımda başlayın</h2>
+          <h2 className="text-4xl md:text-5xl font-bold">4 adımda akıllı QR deneyimi</h2>
         </div>
 
         {/* ===== DESKTOP: Vertical Timeline (Variant 2) ===== */}
@@ -56,8 +80,8 @@ const StepsCombined = () => {
                 {/* Content card */}
                 <div className={`w-[calc(50%-40px)] ${isEven ? "pr-8" : "pl-8"} ${isEven ? "" : "ml-auto"}`}>
                   <div className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
-                    <div className="rounded-xl overflow-hidden mb-4">
-                      <img src={step.image} alt={step.title} className="w-full h-44 object-cover" />
+                    <div className="rounded-xl overflow-hidden mb-4 bg-muted">
+                      <img src={step.image} alt={step.title} className="w-full h-44 object-contain" />
                     </div>
                     <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
                       Adım {i + 1}
@@ -103,8 +127,8 @@ const StepsCombined = () => {
 
                 {isActive && (
                   <div className="pt-4 space-y-3">
-                    <div className="rounded-xl overflow-hidden">
-                      <img src={step.image} alt={step.title} className="w-full h-48 object-cover" />
+                    <div className="rounded-xl overflow-hidden bg-muted">
+                      <img src={step.image} alt={step.title} className="w-full h-48 object-contain" />
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                   </div>

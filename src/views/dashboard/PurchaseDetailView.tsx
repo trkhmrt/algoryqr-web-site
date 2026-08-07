@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, Package, Receipt } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 
+import RefundConfirmDialog from "@/components/dashboard/RefundConfirmDialog";
+import RefundStatusBadge from "@/components/dashboard/RefundStatusBadge";
+import RefundStatusPanel from "@/components/dashboard/RefundStatusPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,13 +21,37 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatDaysUntilExpiry, formatPackageDate, formatPackagePrice } from "@/lib/package-display";
-import { canCancelPurchase, canCancelAtPeriodEnd, canCancelWithRefund, canResumeRenewal, cancelPurchase, cancelPurchaseAtPeriodEnd, cancelPurchaseWithRefund, resumePurchaseRenewal, getPurchaseSummary } from "@/lib/purchase-fulfillment";
+import {
+  canCancelPurchase,
+  canCancelAtPeriodEnd,
+  canCancelWithRefund,
+  canPaySubscriptionDebt,
+  canResumeRenewal,
+  cancelPurchase,
+  cancelPurchaseAtPeriodEnd,
+  cancelPurchaseWithRefund,
+  resumePurchaseRenewal,
+  getPurchaseSummary,
+  isSubscriptionPastDue,
+  paySubscriptionDebt,
+  storePendingPurchaseId,
+  type PurchaseInitiateResponse,
+} from "@/lib/purchase-fulfillment";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { isRefundInFlight, purchaseStatusLabel } from "@/lib/refund-display";
 import { ApiError } from "@/lib/api/errors";
 
 type PurchaseDetailViewProps = {
@@ -34,10 +61,16 @@ type PurchaseDetailViewProps = {
 export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewProps) {
   const queryClient = useQueryClient();
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [paymentOverlay, setPaymentOverlay] = useState<{
+    kind: "url" | "html";
+    content: string;
+  } | null>(null);
   const { data, isLoading, isError } = useQuery({
     queryKey: ["purchaseSummary", purchaseId],
     queryFn: () => getPurchaseSummary(purchaseId),
     staleTime: 15_000,
+    refetchInterval: (query) =>
+      isRefundInFlight(query.state.data?.refundStatus) ? 2_500 : false,
   });
 
   const cancelMutation = useMutation({
@@ -54,7 +87,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       const message =
         error instanceof ApiError
           ? error.message
-          : "Paket iptal edilemedi. Lutfen tekrar deneyin.";
+          : "Paket iptal edilemedi. Lütfen tekrar deneyin.";
       setCancelError(message);
     },
   });
@@ -74,7 +107,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       setCancelError(
         error instanceof ApiError
           ? error.message
-          : "Donem sonu iptal basarisiz. Lutfen tekrar deneyin.",
+          : "Dönem sonu iptal başarısız. Lütfen tekrar deneyin.",
       );
     },
   });
@@ -86,6 +119,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
       ]);
     },
@@ -93,7 +127,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       setCancelError(
         error instanceof ApiError
           ? error.message
-          : "Iade ile iptal basarisiz. Lutfen tekrar deneyin.",
+          : "İade ile iptal başarısız. Lütfen tekrar deneyin.",
       );
     },
   });
@@ -112,19 +146,81 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       setCancelError(
         error instanceof ApiError
           ? error.message
-          : "Yenilemeyi acma basarisiz. Lutfen tekrar deneyin.",
+          : "Yenilemeyi açma başarısız. Lütfen tekrar deneyin.",
       );
     },
   });
 
-  const installments = data?.installments ?? data?.installmentSchedule ?? [];
+  const payDebtMutation = useMutation({
+    mutationFn: () => paySubscriptionDebt(purchaseId),
+    onSuccess: (response: PurchaseInitiateResponse) => {
+      setCancelError(null);
+      if (!Number.isSafeInteger(response.purchaseId) || response.purchaseId <= 0) {
+        setCancelError("Borç ödeme kimliği alınamadı.");
+        return;
+      }
+      storePendingPurchaseId(response.purchaseId);
+      if (response.paymentPageUrl) {
+        setPaymentOverlay({ kind: "url", content: response.paymentPageUrl });
+        return;
+      }
+      if (response.checkoutFormContent) {
+        setPaymentOverlay({
+          kind: "html",
+          content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.checkoutFormContent}`,
+        });
+        return;
+      }
+      setCancelError("Güvenli ödeme sayfası alınamadı.");
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Borç ödeme başlatılamadı. Lütfen tekrar deneyin.",
+      );
+    },
+  });
+
   const products = data?.products ?? [];
-  const billing = data?.billingSnapshot;
-  const showImmediateCancel = data ? canCancelPurchase(data) : false;
-  const showCancelAtPeriodEnd = data ? canCancelAtPeriodEnd(data) : false;
-  const showCancelWithRefund = data ? canCancelWithRefund(data) : false;
-  const showResumeRenewal = data ? canResumeRenewal(data) : false;
+  const refundPending = isRefundInFlight(data?.refundStatus);
+  const showImmediateCancel = data ? canCancelPurchase(data) && !refundPending : false;
+  const showCancelAtPeriodEnd = data ? canCancelAtPeriodEnd(data) && !refundPending : false;
+  const showCancelWithRefund = data ? canCancelWithRefund(data) && !refundPending : false;
+  const showResumeRenewal = data ? canResumeRenewal(data) && !refundPending : false;
+  const showPayDebt = data ? canPaySubscriptionDebt(data) && !refundPending : false;
   const isSubscription = data?.paymentStyle === "SUBSCRIPTION";
+  const pastDue = data ? isSubscriptionPastDue(data) : false;
+
+  if (paymentOverlay) {
+    const title =
+      paymentOverlay.kind === "url" ? "Borç ödemesi (iyzico)" : "Borç ödemesi";
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <div className="flex items-center justify-between border-b p-3">
+          <p className="text-sm font-medium">{title}</p>
+          <Button variant="outline" onClick={() => setPaymentOverlay(null)}>
+            İptal
+          </Button>
+        </div>
+        {paymentOverlay.kind === "url" ? (
+          <iframe
+            title={title}
+            src={paymentOverlay.content}
+            className="w-full flex-1 border-0 bg-white"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+          />
+        ) : (
+          <iframe
+            title={title}
+            srcDoc={paymentOverlay.content}
+            className="w-full flex-1 border-0 bg-white"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -136,8 +232,8 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Satin alma detayi</h1>
-          <p className="text-sm text-muted-foreground">Paket, odeme ve urun bilgileri.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Paket detayı</h1>
+          <p className="text-sm text-muted-foreground">Paket hakları ve abonelik işlemleri.</p>
         </div>
       </div>
 
@@ -148,23 +244,51 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
           </CardContent>
         </Card>
       ) : isError || !data ? (
-        <p className="text-sm text-destructive">Satin alma detayi yuklenemedi.</p>
+        <p className="text-sm text-destructive">Paket detayı yüklenemedi.</p>
       ) : (
         <>
+          <RefundStatusPanel
+            packageName={data.packageName}
+            price={data.price}
+            currency={data.currency}
+            refundableAmount={data.refundableAmount}
+            refundStatus={data.refundStatus}
+            refundedAt={data.refundedAt}
+            cardBrand={data.cardBrand}
+            cardLastFour={data.cardLastFour}
+          />
+
           <Card className="glow-card">
             <CardContent className="space-y-4 p-6">
-              <div className="flex items-start gap-2">
-                <Package className="mt-0.5 h-4 w-4 text-primary" />
-                <div className="min-w-0">
+              <div className="flex items-start gap-3">
+                <Package className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Paket</p>
                   <h2 className="mt-1 text-xl font-semibold text-foreground">{data.packageName}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {data.packageCode}
-                    {data.purchaseType ? `  |  ${data.purchaseType}` : ""}
-                    {`  |  ${data.status}`}
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {data.packageCode ? (
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        {data.packageCode}
+                      </span>
+                    ) : null}
+                    <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      #{purchaseId}
+                    </span>
+                    {data.purchaseType ? (
+                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {data.purchaseType}
+                      </span>
+                    ) : null}
+                    <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      {purchaseStatusLabel(data.status)}
+                    </span>
+                    <RefundStatusBadge
+                      refundStatus={data.refundStatus}
+                      refundedAt={data.refundedAt}
+                    />
+                  </div>
                 </div>
-                <div className="ml-auto shrink-0 text-right">
+                <div className="shrink-0 text-right">
                   <p className="text-xl font-semibold text-foreground">
                     {formatPackagePrice(data.price, data.currency)}
                   </p>
@@ -173,104 +297,152 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                   </p>
                 </div>
               </div>
-              <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                <p>Baslangic: {formatPackageDate(data.startsAt)}</p>
-                <p>
-                  Bitis: {formatPackageDate(data.expiresAt)}  |  {formatDaysUntilExpiry(data.daysUntilExpiry)}
-                </p>
-                <p>Aktiflik: {data.usable && !data.expired ? "Aktif (tarihe gore)" : "Pasif"}</p>
-                <p>Odeme modu: {data.paymentMode ?? "-"}</p>
-                <p>Odeme stili: {data.paymentStyle ?? "-"}</p>
+
+              <dl className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Başlangıç</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPackageDate(data.startsAt)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Bitiş</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPackageDate(data.expiresAt)}
+                    {data.daysUntilExpiry != null ? (
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        {formatDaysUntilExpiry(data.daysUntilExpiry)}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Aktiflik</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {data.usable && !data.expired ? "Aktif (tarihe göre)" : "Pasif"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Ödeme stili</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {data.paymentStyle ?? "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Ödeme modu</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {data.paymentMode ?? "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Sonraki ödeme</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPackageDate(data.nextPaymentDueAt)}
+                  </dd>
+                </div>
                 {isSubscription ? (
-                  <p className="sm:col-span-2 text-foreground">
-                    Sonraki odeme:{" "}
-                    <span className="font-medium">{formatPackageDate(data.nextPaymentDueAt)}</span>
-                  </p>
-                ) : (
-                  <p>Sonraki odeme: {formatPackageDate(data.nextPaymentDueAt)}</p>
-                )}
-              </div>
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Yenileme</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {data.cancelAtPeriodEnd ? "Kapalı" : "Otomatik"}
+                    </dd>
+                  </div>
+                ) : null}
+                {data.cardLastFour ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Kart</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {[data.cardBrand, `•••• ${data.cardLastFour}`].filter(Boolean).join(" ")}
+                    </dd>
+                  </div>
+                ) : isSubscription ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Kart</dt>
+                    <dd className="text-right font-medium text-foreground">Kayıtlı değil</dd>
+                  </div>
+                ) : null}
+                {pastDue && data.subscriptionGraceEndsAt ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Ödeme süresi</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {formatPackageDate(data.subscriptionGraceEndsAt)}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+
               {(data.paymentApproaching || data.expiryApproaching) && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   {data.paymentApproaching
-                    ? "Odeme tarihiniz 7 gun icinde."
-                    : "Paket bitis tarihiniz 7 gun icinde."}
+                    ? "Ödeme tarihiniz 7 gün içinde."
+                    : "Paket bitiş tarihiniz 7 gün içinde."}
                 </p>
               )}
+              {pastDue ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Yenileme ödemesi alınamadı.{" "}
+                  {data.subscriptionGraceEndsAt
+                    ? `Erişiminiz ${formatPackageDate(data.subscriptionGraceEndsAt)} tarihine kadar devam eder.`
+                    : "Erişiminiz kısa süre daha devam eder."}{" "}
+                  Dönem ücretini Checkout Form ile ödeyebilirsiniz.
+                </p>
+              ) : null}
+              {!pastDue && isSubscription && !data.paymentMethodId ? (
+                <p className="text-sm text-muted-foreground">
+                  Kayıtlı kart yok; otomatik yenileme çalışmaz. Kart ekleyebilir veya dönem
+                  gelince borcu manuel ödeyebilirsiniz.
+                </p>
+              ) : null}
               {data.cancelAtPeriodEnd ? (
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Yenileme kapali. Erisiminiz {formatPackageDate(data.expiresAt)} tarihine kadar
+                  Yenileme kapalı. Erişiminiz {formatPackageDate(data.expiresAt)} tarihine kadar
                   devam eder.
                 </p>
               ) : null}
               {showImmediateCancel ||
               showCancelAtPeriodEnd ||
               showCancelWithRefund ||
-              showResumeRenewal ? (
+              showResumeRenewal ||
+              showPayDebt ? (
                 <div className="space-y-2 border-t border-border/60 pt-4">
                   {cancelError ? <p className="text-sm text-destructive">{cancelError}</p> : null}
                   <div className="flex flex-wrap gap-2">
-                    {showCancelAtPeriodEnd ? (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            disabled={cancelAtPeriodEndMutation.isPending}
-                          >
-                            {cancelAtPeriodEndMutation.isPending
-                              ? "Isleniyor..."
-                              : "Donem sonunda bitir"}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Yenileme kapatilsin mi?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {data.packageName} paketi donem sonuna kadar acik kalir. Sonraki donem
-                              icin ucret alinmaz; iade yapilmaz.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Vazgec</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => cancelAtPeriodEndMutation.mutate()}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Donem sonunda bitir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    {showPayDebt ? (
+                      <Button
+                        type="button"
+                        variant="hero"
+                        disabled={payDebtMutation.isPending}
+                        onClick={() => payDebtMutation.mutate()}
+                      >
+                        {payDebtMutation.isPending ? "Ödeme açılıyor…" : "Borcu öde"}
+                      </Button>
                     ) : null}
-                    {showCancelWithRefund ? (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={cancelWithRefundMutation.isPending}
-                          >
-                            {cancelWithRefundMutation.isPending
-                              ? "Iade isleniyor..."
-                              : "Hemen iptal et ve iade al"}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Iade ile iptal edilsin mi?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {data.packageName} paketi hemen kapanir ve bu donem odemesi iade edilir.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Vazgec</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => cancelWithRefundMutation.mutate()}>
-                              Iptal et ve iade al
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    {showCancelWithRefund || showCancelAtPeriodEnd ? (
+                      <RefundConfirmDialog
+                        purchase={{
+                          purchaseId,
+                          packageName: data.packageName,
+                          price: data.price,
+                          currency: data.currency,
+                          refundableAmount: data.refundableAmount,
+                          refundEligibleUntil: data.refundEligibleUntil,
+                          refundCoolingDays: data.refundCoolingDays,
+                          cardBrand: data.cardBrand,
+                          cardLastFour: data.cardLastFour,
+                        }}
+                        allowRefundNow={showCancelWithRefund}
+                        allowPeriodEnd={showCancelAtPeriodEnd}
+                        isPending={
+                          cancelWithRefundMutation.isPending ||
+                          cancelAtPeriodEndMutation.isPending
+                        }
+                        onConfirm={() => cancelWithRefundMutation.mutate()}
+                        onPreferPeriodEnd={
+                          showCancelAtPeriodEnd
+                            ? () => cancelAtPeriodEndMutation.mutate()
+                            : undefined
+                        }
+                      />
                     ) : null}
                     {showResumeRenewal ? (
                       <Button
@@ -279,7 +451,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                         disabled={resumeRenewalMutation.isPending}
                         onClick={() => resumeRenewalMutation.mutate()}
                       >
-                        {resumeRenewalMutation.isPending ? "Aciliyor..." : "Yenilemeyi tekrar ac"}
+                        {resumeRenewalMutation.isPending ? "Açılıyor…" : "Yenilemeyi tekrar aç"}
                       </Button>
                     ) : null}
                     {showImmediateCancel ? (
@@ -290,7 +462,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                             variant="destructive"
                             disabled={cancelMutation.isPending}
                           >
-                            {cancelMutation.isPending ? "Iptal ediliyor..." : "Paketi iptal et"}
+                            {cancelMutation.isPending ? "İptal ediliyor…" : "Paketi iptal et"}
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -301,7 +473,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Vazgec</AlertDialogCancel>
+                            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => cancelMutation.mutate()}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -315,135 +487,53 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                   </div>
                 </div>
               ) : null}
-            </CardContent>
-          </Card>
-
-          <Card className="glow-card" id="odeme">
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-medium text-foreground">Odeme bilgileri</h3>
-              </div>
-              <div className="space-y-2 rounded-lg border border-border/70 bg-background p-4 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Odeme ID</span>
-                  <span className="font-mono text-foreground">{data.paymentId || "-"}</span>
+              {isSubscription && !data.paymentMethodId ? (
+                <div className="border-t border-border/60 pt-4">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={DASHBOARD_ROUTES.accountPaymentMethods}>Kart ekle</Link>
+                  </Button>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Conversation ID</span>
-                  <span className="font-mono text-xs text-foreground">
-                    {data.paymentConversationId || "-"}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Odenen tutar</span>
-                  <span className="font-medium text-foreground">
-                    {formatPackagePrice(data.price, data.currency)}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background p-4">
-                <CreditCard className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Kart</p>
-                  {data.cardLastFour ? (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {(data.cardBrand || "Kart").toString()}  |  **** {data.cardLastFour}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Kart bilgisi kaydi yok (tek seferlik odeme olabilir).
-                    </p>
-                  )}
-                </div>
-              </div>
+              ) : null}
             </CardContent>
           </Card>
 
           <Card className="glow-card">
             <CardContent className="space-y-3 p-6">
-              <h3 className="text-sm font-medium text-foreground">Paketteki urunler</h3>
+              <h3 className="text-sm font-medium text-foreground">Paketteki ürünler</h3>
               {products.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Urun kaydi bulunamadi.</p>
+                <p className="text-sm text-muted-foreground">Ürün kaydı bulunamadı.</p>
               ) : (
-                <div className="space-y-2">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2 text-sm"
-                    >
-                      <div>
-                        <p className="font-medium text-foreground">{product.productName}</p>
-                        <p className="text-xs text-muted-foreground">{product.productCode}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {product.unlimited
-                          ? "Sinirsiz"
-                          : `${product.usedQuantity}/${product.totalQuantity} kullanildi  |  ${product.remainingQuantity} kalan`}
-                      </p>
-                    </div>
-                  ))}
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-10 px-3">Ürün</TableHead>
+                        <TableHead className="h-10 px-3 text-right">Kullanılan</TableHead>
+                        <TableHead className="h-10 px-3 text-right">Kalan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product.id} className="hover:bg-muted/30">
+                          <TableCell className="px-3 py-2.5 font-medium text-foreground">
+                            {product.productName}
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 text-right text-muted-foreground">
+                            {product.unlimited
+                              ? "—"
+                              : `${product.usedQuantity}/${product.totalQuantity}`}
+                          </TableCell>
+                          <TableCell className="px-3 py-2.5 text-right font-medium text-foreground">
+                            {product.unlimited ? "Sınırsız" : product.remainingQuantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {isSubscription ? (
-            <Card className="glow-card">
-              <CardContent className="space-y-3 p-6">
-                <h3 className="text-sm font-medium text-foreground">Odeme donemleri</h3>
-                <p className="text-sm text-foreground">
-                  Sonraki odeme:{" "}
-                  <span className="font-medium">{formatPackageDate(data.nextPaymentDueAt)}</span>
-                </p>
-                {installments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Donem kaydi yok.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {installments.map((item) => (
-                      <div
-                        key={`${item.installmentNumber}-${item.status}`}
-                        className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 text-sm last:border-0"
-                      >
-                        <span className="text-muted-foreground">
-                          {item.installmentNumber}. donem
-                          {item.dueAt ? `  |  ${formatPackageDate(item.dueAt)}` : ""}
-                        </span>
-                        <span className="text-foreground">
-                          {formatPackagePrice(item.amount, item.currency ?? data.currency)}
-                          {"  |  "}
-                          {item.status === "PAID"
-                            ? "Odendi"
-                            : item.status === "PENDING"
-                              ? "Bekliyor"
-                              : item.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {billing ? (
-            <Card className="glow-card">
-              <CardContent className="space-y-2 p-6 text-sm">
-                <h3 className="text-sm font-medium text-foreground">Fatura adresi</h3>
-                <p className="text-muted-foreground">
-                  {[billing.legalName, billing.name, billing.surname].filter(Boolean).join(" ") || "-"}
-                </p>
-                <p className="text-muted-foreground">
-                  {[billing.address, billing.district, billing.city].filter(Boolean).join(", ") || "-"}
-                </p>
-                {(billing.email || billing.phone) && (
-                  <p className="text-muted-foreground">
-                    {[billing.email, billing.phone].filter(Boolean).join("  |  ")}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
         </>
       )}
     </div>

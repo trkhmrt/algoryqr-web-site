@@ -264,7 +264,7 @@ export const LocationDetails = ({ value, onChange }: LocationDetailsProps) => (
   </div>
 );
 
-export { createInitialMenuData, type MenuData, type MenuThemeId, type MenuUrlMode } from "./MenuDetails";
+export { createInitialMenuData, type MenuData, type MenuThemeId } from "./MenuDetails";
 
 export const QrTypeDetails = ({ selectedType, data, onChange, menuExcludeId }: QrTypeDetailsProps) => {
   if (selectedType === "link") {

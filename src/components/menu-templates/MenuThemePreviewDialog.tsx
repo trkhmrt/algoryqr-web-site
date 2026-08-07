@@ -32,30 +32,28 @@ export function MenuThemePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-[min(100vw-2rem,420px)] max-w-[420px] flex-col gap-3 overflow-hidden p-4 sm:rounded-xl">
+      <DialogContent className="flex max-h-[90vh] w-[min(100vw-2rem,448px)] max-w-md flex-col gap-3 overflow-hidden p-4 sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>{themeName} önizleme</DialogTitle>
           <DialogDescription>
             Örnek menü verisiyle temayı gezinin. Gerçek menünüz farklı olabilir.
           </DialogDescription>
         </DialogHeader>
-        <div className="relative mx-auto w-full max-w-[390px] isolate overflow-hidden rounded-[1.75rem] border border-border bg-background shadow-inner [transform:translateZ(0)]">
-          <div className="relative h-[min(70vh,720px)] overflow-y-auto overscroll-contain">
-            {open ? (
-              <MenuProductFeed
-                key={themeId}
-                menuId={MENU_THEME_PREVIEW_MENU.menuId}
-                initialProducts={MENU_THEME_PREVIEW_PRODUCTS}
-                productHasNext={false}
-              >
-                <Component
-                  menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
-                  products={MENU_THEME_PREVIEW_PRODUCTS}
-                  categories={MENU_THEME_PREVIEW_CATEGORIES}
-                />
-              </MenuProductFeed>
-            ) : null}
-          </div>
+        <div className="relative isolate h-[min(70vh,720px)] overflow-y-auto overscroll-contain rounded-[1.75rem] border border-border shadow-inner [transform:translateZ(0)]">
+          {open ? (
+            <MenuProductFeed
+              key={themeId}
+              menuId={MENU_THEME_PREVIEW_MENU.menuId}
+              initialProducts={MENU_THEME_PREVIEW_PRODUCTS}
+              productHasNext={false}
+            >
+              <Component
+                menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
+                products={MENU_THEME_PREVIEW_PRODUCTS}
+                categories={MENU_THEME_PREVIEW_CATEGORIES}
+              />
+            </MenuProductFeed>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

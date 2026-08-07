@@ -1,49 +1,43 @@
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
-import { collectCategoryIds, findCategoryById } from "../types";
+import type { MainCategoryApiItem, MenuProductApiItem, SubCategoryApiItem } from "@/lib/api";
 
-export function filterProductsForCategory(
+export function filterProductsForSubCategory(
   products: MenuProductApiItem[],
-  category: MenuCategoryApiItem | null,
+  subCategoryId: number | null,
 ): MenuProductApiItem[] {
-  if (!category) return products;
-  const ids = new Set(collectCategoryIds(category));
-  return products.filter(
-    (product) => product.categoryId != null && ids.has(product.categoryId),
-  );
+  if (subCategoryId == null) return products;
+  return products.filter((product) => product.subCategoryId === subCategoryId);
 }
 
-export function resolveActiveCategory(
-  categories: MenuCategoryApiItem[],
-  activeCategoryId: "all" | number,
-): MenuCategoryApiItem | null {
-  if (activeCategoryId === "all") return null;
-  return findCategoryById(categories, activeCategoryId);
+export function filterProductsForMainCategory(
+  products: MenuProductApiItem[],
+  mainCategoryId: number | null,
+): MenuProductApiItem[] {
+  if (mainCategoryId == null) return products;
+  return products.filter((product) => product.mainCategoryId === mainCategoryId);
 }
 
 export function resolveSubCategories(
-  categories: MenuCategoryApiItem[],
+  categories: MainCategoryApiItem[],
   activeCategoryId: "all" | number,
-): MenuCategoryApiItem[] {
+): SubCategoryApiItem[] {
   if (activeCategoryId === "all") {
-    return categories.flatMap((c) => c.children ?? []);
+    return categories.flatMap((c) => c.subs ?? []);
   }
-  const active = findCategoryById(categories, activeCategoryId);
-  return active?.children ?? [];
+  const active = categories.find((c) => c.id === activeCategoryId);
+  return active?.subs ?? [];
 }
 
 export function filterVisibleProducts(
   products: MenuProductApiItem[],
-  categories: MenuCategoryApiItem[],
+  categories: MainCategoryApiItem[],
   activeCategoryId: "all" | number,
   activeSubCategoryId: "all" | number,
 ): MenuProductApiItem[] {
   if (activeSubCategoryId !== "all") {
-    const sub = findCategoryById(categories, activeSubCategoryId);
-    return filterProductsForCategory(products, sub);
+    return filterProductsForSubCategory(products, activeSubCategoryId);
   }
   if (activeCategoryId !== "all") {
-    const cat = findCategoryById(categories, activeCategoryId);
-    return filterProductsForCategory(products, cat);
+    return filterProductsForMainCategory(products, activeCategoryId);
   }
   return products;
 }

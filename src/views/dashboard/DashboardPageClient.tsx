@@ -21,9 +21,13 @@ import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
 import DigitalMenuProductDetailView from "@/views/dashboard/DigitalMenuProductDetailView";
 import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
 import PackageComparisonView from "@/views/dashboard/PackageComparisonView";
+import PaymentHistoryDetailView from "@/views/dashboard/PaymentHistoryDetailView";
+import PaymentHistoryView from "@/views/dashboard/PaymentHistoryView";
 import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
 import PlanChangeView from "@/views/dashboard/PlanChangeView";
 import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
+import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
+import SmartReportsView from "@/views/dashboard/SmartReportsView";
 
 interface DashboardPageClientProps {
   initialUser?: StoredUser | null;
@@ -66,6 +70,17 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     if (pathname === DASHBOARD_ROUTES.accountBillingAddresses) {
       return { mode: "billingAddresses" as const };
     }
+    if (pathname === DASHBOARD_ROUTES.accountPaymentHistory) {
+      return { mode: "paymentHistory" as const };
+    }
+    const paymentHistoryDetailPrefix = `${DASHBOARD_ROUTES.accountPaymentHistory}/`;
+    if (pathname.startsWith(paymentHistoryDetailPrefix)) {
+      const slug = pathname.slice(paymentHistoryDetailPrefix.length).split("/")[0];
+      const purchaseId = Number(slug);
+      if (slug && Number.isSafeInteger(purchaseId) && purchaseId > 0) {
+        return { mode: "paymentHistoryDetail" as const, purchaseId };
+      }
+    }
     const checkoutPrefix = `${DASHBOARD_ROUTES.accountSubscription}/satin-al/`;
     if (pathname.startsWith(checkoutPrefix)) {
       const slug = pathname.slice(checkoutPrefix.length).split("/")[0];
@@ -81,6 +96,9 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
       if (slug && Number.isSafeInteger(purchaseId) && purchaseId > 0) {
         return { mode: "purchaseDetail" as const, purchaseId };
       }
+    }
+    if (pathname === DASHBOARD_ROUTES.accountSecurity) {
+      return { mode: "security" as const };
     }
     if (pathname === DASHBOARD_ROUTES.account) {
       return { mode: "main" as const };
@@ -134,6 +152,18 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <AnalyticsTab />
       </Suspense>
     );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.smartReports) {
+    return <SmartReportsView />;
+  }
+
+  const smartReportDetailPrefix = `${DASHBOARD_ROUTES.smartReports}/`;
+  if (pathname.startsWith(smartReportDetailPrefix)) {
+    const jobId = pathname.slice(smartReportDetailPrefix.length).split("/")[0];
+    if (jobId && /^[0-9a-fA-F-]{36}$/.test(jobId)) {
+      return <SmartReportDetailView jobId={jobId} />;
+    }
   }
 
   if (digitalMenuCheckout) {
@@ -236,7 +266,15 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return <BillingAddressesView />;
   }
 
-  if (pathname === DASHBOARD_ROUTES.account || accountRoute?.mode === "main") {
+  if (accountRoute?.mode === "paymentHistory") {
+    return <PaymentHistoryView />;
+  }
+
+  if (accountRoute?.mode === "paymentHistoryDetail") {
+    return <PaymentHistoryDetailView purchaseId={accountRoute.purchaseId} />;
+  }
+
+  if (accountRoute?.mode === "security" || pathname === DASHBOARD_ROUTES.account || accountRoute?.mode === "main") {
     return <SettingsTab onNotify={notify} />;
   }
 

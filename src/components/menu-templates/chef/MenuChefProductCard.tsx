@@ -41,8 +41,10 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
       </div>
       <div className="min-w-0 flex-1 py-0.5">
         <p className="truncate text-sm font-semibold text-neutral-900">{item.name}</p>
-        {item.category ? (
-          <p className="mt-0.5 truncate text-xs text-neutral-500">{item.category}</p>
+        {item.subCategoryName || item.mainCategoryName ? (
+          <p className="mt-0.5 truncate text-xs text-neutral-500">
+            {[item.mainCategoryName, item.subCategoryName].filter(Boolean).join(" / ")}
+          </p>
         ) : null}
         {priceLabel ? (
           <p className="mt-1 text-sm font-medium text-amber-800">{priceLabel}</p>

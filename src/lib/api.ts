@@ -80,8 +80,6 @@ export type QrRequestDetails =
       email?: string;
       address?: string;
       themeId: string;
-      urlMode: string;
-      publicSlug?: string;
       products?: Array<{
         name: string;
         description?: string;
@@ -118,7 +116,6 @@ export interface CreateQrResponse {
   qrId?: number;
   publicUrl?: string;
   menuId?: number;
-  urlMode?: string;
 }
 
 export interface UpdateQrRequestBody {
@@ -166,6 +163,7 @@ export interface UserEntitlementApiItem {
   purchaseStatus?: string | null;
   usable: boolean;
   expired: boolean;
+  lastUsage?: string | null;
 }
 
 export interface PurchaseApiItem {
@@ -193,8 +191,12 @@ export interface PurchaseApiItem {
   cancelAtPeriodEnd?: boolean;
   currentPeriodConversationId?: string | null;
   currentPeriodPaidAt?: string | null;
+  subscriptionGraceEndsAt?: string | null;
+  manualPaymentRequired?: boolean;
   refundEligibleUntil?: string | null;
   refundEligible?: boolean;
+  refundableAmount?: number | string | null;
+  refundCoolingDays?: number | null;
   refundedAt?: string | null;
   refundStatus?: string | null;
   daysUntilExpiry?: number | null;
@@ -260,8 +262,12 @@ export interface PurchaseSummaryApiItem {
   cancelAtPeriodEnd?: boolean;
   currentPeriodConversationId?: string | null;
   currentPeriodPaidAt?: string | null;
+  subscriptionGraceEndsAt?: string | null;
+  manualPaymentRequired?: boolean;
   refundEligibleUntil?: string | null;
   refundEligible?: boolean;
+  refundableAmount?: number | string | null;
+  refundCoolingDays?: number | null;
   refundedAt?: string | null;
   refundStatus?: string | null;
   daysUntilExpiry?: number | null;
@@ -312,6 +318,7 @@ export interface PlanPackageApiItem {
   active: boolean;
   validityDays: number;
   trialEligible?: boolean;
+  priority?: number | null;
   items: PlanPackageItemApi[];
   allowedPaymentModes?: Array<"DIRECT" | "THREE_DS">;
   installmentOptions?: InstallmentOptionApiItem[];
@@ -397,7 +404,6 @@ type CreateQrGatewayResponse = {
   qrId?: number;
   publicUrl?: string;
   menuId?: number;
-  urlMode?: string;
 };
 
 export interface MenuQrBriefApiItem {
@@ -416,10 +422,11 @@ export interface MenuProfileApiItem {
   phone?: string;
   email?: string;
   address?: string;
-  publicSlug?: string;
-  urlMode: string;
   publicUrl: string;
   active: boolean;
+  ratingAvg?: number | string | null;
+  ratingCount?: number | null;
+  userRating?: number | null;
   qr?: MenuQrBriefApiItem | null;
 }
 
@@ -455,46 +462,82 @@ export interface MenuProductApiItem {
   description?: string;
   price?: number | string;
   currency: string;
-  category?: string;
-  categoryId?: number | null;
-  categoryName?: string;
-  categoryPath?: string;
+  subCategoryId: number;
+  subCategorySlug?: string;
+  subCategoryName?: string;
+  mainCategoryId?: number;
+  mainCategorySlug?: string;
+  mainCategoryName?: string;
+  tags?: MenuTagApiItem[];
+  allergens?: MenuAllergenApiItem[];
   sortOrder: number;
   imageUrl?: string;
   available: boolean;
+  chefRecommended?: boolean;
+  ratingAvg?: number | string;
+  ratingCount?: number;
+  servesPeopleMin?: number | null;
+  servesPeopleMax?: number | null;
   nutrition?: NutritionFacts | null;
 }
 
+export interface MenuTagApiItem {
+  id: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface MenuAllergenApiItem {
+  id: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface SubCategoryApiItem {
+  id: number;
+  mainCategoryId: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface MainCategoryApiItem {
+  id: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+  subs: SubCategoryApiItem[];
+}
+
+/** @deprecated legacy tree shape — prefer MainCategoryApiItem */
 export interface MenuCategoryApiItem {
   categoryId: number;
-  menuId: number;
+  menuId?: number;
   parentId?: number | null;
   name: string;
   sortOrder: number;
   children: MenuCategoryApiItem[];
-}
-
-export interface MenuCategoryRequestBody {
-  name: string;
-  parentId?: number | null;
-  sortOrder?: number;
-}
-
-export interface MenuCategoryUpdateBody {
-  name?: string;
-  parentId?: number | null;
-  sortOrder?: number;
+  slug?: string;
 }
 
 export interface PublicMenuApiResponse {
   menu: MenuProfileApiItem;
   products: MenuProductApiItem[];
-  categories?: MenuCategoryApiItem[];
+  categories?: MainCategoryApiItem[];
   themeId: string;
   productPage?: number;
   productSize?: number;
   productTotalElements?: number;
   productHasNext?: boolean;
+}
+
+export interface MenuRatingApiResponse {
+  menuId?: number;
+  ratingAvg?: number | string | null;
+  ratingCount?: number | null;
+  userRating?: number | null;
 }
 
 export interface MenuProductPageApiResponse {
@@ -511,18 +554,59 @@ export interface MenuProductRequestBody {
   description?: string;
   price?: number | string;
   currency?: string;
-  category?: string;
-  categoryId?: number | null;
+  subCategoryId: number;
+  tagIds?: number[];
+  allergenIds?: number[];
   sortOrder?: number;
   imageUrl?: string;
   available?: boolean;
+  chefRecommended?: boolean;
+  servesPeopleMin?: number | null;
+  servesPeopleMax?: number | null;
   nutrition?: NutritionFacts;
 }
 
-export async function checkMenuSlugAvailabilityRequest(slug: string, excludeMenuId?: number) {
-  const params = new URLSearchParams({ slug });
-  if (excludeMenuId != null) params.set("excludeMenuId", String(excludeMenuId));
-  const response = await api.get<{ slug: string; available: boolean }>(`/menu/slug-available?${params.toString()}`);
+export interface ProductFacetsApiResponse {
+  totalMatching: number;
+  tags: Array<{ tagId: number; slug: string; name: string; count: number }>;
+  allergens?: Array<{ allergenId: number; slug: string; name: string; count: number }>;
+  servesBuckets: Array<{ key: string; label: string; count: number }>;
+}
+
+export type PublicProductQuery = {
+  page?: number;
+  size?: number;
+  chefRecommended?: boolean;
+  tagSlug?: string;
+  minRating?: number | string;
+  subCategoryId?: number;
+  mainCategoryId?: number;
+  tagIds?: number[];
+  servesPeople?: number;
+  servesPeopleMin?: number;
+  servesPeopleMax?: number;
+  q?: string;
+};
+
+function appendPublicProductParams(params: URLSearchParams, query: PublicProductQuery = {}) {
+  if (query.page != null) params.set("page", String(query.page));
+  if (query.size != null) params.set("size", String(query.size));
+  if (query.chefRecommended != null) params.set("chefRecommended", String(query.chefRecommended));
+  if (query.tagSlug) params.set("tagSlug", query.tagSlug);
+  if (query.minRating != null) params.set("minRating", String(query.minRating));
+  if (query.subCategoryId != null) params.set("subCategoryId", String(query.subCategoryId));
+  if (query.mainCategoryId != null) params.set("mainCategoryId", String(query.mainCategoryId));
+  if (query.servesPeople != null) params.set("servesPeople", String(query.servesPeople));
+  if (query.servesPeopleMin != null) params.set("servesPeopleMin", String(query.servesPeopleMin));
+  if (query.servesPeopleMax != null) params.set("servesPeopleMax", String(query.servesPeopleMax));
+  if (query.q) params.set("q", query.q);
+  for (const tagId of query.tagIds ?? []) {
+    params.append("tagIds", String(tagId));
+  }
+}
+
+export async function getMenuByQrIdRequest(qrId: number | string): Promise<MenuProfileApiItem> {
+  const response = await api.get<MenuProfileApiItem>(`/menu/by-qr/${qrId}`);
   return response.data;
 }
 
@@ -534,11 +618,6 @@ export interface ActiveMenuSummaryApiItem {
   publicUrl?: string | null;
   active: boolean;
   qr?: { id: number; name?: string | null } | null;
-}
-
-export async function getMenuByQrIdRequest(qrId: number | string): Promise<MenuProfileApiItem> {
-  const response = await api.get<MenuProfileApiItem>(`/menu/by-qr/${qrId}`);
-  return response.data;
 }
 
 export async function getMyActiveMenusRequest(): Promise<ActiveMenuSummaryApiItem[]> {
@@ -562,17 +641,100 @@ export interface MenuCategoriesByQrApiResponse {
   menuId: number;
   qrId: number;
   businessName?: string | null;
-  categories: MenuCategoryApiItem[];
+  categories: MainCategoryApiItem[];
+}
+
+export type MenuProductsByQrQuery = {
+  page?: number;
+  size?: number;
+  q?: string;
+  subCategoryId?: number;
+};
+
+function applyLocalProductPagination(
+  items: MenuProductApiItem[],
+  options: MenuProductsByQrQuery = {},
+): Pick<MenuProductPageApiResponse, "content" | "page" | "size" | "totalElements" | "totalPages" | "hasNext"> {
+  const page = options.page ?? 0;
+  const size = options.size ?? 20;
+  let filtered = items;
+  if (options.q) {
+    const q = options.q.toLocaleLowerCase("tr");
+    filtered = filtered.filter((product) => product.name.toLocaleLowerCase("tr").includes(q));
+  }
+  if (options.subCategoryId != null) {
+    filtered = filtered.filter((product) => product.subCategoryId === options.subCategoryId);
+  }
+  const totalElements = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalElements / size) || 1);
+  const start = page * size;
+  const content = filtered.slice(start, start + size);
+  return {
+    content,
+    page,
+    size,
+    totalElements,
+    totalPages,
+    hasNext: start + size < totalElements,
+  };
+}
+
+function normalizeProductPage(
+  raw: Partial<MenuProductPageApiResponse> | null | undefined,
+  options: MenuProductsByQrQuery = {},
+): MenuProductPageApiResponse {
+  const page = options.page ?? 0;
+  const size = options.size ?? 20;
+  const items = Array.isArray(raw?.content) ? raw.content : [];
+  if (items.length > size) {
+    return applyLocalProductPagination(items, options);
+  }
+  return {
+    content: items,
+    page: raw?.page ?? page,
+    size: raw?.size ?? size,
+    totalElements: raw?.totalElements ?? items.length,
+    totalPages: Math.max(1, raw?.totalPages ?? 1),
+    hasNext: Boolean(raw?.hasNext),
+  };
 }
 
 export async function getMenuProductsByQrRequest(
   qrId: number | string,
+  options: MenuProductsByQrQuery = {},
 ): Promise<MenuProductsByQrApiResponse> {
-  const response = await api.get<MenuProductsByQrApiResponse>(`/menu/by-qr/${qrId}/products`);
+  const params: Record<string, string | number> = {};
+  if (options.page != null) params.page = options.page;
+  if (options.size != null) params.size = options.size;
+  if (options.q) params.q = options.q;
+  if (options.subCategoryId != null) params.subCategoryId = options.subCategoryId;
+
+  const response = await api.get<MenuProductsByQrApiResponse>(`/menu/by-qr/${qrId}/products`, {
+    params,
+  });
+  const data = response.data;
+  const page = normalizeProductPage(data, options);
   return {
-    ...response.data,
-    content: Array.isArray(response.data?.content) ? response.data.content : [],
+    ...data,
+    ...page,
+    content: page.content,
   };
+}
+
+export async function getMenuProductsPageRequest(
+  menuId: number | string,
+  options: MenuProductsByQrQuery = {},
+): Promise<MenuProductPageApiResponse> {
+  const page = options.page ?? 0;
+  const size = options.size ?? 20;
+  const params: Record<string, string | number> = { page, size };
+  if (options.q) params.q = options.q;
+  if (options.subCategoryId != null) params.subCategoryId = options.subCategoryId;
+
+  const response = await api.get<MenuProductPageApiResponse>(`/menu/${menuId}/products`, {
+    params,
+  });
+  return normalizeProductPage(response.data, options);
 }
 
 export async function getMenuCategoriesByQrRequest(
@@ -606,13 +768,15 @@ export async function getMenuProductsRequest(menuId: number | string): Promise<M
 
 export async function getPublicMenuProductsRequest(
   menuId: number | string,
-  page = 0,
+  pageOrQuery: number | PublicProductQuery = 0,
   size = 20,
 ): Promise<MenuProductPageApiResponse> {
-  const params = new URLSearchParams({
-    page: String(page),
-    size: String(size),
-  });
+  const query: PublicProductQuery =
+    typeof pageOrQuery === "number"
+      ? { page: pageOrQuery, size }
+      : { page: 0, size: 20, ...pageOrQuery };
+  const params = new URLSearchParams();
+  appendPublicProductParams(params, query);
   const response = await fetch(`/api/menu/public/${encodeURIComponent(String(menuId))}/products?${params}`, {
     cache: "no-store",
   });
@@ -620,6 +784,39 @@ export async function getPublicMenuProductsRequest(
     throw new ApiError(response.status, "Ürünler yüklenemedi");
   }
   return response.json() as Promise<MenuProductPageApiResponse>;
+}
+
+export async function getPublicProductFacetsRequest(
+  menuId: number | string,
+  query: PublicProductQuery = {},
+): Promise<ProductFacetsApiResponse> {
+  const params = new URLSearchParams();
+  appendPublicProductParams(params, query);
+  const response = await fetch(
+    `/api/menu/public/${encodeURIComponent(String(menuId))}/product-facets?${params}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, "Ürün filtreleri yüklenemedi");
+  }
+  return response.json() as Promise<ProductFacetsApiResponse>;
+}
+
+export async function getPublicProductRecommendationsRequest(
+  menuId: number | string,
+  productId: number | string,
+  limit = 6,
+): Promise<MenuProductApiItem[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await fetch(
+    `/api/menu/public/${encodeURIComponent(String(menuId))}/products/${encodeURIComponent(String(productId))}/recommendations?${params}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, "Öneriler yüklenemedi");
+  }
+  const data = (await response.json()) as MenuProductApiItem[];
+  return Array.isArray(data) ? data : [];
 }
 
 export async function createMenuProductRequest(
@@ -650,42 +847,42 @@ export async function deleteMenuProductRequest(productId: number | string): Prom
   await api.delete(`/menu/products/${productId}`);
 }
 
-export async function getMenuCategoriesRequest(menuId: number | string): Promise<MenuCategoryApiItem[]> {
-  const response = await api.get<MenuCategoryApiItem[]>(`/menu/${menuId}/categories`);
-  return response.data;
+export async function getMenuCategoriesRequest(menuId: number | string): Promise<MainCategoryApiItem[]> {
+  const response = await api.get<MainCategoryApiItem[]>(`/menu/${menuId}/categories`);
+  return Array.isArray(response.data) ? response.data : [];
 }
 
-export async function createMenuCategoryRequest(
-  menuId: number | string,
-  payload: MenuCategoryRequestBody,
-): Promise<MenuCategoryApiItem> {
-  const response = await api.post<MenuCategoryApiItem>(`/menu/${menuId}/categories`, payload);
-  return response.data;
+export async function getMenuTaxonomyRequest(): Promise<MainCategoryApiItem[]> {
+  const response = await api.get<MainCategoryApiItem[]>("/menu/taxonomy");
+  return Array.isArray(response.data) ? response.data : [];
 }
 
-export async function updateMenuCategoryRequest(
-  categoryId: number | string,
-  payload: MenuCategoryUpdateBody,
-): Promise<MenuCategoryApiItem> {
-  const response = await api.put<MenuCategoryApiItem>(`/menu/categories/${categoryId}`, payload);
-  return response.data;
+export async function getMenuTagsRequest(): Promise<MenuTagApiItem[]> {
+  const response = await api.get<MenuTagApiItem[]>("/menu/tags");
+  return Array.isArray(response.data) ? response.data : [];
 }
 
-export async function deleteMenuCategoryRequest(categoryId: number | string): Promise<void> {
-  await api.delete(`/menu/categories/${categoryId}`);
+export async function getMenuAllergensRequest(): Promise<MenuAllergenApiItem[]> {
+  const response = await api.get<MenuAllergenApiItem[]>("/menu/allergens");
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export function flattenTaxonomySubs(
+  categories: MainCategoryApiItem[],
+): Array<{ id: number; label: string; mainCategoryId: number }> {
+  return categories.flatMap((main) =>
+    (main.subs ?? []).map((sub) => ({
+      id: sub.id,
+      mainCategoryId: main.id,
+      label: `${main.name} / ${sub.name}`,
+    })),
+  );
 }
 
 export function flattenMenuCategories(
-  categories: MenuCategoryApiItem[],
-  depth = 0,
+  categories: MainCategoryApiItem[],
 ): Array<{ id: number; label: string }> {
-  return categories.flatMap((category) => [
-    {
-      id: category.categoryId,
-      label: `${depth > 0 ? `${"— ".repeat(depth)}` : ""}${category.name}`,
-    },
-    ...flattenMenuCategories(category.children ?? [], depth + 1),
-  ]);
+  return flattenTaxonomySubs(categories).map(({ id, label }) => ({ id, label }));
 }
 
 export interface MenuUpdateRequestBody {
@@ -695,8 +892,6 @@ export interface MenuUpdateRequestBody {
   phone?: string;
   email?: string;
   address?: string;
-  urlMode?: string;
-  publicSlug?: string;
   active?: boolean;
 }
 
@@ -713,6 +908,33 @@ export async function getPublicMenuRequest(identifier: string): Promise<PublicMe
     throw new ApiError(response.status, "Menü bulunamadı");
   }
   return response.json() as Promise<PublicMenuApiResponse>;
+}
+
+export async function getPublicMenuRatingRequest(
+  identifier: number | string,
+): Promise<MenuRatingApiResponse> {
+  const response = await fetch(`/api/menu/public/${encodeURIComponent(String(identifier))}/rating`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Menü puanı yüklenemedi");
+  }
+  return response.json() as Promise<MenuRatingApiResponse>;
+}
+
+export async function submitPublicMenuRatingRequest(
+  identifier: number | string,
+  rating: number,
+): Promise<MenuRatingApiResponse> {
+  const response = await fetch(`/api/menu/public/${encodeURIComponent(String(identifier))}/rating`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rating }),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Menü puanı kaydedilemedi");
+  }
+  return response.json() as Promise<MenuRatingApiResponse>;
 }
 
 export async function createQrRequest(payload: CreateQrRequestBody): Promise<CreateQrResponse> {
@@ -740,7 +962,6 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
     qrId,
     publicUrl: response.data.publicUrl,
     menuId: response.data.menuId,
-    urlMode: response.data.urlMode,
   };
 }
 

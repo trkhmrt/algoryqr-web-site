@@ -5,8 +5,6 @@ export type MenuCreateProfile = {
   email?: string;
   address?: string;
   themeId: string;
-  urlMode: "id" | "slug";
-  publicSlug?: string;
 };
 
 export type MenuCreateProduct = {
@@ -28,8 +26,6 @@ export function buildMenuCreateDetails(
     email: menu.email,
     address: menu.address,
     themeId: menu.themeId,
-    urlMode: menu.urlMode.toUpperCase(),
-    ...(menu.urlMode === "slug" ? { publicSlug: menu.publicSlug } : {}),
     products,
   };
 }

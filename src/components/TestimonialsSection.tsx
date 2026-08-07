@@ -5,19 +5,22 @@ import { motion, useInView } from "framer-motion";
 
 const testimonials = [
   {
-    quote: "AlgoryQR ile restoran menümüzü dinamik hale getirdik. Artık fiyat değişikliklerini anında güncelliyoruz.",
+    quote:
+      "AlgoryQR ile menümüzü dinamik hale getirdik. Akıllı Özet sayesinde ürün açıklamalarını çok daha hızlı hazırlıyoruz.",
     name: "Elif K.",
     role: "Restoran Sahibi",
   },
   {
-    quote: "Etkinlik biletlerimiz için QR kod oluşturduk. Tarama analitikleri sayesinde katılım oranlarını anlık takip ediyoruz.",
+    quote:
+      "Misafirler menüdeki asistana soru sorabiliyor. Hem QR hem dijital menü tek panelden yönetiliyor; işimiz kolaylaştı.",
     name: "Mert A.",
-    role: "Etkinlik Yöneticisi",
+    role: "Kafe İşletmecisi",
   },
   {
-    quote: "API entegrasyonu sayesinde e-ticaret sitemizde her sipariş için otomatik QR kod üretiyoruz.",
+    quote:
+      "Akıllı Raporlama ile hangi ürünlerin ilgi gördüğünü net görüyoruz. Kampanyaları buna göre planlıyoruz.",
     name: "Ayşe T.",
-    role: "E-Ticaret Müdürü",
+    role: "İşletme Müdürü",
   },
 ];
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { MenuProfileApiItem } from "@/lib/api";
+import { MenuViewportFrame } from "../shared";
 import { LumiereTopNav } from "./TopNav";
 import { LUMIERE_STYLES } from "./styles";
 
@@ -20,7 +21,7 @@ export function LumiereShell({
   children,
 }: ShellProps) {
   return (
-    <div className="lumiere-menu relative flex min-h-screen flex-col overflow-x-hidden">
+    <MenuViewportFrame frameBgClassName="lumiere-menu" innerClassName="lumiere-menu">
       <style>{LUMIERE_STYLES}</style>
       <LumiereTopNav
         businessName={menu.businessName}
@@ -28,9 +29,9 @@ export function LumiereShell({
         onBack={onBack}
         onHome={onHome}
       />
-      <main className={`flex-grow pb-10 ${topVariant === "detail" ? "pt-16" : ""}`}>
+      <main className={`flex-grow pb-16 ${topVariant === "detail" ? "pt-14" : ""}`}>
         {children}
       </main>
-    </div>
+    </MenuViewportFrame>
   );
 }

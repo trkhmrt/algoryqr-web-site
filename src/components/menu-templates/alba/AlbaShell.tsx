@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { MenuViewportFrame } from "../shared";
 import { ALBA_STYLES } from "./styles";
 
 type AlbaShellProps = {
@@ -8,9 +9,9 @@ type AlbaShellProps = {
 
 export function AlbaShell({ children }: AlbaShellProps) {
   return (
-    <div className="alba-menu relative min-h-screen overflow-x-hidden">
+    <MenuViewportFrame frameBgClassName="alba-menu" innerClassName="alba-menu">
       <style>{ALBA_STYLES}</style>
       {children}
-    </div>
+    </MenuViewportFrame>
   );
 }

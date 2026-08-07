@@ -1,10 +1,15 @@
-export type MenuAnalyticsEventType = "MENU_OPEN" | "CATEGORY_VIEW" | "PRODUCT_VIEW";
+export type MenuAnalyticsEventType =
+  | "MENU_OPEN"
+  | "CATEGORY_VIEW"
+  | "PRODUCT_VIEW"
+  | "SERVES_FILTER";
 export type MenuAnalyticsDeviceType = "MOBILE" | "TABLET" | "DESKTOP";
 
 export type MenuAnalyticsEventItem = {
   type: MenuAnalyticsEventType;
   categoryId?: number;
   productId?: number;
+  servesPeople?: number;
   sequence: number;
   occurredAt: string;
 };

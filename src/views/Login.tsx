@@ -26,11 +26,15 @@ const Login = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const error = new URLSearchParams(window.location.search).get("error");
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
     const message = getGoogleAuthErrorMessage(error);
     if (!message) return;
-    toast({ title: "Google ile giriş başarısız", description: message, variant: "destructive" });
-    router.replace("/login");
+    const show = window.setTimeout(() => {
+      toast({ title: "Google ile giriş başarısız", description: message, variant: "destructive" });
+      router.replace("/login");
+    }, 0);
+    return () => window.clearTimeout(show);
   }, [router, toast]);
 
   const cancelTwoFactor = async () => {

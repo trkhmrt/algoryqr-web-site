@@ -12,6 +12,8 @@ export const GLASSY_GRAY_STYLES = `
     --gg-outline: #a98a7d;
     --gg-accent: #caf300;
     --gg-on-surface: #e5e2e1;
+    --menu-frame-bg: #0a0a0a;
+    --menu-frame-border: rgba(255, 255, 255, 0.08);
     background-color: var(--gg-bg);
     color: var(--gg-on-surface);
     font-family: var(--gg-font-body);

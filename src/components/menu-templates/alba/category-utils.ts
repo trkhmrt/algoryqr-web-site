@@ -1,5 +1,6 @@
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
-import { collectCategoryIds, findCategoryById } from "../types";
+import type { MenuProductApiItem } from "@/lib/api";
+import type { TaxonomyNavNode } from "../types";
+import { collectCategoryIds, filterProductsByNavNode } from "../types";
 import { albaCategoryMark } from "./styles";
 
 export type AlbaView =
@@ -8,15 +9,15 @@ export type AlbaView =
   | { type: "product"; productId: number; categoryId: number | null };
 
 export function getBreadcrumbs(
-  categories: MenuCategoryApiItem[],
+  categories: TaxonomyNavNode[],
   categoryId: number,
-): MenuCategoryApiItem[] {
-  const trail: MenuCategoryApiItem[] = [];
+): TaxonomyNavNode[] {
+  const trail: TaxonomyNavNode[] = [];
 
   function walk(
-    nodes: MenuCategoryApiItem[],
+    nodes: TaxonomyNavNode[],
     targetId: number,
-    path: MenuCategoryApiItem[],
+    path: TaxonomyNavNode[],
   ): boolean {
     for (const node of nodes) {
       const next = [...path, node];
@@ -35,18 +36,14 @@ export function getBreadcrumbs(
 
 export function filterProductsForCategory(
   products: MenuProductApiItem[],
-  category: MenuCategoryApiItem | null,
+  category: TaxonomyNavNode | null,
 ): MenuProductApiItem[] {
-  if (!category) return products;
-  const ids = new Set(collectCategoryIds(category));
-  return products.filter(
-    (product) => product.categoryId != null && ids.has(product.categoryId),
-  );
+  return filterProductsByNavNode(products, category);
 }
 
 export function countProductsForCategory(
   products: MenuProductApiItem[],
-  category: MenuCategoryApiItem,
+  category: TaxonomyNavNode,
 ): number {
   return filterProductsForCategory(products, category).length;
 }
@@ -60,8 +57,8 @@ export function popularProducts(products: MenuProductApiItem[], limit = 6) {
 }
 
 export function categoryMarkFor(
-  category: MenuCategoryApiItem,
-  rootCategories: MenuCategoryApiItem[],
+  category: TaxonomyNavNode,
+  rootCategories: TaxonomyNavNode[],
 ) {
   const index = Math.max(
     0,

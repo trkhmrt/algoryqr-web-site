@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   User, Shield, Bell, ChevronRight, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail,
   RefreshCw, LogOut, Timer, Copy, CreditCard,
-  WalletCards, MapPin, History, Monitor,
+  WalletCards, MapPin, History, Monitor, Clock3,
 } from "lucide-react";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { authService, type TwoFactorSetupPayload } from "@/lib/auth-service";
@@ -27,6 +27,10 @@ import { ChangeEmailDialog } from "@/components/dashboard/ChangeEmailDialog";
 import { ApiError } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/api/storage";
 import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
+import { useSubscription } from "@/hooks/use-subscription";
+import { formatDaysUntilExpiry } from "@/lib/package-display";
+import { isDateUsablePurchase } from "@/lib/product-access";
+import { cn } from "@/lib/utils";
 
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
 const REFRESH_BUFFER_SECONDS = 30;
@@ -35,9 +39,15 @@ function nextRefreshAtFromAccessExp(accessExpSeconds: number): number {
   return Math.max(Date.now() + 1000, accessExpSeconds * 1000 - REFRESH_BUFFER_SECONDS * 1000);
 }
 
-type SettingsPage = "main" | "profile" | "security" | "notifications" | "session";
+type SettingsPage = "main" | "profile" | "notifications" | "session";
+type SettingsView = SettingsPage | "security";
 
-type SettingsMenuKey = SettingsPage | "subscription" | "paymentMethods" | "billingAddresses";
+type SettingsMenuKey =
+  | SettingsView
+  | "subscription"
+  | "paymentHistory"
+  | "paymentMethods"
+  | "billingAddresses";
 
 interface SettingsTabProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -111,11 +121,15 @@ function ComingSoonBadge() {
 
 export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { data: myProfile, isLoading: myProfileLoading, isError: myProfileError } = useMyProfile();
   const { data: accessProfile } = useAccessProfile();
+  const subscription = useSubscription();
   const isGoogleAccount = accessProfile?.provider === "GOOGLE";
   const [page, setPage] = useState<SettingsPage>("main");
+  const view: SettingsView =
+    pathname === DASHBOARD_ROUTES.accountSecurity ? "security" : page;
 
   const [accessTokenExpiresAt, setAccessTokenExpiresAt] = useState<number | null>(null);
   const [refreshTokenExpiresAt, setRefreshTokenExpiresAt] = useState<number | null>(null);
@@ -156,14 +170,14 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     error: sessionsError,
     revokingId,
     revoke: revokeSession,
-  } = useUserSessions(page === "security");
+  } = useUserSessions(view === "security");
 
   const activeSessions = sessions.filter((session) => session.active);
   const pastSessions = sessions.filter((session) => !session.active);
 
   useEffect(() => {
-    if (page !== "security") setShowPastSessions(false);
-  }, [page]);
+    if (view !== "security") setShowPastSessions(false);
+  }, [view]);
 
   const fetchTokenExp = useCallback(() => {
     setTokenLoading(true);
@@ -470,38 +484,109 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     }
   };
 
+  const goBackToMain = () => {
+    if (pathname === DASHBOARD_ROUTES.accountSecurity) {
+      router.push(DASHBOARD_ROUTES.account);
+      return;
+    }
+    setPage("main");
+  };
+
   const backButton = (
     <button
-      onClick={() => setPage("main")}
+      onClick={goBackToMain}
       className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
     >
       <ArrowLeft className="h-4 w-4" />
     </button>
   );
 
-  if (page === "main") {
+  if (view === "main") {
+    const active = subscription.data?.activePurchase;
+    const isActiveTrial =
+      !!active &&
+      active.purchaseType === "TRIAL" &&
+      isDateUsablePurchase(active);
+    const trialDays = active?.daysUntilExpiry;
+    const trialUrgent = typeof trialDays === "number" && trialDays <= 3;
+
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="mx-auto w-full max-w-md space-y-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Hesabım</h1>
-          <p className="text-sm text-muted-foreground">Abonelik, profil ve uygulama ayarlarınızı yönetin</p>
         </div>
-        <div className="grid gap-4">
+        <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+          {isActiveTrial && active ? (
+            <button
+              type="button"
+              className={cn(
+                "flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors",
+                trialUrgent
+                  ? "bg-amber-500/5 hover:bg-amber-500/10"
+                  : "bg-emerald-500/5 hover:bg-emerald-500/10",
+              )}
+              onClick={() => router.push(DASHBOARD_ROUTES.accountPackages)}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                    trialUrgent ? "bg-amber-500/10" : "bg-emerald-500/10",
+                  )}
+                >
+                  <Clock3
+                    className={cn(
+                      "h-4 w-4",
+                      trialUrgent ? "text-amber-600" : "text-emerald-600",
+                    )}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-medium text-foreground">
+                    {active.packageName} denemeniz aktif
+                  </h3>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {formatDaysUntilExpiry(trialDays)}
+                    {active.expiresAt
+                      ? ` · ${new Intl.DateTimeFormat("tr-TR", {
+                          day: "numeric",
+                          month: "long",
+                        }).format(new Date(active.expiresAt))} biter`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 text-xs font-medium",
+                  trialUrgent ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400",
+                )}
+              >
+                Pakete geç
+              </span>
+            </button>
+          ) : null}
           {([
-            { icon: CreditCard, title: "Abonelik", desc: "Aktif paketinizi görün ve yeni paket satın alın", key: "subscription" },
-            { icon: WalletCards, title: "Kayıtlı Kartlarım", desc: "Ödemelerde kullanacağınız kartları yönetin", key: "paymentMethods" },
-            { icon: MapPin, title: "Fatura Adreslerim", desc: "Fatura bilgilerinizi görüntüleyin ve düzenleyin", key: "billingAddresses" },
-            { icon: Key, title: "Oturum / Token", desc: "Access token kalan süre, yenileme ve revoke", key: "session" },
-            { icon: User, title: "Profil Bilgileri", desc: "Ad, soyad, e-posta ve telefon bilgilerinizi güncelleyin", key: "profile" },
-            { icon: Shield, title: "Güvenlik", desc: "Şifre, 2FA ve oturumlar", key: "security" },
-            { icon: Bell, title: "Bildirimler", desc: "E-posta bildirim tercihlerinizi yönetin", key: "notifications" },
-          ] as const satisfies ReadonlyArray<{ icon: typeof CreditCard; title: string; desc: string; key: SettingsMenuKey }>).map((item) => (
-            <Card
+            { icon: CreditCard, title: "Abonelik", key: "subscription" },
+            { icon: History, title: "Ödeme geçmişi", key: "paymentHistory" },
+            { icon: WalletCards, title: "Kayıtlı Kartlarım", key: "paymentMethods" },
+            { icon: MapPin, title: "Fatura Adreslerim", key: "billingAddresses" },
+            { icon: Key, title: "Oturum / Token", key: "session" },
+            { icon: User, title: "Profil Bilgileri", key: "profile" },
+            { icon: Shield, title: "Güvenlik", key: "security" },
+            { icon: Bell, title: "Bildirimler", key: "notifications" },
+          ] as const satisfies ReadonlyArray<{ icon: typeof CreditCard; title: string; key: SettingsMenuKey }>).map((item) => (
+            <button
               key={item.title}
-              className="glow-card cursor-pointer hover:bg-muted/50 transition-colors"
+              type="button"
+              className="flex w-full cursor-pointer items-center justify-between gap-3 bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
               onClick={() => {
                 if (item.key === "subscription") {
                   router.push(DASHBOARD_ROUTES.accountSubscription);
+                  return;
+                }
+                if (item.key === "paymentHistory") {
+                  router.push(DASHBOARD_ROUTES.accountPaymentHistory);
                   return;
                 }
                 if (item.key === "paymentMethods") {
@@ -512,33 +597,30 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                   router.push(DASHBOARD_ROUTES.accountBillingAddresses);
                   return;
                 }
+                if (item.key === "security") {
+                  router.push(DASHBOARD_ROUTES.accountSecurity);
+                  return;
+                }
                 setPage(item.key as SettingsPage);
               }}
             >
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                    <item.icon className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{item.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                  </div>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <item.icon className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+                <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
           ))}
         </div>
 
-        <Card className="glow-card border-destructive/20">
-          <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-sm text-foreground">Çıkış Yap</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Hesabınızdan güvenli şekilde çıkış yapın</p>
-            </div>
+        <div className="overflow-hidden rounded-lg border border-destructive/20">
+          <div className="flex items-center justify-between gap-3 bg-card px-3 py-2.5">
+            <h3 className="text-sm font-medium text-foreground">Çıkış Yap</h3>
             <Button
               variant="destructive"
+              size="sm"
               className="shrink-0"
               onClick={() => void handleLogout()}
               disabled={logoutLoading}
@@ -546,13 +628,13 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
               <LogOut className="h-4 w-4 mr-2" />
               {logoutLoading ? "Çıkış yapılıyor…" : "Çıkış Yap"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (page === "session") {
+  if (view === "session") {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
@@ -620,7 +702,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     );
   }
 
-  if (page === "profile") {
+  if (view === "profile") {
     const avA = (firstName.trim() || myProfile?.firstName || "?").charAt(0).toUpperCase();
     const avB = (lastName.trim() || myProfile?.lastName || "").charAt(0).toUpperCase();
     return (
@@ -742,7 +824,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     );
   }
 
-  if (page === "security") {
+  if (view === "security") {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
@@ -1009,7 +1091,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     );
   }
 
-  if (page === "notifications") {
+  if (view === "notifications") {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">

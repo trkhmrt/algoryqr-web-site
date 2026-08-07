@@ -2,22 +2,20 @@
 
 import { useMemo } from "react";
 
-import type { MenuProductApiItem } from "@/lib/api";
-
 import type { MenuTemplateProps } from "../types";
 import {
   filterProductsByNavCategory,
-  formatMenuPrice,
   resolveMenuNavCategories,
 } from "../types";
 import {
-  MenuCategoryRail,
+  DenseProductRow,
+  DenseStickyToolbar,
   MenuProductScrollSentinel,
-  MenuSearchField,
   searchMenuProducts,
   useMenuTemplateNav,
   useRegisterChefOpenProduct,
 } from "../shared";
+import { DarkShell } from "./DarkShell";
 import { DarkProductDetail } from "./ProductDetail";
 
 export function DarkMenuTemplate({
@@ -46,8 +44,8 @@ export function DarkMenuTemplate({
   useRegisterChefOpenProduct(openProduct);
 
   const categoryProducts = useMemo(
-    () => filterProductsByNavCategory(products, activeCategory, categories),
-    [products, activeCategory, categories],
+    () => filterProductsByNavCategory(products, activeCategory),
+    [products, activeCategory],
   );
 
   const visibleProducts = useMemo(
@@ -62,9 +60,9 @@ export function DarkMenuTemplate({
 
   if (isProductView && selectedProduct) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100">
-        <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/95 px-4 py-3 backdrop-blur">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+      <DarkShell>
+        <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/95 px-4 py-2.5 backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={goBack}
@@ -76,127 +74,86 @@ export function DarkMenuTemplate({
           </div>
         </header>
         <DarkProductDetail product={selectedProduct} onBack={goBack} />
-      </div>
+      </DarkShell>
     );
   }
 
   const listItems = globalResults ?? visibleProducts;
 
+  const rowProps = {
+    className: "border-neutral-800",
+    imageClassName: "bg-neutral-900",
+    titleClassName: "text-neutral-100",
+    priceClassName: "text-emerald-400",
+    descriptionClassName: "text-neutral-400",
+    chipClassName: "bg-neutral-800 text-neutral-400",
+    accentChipClassName: "bg-emerald-500/20 text-emerald-300",
+    destructiveChipClassName: "bg-red-500/20 text-red-300",
+    imagePlaceholderClassName: "text-neutral-600",
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <header className="border-b border-neutral-800 px-4 py-8">
-        <div className="mx-auto max-w-3xl">
-          <h1 className="text-3xl font-bold">{menu.businessName}</h1>
-          {menu.slogan ? (
-            <p className="mt-2 text-base text-neutral-300">{menu.slogan}</p>
-          ) : null}
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
-            {menu.phone ? <span>{menu.phone}</span> : null}
-            {menu.email ? <span>{menu.email}</span> : null}
-            {menu.address ? <span>{menu.address}</span> : null}
-          </div>
+    <DarkShell>
+      <header className="border-b border-neutral-800 px-4 py-5">
+        <h1 className="text-2xl font-bold">{menu.businessName}</h1>
+        {menu.slogan ? (
+          <p className="mt-1.5 line-clamp-2 text-sm text-neutral-300">{menu.slogan}</p>
+        ) : null}
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-400">
+          {menu.phone ? <span>{menu.phone}</span> : null}
+          {menu.email ? <span>{menu.email}</span> : null}
+          {menu.address ? <span className="line-clamp-1">{menu.address}</span> : null}
         </div>
       </header>
 
-      <div className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto max-w-3xl space-y-3">
-          <MenuSearchField
-            value={searchQuery}
-            onChange={setSearchQuery}
-            inputClassName="border-neutral-700 bg-neutral-900 text-neutral-100 placeholder:text-neutral-500 focus:border-emerald-500/50"
-          />
-          <MenuCategoryRail
-            categories={navCategories}
-            activeKey={activeCategoryKey}
-            onSelect={selectCategory}
-            activeChipClassName="bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
-            inactiveChipClassName="bg-neutral-900 text-neutral-300 ring-1 ring-neutral-800 hover:bg-neutral-800"
-          />
-        </div>
-      </div>
+      <DenseStickyToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Ürün ara…"
+        className="border-b border-neutral-800 bg-neutral-950/95"
+        searchClassName="border-neutral-700 bg-neutral-900 text-neutral-100 placeholder:text-neutral-500 focus:border-emerald-500/50 focus:ring-emerald-500/20"
+        searchIconClassName="text-neutral-500"
+        categories={navCategories}
+        activeCategoryKey={activeCategoryKey}
+        onSelectCategory={selectCategory}
+        activeChipClassName="bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40"
+        inactiveChipClassName="bg-neutral-900 text-neutral-300 ring-1 ring-neutral-800"
+      />
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="px-4 py-4 pb-20">
         {globalResults ? (
-          <p className="mb-4 text-sm text-neutral-500">
+          <p className="mb-3 text-sm text-neutral-500">
             “{searchQuery.trim()}” için {globalResults.length} sonuç
           </p>
         ) : activeCategory ? (
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
             {activeCategory.name}
           </h2>
         ) : null}
 
         {listItems.length > 0 ? (
-          <div className="space-y-3">
+          <div>
             {listItems.map((item) => (
-              <DarkProductCard
+              <DenseProductRow
                 key={item.productId}
                 item={item}
-                onOpen={() => openProduct(item)}
+                onOpen={openProduct}
+                {...rowProps}
               />
             ))}
             <MenuProductScrollSentinel />
           </div>
         ) : (
-          <p className="text-center text-sm text-neutral-500">
-            {searchQuery.trim()
-              ? "Aramanızla eşleşen ürün bulunamadı."
-              : "Bu kategoride henüz ürün yok."}
-          </p>
-        )}
-        {listItems.length === 0 ? <MenuProductScrollSentinel /> : null}
-      </main>
-    </div>
-  );
-}
-
-function DarkProductCard({
-  item,
-  onOpen,
-}: {
-  item: MenuProductApiItem;
-  onOpen: () => void;
-}) {
-  return (
-    <article
-      role="button"
-      tabIndex={0}
-      className="cursor-pointer rounded-xl bg-neutral-900 p-4 ring-1 ring-neutral-800 transition hover:ring-neutral-700"
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-    >
-      <div className="flex gap-4">
-        {item.imageUrl ? (
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="h-16 w-16 rounded-lg object-cover"
-          />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <div className="flex justify-between gap-3">
-            <h3 className="font-medium">{item.name}</h3>
-            <span className="shrink-0 text-emerald-400">
-              {formatMenuPrice(item.price, item.currency)}
-            </span>
-          </div>
-          {!item.available ? (
-            <span className="mt-1 inline-block text-xs uppercase text-neutral-500">
-              Tükendi
-            </span>
-          ) : null}
-          {item.description ? (
-            <p className="mt-1 line-clamp-2 text-sm text-neutral-400">
-              {item.description}
+          <>
+            <p className="py-12 text-center text-sm text-neutral-500">
+              {searchQuery.trim()
+                ? "Aramanızla eşleşen ürün bulunamadı."
+                : "Bu kategoride henüz ürün yok."}
             </p>
-          ) : null}
-        </div>
-      </div>
-    </article>
+            <MenuProductScrollSentinel />
+          </>
+        )}
+      </main>
+    </DarkShell>
   );
 }

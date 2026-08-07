@@ -7,11 +7,25 @@ export async function GET(req: Request, context: { params: Promise<{ identifier:
   try {
     const { identifier } = await context.params;
     const url = new URL(req.url);
-    const page = url.searchParams.get("page") ?? "0";
-    const size = url.searchParams.get("size") ?? "20";
+    const params: Record<string, string | string[]> = {};
+    url.searchParams.forEach((value, key) => {
+      const existing = params[key];
+      if (existing == null) {
+        params[key] = value;
+        return;
+      }
+      if (Array.isArray(existing)) {
+        existing.push(value);
+        return;
+      }
+      params[key] = [existing, value];
+    });
 
     const upstream = await axios.get(`${API_BASE_URL}/menu/public/${identifier}/products`, {
-      params: { page, size },
+      params,
+      paramsSerializer: {
+        indexes: null,
+      },
       validateStatus: () => true,
       timeout: 20_000,
     });

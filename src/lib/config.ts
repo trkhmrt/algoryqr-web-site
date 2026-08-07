@@ -60,6 +60,24 @@ export const QR_MCP_BASE_URL = resolveQrMcpBaseUrl();
 
 export const QR_MCP_API_KEY = process.env.QR_MCP_API_KEY?.trim() ?? "";
 
+function resolveQrAgentBaseUrl(): string {
+  const fromEnv = process.env.QR_AGENT_BASE_URL?.trim();
+  if (fromEnv) return trimTrailingSlash(fromEnv);
+  return "http://localhost:3200";
+}
+
+export const QR_AGENT_BASE_URL = resolveQrAgentBaseUrl();
+
+function resolveAiServiceBaseUrl(): string {
+  const fromEnv = process.env.AI_SERVICE_BASE_URL?.trim();
+  if (fromEnv) return trimTrailingSlash(fromEnv);
+  return "http://localhost:8000";
+}
+
+export const AI_SERVICE_BASE_URL = resolveAiServiceBaseUrl();
+
+export const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY?.trim() ?? "";
+
 export const ACCESS_TOKEN_EXPIRY_MS = 900_000;
 export const ACCESS_TOKEN_EXPIRY_SECONDS = ACCESS_TOKEN_EXPIRY_MS / 1000;
 export const REFRESH_TOKEN_EXPIRY_DAYS = 7;

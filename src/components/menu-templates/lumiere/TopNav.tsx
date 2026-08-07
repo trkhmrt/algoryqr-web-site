@@ -15,19 +15,17 @@ export function LumiereTopNav({
 
   if (variant === "detail") {
     return (
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-[var(--lm-outline-variant)] bg-[color-mix(in_srgb,var(--lm-surface)_80%,transparent)] backdrop-blur-md transition-colors duration-200">
-        <div className="mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-[var(--lm-margin)]">
+      <header className="fixed left-0 right-0 top-0 z-50 mx-auto max-w-md border-b border-[var(--lm-outline-variant)] bg-[color-mix(in_srgb,var(--lm-surface)_88%,transparent)] backdrop-blur-md">
+        <div className="flex h-14 items-center justify-between px-4">
           <button
             type="button"
             onClick={onBack}
-            className="lm-muted p-1 transition-opacity hover:opacity-80"
+            className="p-1 text-[var(--lm-on-surface-variant)]"
             aria-label="Geri"
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h1 className="lm-headline-md tracking-tighter text-[var(--lm-on-surface)]">
-            {title}
-          </h1>
+          <h1 className="lm-headline-md truncate text-[var(--lm-on-surface)]">{title}</h1>
           <div className="w-6" />
         </div>
       </header>
@@ -35,17 +33,17 @@ export function LumiereTopNav({
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--lm-outline-variant)] bg-[var(--lm-surface)]">
-      <div className="mx-auto flex h-16 w-full max-w-screen-xl items-center justify-between px-[var(--lm-margin)]">
+    <header className="sticky top-0 z-50 border-b border-[var(--lm-outline-variant)] bg-[var(--lm-surface)]">
+      <div className="flex h-14 items-center px-4">
         <button
           type="button"
           onClick={onHome}
-          className="flex items-center gap-4 text-left"
+          className="flex min-w-0 items-center gap-2 text-left"
         >
-          <span className="material-symbols-outlined lm-primary">restaurant_menu</span>
-          <h1 className="lm-headline-md tracking-tighter text-[var(--lm-on-surface)]">
-            {title}
-          </h1>
+          <span className="material-symbols-outlined text-[var(--lm-primary)]">
+            restaurant_menu
+          </span>
+          <h1 className="lm-headline-md truncate text-[var(--lm-on-surface)]">{title}</h1>
         </button>
       </div>
     </header>

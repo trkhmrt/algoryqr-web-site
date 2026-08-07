@@ -124,11 +124,38 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
   };
 }
 
+function isProductCode(value: string): value is ProductCode {
+  return (
+    value === "QR_CREATE" ||
+    value === "QR_MENU" ||
+    value === "QR_AGENT" ||
+    value === "QR_ANALYTICS"
+  );
+}
+
+function normalizeProductCode(value: string): ProductCode | null {
+  if (isProductCode(value)) return value;
+  if (value === "SMART_REPORTING") return "QR_ANALYTICS";
+  if (value === "SMART_ASSISTANT") return "QR_AGENT";
+  return null;
+}
+
+function isProductScope(value: string): value is ProductScope {
+  return (
+    value === "QR_CREATE_OWNER" ||
+    value === "QR_MENU_OWNER" ||
+    value === "QR_ANALYTICS_OWNER"
+  );
+}
+
 export function getAccessProfileFromToken(token?: string | null): AccessProfile {
   const payload = token ? parseJwtPayload(token) : null;
   if (!payload) {
     return { activePackage: null, products: [], scopes: [], roles: [], provider: null };
   }
+  const products = readStringArray(payload.products)
+    .map(normalizeProductCode)
+    .filter((item): item is ProductCode => item != null);
   return {
     activePackage:
       payload.activePackage === "FREE_PACKAGE" ||
@@ -136,7 +163,7 @@ export function getAccessProfileFromToken(token?: string | null): AccessProfile 
       payload.activePackage === "ULTIMATE_PACKAGE"
         ? payload.activePackage
         : null,
-    products: readStringArray(payload.products).filter(isProductCode),
+    products: [...new Set(products)],
     scopes: readStringArray(payload.scopes).filter(isProductScope),
     roles: readStringArray(payload.roles),
     provider: parseAuthProvider(payload.provider),
@@ -164,23 +191,6 @@ export function tokenHasScope(token: string | null | undefined, scope: ProductSc
 
 function readStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function isProductCode(value: string): value is ProductCode {
-  return (
-    value === "QR_CREATE" ||
-    value === "QR_MENU" ||
-    value === "QR_AGENT" ||
-    value === "QR_ANALYTICS"
-  );
-}
-
-function isProductScope(value: string): value is ProductScope {
-  return (
-    value === "QR_CREATE_OWNER" ||
-    value === "QR_MENU_OWNER" ||
-    value === "QR_ANALYTICS_OWNER"
-  );
 }
 
 export function buildUpstreamAuthHeaders(accessToken: string): Record<string, string> {

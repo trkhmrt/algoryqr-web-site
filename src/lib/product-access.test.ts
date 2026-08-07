@@ -70,6 +70,16 @@ describe("hasActiveProductAccess", () => {
       ),
     ).toBe(true);
   });
+
+  it("accepts SMART_REPORTING as alias for QR_ANALYTICS", () => {
+    expect(
+      hasActiveProductAccess(
+        [entitlement({ productCode: "SMART_REPORTING" })],
+        [purchase()],
+        "QR_ANALYTICS",
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("pickActivePurchase", () => {

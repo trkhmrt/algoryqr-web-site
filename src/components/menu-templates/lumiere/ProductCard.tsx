@@ -1,5 +1,6 @@
 import type { MenuProductApiItem } from "@/lib/api";
 import { formatMenuPrice } from "../types";
+import { formatServesPeopleLabel } from "../shared/serves-people";
 
 type ProductCardProps = {
   item: MenuProductApiItem;
@@ -7,6 +8,7 @@ type ProductCardProps = {
 };
 
 export function LumiereProductCard({ item, onOpen }: ProductCardProps) {
+  const servesLabel = formatServesPeopleLabel(item.servesPeopleMin, item.servesPeopleMax);
   return (
     <button
       type="button"
@@ -25,11 +27,18 @@ export function LumiereProductCard({ item, onOpen }: ProductCardProps) {
             <span className="material-symbols-outlined text-4xl">restaurant</span>
           </div>
         )}
-        {!item.available ? (
-          <span className="lm-badge absolute right-3 top-3 rounded px-2 py-1 text-[10px] uppercase tracking-widest">
-            Tükendi
-          </span>
-        ) : null}
+        <div className="absolute right-3 top-3 flex flex-col gap-1">
+          {servesLabel ? (
+            <span className="lm-badge rounded px-2 py-1 text-[10px] uppercase tracking-widest">
+              {servesLabel}
+            </span>
+          ) : null}
+          {!item.available ? (
+            <span className="lm-badge rounded px-2 py-1 text-[10px] uppercase tracking-widest">
+              Tükendi
+            </span>
+          ) : null}
+        </div>
       </div>
       <div className="space-y-1 p-4">
         <div className="flex items-start justify-between gap-2">

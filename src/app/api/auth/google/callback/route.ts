@@ -114,6 +114,24 @@ export async function GET(req: NextRequest) {
       return googleAuthErrorRedirect(req, intent, "oauth_failed");
     }
 
+    const clearGoogleIntentCookie = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      path: "/api/auth/google",
+      maxAge: 0,
+    };
+
+    if (intent === "register") {
+      const registerUrl = new URL("/register", getAppOrigin(req));
+      registerUrl.searchParams.set("registered", "1");
+      const response = NextResponse.redirect(registerUrl, 303);
+      response.headers.set("Cache-Control", "no-store");
+      response.headers.set("Referrer-Policy", "no-referrer");
+      response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
+      return response;
+    }
+
     const accessTokenExpiresAt =
       readPositiveNumber(data.accessTokenExpiresAt) ??
       isoToEpochSeconds(readString(data.accessExpiresAt)) ??
@@ -133,13 +151,7 @@ export async function GET(req: NextRequest) {
     );
     response.headers.set("Cache-Control", "no-store");
     response.headers.set("Referrer-Policy", "no-referrer");
-    response.cookies.set("googleAuthIntent", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/api/auth/google",
-      maxAge: 0,
-    });
+    response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
     setAuthCookies(response, accessToken, refreshToken, userId);
     setTokenExpiryCookies(
       response,

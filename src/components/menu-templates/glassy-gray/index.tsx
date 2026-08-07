@@ -2,9 +2,17 @@
 
 import { useMemo, useState } from "react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
-import type { MenuTemplateProps } from "../types";
+import type { MenuProductApiItem } from "@/lib/api";
+import type { MenuTemplateProps, TaxonomyNavNode } from "../types";
 import {
+  filterProductsByNavNode,
+  findCategoryById,
+  resolveProductNavCategory,
+  taxonomyAsNavTree,
+  trackIdForNavNode,
+} from "../types";
+import {
+  DenseProductRow,
   MenuProductScrollSentinel,
   resolveSelectedProduct,
   searchMenuProducts,
@@ -12,15 +20,12 @@ import {
 } from "../shared";
 import {
   type GlassyView,
-  filterProductsForCategory,
-  findCategoryById,
   firstRootCategory,
   popularProducts,
 } from "./category-utils";
 import { GlassyGrayCategoryView } from "./CategoryView";
 import { GlassyGrayShell } from "./GlassyGrayShell";
 import { GlassyGrayHomeView } from "./HomeView";
-import { GlassyGrayProductCard } from "./ProductCard";
 import { GlassyGrayProductDetailView } from "./ProductDetailView";
 
 export function GlassyGrayMenuTemplate({
@@ -35,6 +40,11 @@ export function GlassyGrayMenuTemplate({
     null,
   );
 
+  const displayCategories = useMemo(
+    () => taxonomyAsNavTree(categories),
+    [categories],
+  );
+
   const activeCategoryId =
     view.type === "category"
       ? view.categoryId
@@ -43,10 +53,10 @@ export function GlassyGrayMenuTemplate({
         : null;
 
   const activeCategory =
-    activeCategoryId != null ? findCategoryById(categories, activeCategoryId) : null;
+    activeCategoryId != null ? findCategoryById(displayCategories, activeCategoryId) : null;
 
   const categoryProducts = useMemo(
-    () => filterProductsForCategory(products, activeCategory),
+    () => filterProductsByNavNode(products, activeCategory),
     [products, activeCategory],
   );
 
@@ -70,10 +80,10 @@ export function GlassyGrayMenuTemplate({
   };
 
   const goMenu = () => {
-    const first = firstRootCategory(categories);
+    const first = firstRootCategory(displayCategories);
     if (first) {
       setView({ type: "category", categoryId: first.categoryId });
-      analytics?.trackCategoryView(first.categoryId);
+      analytics?.trackCategoryView(trackIdForNavNode(first));
     } else {
       setView({ type: "home" });
     }
@@ -82,23 +92,27 @@ export function GlassyGrayMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const selectCategory = (category: MenuCategoryApiItem) => {
+  const selectCategory = (category: TaxonomyNavNode) => {
     setSearchValue("");
     setPinnedProduct(null);
     setView({ type: "category", categoryId: category.categoryId });
-    analytics?.trackCategoryView(category.categoryId);
+    analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
-    const categoryId = product.categoryId ?? activeCategoryId;
+    const productCategory = resolveProductNavCategory(displayCategories, product);
+    const categoryId = productCategory?.categoryId ?? activeCategoryId;
     setPinnedProduct(product);
     setView({
       type: "product",
       productId: product.productId,
       categoryId,
     });
-    analytics?.trackProductView(product.productId, categoryId);
+    analytics?.trackProductView(
+      product.productId,
+      product.subCategoryId ?? product.mainCategoryId ?? null,
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -120,7 +134,7 @@ export function GlassyGrayMenuTemplate({
   return (
     <GlassyGrayShell
       menu={menu}
-      categories={categories}
+      categories={displayCategories}
       activeNav={activeNav}
       activeCategoryId={activeCategoryId}
       showSearch={showSearch}
@@ -134,24 +148,33 @@ export function GlassyGrayMenuTemplate({
     >
       {view.type === "home" && globalResults ? (
         <section>
-          <h2 className="gg-display mb-4 text-2xl font-bold text-white">
+          <h2 className="gg-display mb-3 text-lg font-bold text-white">
             Arama sonuçları
           </h2>
-          <p className="gg-muted mb-6 text-sm">
+          <p className="gg-muted mb-4 text-sm">
             “{searchValue.trim()}” için {globalResults.length} sonuç
           </p>
           {globalResults.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div>
               {globalResults.map((item) => (
-                <GlassyGrayProductCard
+                <DenseProductRow
                   key={item.productId}
                   item={item}
                   onOpen={openProduct}
+                  className="border-white/10"
+                  imageClassName="bg-white/5"
+                  titleClassName="text-white gg-display"
+                  priceClassName="gg-primary"
+                  descriptionClassName="gg-muted"
+                  chipClassName="bg-white/10 gg-muted"
+                  accentChipClassName="bg-[var(--gg-primary)] text-[#1a120e]"
+                  destructiveChipClassName="bg-red-500/20 text-red-300"
+                  imagePlaceholderClassName="gg-muted"
                 />
               ))}
             </div>
           ) : (
-            <p className="gg-glass-heavy gg-muted rounded-3xl p-8 text-center">
+            <p className="gg-glass-heavy gg-muted rounded-2xl p-8 text-center text-sm">
               Aramanızla eşleşen ürün bulunamadı.
             </p>
           )}

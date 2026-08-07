@@ -3,16 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, CreditCard, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
 
 import BillingAddressForm from "@/components/dashboard/commerce/BillingAddressForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { invalidateBillingAddresses, invalidatePaymentMethods, useBillingAddresses, usePaymentMethods } from "@/hooks/use-commerce";
@@ -23,16 +20,12 @@ import { ApiError } from "@/lib/api";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import {
-  cardSchema,
   checkoutSchema,
-  formatCardNumber,
-  formatExpiry,
   displayBillingName,
   buildBillingAddressPayload,
   type BillingAddress,
   type BillingAddressForm as BillingAddressFormValues,
   type BillingPeriod,
-  type CardForm,
 } from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatPackagePrice, packageFeatures } from "@/lib/package-display";
@@ -53,6 +46,10 @@ function money(value: number | string | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+type PaymentOverlay =
+  | { kind: "url"; content: string }
+  | { kind: "html"; content: string };
+
 export default function PackagePurchaseView({
   packageId,
   onNotify,
@@ -69,7 +66,7 @@ export default function PackagePurchaseView({
   const [recurringConsent, setRecurringConsent] = useState(false);
   const [creatingAddress, setCreatingAddress] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
-  const [threeDsHtml, setThreeDsHtml] = useState<string | null>(null);
+  const [paymentOverlay, setPaymentOverlay] = useState<PaymentOverlay | null>(null);
   const [purchaseId, setPurchaseId] = useState<number | null>(null);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
   const finalizedPurchaseId = useRef<number | null>(null);
@@ -77,10 +74,6 @@ export default function PackagePurchaseView({
   const methodInitialized = useRef(false);
   const fulfillment = usePurchaseFulfillment(purchaseId, pollStartedAt);
   const pkg = packages.data?.find((item) => item.id === packageId);
-  const cardForm = useForm<CardForm>({
-    resolver: zodResolver(cardSchema),
-    defaultValues: { cardHolderName: "", cardNumber: "", expiry: "", cvc: "", saveCard: false },
-  });
 
   useEffect(() => {
     if (!addressInitialized.current && addresses.data?.length) {
@@ -123,13 +116,13 @@ export default function PackagePurchaseView({
     if (summary.status === "ACTIVE") {
       finalizedPurchaseId.current = summary.purchaseId;
       clearPendingPurchaseId();
-      setThreeDsHtml(null);
+      setPaymentOverlay(null);
       void finalizeSuccess();
     }
     if (summary.status === "FAILED" || summary.status === "CANCELLED") {
       finalizedPurchaseId.current = summary.purchaseId;
       clearPendingPurchaseId();
-      setThreeDsHtml(null);
+      setPaymentOverlay(null);
       onNotify("danger", "Ödeme tamamlanamadı. Lütfen kart bilgilerinizi kontrol edip tekrar deneyin.");
     }
   }, [finalizeSuccess, fulfillment.summary.data, onNotify]);
@@ -177,22 +170,14 @@ export default function PackagePurchaseView({
       return;
     }
 
-    let card: CardForm | null = null;
-    if (paymentMethodId == null) {
-      const valid = await cardForm.trigger();
-      if (!valid) {
-        onNotify("warning", "Kart bilgilerini kontrol edin.");
-        return;
-      }
-      card = cardForm.getValues();
-    }
+    const usingNewCard = paymentMethodId == null;
 
     setIsPaying(true);
     try {
       const selectedAddress = addresses.data?.find((item) => item.id === billingAddressId);
       const payload: Record<string, unknown> = {
         packageId,
-        paymentMode: "THREE_DS",
+        paymentMode: usingNewCard ? "CHECKOUT_FORM" : "THREE_DS",
         paymentStyle: "SUBSCRIPTION",
         billingPeriod,
         billingAddressId,
@@ -200,17 +185,6 @@ export default function PackagePurchaseView({
         identityNumber: selectedAddress?.tckn || selectedAddress?.vkn || undefined,
         recurringConsent,
       };
-      if (card) {
-        const [expireMonth, expireYear] = card.expiry.split("/");
-        payload.paymentCard = {
-          cardHolderName: card.cardHolderName.trim(),
-          cardNumber: card.cardNumber.replace(/\D/g, ""),
-          expireMonth,
-          expireYear: `20${expireYear}`,
-          cvc: card.cvc,
-          registerCard: 1,
-        };
-      }
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", payload);
       if (!Number.isSafeInteger(response.data.purchaseId) || response.data.purchaseId <= 0) {
         throw new Error("Satın alım kimliği alınamadı.");
@@ -218,7 +192,24 @@ export default function PackagePurchaseView({
       storePendingPurchaseId(response.data.purchaseId);
       setPurchaseId(response.data.purchaseId);
       setPollStartedAt(Date.now());
-      setThreeDsHtml(response.data.paymentHtml ?? response.data.htmlContent ?? null);
+      if (usingNewCard) {
+        if (response.data.paymentPageUrl) {
+          setPaymentOverlay({ kind: "url", content: response.data.paymentPageUrl });
+        } else if (response.data.checkoutFormContent) {
+          setPaymentOverlay({
+            kind: "html",
+            content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.data.checkoutFormContent}`,
+          });
+        } else {
+          throw new Error("Güvenli ödeme sayfası alınamadı.");
+        }
+      } else {
+        const html = response.data.paymentHtml ?? response.data.htmlContent ?? null;
+        if (!html) {
+          throw new Error("3D Secure sayfası alınamadı.");
+        }
+        setPaymentOverlay({ kind: "html", content: html });
+      }
     } catch (error) {
       onNotify("danger", error instanceof ApiError ? error.message : "Ödeme işlemi tamamlanamadı.");
     } finally {
@@ -226,14 +217,29 @@ export default function PackagePurchaseView({
     }
   };
 
-  if (threeDsHtml) {
+  if (paymentOverlay) {
+    const title = paymentOverlay.kind === "url" ? "Güvenli Ödeme (iyzico)" : "3D Secure doğrulama";
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
         <div className="flex items-center justify-between border-b p-3">
-          <p className="text-sm font-medium">3D Secure doğrulama</p>
-          <Button variant="outline" onClick={() => setThreeDsHtml(null)}>İptal</Button>
+          <p className="text-sm font-medium">{title}</p>
+          <Button variant="outline" onClick={() => setPaymentOverlay(null)}>İptal</Button>
         </div>
-        <iframe title="3D Secure" srcDoc={threeDsHtml} className="w-full flex-1 border-0 bg-white" sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation" />
+        {paymentOverlay.kind === "url" ? (
+          <iframe
+            title={title}
+            src={paymentOverlay.content}
+            className="w-full flex-1 border-0 bg-white"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+          />
+        ) : (
+          <iframe
+            title={title}
+            srcDoc={paymentOverlay.content}
+            className="w-full flex-1 border-0 bg-white"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+          />
+        )}
       </div>
     );
   }
@@ -375,40 +381,13 @@ export default function PackagePurchaseView({
               ) : null}
 
               {paymentMethodId == null && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Kart üzerindeki isim</Label>
-                    <Input autoComplete="cc-name" {...cardForm.register("cardHolderName")} />
-                    <p className="text-xs text-destructive">{cardForm.formState.errors.cardHolderName?.message}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Kart numarası</Label>
-                    <Input
-                      inputMode="numeric"
-                      autoComplete="cc-number"
-                      {...cardForm.register("cardNumber", { onChange: (event) => cardForm.setValue("cardNumber", formatCardNumber(event.target.value)) })}
-                    />
-                    <p className="text-xs text-destructive">{cardForm.formState.errors.cardNumber?.message}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Son kullanma</Label>
-                      <Input
-                        placeholder="AA/YY"
-                        inputMode="numeric"
-                        autoComplete="cc-exp"
-                        {...cardForm.register("expiry", { onChange: (event) => cardForm.setValue("expiry", formatExpiry(event.target.value)) })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>CVV</Label>
-                      <Input inputMode="numeric" autoComplete="cc-csc" maxLength={4} {...cardForm.register("cvc")} />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="save-card" checked disabled />
-                    <Label htmlFor="save-card" className="text-sm font-normal">Kartım sonraki ödemeler için kaydedilir</Label>
-                  </div>
+                <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background p-3 text-xs text-muted-foreground">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <p>
+                    Kart bilgileriniz bizim sunucularımıza hiç ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna
+                    bastığınızda iyzico&apos;nun güvenli ödeme sayfasına yönlendirilirsiniz; kartınız sonraki
+                    ödemeler için orada saklanır.
+                  </p>
                 </div>
               )}
 

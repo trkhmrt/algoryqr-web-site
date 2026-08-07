@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
-import type { MenuTemplateProps } from "../types";
-import { resolveSelectedProduct, useRegisterChefOpenProduct } from "../shared";
+import type { MenuProductApiItem } from "@/lib/api";
+import type { MenuTemplateProps, TaxonomyNavNode } from "../types";
 import {
-  type LumiereView,
-  filterProductsForCategory,
+  filterProductsByNavNode,
   findCategoryById,
-} from "./category-utils";
+  resolveProductNavCategory,
+  taxonomyAsNavTree,
+  trackIdForNavNode,
+} from "../types";
+import { resolveSelectedProduct, useRegisterChefOpenProduct } from "../shared";
+import { type LumiereView } from "./category-utils";
 import { LumiereCategoryView } from "./CategoryView";
 import { LumiereHomeView } from "./HomeView";
 import { LumiereShell } from "./LumiereShell";
@@ -26,9 +29,11 @@ export function LumiereMenuTemplate({
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(
     null,
   );
-  const infoRef = useRef<HTMLDivElement | null>(null);
 
-  const displayCategories = categories;
+  const displayCategories = useMemo(
+    () => taxonomyAsNavTree(categories),
+    [categories],
+  );
 
   const activeCategoryId =
     view.type === "category"
@@ -38,10 +43,12 @@ export function LumiereMenuTemplate({
         : null;
 
   const activeCategory =
-    activeCategoryId != null ? findCategoryById(categories, activeCategoryId) : null;
+    activeCategoryId != null
+      ? findCategoryById(displayCategories, activeCategoryId)
+      : null;
 
   const categoryProducts = useMemo(
-    () => filterProductsForCategory(products, activeCategory),
+    () => filterProductsByNavNode(products, activeCategory),
     [products, activeCategory],
   );
 
@@ -64,22 +71,26 @@ export function LumiereMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const selectCategory = (category: MenuCategoryApiItem) => {
+  const selectCategory = (category: TaxonomyNavNode) => {
     setPinnedProduct(null);
     setView({ type: "category", categoryId: category.categoryId });
-    analytics?.trackCategoryView(category.categoryId);
+    analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
-    const categoryId = product.categoryId ?? activeCategoryId;
+    const productCategory = resolveProductNavCategory(displayCategories, product);
+    const categoryId = productCategory?.categoryId ?? activeCategoryId;
     setPinnedProduct(product);
     setView({
       type: "product",
       productId: product.productId,
       categoryId,
     });
-    analytics?.trackProductView(product.productId, categoryId);
+    analytics?.trackProductView(
+      product.productId,
+      product.subCategoryId ?? product.mainCategoryId ?? null,
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -118,7 +129,6 @@ export function LumiereMenuTemplate({
             selectCategory(category);
           }}
           onOpenProduct={openProduct}
-          infoRef={infoRef}
         />
       ) : null}
 

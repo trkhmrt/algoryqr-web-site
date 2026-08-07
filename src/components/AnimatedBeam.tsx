@@ -64,9 +64,9 @@ const AnimatedBeam = () => {
           className="text-center mb-16 space-y-4"
         >
           <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">Entegrasyonlar</p>
-          <h2 className="text-4xl md:text-5xl font-bold">Her şeyi bağlayın</h2>
+          <h2 className="text-4xl md:text-5xl font-bold">QR ile her şeyi bağlayın</h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            URL, e-posta, Wi-Fi, vCard ve daha fazlası — tek bir QR kod platformunda.
+            URL, dijital menü, Wi-Fi, vCard ve daha fazlası — tek platformda oluşturun, yapay zeka ile yönetin.
           </p>
         </motion.div>
 

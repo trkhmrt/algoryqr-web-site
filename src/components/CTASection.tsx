@@ -20,12 +20,12 @@ const CTASection = () => {
           className="rounded-2xl border border-border bg-card p-12 md:p-20 text-center space-y-6 max-w-3xl mx-auto"
         >
           <h2 className="text-4xl md:text-5xl font-bold">
-            İlk QR kodunuzu oluşturmaya hazır mısınız?
+            QR menünüzü ve yapay zeka araçlarını keşfedin
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Ücretsiz başlayın. Kredi kartı gerektirmez. Dakikalar içinde ilk dinamik QR kodunuz hazır.
+            Ücretsiz başlayın. Dinamik QR, dijital menü, Akıllı Özet, Asistan ve Raporlama — dakikalar içinde hazır.
           </p>
-          <Link href="/login">
+          <Link href="/register">
             <Button variant="hero" size="lg" className="gap-2 mt-4">
               Ücretsiz Başla <ArrowRight className="h-4 w-4" />
             </Button>

@@ -1,10 +1,13 @@
 import axios from "axios";
 import { cookies } from "next/headers";
 
+import JsonLd from "@/components/JsonLd";
 import Index from "@/views/Index";
 import type { PlanPackageApiItem } from "@/lib/api";
 import { getUserFromAccessToken } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
+import { FAQ_ITEMS } from "@/lib/faq";
+import { faqJsonLd } from "@/lib/seo";
 
 async function fetchPublicPackages(): Promise<PlanPackageApiItem[]> {
   try {
@@ -30,5 +33,10 @@ export default async function Home() {
   const initialUser = getUserFromAccessToken(accessToken);
   const packages = await fetchPublicPackages();
 
-  return <Index initialUser={initialUser} packages={packages} />;
+  return (
+    <>
+      <JsonLd data={faqJsonLd(FAQ_ITEMS)} />
+      <Index initialUser={initialUser} packages={packages} />
+    </>
+  );
 }

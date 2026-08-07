@@ -10,7 +10,6 @@ import {
   MenuDetails,
   createInitialMenuData,
   type MenuData,
-  type MenuUrlMode,
 } from "@/components/dashboard/qr-create/MenuDetails";
 import { resolveMenuThemeId } from "@/components/menu-templates/registry";
 import { Button } from "@/components/ui/button";
@@ -41,8 +40,6 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
   useEffect(() => {
     if (!profile) return;
     if (menuHydratedFor === profile.menuId) return;
-    const urlModeRaw = String(profile.urlMode ?? "ID").toLowerCase();
-    const urlMode: MenuUrlMode = urlModeRaw === "slug" ? "slug" : "id";
     const themeId = resolveMenuThemeId(profile.themeId);
     setMenu({
       businessName: profile.businessName ?? "",
@@ -51,8 +48,6 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
       email: profile.email ?? "",
       address: profile.address ?? "",
       themeId,
-      urlMode,
-      publicSlug: profile.publicSlug ?? "",
     });
     setMenuHydratedFor(profile.menuId);
   }, [menuHydratedFor, profile]);
@@ -73,10 +68,6 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
       notify("warning", "Firma adı zorunlu.");
       return;
     }
-    if (menu.urlMode === "slug" && !menu.publicSlug.trim()) {
-      notify("warning", "Özel adres (slug) zorunlu.");
-      return;
-    }
     setSaving(true);
     try {
       await updateMenuRequest(menuId, {
@@ -86,8 +77,6 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
         email: menu.email.trim(),
         address: menu.address.trim(),
         themeId: menu.themeId,
-        urlMode: menu.urlMode.toUpperCase(),
-        publicSlug: menu.urlMode === "slug" ? menu.publicSlug.trim() : undefined,
       });
       await invalidateMenuByQr(queryClient, qrId);
       notify("info", "Menü bilgileri güncellendi.");

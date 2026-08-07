@@ -1,7 +1,7 @@
 import type { MenuProductApiItem } from "@/lib/api";
 
 import { formatMenuPrice } from "../types";
-import { MenuNutritionFacts } from "../shared";
+import { DenseMetaChips, DenseNutritionStrip } from "../shared";
 
 type ProductDetailViewProps = {
   product: MenuProductApiItem;
@@ -9,92 +9,62 @@ type ProductDetailViewProps = {
 };
 
 export function GlassyGrayProductDetailView({ product, onBack }: ProductDetailViewProps) {
+  const price = formatMenuPrice(product.price, product.currency);
+
   return (
-    <div className="mx-auto max-w-6xl">
-      <button
-        type="button"
-        onClick={onBack}
-        className="gg-muted mb-6 hidden items-center gap-2 text-sm hover:text-[var(--gg-primary)] md:flex"
-      >
-        <span className="material-symbols-outlined text-lg">arrow_back</span>
-        Geri
-      </button>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
-        <div className="space-y-4 lg:col-span-7">
-          <div className="group relative overflow-hidden rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]">
-            {product.imageUrl ? (
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="aspect-[4/5] w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            ) : (
-              <div className="gg-placeholder flex aspect-[4/5] w-full items-center justify-center">
-                <span className="material-symbols-outlined text-6xl">restaurant</span>
-              </div>
-            )}
-            <div className="gg-glass absolute right-6 top-6 flex flex-col items-center rounded-2xl px-6 py-4">
-              <span className="gg-muted mb-1 text-[10px] font-bold uppercase tracking-widest">
-                {product.available ? "Menü" : "Tükendi"}
-              </span>
-              <span className="gg-display gg-primary text-3xl font-bold">
-                {formatMenuPrice(product.price, product.currency)}
-              </span>
-            </div>
-            <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-8 lg:hidden">
-              <h2 className="gg-display mb-2 text-3xl font-bold text-white">{product.name}</h2>
-            </div>
+    <div>
+      <div className="relative mb-4 h-44 overflow-hidden rounded-2xl">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="gg-placeholder flex h-full w-full items-center justify-center">
+            <span className="material-symbols-outlined text-4xl">restaurant</span>
           </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        {price ? (
+          <span className="gg-display gg-primary absolute right-3 top-3 rounded-xl bg-black/50 px-3 py-1.5 text-lg font-bold backdrop-blur">
+            {price}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="gg-glass rounded-2xl p-4">
+        <DenseMetaChips
+          product={product}
+          maxAllergens={4}
+          maxTags={3}
+          chipClassName="bg-white/10 gg-muted"
+          accentChipClassName="bg-[var(--gg-primary)] text-[#1a120e]"
+          destructiveChipClassName="bg-red-500/20 text-red-300"
+        />
+        <h2 className="gg-display mt-2 text-2xl font-bold text-white">{product.name}</h2>
+
+        {product.description ? (
+          <p className="gg-muted mt-3 text-sm leading-relaxed">{product.description}</p>
+        ) : null}
+
+        <div className="mt-4">
+          <DenseNutritionStrip
+            nutrition={product.nutrition}
+            itemClassName="border border-white/10 bg-black/20"
+            labelClassName="gg-muted"
+            valueClassName="gg-primary"
+          />
         </div>
 
-        <div className="space-y-6 lg:col-span-5">
-          <div className="gg-glass relative overflow-hidden rounded-[2rem] p-8 shadow-2xl md:p-10">
-            <div className="absolute -right-16 -top-16 h-32 w-32 rounded-full bg-[rgba(255,182,147,0.05)] blur-3xl" />
-
-            <div className="mb-6 hidden lg:block">
-              <h2 className="gg-display text-4xl font-bold leading-tight text-white">
-                {product.name}
-              </h2>
-              {!product.available ? (
-                <div className="mt-4">
-                  <span className="gg-badge rounded-full px-3 py-1 text-xs font-bold uppercase">
-                    Tükendi
-                  </span>
-                </div>
-              ) : null}
-            </div>
-
-            {product.description ? (
-              <div className="mb-8">
-                <h3 className="gg-display mb-2 text-xl font-semibold text-white">
-                  Açıklama
-                </h3>
-                <p className="gg-muted text-lg leading-7">{product.description}</p>
-              </div>
-            ) : null}
-
-            <MenuNutritionFacts
-              nutrition={product.nutrition}
-              className="mb-8 rounded-2xl border border-white/10 bg-black/20 p-5"
-              titleClassName="text-white gg-display"
-              basisClassName="text-white/50"
-              rowClassName="border-white/10"
-              labelClassName="text-white/70"
-              valueClassName="text-[var(--gg-primary)]"
-              footnoteClassName="text-white/40"
-            />
-
-            <button
-              type="button"
-              onClick={onBack}
-              className="gg-cta flex w-full items-center justify-center gap-3 rounded-2xl py-5 text-xl font-bold shadow-[0_20px_40px_-10px_rgba(255,107,0,0.4)] transition-all hover:brightness-110 active:scale-95"
-            >
-              <span className="material-symbols-outlined">restaurant_menu</span>
-              Menüye Dön
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="gg-cta gg-display mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold active:scale-95"
+        >
+          <span className="material-symbols-outlined">restaurant_menu</span>
+          Menüye Dön
+        </button>
       </div>
     </div>
   );

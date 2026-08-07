@@ -1,10 +1,15 @@
 import type { MenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
-import type { MenuCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
+import type {
+  MainCategoryApiItem,
+  MenuProductApiItem,
+  MenuProfileApiItem,
+  SubCategoryApiItem,
+} from "@/lib/api";
 
 export type MenuTemplateProps = {
   menu: MenuProfileApiItem;
   products: MenuProductApiItem[];
-  categories?: MenuCategoryApiItem[];
+  categories?: MainCategoryApiItem[];
   analytics?: MenuVisitAnalytics;
 };
 
@@ -18,65 +23,48 @@ export type MenuTemplateRendererProps = MenuTemplateProps & {
 
 export type MenuNavCategory = {
   key: string;
-  categoryId: number | null;
+  mainCategoryId: number | null;
+  subCategoryId: number | null;
   name: string;
   depth: number;
 };
 
-export function collectCategoryIds(category: MenuCategoryApiItem): number[] {
-  return [
-    category.categoryId,
-    ...(category.children ?? []).flatMap(collectCategoryIds),
-  ];
-}
-
-export function findCategoryById(
-  categories: MenuCategoryApiItem[],
-  categoryId: number,
-): MenuCategoryApiItem | null {
-  for (const category of categories) {
-    if (category.categoryId === categoryId) return category;
-    const nested = findCategoryById(category.children ?? [], categoryId);
-    if (nested) return nested;
-  }
-  return null;
-}
-
-export function flattenNavCategories(
-  categories: MenuCategoryApiItem[],
-  depth = 0,
-): MenuNavCategory[] {
-  return categories.flatMap((category) => [
+export function flattenTaxonomyNav(categories: MainCategoryApiItem[] = []): MenuNavCategory[] {
+  return categories.flatMap((main) => [
     {
-      key: `cat-${category.categoryId}`,
-      categoryId: category.categoryId,
-      name: category.name,
-      depth,
+      key: `main-${main.id}`,
+      mainCategoryId: main.id,
+      subCategoryId: null,
+      name: main.name,
+      depth: 0,
     },
-    ...flattenNavCategories(category.children ?? [], depth + 1),
+    ...(main.subs ?? []).map((sub) => ({
+      key: `sub-${sub.id}`,
+      mainCategoryId: main.id,
+      subCategoryId: sub.id,
+      name: sub.name,
+      depth: 1,
+    })),
   ]);
 }
 
 export function resolveMenuNavCategories(
-  categories: MenuCategoryApiItem[] | undefined,
+  categories: MainCategoryApiItem[] | undefined,
   products: MenuProductApiItem[],
 ): MenuNavCategory[] {
-  const fromApi = flattenNavCategories(categories ?? []);
+  const fromApi = flattenTaxonomyNav(categories ?? []);
   if (fromApi.length > 0) return fromApi;
 
   const seen = new Set<string>();
   const fromProducts: MenuNavCategory[] = [];
   for (const product of products) {
-    const name =
-      product.categoryPath?.trim() ||
-      product.categoryName?.trim() ||
-      product.category?.trim() ||
-      "Genel";
+    const name = product.subCategoryName?.trim() || product.mainCategoryName?.trim() || "Genel";
     if (seen.has(name)) continue;
     seen.add(name);
     fromProducts.push({
       key: `name-${name.toLowerCase()}`,
-      categoryId: product.categoryId ?? null,
+      mainCategoryId: product.mainCategoryId ?? null,
+      subCategoryId: product.subCategoryId ?? null,
       name,
       depth: 0,
     });
@@ -87,38 +75,140 @@ export function resolveMenuNavCategories(
 export function filterProductsByNavCategory(
   products: MenuProductApiItem[],
   category: MenuNavCategory | null,
-  categoryTree?: MenuCategoryApiItem[],
 ): MenuProductApiItem[] {
   if (!category) return products;
-  if (category.categoryId != null) {
-    const treeNode =
-      categoryTree && categoryTree.length > 0
-        ? findCategoryById(categoryTree, category.categoryId)
-        : null;
-    if (treeNode) {
-      const ids = new Set(collectCategoryIds(treeNode));
-      return products.filter(
-        (product) => product.categoryId != null && ids.has(product.categoryId),
-      );
-    }
-    return products.filter((product) => product.categoryId === category.categoryId);
+  if (category.subCategoryId != null) {
+    return products.filter((product) => product.subCategoryId === category.subCategoryId);
   }
-  const name = category.name.trim().toLowerCase();
-  return products.filter((product) => {
-    const labels = [product.categoryPath, product.categoryName, product.category]
-      .map((value) => value?.trim().toLowerCase())
-      .filter(Boolean);
-    return labels.includes(name) || (name === "genel" && labels.length === 0);
+  if (category.mainCategoryId != null) {
+    return products.filter((product) => product.mainCategoryId === category.mainCategoryId);
+  }
+  return products;
+}
+
+export function findSubCategory(
+  categories: MainCategoryApiItem[],
+  subCategoryId: number,
+): SubCategoryApiItem | null {
+  for (const main of categories) {
+    const found = (main.subs ?? []).find((sub) => sub.id === subCategoryId);
+    if (found) return found;
+  }
+  return null;
+}
+
+export function findMainCategory(
+  categories: MainCategoryApiItem[],
+  mainCategoryId: number,
+): MainCategoryApiItem | null {
+  return categories.find((main) => main.id === mainCategoryId) ?? null;
+}
+
+const MAIN_NAV_OFFSET = 1_000_000;
+
+export type TaxonomyNavNode = {
+  categoryId: number;
+  name: string;
+  parentId: number | null;
+  sortOrder: number;
+  kind: "main" | "sub";
+  mainCategoryId: number;
+  subCategoryId: number | null;
+  children: TaxonomyNavNode[];
+};
+
+export function taxonomyAsNavTree(mains: MainCategoryApiItem[] = []): TaxonomyNavNode[] {
+  return mains.map((main) => {
+    const mainNavId = MAIN_NAV_OFFSET + main.id;
+    return {
+      categoryId: mainNavId,
+      name: main.name,
+      parentId: null,
+      sortOrder: main.sortOrder,
+      kind: "main" as const,
+      mainCategoryId: main.id,
+      subCategoryId: null,
+      children: (main.subs ?? []).map((sub) => ({
+        categoryId: sub.id,
+        name: sub.name,
+        parentId: mainNavId,
+        sortOrder: sub.sortOrder,
+        kind: "sub" as const,
+        mainCategoryId: main.id,
+        subCategoryId: sub.id,
+        children: [],
+      })),
+    };
   });
+}
+
+export function findCategoryById(
+  categories: TaxonomyNavNode[],
+  categoryId: number,
+): TaxonomyNavNode | null {
+  for (const category of categories) {
+    if (category.categoryId === categoryId) return category;
+    const nested = findCategoryById(category.children, categoryId);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+export function collectCategoryIds(category: TaxonomyNavNode): number[] {
+  return [category.categoryId, ...category.children.flatMap(collectCategoryIds)];
+}
+
+export function flattenNavCategories(categories: TaxonomyNavNode[]): Array<{
+  categoryId: number;
+  name: string;
+  depth: number;
+}> {
+  const out: Array<{ categoryId: number; name: string; depth: number }> = [];
+  const walk = (nodes: TaxonomyNavNode[], depth: number) => {
+    for (const node of nodes) {
+      out.push({ categoryId: node.categoryId, name: node.name, depth });
+      walk(node.children, depth + 1);
+    }
+  };
+  walk(categories, 0);
+  return out;
+}
+
+export function filterProductsByNavNode(
+  products: MenuProductApiItem[],
+  category: TaxonomyNavNode | null,
+): MenuProductApiItem[] {
+  if (!category) return products;
+  if (category.kind === "sub" && category.subCategoryId != null) {
+    return products.filter((product) => product.subCategoryId === category.subCategoryId);
+  }
+  return products.filter((product) => product.mainCategoryId === category.mainCategoryId);
+}
+
+export function trackIdForNavNode(category: TaxonomyNavNode): number {
+  return category.subCategoryId ?? category.mainCategoryId;
+}
+
+export function resolveProductNavCategory(
+  categories: TaxonomyNavNode[],
+  product: MenuProductApiItem,
+): TaxonomyNavNode | null {
+  if (product.subCategoryId != null) {
+    const sub = findCategoryById(categories, product.subCategoryId);
+    if (sub) return sub;
+  }
+  if (product.mainCategoryId != null) {
+    return findCategoryById(categories, MAIN_NAV_OFFSET + product.mainCategoryId);
+  }
+  return null;
 }
 
 export function groupProductsByCategory(products: MenuProductApiItem[]) {
   const groups = new Map<string, MenuProductApiItem[]>();
   for (const product of products) {
     const key =
-      product.categoryPath?.trim() ||
-      product.categoryName?.trim() ||
-      product.category?.trim() ||
+      product.subCategoryName?.trim() ||
+      product.mainCategoryName?.trim() ||
       "Genel";
     const list = groups.get(key) ?? [];
     list.push(product);

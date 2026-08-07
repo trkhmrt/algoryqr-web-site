@@ -1,26 +1,32 @@
 "use client";
 
 import { useMemo } from "react";
-import { Search, MapPin, Phone, ChevronRight } from "lucide-react";
+import { MapPin, Phone } from "lucide-react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
-import { formatMenuPrice } from "../types";
-import { MenuProductScrollSentinel, searchMenuProducts } from "../shared";
+import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
+import type { TaxonomyNavNode } from "../types";
+import {
+  DenseCategoryGrid,
+  DenseFeaturedSlider,
+  DenseProductRow,
+  DenseStickyToolbar,
+  MenuProductScrollSentinel,
+  searchMenuProducts,
+} from "../shared";
 import {
   categoryEmojiFor,
   countProductsForCategory,
   popularProducts,
 } from "./category-utils";
-import { ItemRow } from "./ItemRow";
 import { LUMEN_HERO_IMAGE } from "./styles";
 
 type HomeViewProps = {
   menu: MenuProfileApiItem;
-  categories: MenuCategoryApiItem[];
+  categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  onSelectCategory: (category: MenuCategoryApiItem) => void;
+  onSelectCategory: (category: TaxonomyNavNode) => void;
   onOpenProduct: (product: MenuProductApiItem) => void;
 };
 
@@ -43,36 +49,62 @@ export function LumenHomeView({
     menu.slogan?.trim() ||
     "Mevsimin en taze malzemeleriyle hazırlanan modern mutfak.";
 
+  const categoryGridItems = useMemo(
+    () =>
+      categories.map((cat, index) => ({
+        id: cat.categoryId,
+        name: cat.name,
+        productCount: countProductsForCategory(products, cat),
+        mark: categoryEmojiFor(cat, categories) || ["◐", "◆", "◇", "◈"][index % 4],
+        subtitle:
+          (cat.children?.length ?? 0) > 0
+            ? `${cat.children!.length} alt`
+            : undefined,
+      })),
+    [categories, products],
+  );
+
+  const rowProps = {
+    className: "border-[var(--ln-border)]",
+    imageClassName: "bg-[var(--ln-card)]",
+    titleClassName: "ln-fg font-display",
+    priceClassName: "ln-gold",
+    descriptionClassName: "ln-muted",
+    chipClassName: "bg-[color-mix(in_oklch,var(--ln-gold)_15%,transparent)] ln-muted",
+    accentChipClassName: "bg-[color-mix(in_oklch,var(--ln-gold)_90%,transparent)] text-[var(--ln-primary-fg)]",
+    destructiveChipClassName: "bg-[color-mix(in_oklch,var(--ln-destructive)_20%,transparent)] text-[var(--ln-destructive)]",
+    imagePlaceholderClassName: "ln-gold",
+  };
+
   return (
-    <div className="min-h-screen">
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={LUMEN_HERO_IMAGE}
-            alt=""
-            className="h-full w-full object-cover opacity-40"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_oklch,var(--ln-bg)_40%,transparent)] via-[color-mix(in_oklch,var(--ln-bg)_70%,transparent)] to-[var(--ln-bg)]" />
-        </div>
-        <div className="relative mx-auto max-w-2xl px-6 pb-10 pt-14 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-bg)_50%,transparent)] px-3 py-1 text-[11px] uppercase tracking-[0.25em] ln-muted backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full ln-gold-bg" />
+    <div className="min-h-screen pb-16">
+      <header className="relative min-h-[180px] max-h-[220px] overflow-hidden">
+        <img
+          src={LUMEN_HERO_IMAGE}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-35"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_oklch,var(--ln-bg)_50%,transparent)] to-[var(--ln-bg)]" />
+        <div className="relative px-4 pb-5 pt-10 text-center">
+          <p className="mb-2 text-[10px] uppercase tracking-[0.22em] ln-muted">
             Hoş geldiniz
-          </div>
-          <h1 className="font-display text-6xl font-semibold leading-none tracking-tight">
-            <span className="text-gradient-gold">{menu.businessName}</span>
+          </p>
+          <h1 className="font-display text-3xl font-semibold leading-tight text-gradient-gold">
+            {menu.businessName}
           </h1>
-          <p className="mx-auto mt-3 max-w-sm text-sm ln-muted">{slogan}</p>
+          <p className="mx-auto mt-2 line-clamp-2 max-w-xs text-xs ln-muted">{slogan}</p>
           {(menu.phone || menu.address) && (
-            <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs ln-muted">
+            <div className="mt-3 flex flex-wrap justify-center gap-3 text-[11px] ln-muted">
               {menu.address ? (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 ln-gold" /> {menu.address}
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3 ln-gold" />
+                  <span className="line-clamp-1">{menu.address}</span>
                 </span>
               ) : null}
               {menu.phone ? (
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 ln-gold" /> {menu.phone}
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3 ln-gold" />
+                  {menu.phone}
                 </span>
               ) : null}
             </div>
@@ -80,32 +112,32 @@ export function LumenHomeView({
         </div>
       </header>
 
-      <div className="sticky top-0 z-30 border-b border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-bg)_85%,transparent)] backdrop-blur-xl">
-        <div className="mx-auto max-w-2xl px-6 py-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 ln-muted" />
-            <input
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Yemek, malzeme veya kategori ara..."
-              className="w-full rounded-full border border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_70%,transparent)] py-3 pl-11 pr-4 text-sm ln-fg placeholder:text-[var(--ln-muted)] focus:border-[color-mix(in_oklch,var(--ln-gold)_60%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklch,var(--ln-gold)_20%,transparent)]"
-            />
-          </div>
-        </div>
-      </div>
+      <DenseStickyToolbar
+        searchQuery={searchQuery}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Yemek, malzeme veya kategori ara..."
+        className="border-b border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-bg)_88%,transparent)]"
+        searchClassName="border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_70%,transparent)] ln-fg placeholder:text-[var(--ln-muted)] focus:border-[color-mix(in_oklch,var(--ln-gold)_60%,transparent)] focus:ring-[color-mix(in_oklch,var(--ln-gold)_20%,transparent)]"
+        searchIconClassName="ln-muted"
+      />
 
-      <main className="mx-auto max-w-2xl px-6 pb-24 pt-8">
+      <main className="px-4 pb-20 pt-4">
         {searchQuery.trim() ? (
           <section>
-            <h2 className="mb-4 font-display text-xl font-semibold ln-fg">
+            <h2 className="mb-3 font-display text-lg font-semibold ln-fg">
               “{searchQuery}” için sonuçlar
             </h2>
             {searchResults.length === 0 ? (
-              <p className="py-16 text-center text-sm ln-muted">Sonuç bulunamadı.</p>
+              <p className="py-12 text-center text-sm ln-muted">Sonuç bulunamadı.</p>
             ) : (
-              <div className="space-y-3">
+              <div>
                 {searchResults.map((item) => (
-                  <ItemRow key={item.productId} item={item} onOpen={onOpenProduct} />
+                  <DenseProductRow
+                    key={item.productId}
+                    item={item}
+                    onOpen={onOpenProduct}
+                    {...rowProps}
+                  />
                 ))}
               </div>
             )}
@@ -113,121 +145,41 @@ export function LumenHomeView({
         ) : (
           <>
             {popular.length > 0 ? (
-              <section className="mb-10">
-                <div className="mb-4 flex items-baseline justify-between">
-                  <h2 className="font-display text-xl font-semibold ln-fg">
-                    Öne çıkanlar
-                  </h2>
-                  <span className="text-[11px] uppercase tracking-widest ln-muted">
-                    Şef seçimi
-                  </span>
-                </div>
-                <div className="scrollbar-none -mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2">
-                  {popular.map((item) => {
-                    const price = formatMenuPrice(item.price, item.currency);
-                    const kcal = item.nutrition?.energyKcal;
-                    const protein = item.nutrition?.protein;
-                    return (
-                      <button
-                        key={item.productId}
-                        type="button"
-                        onClick={() => onOpenProduct(item)}
-                        className="group relative w-56 shrink-0 snap-start overflow-hidden rounded-2xl border border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_60%,transparent)] text-left"
-                      >
-                        <div className="relative h-40 w-full overflow-hidden bg-[var(--ln-card)]">
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.name}
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
-                              loading="lazy"
-                            />
-                          ) : null}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[var(--ln-card)] via-transparent to-transparent" />
-                          {price ? (
-                            <span className="absolute right-2 top-2 rounded-full bg-[color-mix(in_oklch,var(--ln-gold)_90%,transparent)] px-2 py-0.5 text-[10px] font-medium text-[var(--ln-primary-fg)]">
-                              {price}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="p-3">
-                          <p className="truncate font-display text-sm font-semibold ln-fg">
-                            {item.name}
-                          </p>
-                          {kcal != null && kcal !== "" ? (
-                            <p className="mt-0.5 text-[10px] uppercase tracking-widest ln-muted">
-                              {kcal} kcal
-                              {protein != null && protein !== ""
-                                ? ` · ${protein}g protein`
-                                : ""}
-                            </p>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+              <section className="mb-6">
+                <h2 className="mb-2 font-display text-lg font-semibold ln-fg">
+                  Öne çıkanlar
+                </h2>
+                <DenseFeaturedSlider
+                  items={popular}
+                  onOpen={onOpenProduct}
+                  cardClassName="border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_60%,transparent)]"
+                  imageClassName="bg-[var(--ln-card)]"
+                  titleClassName="ln-fg font-display"
+                  priceClassName="bg-[color-mix(in_oklch,var(--ln-gold)_90%,transparent)] text-[var(--ln-primary-fg)]"
+                  chipClassName="bg-[color-mix(in_oklch,var(--ln-gold)_15%,transparent)] ln-muted"
+                  accentChipClassName="bg-[color-mix(in_oklch,var(--ln-gold)_90%,transparent)] text-[var(--ln-primary-fg)]"
+                  destructiveChipClassName="bg-[color-mix(in_oklch,var(--ln-destructive)_20%,transparent)] text-[var(--ln-destructive)]"
+                  imagePlaceholderClassName="ln-gold"
+                />
               </section>
             ) : null}
 
             <section>
-              <h2 className="mb-4 font-display text-xl font-semibold ln-fg">
+              <h2 className="mb-3 font-display text-lg font-semibold ln-fg">
                 Kategoriler
               </h2>
               {categories.length > 0 ? (
-                <div className="space-y-3">
-                  {categories.map((cat, index) => {
-                    const subs = cat.children ?? [];
-                    const count = countProductsForCategory(products, cat);
-                    return (
-                      <div
-                        key={cat.categoryId}
-                        className="overflow-hidden rounded-2xl border border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_50%,transparent)]"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => onSelectCategory(cat)}
-                          className="group flex w-full items-center justify-between px-4 py-4 text-left transition hover:bg-[var(--ln-card)]"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="grid h-10 w-10 place-items-center rounded-full bg-[color-mix(in_oklch,var(--ln-gold)_15%,transparent)] font-display text-lg ln-gold">
-                              {categoryEmojiFor(cat, categories) ||
-                                lumenEmojiFallback(index)}
-                            </span>
-                            <div>
-                              <p className="font-display text-lg font-semibold ln-fg">
-                                {cat.name}
-                              </p>
-                              <p className="text-[11px] uppercase tracking-widest ln-muted">
-                                {count} tabak
-                                {subs.length > 0
-                                  ? ` · ${subs.length} alt kategori`
-                                  : ""}
-                              </p>
-                            </div>
-                          </div>
-                          <ChevronRight className="h-4 w-4 ln-muted transition group-hover:translate-x-0.5 group-hover:text-[var(--ln-gold)]" />
-                        </button>
-                        {subs.length > 0 ? (
-                          <div className="border-t border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-bg)_30%,transparent)] px-4 py-3">
-                            <div className="flex flex-wrap gap-2">
-                              {subs.map((sub) => (
-                                <button
-                                  key={sub.categoryId}
-                                  type="button"
-                                  onClick={() => onSelectCategory(sub)}
-                                  className="rounded-full border border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_60%,transparent)] px-3 py-1 text-xs ln-muted transition hover:border-[color-mix(in_oklch,var(--ln-gold)_50%,transparent)] hover:text-[var(--ln-fg)]"
-                                >
-                                  {sub.name}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
+                <DenseCategoryGrid
+                  categories={categoryGridItems}
+                  onSelect={(item) => {
+                    const cat = categories.find((c) => c.categoryId === item.id);
+                    if (cat) onSelectCategory(cat);
+                  }}
+                  cardClassName="border-[var(--ln-border)] bg-[color-mix(in_oklch,var(--ln-card)_60%,transparent)]"
+                  titleClassName="ln-fg font-display"
+                  metaClassName="ln-muted"
+                  markClassName="ln-gold bg-[color-mix(in_oklch,var(--ln-gold)_15%,transparent)]"
+                />
               ) : (
                 <p className="py-8 text-center text-sm ln-muted">
                   Henüz kategori yok.
@@ -238,18 +190,6 @@ export function LumenHomeView({
         )}
         <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-6 text-sm ln-muted" />
       </main>
-
-      <footer className="border-t border-[var(--ln-border)] py-8 text-center">
-        <p className="font-display text-xl text-gradient-gold">{menu.businessName}</p>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.3em] ln-muted">
-          Afiyet olsun
-        </p>
-      </footer>
     </div>
   );
-}
-
-function lumenEmojiFallback(index: number) {
-  const emojis = ["◐", "◆", "◇", "◈", "❋", "✦", "◉"];
-  return emojis[index % emojis.length];
 }

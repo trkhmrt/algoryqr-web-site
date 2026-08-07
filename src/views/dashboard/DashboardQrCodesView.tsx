@@ -32,6 +32,12 @@ import {
   isMenuQrDetails,
   type DashboardQrItem,
 } from "@/components/dashboard/qr/qr-mappers";
+import {
+  copyQrImageToClipboard,
+  copyTextToClipboard,
+  downloadQrImage,
+  shareQr,
+} from "@/components/dashboard/qr/qr-actions";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage, usePackageUsage } from "@/hooks/use-package-usage";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -140,6 +146,58 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       notify("danger", message);
     }
   }, [notify, queryClient, router]);
+
+  const handleCopyQr = useCallback(async (qr: DashboardQrItem) => {
+    try {
+      if (qr.imgSrc) {
+        const imageOk = await copyQrImageToClipboard(qr.imgSrc);
+        if (imageOk) {
+          notify("info", "QR panoya kopyalandı.");
+          return;
+        }
+      }
+      const textOk = await copyTextToClipboard(qr.content);
+      if (textOk) {
+        notify("info", "İçerik panoya kopyalandı.");
+        return;
+      }
+      notify("warning", "Kopyalama başarısız.");
+    } catch {
+      notify("warning", "Kopyalama başarısız.");
+    }
+  }, [notify]);
+
+  const handleDownloadQr = useCallback((qr: DashboardQrItem) => {
+    if (!qr.imgSrc) {
+      notify("warning", "İndirilecek QR görseli bulunamadı.");
+      return;
+    }
+    const ok = downloadQrImage(qr.imgSrc, qr.name);
+    if (ok) notify("info", "QR indirildi.");
+    else notify("warning", "İndirme başarısız.");
+  }, [notify]);
+
+  const handleShareQr = useCallback(async (qr: DashboardQrItem) => {
+    try {
+      const ok = await shareQr({
+        title: qr.name,
+        text: qr.content,
+        imgSrc: qr.imgSrc ?? undefined,
+      });
+      if (ok) {
+        notify("info", "Paylaşım açıldı.");
+        return;
+      }
+      const copied = await copyTextToClipboard(qr.content);
+      if (copied) {
+        notify("warning", "Paylaşım desteklenmiyor; içerik kopyalandı.");
+        return;
+      }
+      notify("warning", "Paylaşım desteklenmiyor.");
+    } catch {
+      notify("warning", "Paylaşım iptal edildi veya başarısız.");
+    }
+  }, [notify]);
 
   const handleSaveQrEdit = useCallback(async () => {
     if (!selectedQR) return;
@@ -376,9 +434,9 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-1 border-t border-border/60 pt-2 lg:justify-end lg:border-0 lg:pt-0" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"><Copy className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"><Download className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"><Share2 className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8" onClick={() => void handleCopyQr(qr)}><Copy className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8" onClick={() => handleDownloadQr(qr)}><Download className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8" onClick={() => void handleShareQr(qr)}><Share2 className="h-3.5 w-3.5" /></Button>
                           <Button
                             variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"
                             onClick={() => {
@@ -626,18 +684,20 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                         <span className="text-foreground font-medium">{selectedQR.scans.toLocaleString()}</span>
                       </div>
                     </div>
-                    <div className="mt-6 grid grid-cols-2 gap-2">
-                      <Button variant="outline" size="sm" className="gap-1.5"><Download className="h-3.5 w-3.5" /> İndir</Button>
-                      <Button variant="outline" size="sm" className="gap-1.5"><Copy className="h-3.5 w-3.5" /> Kopyala</Button>
-                      <Button variant="outline" size="sm" className="gap-1.5"><Share2 className="h-3.5 w-3.5" /> Paylaş</Button>
+                    <div className="mt-6 grid grid-cols-4 gap-2">
+                      <Button variant="outline" size="icon" className="h-9 w-full" title="İndir" aria-label="İndir" onClick={() => handleDownloadQr(selectedQR)}><Download className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="icon" className="h-9 w-full" title="Kopyala" aria-label="Kopyala" onClick={() => void handleCopyQr(selectedQR)}><Copy className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="icon" className="h-9 w-full" title="Paylaş" aria-label="Paylaş" onClick={() => void handleShareQr(selectedQR)}><Share2 className="h-4 w-4" /></Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="outline"
-                            size="sm"
-                            className="gap-1.5 text-destructive hover:text-destructive"
+                            size="icon"
+                            className="h-9 w-full text-destructive hover:text-destructive"
+                            title="Sil"
+                            aria-label="Sil"
                           >
-                            <Trash2 className="h-3.5 w-3.5" /> Sil
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>

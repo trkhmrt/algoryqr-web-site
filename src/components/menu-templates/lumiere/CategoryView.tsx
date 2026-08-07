@@ -1,18 +1,23 @@
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
+import type { MenuProductApiItem } from "@/lib/api";
 
-import { findCategoryById, flattenNavCategories } from "../types";
-import { MenuCategoryRail, MenuProductScrollSentinel, searchMenuProducts } from "../shared";
-import { LumiereProductCard } from "./ProductCard";
-import { LUMIERE_CATEGORY_HERO, lumiereCategoryImage } from "./styles";
+import type { TaxonomyNavNode } from "../types";
+import {
+  DenseProductRow,
+  MenuCategoryRail,
+  MenuProductScrollSentinel,
+  resolveNavNodeFromRailCategory,
+  searchMenuProducts,
+  taxonomyNavNodesToRailCategories,
+} from "../shared";
 
 type CategoryViewProps = {
-  category: MenuCategoryApiItem;
-  categories: MenuCategoryApiItem[];
+  category: TaxonomyNavNode;
+  categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   searchQuery: string;
   onSearchChange: (value: string) => void;
   categoryIndex?: number;
-  onSelectCategory: (category: MenuCategoryApiItem) => void;
+  onSelectCategory: (category: TaxonomyNavNode) => void;
   onOpenProduct: (product: MenuProductApiItem) => void;
 };
 
@@ -22,81 +27,71 @@ export function LumiereCategoryView({
   products,
   searchQuery,
   onSearchChange,
-  categoryIndex = 0,
   onSelectCategory,
   onOpenProduct,
 }: CategoryViewProps) {
   const filtered = searchMenuProducts(products, searchQuery);
-  const q = searchQuery.trim();
-  const heroImage = lumiereCategoryImage(categoryIndex) || LUMIERE_CATEGORY_HERO;
-  const navCategories = flattenNavCategories(categories);
+  const navCategories = taxonomyNavNodesToRailCategories(categories);
+
+  const rowProps = {
+    className: "border-[var(--lm-outline-variant)]",
+    imageClassName: "bg-[var(--lm-surface-container)]",
+    titleClassName: "text-[var(--lm-on-surface)]",
+    priceClassName: "text-[var(--lm-primary)]",
+    descriptionClassName: "text-[var(--lm-on-surface-variant)]",
+    chipClassName: "bg-[var(--lm-surface-container)] text-[var(--lm-on-surface-variant)]",
+    accentChipClassName: "bg-[var(--lm-primary)] text-white",
+    destructiveChipClassName: "bg-[var(--lm-primary-container)] text-white",
+    imagePlaceholderClassName: "text-[var(--lm-on-surface-variant)]",
+  };
 
   return (
     <div>
-      <section className="relative h-[280px] w-full overflow-hidden">
-        <img src={heroImage} alt="" className="h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-[var(--lm-margin)]">
-          <h2 className="lm-headline-lg text-white">{category.name}</h2>
-          <p className="lm-body-sm mt-1 text-white/70">
-            {products.length} ürün
-          </p>
-        </div>
-      </section>
+      <header className="border-b border-[var(--lm-outline-variant)] px-4 py-4">
+        <h2 className="lm-headline-lg text-[var(--lm-on-surface)]">{category.name}</h2>
+        <p className="lm-body-sm mt-1 text-[var(--lm-on-surface-variant)]">
+          {products.length} ürün
+        </p>
+      </header>
 
-      <section className="relative z-20 -mt-5 space-y-3 px-[var(--lm-margin)]">
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-lowest)] p-1 shadow-lg focus-within:border-[var(--lm-primary)]">
-          <div className="flex flex-1 items-center gap-1 px-2 py-3">
-            <span className="material-symbols-outlined text-[20px] text-[var(--lm-on-surface-variant)]">
-              search
-            </span>
-            <input
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={`${category.name} içinde ara…`}
-              className="lm-body-lg w-full border-none bg-transparent outline-none placeholder:text-[color-mix(in_srgb,var(--lm-on-surface-variant)_50%,transparent)] focus:ring-0"
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={() => onSearchChange("")}
-                className="lm-body-sm px-2 text-[var(--lm-on-surface-variant)]"
-              >
-                Temizle
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        <MenuCategoryRail
-          categories={navCategories}
-          activeKey={`cat-${category.categoryId}`}
-          onSelect={(cat) => {
-            if (cat.categoryId == null) return;
-            const found = findCategoryById(categories, cat.categoryId);
-            if (found) onSelectCategory(found);
-          }}
-          activeChipClassName="bg-[var(--lm-primary)] text-white"
-          inactiveChipClassName="bg-[var(--lm-surface-container)] text-[var(--lm-on-surface)] ring-1 ring-[var(--lm-outline-variant)]"
+      <div className="sticky top-14 z-20 border-b border-[var(--lm-outline-variant)] bg-[color-mix(in_srgb,var(--lm-surface)_92%,transparent)] px-4 py-2 backdrop-blur">
+        <input
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={`${category.name} içinde ara…`}
+          className="w-full rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-lowest)] px-3 py-2.5 text-sm text-[var(--lm-on-surface)] outline-none focus:border-[var(--lm-primary)]"
         />
-      </section>
+        <div className="mt-2">
+          <MenuCategoryRail
+            categories={navCategories}
+            activeKey={`cat-${category.categoryId}`}
+            onSelect={(cat) => {
+              const found = resolveNavNodeFromRailCategory(categories, cat);
+              if (found) onSelectCategory(found);
+            }}
+            activeChipClassName="bg-[var(--lm-primary)] text-white"
+            inactiveChipClassName="bg-[var(--lm-surface-container)] text-[var(--lm-on-surface)] ring-1 ring-[var(--lm-outline-variant)]"
+          />
+        </div>
+      </div>
 
-      <section className="mt-8 px-[var(--lm-margin)]">
+      <section className="px-4 pt-3">
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
             {filtered.map((item) => (
-              <LumiereProductCard
+              <DenseProductRow
                 key={item.productId}
                 item={item}
                 onOpen={onOpenProduct}
+                {...rowProps}
               />
             ))}
           </div>
         ) : (
           <p className="rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container)] p-8 text-center text-[var(--lm-on-surface-variant)]">
-            {q
-              ? `“${searchQuery}” için sonuç bulunamadı.`
-              : `“${category.name}” kategorisinde henüz ürün yok.`}
+            {searchQuery.trim()
+              ? "Aramanızla eşleşen ürün bulunamadı."
+              : "Bu kategoride henüz ürün yok."}
           </p>
         )}
         <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-6 text-sm text-[var(--lm-on-surface-variant)]" />

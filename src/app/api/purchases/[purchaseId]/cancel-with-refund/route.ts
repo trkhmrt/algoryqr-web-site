@@ -6,7 +6,7 @@ import { API_BASE_URL } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ purchaseId: string }> },
 ) {
   try {
@@ -18,11 +18,17 @@ export async function POST(
     if (!accessToken) {
       return NextResponse.json({ message: "Oturum gerekli" }, { status: 401 });
     }
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    const realIp = req.headers.get("x-real-ip");
     const upstream = await axios.post(
       `${API_BASE_URL}/purchases/${purchaseId}/cancel-with-refund`,
       {},
       {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
+          ...(!forwardedFor && realIp ? { "X-Forwarded-For": realIp } : {}),
+        },
         validateStatus: () => true,
         timeout: 30_000,
       },

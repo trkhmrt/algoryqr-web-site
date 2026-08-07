@@ -2,9 +2,14 @@
 
 import { useMemo, useState } from "react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
-import type { MenuTemplateProps } from "../types";
-import { findCategoryById } from "../types";
+import type { MenuProductApiItem } from "@/lib/api";
+import type { MenuTemplateProps, TaxonomyNavNode } from "../types";
+import {
+  findCategoryById,
+  resolveProductNavCategory,
+  taxonomyAsNavTree,
+  trackIdForNavNode,
+} from "../types";
 import { resolveSelectedProduct, useRegisterChefOpenProduct } from "../shared";
 import type { AlbaView } from "./category-utils";
 import { AlbaCategoryView } from "./CategoryView";
@@ -24,6 +29,11 @@ export function AlbaMenuTemplate({
     null,
   );
 
+  const displayCategories = useMemo(
+    () => taxonomyAsNavTree(categories),
+    [categories],
+  );
+
   const activeCategoryId =
     view.type === "category"
       ? view.categoryId
@@ -33,7 +43,7 @@ export function AlbaMenuTemplate({
 
   const activeCategory =
     activeCategoryId != null
-      ? findCategoryById(categories, activeCategoryId)
+      ? findCategoryById(displayCategories, activeCategoryId)
       : null;
 
   const selectedProduct = useMemo(() => {
@@ -48,23 +58,27 @@ export function AlbaMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const selectCategory = (category: MenuCategoryApiItem) => {
+  const selectCategory = (category: TaxonomyNavNode) => {
     setSearchQuery("");
     setPinnedProduct(null);
     setView({ type: "category", categoryId: category.categoryId });
-    analytics?.trackCategoryView(category.categoryId);
+    analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
-    const categoryId = product.categoryId ?? activeCategoryId;
+    const productCategory = resolveProductNavCategory(displayCategories, product);
+    const categoryId = productCategory?.categoryId ?? activeCategoryId;
     setPinnedProduct(product);
     setView({
       type: "product",
       productId: product.productId,
       categoryId,
     });
-    analytics?.trackProductView(product.productId, categoryId);
+    analytics?.trackProductView(
+      product.productId,
+      product.subCategoryId ?? product.mainCategoryId ?? null,
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -89,7 +103,7 @@ export function AlbaMenuTemplate({
       {view.type === "home" ? (
         <AlbaHomeView
           menu={menu}
-          categories={categories}
+          categories={displayCategories}
           products={products}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -101,7 +115,7 @@ export function AlbaMenuTemplate({
       {view.type === "category" && activeCategory ? (
         <AlbaCategoryView
           category={activeCategory}
-          categories={categories}
+          categories={displayCategories}
           products={products}
           onHome={backFromCategory}
           onSelectCategory={selectCategory}
@@ -127,7 +141,7 @@ export function AlbaMenuTemplate({
       {view.type === "product" && selectedProduct ? (
         <AlbaProductDetailView
           product={selectedProduct}
-          categories={categories}
+          categories={displayCategories}
           onBack={backFromProduct}
           onHome={goHome}
           onSelectCategory={selectCategory}

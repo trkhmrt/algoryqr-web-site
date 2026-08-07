@@ -65,15 +65,15 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
-          <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <a href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Özellikler
           </a>
-          <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Fiyatlandırma
           </a>
-          <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            SSS
-          </a>
+          <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            İletişim
+          </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-2">
@@ -134,15 +134,15 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden glass border-t border-border px-4 pb-4 pt-2 flex flex-col gap-3">
-          <a href="#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+          <a href="/#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
             Özellikler
           </a>
-          <a href="#pricing" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+          <a href="/#pricing" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
             Fiyatlandırma
           </a>
-          <a href="#faq" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
-            SSS
-          </a>
+          <Link href="/contact" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+            İletişim
+          </Link>
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             {user ? (
               <>

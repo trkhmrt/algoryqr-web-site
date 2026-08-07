@@ -12,6 +12,8 @@ export const LUMEN_STYLES = `
     --ln-primary-fg: oklch(0.16 0.012 60);
     --ln-destructive: oklch(0.60 0.22 25);
     --ln-destructive-fg: oklch(0.98 0 0);
+    --menu-frame-bg: oklch(0.12 0.01 60);
+    --menu-frame-border: oklch(0.30 0.014 60 / 40%);
     --ln-gradient-gold: linear-gradient(135deg, oklch(0.85 0.14 82), oklch(0.68 0.12 55));
     background-color: var(--ln-bg);
     color: var(--ln-fg);

@@ -3,8 +3,9 @@ export type ChefProductItem = {
   menuId: number;
   name: string;
   description: string | null;
-  category: string | null;
-  categoryId: number | null;
+  subCategoryId: number | null;
+  subCategoryName?: string | null;
+  mainCategoryName?: string | null;
   price: number | null;
   currency: string;
   imageUrl: string | null;
@@ -38,7 +39,7 @@ const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     keyword: "ana yemek",
-    patterns: [/\bana\s*yemek\w*\b/iu, /\bmain\s*course\w*\b/iu],
+    patterns: [/\bana\s*yemek\w*\b/iu, /\bmain\s*course\w*\b/iu, /\bizgara\w*\b/iu, /\bızgara\w*\b/iu, /\bkebap\w*\b/iu],
   },
   {
     keyword: "başlangıç",
@@ -50,7 +51,7 @@ const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     keyword: "içecek",
-    patterns: [/\bi[cç]ecek\w*\b/iu, /\bdrink\w*\b/iu, /\bbeverage\w*\b/iu],
+    patterns: [/\bi[cç]ecek\w*\b/iu, /\bicecek\w*\b/iu, /\bdrink\w*\b/iu, /\bbeverage\w*\b/iu],
   },
 ];
 

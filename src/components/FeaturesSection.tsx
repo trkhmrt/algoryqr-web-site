@@ -2,38 +2,51 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { QrCode, BarChart3, Palette, Zap, Globe, Shield } from "lucide-react";
+import {
+  QrCode,
+  UtensilsCrossed,
+  Sparkles,
+  Bot,
+  LineChart,
+  Palette,
+} from "lucide-react";
 
 const features = [
   {
     icon: QrCode,
     title: "Dinamik QR Kodları",
-    description: "İçeriği istediğiniz zaman değiştirin, yeniden yazdırmanıza gerek yok.",
+    description:
+      "Menü, kampanya veya ödeme bağlantınızı yazdırmadan güncelleyin; tek QR ile her zaman güncel kalın.",
   },
   {
-    icon: BarChart3,
-    title: "Detaylı Analitik",
-    description: "Tarama sayısı, konum, cihaz ve zaman bazlı istatistikler.",
+    icon: UtensilsCrossed,
+    title: "Dijital Menü",
+    description:
+      "Hazır şablonlarla markanıza uygun menü yayınlayın. Fiyat ve ürün değişikliklerini anında yansıtın.",
+  },
+  {
+    icon: Sparkles,
+    title: "Akıllı Özet",
+    description:
+      "Ürün adından yapay zeka ile açıklama üretin. Menü metinlerini dakikalar değil saniyeler içinde hazırlayın.",
+  },
+  {
+    icon: Bot,
+    title: "Akıllı Asistan",
+    description:
+      "Misafirleriniz menü üzerinden soru sorabilsin. Öneri ve yönlendirme ile sipariş deneyimini kolaylaştırın.",
+  },
+  {
+    icon: LineChart,
+    title: "Akıllı Raporlama",
+    description:
+      "Ziyaret, ürün ilgisi ve kullanım eğilimlerini anlaşılır raporlara dönüştürün; kararları veriye dayandırın.",
   },
   {
     icon: Palette,
-    title: "Tam Özelleştirme",
-    description: "Renk, logo, çerçeve ve şekillerle markanıza uygun QR kodlar.",
-  },
-  {
-    icon: Zap,
-    title: "Anında Oluşturma",
-    description: "Saniyeler içinde profesyonel QR kodlarınızı oluşturun.",
-  },
-  {
-    icon: Globe,
-    title: "Toplu Oluşturma",
-    description: "CSV yükleme ile yüzlerce QR kodu tek seferde oluşturun.",
-  },
-  {
-    icon: Shield,
-    title: "Güvenli & Güvenilir",
-    description: "SSL şifreleme ve %99.9 uptime garantisi.",
+    title: "Markaya Uygun Tasarım",
+    description:
+      "Renk, logo ve şablonlarla QR ve menü görünümünü işletmenizin kimliğine göre özelleştirin.",
   },
 ];
 
@@ -52,10 +65,10 @@ const FeaturesSection = () => {
         >
           <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">Özellikler</p>
           <h2 className="text-4xl md:text-5xl font-bold">
-            Her şey tek bir platformda
+            QR, menü ve yapay zeka bir arada
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            QR kod yönetimi için ihtiyacınız olan tüm araçlar.
+            Oluşturmadan yönetmeye, içerikten analitiğe — işletmeniz için gereken araçlar tek platformda.
           </p>
         </motion.div>
 

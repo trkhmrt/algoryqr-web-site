@@ -6,12 +6,11 @@ import { API_BASE_URL } from "@/lib/config";
 export async function GET(_req: Request, context: { params: Promise<{ identifier: string }> }) {
   try {
     const { identifier } = await context.params;
-    const isNumeric = /^\d+$/.test(identifier);
-    const upstreamPath = isNumeric
-      ? `${API_BASE_URL}/menu/public/id/${identifier}`
-      : `${API_BASE_URL}/menu/public/slug/${encodeURIComponent(identifier)}`;
+    if (!/^\d+$/.test(identifier)) {
+      return NextResponse.json({ message: "Menü bulunamadı" }, { status: 404 });
+    }
 
-    const upstream = await axios.get(upstreamPath, {
+    const upstream = await axios.get(`${API_BASE_URL}/menu/public/id/${identifier}`, {
       validateStatus: () => true,
       timeout: 20_000,
     });

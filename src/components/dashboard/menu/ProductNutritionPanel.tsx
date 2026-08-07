@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +71,17 @@ function toNumberOrNull(value: string): number | null {
 function toNumberOrUndefined(value: string): number | undefined {
   const parsed = toNumberOrNull(value);
   return parsed == null ? undefined : parsed;
+}
+
+function hasOptionalNutrition(nutrition?: NutritionFacts | null) {
+  if (!nutrition) return false;
+  return Boolean(
+    nutrition.saturatedFat != null ||
+      nutrition.sugars != null ||
+      nutrition.polyols != null ||
+      nutrition.starch != null ||
+      (nutrition.otherNutrients && nutrition.otherNutrients.length > 0),
+  );
 }
 
 export function emptyNutritionFacts(): NutritionFacts {
@@ -150,10 +161,12 @@ export default function ProductNutritionPanel({
 }: ProductNutritionPanelProps) {
   const { notify } = useDashboardBanners();
   const [form, setForm] = useState<NutritionFormState>(() => emptyForm(nutrition));
+  const [showExtra, setShowExtra] = useState(() => hasOptionalNutrition(nutrition));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setForm(emptyForm(nutrition));
+    setShowExtra(hasOptionalNutrition(nutrition));
   }, [nutrition]);
 
   const updateField = <K extends keyof NutritionFormState>(key: K, value: NutritionFormState[K]) => {
@@ -179,142 +192,164 @@ export default function ProductNutritionPanel({
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-border/70 bg-background p-4">
-      <div>
-        <h3 className="text-sm font-medium text-foreground">Besin değerleri</h3>
-        <p className="text-xs text-muted-foreground">
-          Değerler 100g veya 100ml başına girilir. Enerji hem kJ hem kcal olarak zorunludur.
-        </p>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-medium text-foreground">Besin değerleri</h3>
+          <p className="text-xs text-muted-foreground">100g / 100ml başına · kJ ve kcal zorunlu</p>
+        </div>
+        <Button size="sm" className="h-8" disabled={saving} onClick={() => void handleSave()}>
+          {saving ? "Kaydediliyor..." : "Besinleri kaydet"}
+        </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="space-y-1">
           <Label className="text-xs">Birim</Label>
           <select
-            className="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+            className="flex h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
             value={form.basis}
             onChange={(e) => updateField("basis", e.target.value as NutritionBasis)}
           >
-            <option value="PER_100G">100g başına</option>
-            <option value="PER_100ML">100ml başına</option>
+            <option value="PER_100G">100g</option>
+            <option value="PER_100ML">100ml</option>
           </select>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Enerji (kJ)</Label>
-          <Input value={form.energyKj} onChange={(e) => updateField("energyKj", e.target.value)} />
+          <Input className="h-9" value={form.energyKj} onChange={(e) => updateField("energyKj", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Enerji (kcal)</Label>
-          <Input value={form.energyKcal} onChange={(e) => updateField("energyKcal", e.target.value)} />
+          <Input className="h-9" value={form.energyKcal} onChange={(e) => updateField("energyKcal", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Yağ (g)</Label>
-          <Input value={form.fat} onChange={(e) => updateField("fat", e.target.value)} />
+          <Input className="h-9" value={form.fat} onChange={(e) => updateField("fat", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Doymuş yağ (g)</Label>
-          <Input value={form.saturatedFat} onChange={(e) => updateField("saturatedFat", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Karbonhidrat (g)</Label>
-          <Input value={form.carbohydrate} onChange={(e) => updateField("carbohydrate", e.target.value)} />
+          <Input className="h-9" value={form.carbohydrate} onChange={(e) => updateField("carbohydrate", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Şekerler (g)</Label>
-          <Input value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Polioller (g)</Label>
-          <Input value={form.polyols} onChange={(e) => updateField("polyols", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Nişasta (g)</Label>
-          <Input value={form.starch} onChange={(e) => updateField("starch", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Lif (g)</Label>
-          <Input value={form.fibre} onChange={(e) => updateField("fibre", e.target.value)} />
+          <Input className="h-9" value={form.fibre} onChange={(e) => updateField("fibre", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Protein (g)</Label>
-          <Input value={form.protein} onChange={(e) => updateField("protein", e.target.value)} />
+          <Input className="h-9" value={form.protein} onChange={(e) => updateField("protein", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <Label className="text-xs">Tuz (g)</Label>
-          <Input value={form.salt} onChange={(e) => updateField("salt", e.target.value)} />
+          <Input className="h-9" value={form.salt} onChange={(e) => updateField("salt", e.target.value)} />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs">Diğer besin öğeleri</Label>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() =>
-              updateField("otherNutrients", [...form.otherNutrients, { name: "", value: "", unit: "" }])
-            }
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Ekle
-          </Button>
-        </div>
-        {form.otherNutrients.length === 0 ? (
-          <p className="text-xs text-muted-foreground">İsteğe bağlı ek besin öğesi yok.</p>
-        ) : (
-          form.otherNutrients.map((entry, index) => (
-            <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => setShowExtra((prev) => !prev)}
+      >
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showExtra ? "rotate-180" : ""}`} />
+        Ek alanlar
+      </button>
+
+      {showExtra ? (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Doymuş yağ (g)</Label>
               <Input
-                placeholder="Ad"
-                value={entry.name}
-                onChange={(e) => {
-                  const next = [...form.otherNutrients];
-                  next[index] = { ...next[index], name: e.target.value };
-                  updateField("otherNutrients", next);
-                }}
+                className="h-9"
+                value={form.saturatedFat}
+                onChange={(e) => updateField("saturatedFat", e.target.value)}
               />
-              <Input
-                placeholder="Değer"
-                value={String(entry.value ?? "")}
-                onChange={(e) => {
-                  const next = [...form.otherNutrients];
-                  next[index] = { ...next[index], value: e.target.value };
-                  updateField("otherNutrients", next);
-                }}
-              />
-              <Input
-                placeholder="Birim"
-                value={entry.unit ?? ""}
-                onChange={(e) => {
-                  const next = [...form.otherNutrients];
-                  next[index] = { ...next[index], unit: e.target.value };
-                  updateField("otherNutrients", next);
-                }}
-              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Şekerler (g)</Label>
+              <Input className="h-9" value={form.sugars} onChange={(e) => updateField("sugars", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Polioller (g)</Label>
+              <Input className="h-9" value={form.polyols} onChange={(e) => updateField("polyols", e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Nişasta (g)</Label>
+              <Input className="h-9" value={form.starch} onChange={(e) => updateField("starch", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs">Diğer besin öğeleri</Label>
               <Button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 text-destructive"
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5"
                 onClick={() =>
-                  updateField(
-                    "otherNutrients",
-                    form.otherNutrients.filter((_, itemIndex) => itemIndex !== index),
-                  )
+                  updateField("otherNutrients", [...form.otherNutrients, { name: "", value: "", unit: "" }])
                 }
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" />
+                Ekle
               </Button>
             </div>
-          ))
-        )}
-      </div>
-
-      <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
-        {saving ? "Kaydediliyor..." : "Besin değerlerini kaydet"}
-      </Button>
+            {form.otherNutrients.length === 0 ? (
+              <p className="text-xs text-muted-foreground">İsteğe bağlı ek besin öğesi yok.</p>
+            ) : (
+              form.otherNutrients.map((entry, index) => (
+                <div key={index} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                  <Input
+                    className="h-9"
+                    placeholder="Ad"
+                    value={entry.name}
+                    onChange={(e) => {
+                      const next = [...form.otherNutrients];
+                      next[index] = { ...next[index], name: e.target.value };
+                      updateField("otherNutrients", next);
+                    }}
+                  />
+                  <Input
+                    className="h-9"
+                    placeholder="Değer"
+                    value={String(entry.value ?? "")}
+                    onChange={(e) => {
+                      const next = [...form.otherNutrients];
+                      next[index] = { ...next[index], value: e.target.value };
+                      updateField("otherNutrients", next);
+                    }}
+                  />
+                  <Input
+                    className="h-9"
+                    placeholder="Birim"
+                    value={entry.unit ?? ""}
+                    onChange={(e) => {
+                      const next = [...form.otherNutrients];
+                      next[index] = { ...next[index], unit: e.target.value };
+                      updateField("otherNutrients", next);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive"
+                    onClick={() =>
+                      updateField(
+                        "otherNutrients",
+                        form.otherNutrients.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

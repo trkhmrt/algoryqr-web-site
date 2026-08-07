@@ -1,30 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Minus, X } from "lucide-react";
+import { ArrowLeft, Check, CircleHelp, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useEligibleTrialPackages } from "@/hooks/use-commerce";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import type { PlanPackageApiItem } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   buildPackageComparisonRows,
-  diffPackages,
+  featureTooltip,
   formatDaysUntilExpiry,
   formatPackageDate,
   formatPackagePrice,
-  packageFeatures,
   planActionLabel,
   purchaseTypeLabel,
 } from "@/lib/package-display";
+import { matchesProductCode } from "@/lib/product-access";
 import { cn } from "@/lib/utils";
 
 function sortedPackages(packages: PlanPackageApiItem[]): PlanPackageApiItem[] {
   return [...packages].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+}
+
+function ComparisonCellValue({ value }: { value: string }) {
+  if (value === "Var") {
+    return (
+      <span
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600"
+        aria-label="Var"
+      >
+        <Check className="h-3 w-3 text-white" strokeWidth={3} />
+      </span>
+    );
+  }
+  if (value === "Yok") {
+    return (
+      <span
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-600"
+        aria-label="Yok"
+      >
+        <X className="h-3 w-3 text-white" strokeWidth={3} />
+      </span>
+    );
+  }
+  return <>{value}</>;
 }
 
 export default function PackageComparisonView() {
@@ -33,7 +63,6 @@ export default function PackageComparisonView() {
   const subscription = useSubscription();
   const packagesQuery = useActivePackages();
   const eligibleTrials = useEligibleTrialPackages();
-  const [focusedId, setFocusedId] = useState<number | null>(null);
 
   const current = subscription.data?.activePurchase ?? null;
   const packages = useMemo(
@@ -41,9 +70,6 @@ export default function PackageComparisonView() {
     [packagesQuery.data],
   );
   const rows = useMemo(() => buildPackageComparisonRows(packages), [packages]);
-  const focusedPackage = packages.find((pkg) => pkg.id === focusedId) ?? null;
-  const currentCatalog = packages.find((pkg) => pkg.id === current?.packageId) ?? null;
-  const diff = focusedPackage ? diffPackages(currentCatalog, focusedPackage) : null;
   const trialEligibleIds = new Set((eligibleTrials.data ?? []).map((pkg) => pkg.id));
   const isPaidActive =
     !!current &&
@@ -56,9 +82,19 @@ export default function PackageComparisonView() {
     current.usable &&
     !current.expired &&
     (current.purchaseType === "TRIAL" || current.packageCode === "FREE_PACKAGE");
+  const featureColPct = 28;
+  const packageColPct = packages.length > 0 ? (100 - featureColPct) / packages.length : 0;
 
   const ctaHref = (pkg: PlanPackageApiItem) => {
-    if (current?.packageId === pkg.id) return null;
+    if (pkg.code === "FREE_PACKAGE" && current?.packageId !== pkg.id) {
+      return null;
+    }
+    if (current?.packageId === pkg.id) {
+      if (current.purchaseType === "TRIAL") {
+        return DASHBOARD_ROUTES.accountSubscriptionCheckout(pkg.id);
+      }
+      return null;
+    }
     if (isPaidActive) return DASHBOARD_ROUTES.accountPlanChange(pkg.id);
     return DASHBOARD_ROUTES.accountSubscriptionCheckout(pkg.id);
   };
@@ -115,184 +151,140 @@ export default function PackageComparisonView() {
       ) : packages.length === 0 ? (
         <p className="text-sm text-muted-foreground">Karşılaştırılacak paket bulunamadı.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="min-w-[640px] w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground">
-                  Özellik
-                </th>
-                {packages.map((pkg) => {
-                  const isCurrent = current?.packageId === pkg.id;
-                  const menuHighlight = highlight === "QR_MENU";
-                  const hasMenu = pkg.items?.some((i) => i.productCode === "QR_MENU");
-                  return (
-                    <th
-                      key={pkg.id}
-                      className={cn(
-                        "min-w-[160px] px-4 py-3 text-left align-bottom",
-                        isCurrent && "bg-primary/5",
-                        menuHighlight && hasMenu && "ring-1 ring-inset ring-primary/30",
-                      )}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-semibold text-foreground">{pkg.name}</span>
-                          {isCurrent ? (
-                            <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                              Mevcut
-                            </span>
+        <TooltipProvider delayDuration={200}>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="min-w-[720px] w-full table-fixed border-collapse text-sm">
+              <colgroup>
+                <col style={{ width: `${featureColPct}%` }} />
+                {packages.map((pkg) => (
+                  <col key={`col-${pkg.id}`} style={{ width: `${packageColPct}%` }} />
+                ))}
+              </colgroup>
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground">
+                    Ürün
+                  </th>
+                  {packages.map((pkg) => {
+                    const isCurrent = current?.packageId === pkg.id;
+                    const highlightMatch =
+                      !!highlight &&
+                      pkg.items?.some((item) => matchesProductCode(item.productCode, highlight));
+                    return (
+                      <th
+                        key={pkg.id}
+                        className={cn(
+                          "px-4 py-3 text-center align-bottom",
+                          isCurrent && "bg-primary/5",
+                          highlightMatch && "ring-1 ring-inset ring-primary/30",
+                        )}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center justify-center gap-1.5">
+                            <span className="font-semibold text-foreground">{pkg.name}</span>
+                            {isCurrent ? (
+                              <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                Mevcut
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-base font-bold text-foreground">
+                            {formatPackagePrice(pkg.price, pkg.currency)}
+                          </p>
+                          {pkg.validityDays ? (
+                            <p className="text-xs font-normal text-muted-foreground">
+                              {pkg.validityDays === 30 ? "aylık" : `/${pkg.validityDays} gün`}
+                            </p>
                           ) : null}
                         </div>
-                        <p className="text-base font-bold text-foreground">
-                          {formatPackagePrice(pkg.price, pkg.currency)}
-                        </p>
-                        {pkg.validityDays ? (
-                          <p className="text-xs font-normal text-muted-foreground">
-                            /{pkg.validityDays} gün
-                          </p>
-                        ) : null}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b border-border/70">
-                  <td className="sticky left-0 z-10 bg-card px-4 py-3 font-medium text-foreground">
-                    {row.label}
-                  </td>
-                  {packages.map((pkg) => (
-                    <td
-                      key={`${row.id}-${pkg.id}`}
-                      className={cn(
-                        "px-4 py-3 text-muted-foreground",
-                        current?.packageId === pkg.id && "bg-primary/5 text-foreground",
-                      )}
-                    >
-                      {row.values[String(pkg.id)] ?? "—"}
-                    </td>
-                  ))}
+                      </th>
+                    );
+                  })}
                 </tr>
-              ))}
-              <tr>
-                <td className="sticky left-0 z-10 bg-card px-4 py-4" />
-                {packages.map((pkg) => {
-                  const label = planActionLabel(current?.packageId, pkg, current?.price);
-                  const href = ctaHref(pkg);
-                  const showTrial =
-                    isFreeOrTrial &&
-                    trialEligibleIds.has(pkg.id) &&
-                    eligibleTrials.data?.some((t) => t.id === pkg.id);
-                  return (
-                    <td key={`cta-${pkg.id}`} className="px-4 py-4 align-top">
-                      <div className="space-y-2">
-                        {label === "Mevcut plan" || !href ? (
-                          <Button className="w-full" variant="outline" disabled>
-                            Mevcut plan
-                          </Button>
-                        ) : (
-                          <Button
-                            className="w-full"
-                            variant={label === "Yükselt" || label === "Satın al" ? "hero" : "outline"}
-                            asChild
-                            onMouseEnter={() => setFocusedId(pkg.id)}
-                            onFocus={() => setFocusedId(pkg.id)}
-                          >
-                            <Link href={href}>{label}</Link>
-                          </Button>
-                        )}
-                        {showTrial ? (
-                          <p className="text-[11px] text-muted-foreground">
-                            Deneme için Dijital Menü veya Abonelik ekranından başlatabilirsiniz.
-                          </p>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
-                          onClick={() => setFocusedId(pkg.id)}
-                        >
-                          Ne değişir?
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-b border-border/70">
+                    <td className="sticky left-0 z-10 bg-card px-4 py-3 text-left font-medium text-foreground break-words">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{row.label}</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+                              aria-label={`${row.label} açıklaması`}
+                            >
+                              <CircleHelp className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">
+                            {featureTooltip(row.label)}
+                          </TooltipContent>
+                        </Tooltip>
+                      </span>
                     </td>
-                  );
-                })}
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                    {packages.map((pkg) => (
+                      <td
+                        key={`${row.id}-${pkg.id}`}
+                        className={cn(
+                          "px-4 py-3 text-center text-muted-foreground break-words",
+                          current?.packageId === pkg.id && "bg-primary/5 text-foreground",
+                        )}
+                      >
+                        <span className="inline-flex items-center justify-center">
+                          <ComparisonCellValue value={row.values[String(pkg.id)] ?? "—"} />
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr>
+                  <td className="sticky left-0 z-10 bg-card px-4 py-4" />
+                  {packages.map((pkg) => {
+                    const label = planActionLabel(
+                      current?.packageId,
+                      pkg,
+                      current?.price,
+                      current?.purchaseType,
+                    );
+                    const href = ctaHref(pkg);
+                    const showTrial =
+                      isFreeOrTrial &&
+                      current?.packageId !== pkg.id &&
+                      trialEligibleIds.has(pkg.id) &&
+                      eligibleTrials.data?.some((t) => t.id === pkg.id);
+                    return (
+                      <td key={`cta-${pkg.id}`} className="px-4 py-4 align-top text-center">
+                        <div className="mx-auto max-w-[220px] space-y-2">
+                          {label === "Mevcut plan" ? (
+                            <Button className="w-full" variant="outline" disabled>
+                              Mevcut plan
+                            </Button>
+                          ) : label && href ? (
+                            <Button
+                              className="w-full"
+                              variant={label === "Yükselt" || label === "Satın al" ? "hero" : "outline"}
+                              asChild
+                            >
+                              <Link href={href}>{label}</Link>
+                            </Button>
+                          ) : null}
+                          {showTrial ? (
+                            <p className="text-[11px] text-muted-foreground">
+                              Deneme için Dijital Menü veya Abonelik ekranından başlatabilirsiniz.
+                            </p>
+                          ) : null}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </TooltipProvider>
       )}
-
-      {focusedPackage && diff ? (
-        <Card className="glow-card">
-          <CardContent className="space-y-4 p-5">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Ne değişir?
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-foreground">
-                {currentCatalog?.name ?? "Mevcut"} → {focusedPackage.name}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {diff.direction === "upgrade"
-                  ? "Yükseltme"
-                  : diff.direction === "downgrade"
-                    ? "Düşürme"
-                    : "Aynı seviye"}
-                {diff.priceDelta !== 0
-                  ? ` · Fiyat farkı ${diff.priceDelta > 0 ? "+" : ""}${formatPackagePrice(Math.abs(diff.priceDelta), focusedPackage.currency)}`
-                  : ""}
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <p className="mb-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">Kazanılanlar</p>
-                <ul className="space-y-1.5">
-                  {(diff.gained.length ? diff.gained : ["Ek yeni özellik yok"]).map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-medium text-amber-700 dark:text-amber-400">Kaybedilenler</p>
-                <ul className="space-y-1.5">
-                  {(diff.lost.length ? diff.lost : ["Kayıp yok"]).map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <X className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">Aynı kalanlar</p>
-                <ul className="space-y-1.5">
-                  {(diff.same.length ? diff.same.slice(0, 5) : ["—"]).map((item) => (
-                    <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Minus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {packageFeatures(focusedPackage).map((feature) => (
-                <li key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }

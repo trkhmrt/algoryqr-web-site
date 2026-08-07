@@ -17,6 +17,7 @@ const CATEGORY_DEBOUNCE_MS = 400;
 export type MenuVisitAnalytics = {
   trackCategoryView: (categoryId: number | null | undefined) => void;
   trackProductView: (productId: number, categoryId?: number | null) => void;
+  trackServesFilter: (servesPeople: number) => void;
 };
 
 export function useMenuVisitAnalytics(menuId: number | null | undefined): MenuVisitAnalytics {
@@ -120,5 +121,15 @@ export function useMenuVisitAnalytics(menuId: number | null | undefined): MenuVi
     [enqueue],
   );
 
-  return { trackCategoryView, trackProductView };
+  const trackServesFilter = useCallback(
+    (servesPeople: number) => {
+      if (!Number.isFinite(servesPeople) || servesPeople < 1) {
+        return;
+      }
+      enqueue("SERVES_FILTER", { servesPeople });
+    },
+    [enqueue],
+  );
+
+  return { trackCategoryView, trackProductView, trackServesFilter };
 }

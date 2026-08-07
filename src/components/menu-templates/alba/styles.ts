@@ -14,6 +14,8 @@ export const ALBA_STYLES = `
     --ab-surface-elevated: color-mix(in srgb, #ffffff 88%, #e8f0f3);
     --ab-destructive: #b42318;
     --ab-destructive-soft: color-mix(in srgb, #b42318 10%, transparent);
+    --menu-frame-bg: #e8edf0;
+    --menu-frame-border: color-mix(in srgb, #15202b 10%, transparent);
     --ab-glow: radial-gradient(ellipse 80% 55% at 50% -10%, #cfe8eb 0%, transparent 70%),
       radial-gradient(ellipse 60% 40% at 100% 0%, #e4eef5 0%, transparent 55%),
       radial-gradient(ellipse 50% 35% at 0% 20%, #dce9e8 0%, transparent 50%);

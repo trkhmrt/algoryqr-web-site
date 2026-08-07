@@ -1,21 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
-import { Search } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
+import { MapPin, Phone } from "lucide-react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
-import { searchMenuProducts, MenuProductScrollSentinel } from "../shared";
+import type { MainCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
+import {
+  DenseProductRow,
+  MenuProductScrollSentinel,
+  MenuRatingControl,
+  searchMenuProducts,
+} from "../shared";
 import {
   filterVisibleProducts,
   resolveSubCategories,
 } from "./category-utils";
-import { SoftProductCard } from "./ProductCard";
 import { SOFT_HERO_IMAGE } from "./styles";
 
 type HomeViewProps = {
   menu: MenuProfileApiItem;
-  categories: MenuCategoryApiItem[];
+  categories: MainCategoryApiItem[];
   products: MenuProductApiItem[];
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -24,6 +27,14 @@ type HomeViewProps = {
   activeSubCategoryId: "all" | number;
   onSelectSubCategory: (id: "all" | number) => void;
   onOpenProduct: (product: MenuProductApiItem) => void;
+  partySizeControl?: ReactNode;
+  ratingControl?: {
+    ratingAvg: number | null;
+    ratingCount: number;
+    userRating?: number | null;
+    onRate?: (value: number) => void;
+    submitting?: boolean;
+  };
 };
 
 export function SoftHomeView({
@@ -37,6 +48,8 @@ export function SoftHomeView({
   activeSubCategoryId,
   onSelectSubCategory,
   onOpenProduct,
+  partySizeControl,
+  ratingControl,
 }: HomeViewProps) {
   const welcome =
     menu.slogan?.trim() || "Hoş geldiniz — menümüze göz atın.";
@@ -67,87 +80,129 @@ export function SoftHomeView({
 
   return (
     <div className="min-h-screen pb-16">
-      <header className="relative h-[42vh] min-h-[280px] w-full overflow-hidden">
+      <header className="relative h-[min(220px,32vh)] min-h-[180px] w-full overflow-hidden">
         <img
           src={SOFT_HERO_IMAGE}
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--sf-bg)] via-[color-mix(in_srgb,var(--sf-fg)_35%,transparent)] to-[color-mix(in_srgb,var(--sf-fg)_45%,transparent)]" />
-        <div className="relative z-10 flex h-full flex-col justify-end px-5 pb-8 pt-10">
-          <Badge className="mb-3 w-fit rounded-full border-0 bg-white/90 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--sf-fg)] shadow-sm hover:bg-white/90">
+        <div className="relative z-10 flex h-full flex-col justify-end px-4 pb-5 pt-8">
+          <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/80">
             Dijital Menü
-          </Badge>
-          <h1 className="font-display text-4xl font-bold leading-none text-white drop-shadow-sm sm:text-5xl">
+          </p>
+          <h1 className="font-display text-3xl font-bold leading-none text-white drop-shadow-sm">
             {menu.businessName}
           </h1>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-white/85">
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-white/85">
             {welcome}
           </p>
+          {(menu.phone || menu.address) && (
+            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-white/75">
+              {menu.address ? (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  <span className="line-clamp-1">{menu.address}</span>
+                </span>
+              ) : null}
+              {menu.phone ? (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {menu.phone}
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
       </header>
 
-      <div className="sticky top-0 z-30 -mt-4 border-b border-[var(--sf-border)] bg-[color-mix(in_srgb,var(--sf-bg)_88%,transparent)] px-5 pb-3 pt-2 backdrop-blur-xl">
-        <div className="relative mx-auto max-w-2xl">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 sf-muted" />
-          <input
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Ürün ara…"
-            className="w-full rounded-2xl border border-[var(--sf-border)] bg-[var(--sf-surface)] py-3.5 pl-11 pr-4 text-sm shadow-sm sf-fg placeholder:text-[var(--sf-muted)] focus:border-[color-mix(in_srgb,var(--sf-accent)_25%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--sf-accent)_10%,transparent)]"
-          />
-        </div>
+      <div className="sticky top-0 z-30 -mt-3 border-b border-[var(--sf-border)] bg-[color-mix(in_srgb,var(--sf-bg)_92%,transparent)] backdrop-blur-xl">
+        <div className="px-4 py-2">
+          <div className="relative">
+            <input
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Ürün ara…"
+              className="w-full rounded-xl border border-[var(--sf-border)] bg-[var(--sf-surface)] py-2.5 pl-3 pr-3 text-sm shadow-sm sf-fg placeholder:text-[var(--sf-muted)] focus:border-[color-mix(in_srgb,var(--sf-accent)_25%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--sf-accent)_10%,transparent)]"
+            />
+          </div>
 
-        <div className="scrollbar-none mx-auto mt-3 flex max-w-2xl gap-2 overflow-x-auto pb-1">
-          <CategoryChip
-            label="Tümü"
-            active={activeCategoryId === "all"}
-            onClick={() => onSelectCategory("all")}
-          />
-          {categories.map((cat) => (
+          {partySizeControl ? <div className="mt-2">{partySizeControl}</div> : null}
+          {ratingControl ? (
+            <div className="mt-2 rounded-xl border border-[var(--sf-border)] bg-[var(--sf-surface)] px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-medium sf-muted">Menüyü puanla</span>
+                <MenuRatingControl
+                  ratingAvg={ratingControl.ratingAvg}
+                  ratingCount={ratingControl.ratingCount}
+                  userRating={ratingControl.userRating}
+                  onRate={ratingControl.onRate}
+                  submitting={ratingControl.submitting}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="scrollbar-none mt-2 flex gap-1.5 overflow-x-auto pb-1">
             <CategoryChip
-              key={cat.categoryId}
-              label={cat.name}
-              active={activeCategoryId === cat.categoryId}
-              onClick={() => onSelectCategory(cat.categoryId)}
-            />
-          ))}
-        </div>
-
-        {subCategories.length > 0 ? (
-          <div className="scrollbar-none mx-auto mt-2 flex max-w-2xl gap-2 overflow-x-auto pb-1">
-            <SubChip
               label="Tümü"
-              active={activeSubCategoryId === "all"}
-              onClick={() => onSelectSubCategory("all")}
+              active={activeCategoryId === "all"}
+              onClick={() => onSelectCategory("all")}
             />
-            {subCategories.map((sub) => (
-              <SubChip
-                key={sub.categoryId}
-                label={sub.name}
-                active={activeSubCategoryId === sub.categoryId}
-                onClick={() => onSelectSubCategory(sub.categoryId)}
+            {categories.map((cat) => (
+              <CategoryChip
+                key={cat.id}
+                label={cat.name}
+                active={activeCategoryId === cat.id}
+                onClick={() => onSelectCategory(cat.id)}
               />
             ))}
           </div>
-        ) : null}
+
+          {subCategories.length > 0 ? (
+            <div className="scrollbar-none mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
+              <SubChip
+                label="Tümü"
+                active={activeSubCategoryId === "all"}
+                onClick={() => onSelectSubCategory("all")}
+              />
+              {subCategories.map((sub) => (
+                <SubChip
+                  key={sub.id}
+                  label={sub.name}
+                  active={activeSubCategoryId === sub.id}
+                  onClick={() => onSelectSubCategory(sub.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <main className="mx-auto max-w-2xl px-5 pt-6">
+      <main className="px-4 pt-3">
         {visible.length > 0 ? (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col">
             {visible.map((item) => (
-              <SoftProductCard
+              <DenseProductRow
                 key={item.productId}
                 item={item}
                 onOpen={onOpenProduct}
+                className="border-[var(--sf-border)]"
+                imageClassName="bg-[var(--sf-bg-soft)]"
+                titleClassName="sf-fg font-display"
+                priceClassName="sf-fg"
+                descriptionClassName="sf-muted"
+                chipClassName="bg-[var(--sf-bg-soft)] sf-muted"
+                accentChipClassName="bg-[var(--sf-accent-soft)] sf-fg"
+                destructiveChipClassName="bg-[var(--sf-destructive-soft)] sf-destructive"
+                imagePlaceholderClassName="sf-muted"
               />
             ))}
             <MenuProductScrollSentinel />
           </div>
         ) : (
           <>
-            <p className="rounded-2xl border border-[var(--sf-border)] bg-[var(--sf-surface)] px-4 py-12 text-center text-sm shadow-sm sf-muted">
+            <p className="rounded-xl border border-[var(--sf-border)] bg-[var(--sf-surface)] px-4 py-10 text-center text-sm sf-muted">
               {searchQuery.trim()
                 ? "Aramanızla eşleşen ürün bulunamadı."
                 : "Bu kategoride henüz ürün yok."}
@@ -173,10 +228,10 @@ function CategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition active:scale-95 ${
+      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
         active
           ? "bg-[var(--sf-accent)] text-[var(--sf-accent-fg)] shadow-sm"
-          : "border border-[var(--sf-border)] bg-[var(--sf-surface)] sf-fg hover:bg-[var(--sf-accent-soft)]"
+          : "border border-[var(--sf-border)] bg-[var(--sf-surface)] sf-fg"
       }`}
     >
       {label}
@@ -197,10 +252,10 @@ function SubChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 ${
+      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition active:scale-95 ${
         active
-          ? "bg-[var(--sf-accent-soft)] sf-fg shadow-sm ring-1 ring-[var(--sf-border)]"
-          : "sf-muted hover:bg-[var(--sf-surface)] hover:text-[var(--sf-fg)]"
+          ? "bg-[var(--sf-accent-soft)] sf-fg ring-1 ring-[var(--sf-border)]"
+          : "sf-muted"
       }`}
     >
       {label}

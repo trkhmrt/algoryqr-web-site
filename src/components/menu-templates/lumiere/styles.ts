@@ -18,7 +18,9 @@ export const LUMIERE_STYLES = `
     --lm-surface-container-highest: #e1e2e4;
     --lm-secondary-container: #d9dff5;
     --lm-on-secondary-container: #5c6274;
-    --lm-margin: 1.25rem;
+    --lm-margin: 1rem;
+    --menu-frame-bg: #e8eaed;
+    --menu-frame-border: color-mix(in srgb, #191c1e 10%, transparent);
     background-color: var(--lm-background);
     color: var(--lm-on-surface);
     font-family: Inter, sans-serif;

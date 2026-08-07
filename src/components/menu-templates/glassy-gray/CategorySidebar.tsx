@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-import type { MenuCategoryApiItem } from "@/lib/api";
+import type { TaxonomyNavNode } from "../types";
 import { categoryIcon } from "./category-utils";
 
 type CategorySidebarProps = {
   businessName: string;
   slogan?: string;
   phone?: string;
-  categories: MenuCategoryApiItem[];
+  categories: TaxonomyNavNode[];
   activeCategoryId: number | null;
-  onSelect: (category: MenuCategoryApiItem) => void;
+  onSelect: (category: TaxonomyNavNode) => void;
   onHome: () => void;
 };
 
@@ -24,13 +24,13 @@ function CategoryTreeItem({
   onToggle,
   onSelect,
 }: {
-  category: MenuCategoryApiItem;
+  category: TaxonomyNavNode;
   depth: number;
   index: number;
   activeCategoryId: number | null;
   expandedIds: Set<number>;
   onToggle: (id: number) => void;
-  onSelect: (category: MenuCategoryApiItem) => void;
+  onSelect: (category: TaxonomyNavNode) => void;
 }) {
   const children = category.children ?? [];
   const hasChildren = children.length > 0;
@@ -89,7 +89,7 @@ function CategoryTreeItem({
 }
 
 function collectAncestorIds(
-  categories: MenuCategoryApiItem[],
+  categories: TaxonomyNavNode[],
   targetId: number,
   trail: number[] = [],
 ): number[] | null {

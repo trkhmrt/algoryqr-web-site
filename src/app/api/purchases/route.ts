@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const body = (await req.json()) as {
       packageId?: number;
-      paymentMode?: "DIRECT" | "THREE_DS";
+      paymentMode?: "DIRECT" | "THREE_DS" | "CHECKOUT_FORM";
       billingPeriod?: "MONTHLY" | "YEARLY";
       paymentStyle?: "SUBSCRIPTION";
       billingAddressId?: number;

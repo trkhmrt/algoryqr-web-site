@@ -18,12 +18,16 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/dijital-menu/kategoriler?qr=${qrId}`,
   digitalMenuAnalytics: (qrId: number | string) =>
     `/dashboard/dijital-menu/analitik?qr=${qrId}`,
+  smartReports: "/dashboard/dijital-menu/akilli-raporlar",
+  smartReportDetail: (jobId: string) =>
+    `/dashboard/dijital-menu/akilli-raporlar/${jobId}`,
   digitalMenuCheckout: (packageId: number | string) =>
     `/dashboard/dijital-menu/satin-al/${packageId}`,
   qrCodes: "/dashboard/qr-kodlarim",
   qrCodesNew: "/dashboard/qr-kodlarim/yeni",
   qrCodeDetail: (id: number | string) => `/dashboard/qr-kodlarim/${id}`,
   account: "/dashboard/hesabim",
+  accountSecurity: "/dashboard/hesabim/guvenlik",
   accountSubscription: "/dashboard/hesabim/abonelik",
   accountPackages: "/dashboard/hesabim/abonelik/paketler",
   accountPackagesHighlight: (highlight: string) =>
@@ -34,6 +38,9 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/hesabim/abonelik/satin-al/${packageId}`,
   accountPurchaseDetail: (purchaseId: number | string) =>
     `/dashboard/hesabim/abonelik/satin-alma/${purchaseId}`,
+  accountPaymentHistory: "/dashboard/hesabim/odeme-gecmisi",
+  accountPaymentHistoryDetail: (purchaseId: number | string) =>
+    `/dashboard/hesabim/odeme-gecmisi/${purchaseId}`,
   accountPaymentMethods: "/dashboard/hesabim/kayitli-kartlarim",
   accountBillingAddresses: "/dashboard/hesabim/fatura-adreslerim",
 } as const;

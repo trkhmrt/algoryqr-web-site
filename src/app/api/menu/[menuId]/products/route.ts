@@ -22,9 +22,13 @@ export async function GET(req: Request, context: { params: Promise<{ menuId: str
     const url = new URL(req.url);
     const page = url.searchParams.get("page");
     const size = url.searchParams.get("size");
+    const q = url.searchParams.get("q");
+    const subCategoryId = url.searchParams.get("subCategoryId");
     const params: Record<string, string> = {};
     if (page != null) params.page = page;
     if (size != null) params.size = size;
+    if (q != null && q !== "") params.q = q;
+    if (subCategoryId != null && subCategoryId !== "") params.subCategoryId = subCategoryId;
 
     const upstream = await axios.get(`${API_BASE_URL}/menu/${menuId}/products`, {
       headers,

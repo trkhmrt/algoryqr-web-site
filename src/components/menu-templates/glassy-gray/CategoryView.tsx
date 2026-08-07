@@ -1,11 +1,10 @@
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
+import type { MenuProductApiItem } from "@/lib/api";
+import type { TaxonomyNavNode } from "../types";
 
-import { searchMenuProducts, MenuProductScrollSentinel } from "../shared";
-import { GlassyGrayProductCard } from "./ProductCard";
-import { GLASSY_GRAY_CATEGORY_HERO } from "./styles";
+import { DenseProductRow, MenuProductScrollSentinel, searchMenuProducts } from "../shared";
 
 type CategoryViewProps = {
-  category: MenuCategoryApiItem;
+  category: TaxonomyNavNode;
   products: MenuProductApiItem[];
   searchQuery: string;
   onOpenProduct: (product: MenuProductApiItem) => void;
@@ -20,32 +19,40 @@ export function GlassyGrayCategoryView({
   const filtered = searchMenuProducts(products, searchQuery);
   const q = searchQuery.trim();
 
+  const rowProps = {
+    className: "border-white/10",
+    imageClassName: "bg-white/5",
+    titleClassName: "text-white gg-display",
+    priceClassName: "gg-primary",
+    descriptionClassName: "gg-muted",
+    chipClassName: "bg-white/10 gg-muted",
+    accentChipClassName: "bg-[var(--gg-primary)] text-[#1a120e]",
+    destructiveChipClassName: "bg-red-500/20 text-red-300",
+    imagePlaceholderClassName: "gg-muted",
+  };
+
   return (
     <section>
-      <div className="group relative mb-8 h-[300px] overflow-hidden rounded-3xl">
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105"
-          style={{ backgroundImage: `url('${GLASSY_GRAY_CATEGORY_HERO}')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--gg-bg)] via-[rgba(19,19,19,0.2)] to-transparent" />
-        <div className="absolute bottom-0 left-0 p-8">
-          <h1 className="gg-text-glow gg-display mb-2 text-4xl font-bold text-white md:text-5xl">
-            {category.name}
-          </h1>
-          <p className="gg-muted max-w-xl text-lg">
-            Duyularınızı harekete geçirecek, ustalıkla hazırlanmış gurme lezzetler.
-          </p>
-        </div>
-      </div>
+      <header className="mb-4">
+        <h1 className="gg-text-glow gg-display text-2xl font-bold text-white">
+          {category.name}
+        </h1>
+        <p className="gg-muted mt-1 text-sm">{products.length} ürün</p>
+      </header>
 
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div>
           {filtered.map((item) => (
-            <GlassyGrayProductCard key={item.productId} item={item} onOpen={onOpenProduct} />
+            <DenseProductRow
+              key={item.productId}
+              item={item}
+              onOpen={onOpenProduct}
+              {...rowProps}
+            />
           ))}
         </div>
       ) : (
-        <p className="gg-glass-heavy gg-muted rounded-3xl p-8 text-center">
+        <p className="gg-glass-heavy gg-muted rounded-2xl p-8 text-center text-sm">
           {q
             ? `“${searchQuery}” için sonuç bulunamadı.`
             : `“${category.name}” kategorisinde henüz ürün yok.`}

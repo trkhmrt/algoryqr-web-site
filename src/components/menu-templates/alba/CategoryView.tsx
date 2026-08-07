@@ -2,21 +2,21 @@
 
 import { ChevronRight } from "lucide-react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem } from "@/lib/api";
+import type { MenuProductApiItem } from "@/lib/api";
+import type { TaxonomyNavNode } from "../types";
+import { DenseProductRow, MenuProductScrollSentinel } from "../shared";
 import {
   countProductsForCategory,
   filterProductsForCategory,
   getBreadcrumbs,
 } from "./category-utils";
-import { ItemRow } from "./ItemRow";
-import { MenuProductScrollSentinel } from "../shared";
 
 type CategoryViewProps = {
-  category: MenuCategoryApiItem;
-  categories: MenuCategoryApiItem[];
+  category: TaxonomyNavNode;
+  categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   onHome: () => void;
-  onSelectCategory: (category: MenuCategoryApiItem) => void;
+  onSelectCategory: (category: TaxonomyNavNode) => void;
   onOpenProduct: (product: MenuProductApiItem) => void;
 };
 
@@ -32,49 +32,55 @@ export function AlbaCategoryView({
   const children = category.children ?? [];
   const items = filterProductsForCategory(products, category);
 
-  return (
-    <div className="min-h-screen">
-      <header className="border-b border-[var(--ab-border)] bg-[color-mix(in_srgb,var(--ab-surface)_55%,transparent)] backdrop-blur">
-        <div className="mx-auto max-w-2xl px-6 pb-8 pt-6">
-          <nav className="flex flex-wrap items-center gap-1 text-[11px] uppercase tracking-[0.16em] ab-muted">
-            <button type="button" onClick={onHome} className="hover:text-[var(--ab-fg)]">
-              Menü
-            </button>
-            {crumbs.map((c, i) => (
-              <span key={c.categoryId} className="flex items-center gap-1">
-                <ChevronRight className="h-3 w-3" />
-                {i === crumbs.length - 1 ? (
-                  <span className="ab-fg">{c.name}</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onSelectCategory(c)}
-                    className="hover:text-[var(--ab-fg)]"
-                  >
-                    {c.name}
-                  </button>
-                )}
-              </span>
-            ))}
-          </nav>
+  const rowProps = {
+    className: "border-[var(--ab-border)]",
+    imageClassName: "bg-[var(--ab-bg-soft)]",
+    titleClassName: "ab-fg font-display",
+    priceClassName: "ab-accent",
+    descriptionClassName: "ab-muted",
+    chipClassName: "bg-[var(--ab-accent-soft)] ab-muted",
+    accentChipClassName: "bg-[var(--ab-accent)] text-white",
+    destructiveChipClassName: "bg-[var(--ab-destructive-soft)] ab-destructive",
+    imagePlaceholderClassName: "ab-accent",
+  };
 
-          <h1 className="mt-4 font-display text-4xl font-semibold ab-fg">
-            {category.name}
-          </h1>
-          <p className="mt-3 text-[11px] uppercase tracking-[0.16em] ab-muted">
-            {items.length} ürün
-            {children.length > 0 ? ` · ${children.length} alt kategori` : ""}
-          </p>
-        </div>
+  return (
+    <div className="min-h-screen pb-16">
+      <header className="border-b border-[var(--ab-border)] bg-[color-mix(in_srgb,var(--ab-surface)_55%,transparent)] px-4 py-4 backdrop-blur">
+        <nav className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.14em] ab-muted">
+          <button type="button" onClick={onHome} className="hover:text-[var(--ab-fg)]">
+            Menü
+          </button>
+          {crumbs.map((c, i) => (
+            <span key={c.categoryId} className="flex items-center gap-1">
+              <ChevronRight className="h-3 w-3" />
+              {i === crumbs.length - 1 ? (
+                <span className="ab-fg">{c.name}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSelectCategory(c)}
+                  className="hover:text-[var(--ab-fg)]"
+                >
+                  {c.name}
+                </button>
+              )}
+            </span>
+          ))}
+        </nav>
+        <h1 className="mt-2 font-display text-2xl font-semibold ab-fg">
+          {category.name}
+        </h1>
+        <p className="mt-1 text-[10px] uppercase tracking-[0.14em] ab-muted">
+          {items.length} ürün
+          {children.length > 0 ? ` · ${children.length} alt kategori` : ""}
+        </p>
       </header>
 
-      <main className="mx-auto max-w-2xl px-6 pb-24 pt-8">
+      <main className="px-4 pb-20 pt-4">
         {children.length > 0 ? (
-          <section className="mb-10">
-            <h2 className="mb-4 font-display text-lg font-semibold ab-fg">
-              Alt kategoriler
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
+          <section className="mb-4">
+            <div className="flex flex-wrap gap-1.5">
               {children.map((child) => {
                 const count = countProductsForCategory(products, child);
                 return (
@@ -82,17 +88,10 @@ export function AlbaCategoryView({
                     key={child.categoryId}
                     type="button"
                     onClick={() => onSelectCategory(child)}
-                    className="group flex items-center justify-between rounded-2xl border border-[var(--ab-border)] bg-[var(--ab-surface)] p-4 text-left transition hover:border-[color-mix(in_srgb,var(--ab-accent)_30%,transparent)]"
+                    className="rounded-full border border-[var(--ab-border)] bg-[var(--ab-surface)] px-3 py-1.5 text-xs ab-fg transition hover:border-[color-mix(in_srgb,var(--ab-accent)_35%,transparent)]"
                   >
-                    <div>
-                      <p className="font-display text-base font-semibold ab-fg">
-                        {child.name}
-                      </p>
-                      <p className="mt-0.5 text-[11px] uppercase tracking-[0.14em] ab-muted">
-                        {count} ürün
-                      </p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 ab-muted transition group-hover:translate-x-0.5 group-hover:text-[var(--ab-accent)]" />
+                    {child.name}
+                    <span className="ml-1 ab-muted">({count})</span>
                   </button>
                 );
               })}
@@ -102,16 +101,18 @@ export function AlbaCategoryView({
 
         {items.length > 0 ? (
           <section>
-            <h2 className="mb-2 font-display text-lg font-semibold ab-fg">Ürünler</h2>
-            <div>
-              {items.map((item) => (
-                <ItemRow key={item.productId} item={item} onOpen={onOpenProduct} />
-              ))}
-            </div>
+            {items.map((item) => (
+              <DenseProductRow
+                key={item.productId}
+                item={item}
+                onOpen={onOpenProduct}
+                {...rowProps}
+              />
+            ))}
           </section>
         ) : (
           children.length === 0 && (
-            <div className="py-16 text-center text-sm ab-muted">
+            <div className="py-12 text-center text-sm ab-muted">
               Bu kategoride şu an ürün yok.
             </div>
           )

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Pencil, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
 
+import { RainbowBeamButton } from "@/components/dashboard/RainbowBeamButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,23 +15,31 @@ import {
   createMenuProductRequest,
   deleteMenuProductRequest,
   flattenMenuCategories,
-  MenuProductApiItem,
   MenuProductRequestBody,
   NutritionBasis,
   NutritionFacts,
   updateMenuProductRequest,
 } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import {
+  hasActiveProductAccess,
+  isDateUsablePurchase,
+  matchesProductCode,
+} from "@/lib/product-access";
+import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   buildNutritionFactsFromForm,
   emptyNutritionFacts,
 } from "@/components/dashboard/menu/ProductNutritionPanel";
-import { useMenuCategoriesByQr } from "@/hooks/use-menu-categories";
+import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
+import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import {
   invalidateMenuProducts,
-  useMenuProductsByQr,
+  useMenuProductsPage,
 } from "@/hooks/use-menu-products";
+import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 
 type MenuProductsPanelProps = {
   menuId: number;
@@ -52,6 +61,9 @@ type NutritionFormFields = {
   salt: string;
 };
 
+const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
+
 const emptyNutritionForm = (): NutritionFormFields => ({
   basis: "PER_100G",
   energyKj: "",
@@ -65,14 +77,18 @@ const emptyNutritionForm = (): NutritionFormFields => ({
   salt: "",
 });
 
-const emptyForm = (categoryId?: number | null): MenuProductRequestBody => ({
+const emptyForm = (subCategoryId?: number | null): MenuProductRequestBody => ({
   name: "",
   description: "",
   price: "",
   currency: "TRY",
-  categoryId: categoryId ?? null,
+  subCategoryId: subCategoryId ?? 0,
+  tagIds: [],
+  allergenIds: [],
   imageUrl: "",
   available: true,
+  servesPeopleMin: 1,
+  servesPeopleMax: 1,
   nutrition: emptyNutritionFacts(),
 });
 
@@ -85,19 +101,104 @@ export default function MenuProductsPanel({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const productsQuery = useMenuProductsByQr(qrId);
+  const subscription = useSubscription();
+  const packages = useActivePackages();
+  const [page, setPage] = useState(0);
+  const [filterCategoryId, setFilterCategoryId] = useState<number | "all">("all");
+  const [filterName, setFilterName] = useState("");
+  const [debouncedFilterName, setDebouncedFilterName] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedFilterName(filterName.trim());
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [filterName]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [qrId, debouncedFilterName, filterCategoryId]);
+
   const categoriesQuery = useMenuCategoriesByQr(qrId);
-  const products = productsQuery.data?.content ?? [];
+  const tagsQuery = useMenuTags();
+  const allergensQuery = useMenuAllergens();
   const categories = categoriesQuery.data?.categories ?? [];
-  const resolvedMenuId = productsQuery.data?.menuId ?? menuId;
-  const loading = productsQuery.isLoading || categoriesQuery.isLoading;
+  const tags = tagsQuery.data ?? [];
+  const allergens = allergensQuery.data ?? [];
+  const resolvedMenuId =
+    menuId > 0 ? menuId : categoriesQuery.data?.menuId != null && categoriesQuery.data.menuId > 0
+      ? categoriesQuery.data.menuId
+      : 0;
+
+  const productsQuery = useMenuProductsPage(
+    resolvedMenuId,
+    {
+      page,
+      size: PAGE_SIZE,
+      q: debouncedFilterName || undefined,
+      subCategoryId: filterCategoryId === "all" ? undefined : filterCategoryId,
+    },
+    resolvedMenuId > 0,
+  );
+  const products = productsQuery.data?.content ?? [];
+  const totalElements = productsQuery.data?.totalElements ?? products.length;
+  const totalPages = Math.max(1, productsQuery.data?.totalPages ?? 1);
+  const hasNext =
+    productsQuery.data?.hasNext ?? page + 1 < totalPages;
+  const hasPrev = page > 0;
+  const loading =
+    categoriesQuery.isLoading ||
+    (resolvedMenuId > 0 && productsQuery.isLoading);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<MenuProductRequestBody>(emptyForm());
+  const [mainCategoryId, setMainCategoryId] = useState<number | "">("");
   const [nutritionForm, setNutritionForm] = useState<NutritionFormFields>(emptyNutritionForm());
   const [showForm, setShowForm] = useState(false);
-  const [filterCategoryId, setFilterCategoryId] = useState<number | "all">("all");
+
+  const entitlements = Array.isArray(subscription.data?.entitlements)
+    ? subscription.data.entitlements
+    : [];
+  const purchases = Array.isArray(subscription.data?.purchases) ? subscription.data.purchases : [];
+  const activePurchase = subscription.data?.activePurchase ?? null;
+  const activePackage =
+    packages.data?.find(
+      (pkg) => activePurchase?.packageId != null && pkg.id === activePurchase.packageId,
+    ) ??
+    packages.data?.find(
+      (pkg) =>
+        !!activePurchase?.packageCode && pkg.code === activePurchase.packageCode,
+    ) ??
+    null;
+  const activePackageHasSmartSummary =
+    !!activePurchase &&
+    isDateUsablePurchase(activePurchase) &&
+    !!activePackage?.items?.some((item) =>
+      matchesProductCode(item.productCode, "SMART_SUMMARY"),
+    );
+  const canUseSmartSummary =
+    hasActiveProductAccess(entitlements, purchases, "SMART_SUMMARY") ||
+    activePackageHasSmartSummary;
 
   const categoryOptions = flattenMenuCategories(categories);
+  const selectedMain = categories.find((main) => main.id === mainCategoryId);
+  const subOptions = selectedMain?.subs ?? [];
+  const selectedSub = subOptions.find((sub) => sub.id === form.subCategoryId);
+  const mainCategorySelectOptions = categories.map((main) => ({
+    value: String(main.id),
+    label: main.name,
+  }));
+  const subCategorySelectOptions = subOptions.map((sub) => ({
+    value: String(sub.id),
+    label: sub.name,
+  }));
+  const filterCategorySelectOptions = [
+    { value: "all", label: "Tümü" },
+    ...categoryOptions.map((option) => ({
+      value: String(option.id),
+      label: option.label,
+    })),
+  ];
 
   useEffect(() => {
     if (productsQuery.isError) {
@@ -112,16 +213,21 @@ export default function MenuProductsPanel({
 
   useEffect(() => {
     if (presetCategoryId == null) return;
+    const main = categories.find((item) =>
+      (item.subs ?? []).some((sub) => sub.id === presetCategoryId),
+    );
+    setMainCategoryId(main?.id ?? "");
     setForm(emptyForm(presetCategoryId));
     setNutritionForm(emptyNutritionForm());
     setEditingId(null);
     setShowForm(true);
     setFilterCategoryId(presetCategoryId);
     onPresetConsumed?.();
-  }, [presetCategoryId, onPresetConsumed]);
+  }, [presetCategoryId, onPresetConsumed, categories]);
 
   const resetForm = () => {
     setForm(emptyForm());
+    setMainCategoryId("");
     setNutritionForm(emptyNutritionForm());
     setEditingId(null);
     setShowForm(false);
@@ -139,6 +245,10 @@ export default function MenuProductsPanel({
   const handleSubmit = async () => {
     if (!form.name?.trim()) {
       notify("warning", "Ürün adı zorunlu.");
+      return;
+    }
+    if (!form.subCategoryId) {
+      notify("warning", "Alt kategori seçimi zorunlu.");
       return;
     }
 
@@ -173,21 +283,6 @@ export default function MenuProductsPanel({
     }
   };
 
-  const handleEdit = (product: MenuProductApiItem) => {
-    setEditingId(product.productId);
-    setForm({
-      name: product.name,
-      description: product.description ?? "",
-      price: product.price ?? "",
-      currency: product.currency,
-      categoryId: product.categoryId ?? null,
-      imageUrl: product.imageUrl ?? "",
-      available: product.available,
-      nutrition: product.nutrition ?? undefined,
-    });
-    setShowForm(true);
-  };
-
   const handleDelete = async (productId: number) => {
     try {
       await deleteMenuProductRequest(productId);
@@ -198,37 +293,94 @@ export default function MenuProductsPanel({
     }
   };
 
-  const visibleProducts =
-    filterCategoryId === "all"
-      ? products
-      : products.filter((product) => product.categoryId === filterCategoryId);
+  const handleSmartSummary = async () => {
+    if (!canUseSmartSummary) {
+      notify("warning", "Akıllı Özet için paketinizde bu özellik bulunmuyor.");
+      router.push(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_SUMMARY"));
+      return;
+    }
+    if (!form.name?.trim()) {
+      notify("warning", "Akıllı özet için önce ürün adı girin.");
+      return;
+    }
+    const selectedTags = tags.filter((tag) => (form.tagIds ?? []).includes(tag.id));
+    const selectedAllergens = allergens.filter((item) =>
+      (form.allergenIds ?? []).includes(item.id),
+    );
+    const priceText =
+      form.price != null && String(form.price).trim() !== ""
+        ? String(form.price).trim()
+        : undefined;
+    setSummaryLoading(true);
+    try {
+      const result = await createSmartSummaryRequest({
+        product: {
+          name: form.name.trim(),
+          description: form.description?.trim() || undefined,
+          price: priceText,
+          currency: form.currency || "TRY",
+          mainCategoryName: selectedMain?.name,
+          subCategoryName: selectedSub?.name,
+          tags: selectedTags.map((tag) => tag.name),
+          allergens: selectedAllergens.map((item) => item.name),
+          servesPeopleMin: form.servesPeopleMin ?? null,
+          servesPeopleMax: form.servesPeopleMax ?? null,
+          chefRecommended: Boolean(form.chefRecommended),
+          available: form.available ?? true,
+          nutrition: resolveNutritionPayload() ?? undefined,
+        },
+        locale: "tr",
+      });
+      setForm({ ...form, description: result.description });
+      notify("info", "Akıllı özet açıklamaya yazıldı.");
+    } catch (error) {
+      notify(
+        "danger",
+        error instanceof Error ? error.message : "Akıllı özet üretilemedi.",
+      );
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground">Kategori filtresi</Label>
-          <select
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-            value={filterCategoryId === "all" ? "all" : String(filterCategoryId)}
-            onChange={(e) =>
-              setFilterCategoryId(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
-          >
-            <option value="all">Tümü</option>
-            {categoryOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className="flex min-w-[180px] max-w-xs flex-1 items-center gap-2">
+            <Label className="shrink-0 text-xs text-muted-foreground">Ürün ara</Label>
+            <Input
+              className="h-9"
+              value={filterName}
+              onChange={(event) => setFilterName(event.target.value)}
+              placeholder="Ürün adına göre ara..."
+            />
+          </div>
+          <div className="flex min-w-[220px] max-w-sm flex-1 items-center gap-2">
+            <Label className="shrink-0 text-xs text-muted-foreground">Kategori filtresi</Label>
+            <SearchableSelect
+              className="h-9"
+              value={filterCategoryId === "all" ? "all" : String(filterCategoryId)}
+              onValueChange={(next) => {
+                setFilterCategoryId(next === "all" ? "all" : Number(next));
+              }}
+              options={filterCategorySelectOptions}
+              placeholder="Kategori seçin"
+              searchPlaceholder="Kategori ara..."
+            />
+          </div>
         </div>
         <Button
           size="sm"
           className="gap-1.5"
           onClick={() => {
             resetForm();
-            setForm(emptyForm(filterCategoryId === "all" ? null : filterCategoryId));
+            const presetSub = filterCategoryId === "all" ? null : filterCategoryId;
+            const main = presetSub == null
+              ? undefined
+              : categories.find((item) => (item.subs ?? []).some((sub) => sub.id === presetSub));
+            setMainCategoryId(main?.id ?? "");
+            setForm(emptyForm(presetSub));
             setNutritionForm(emptyNutritionForm());
             setShowForm(true);
           }}
@@ -246,24 +398,93 @@ export default function MenuProductsPanel({
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Kategori</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
-                value={form.categoryId ?? ""}
-                onChange={(e) =>
+              <Label className="text-xs">Ana Kategori</Label>
+              <SearchableSelect
+                value={mainCategoryId === "" ? "" : String(mainCategoryId)}
+                onValueChange={(next) => {
+                  setMainCategoryId(next ? Number(next) : "");
+                  setForm({ ...form, subCategoryId: 0 });
+                }}
+                options={mainCategorySelectOptions}
+                placeholder="Ana kategori seçin"
+                searchPlaceholder="Kategori ara..."
+                emptyText="Kategori bulunamadı."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Alt Kategori</Label>
+              <SearchableSelect
+                value={form.subCategoryId ? String(form.subCategoryId) : ""}
+                onValueChange={(next) =>
                   setForm({
                     ...form,
-                    categoryId: e.target.value ? Number(e.target.value) : null,
+                    subCategoryId: next ? Number(next) : 0,
                   })
                 }
-              >
-                <option value="">Kategori seçin</option>
-                {categoryOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                options={subCategorySelectOptions}
+                placeholder="Alt kategori seçin"
+                searchPlaceholder="Alt kategori ara..."
+                emptyText="Alt kategori bulunamadı."
+                disabled={mainCategoryId === ""}
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-xs">Etiketler</Label>
+              <div className="flex flex-wrap gap-2 rounded-md border border-border p-2">
+                {tags.map((tag) => {
+                  const selected = (form.tagIds ?? []).includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs ${
+                        selected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                      onClick={() => {
+                        const current = new Set(form.tagIds ?? []);
+                        if (current.has(tag.id)) current.delete(tag.id);
+                        else current.add(tag.id);
+                        setForm({ ...form, tagIds: Array.from(current) });
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-xs">Alerjen maddeler</Label>
+              <div className="flex flex-wrap gap-2 rounded-md border border-border p-2">
+                {allergens.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Alerjen yok.</p>
+                ) : (
+                  allergens.map((allergen) => {
+                    const selected = (form.allergenIds ?? []).includes(allergen.id);
+                    return (
+                      <button
+                        key={allergen.id}
+                        type="button"
+                        className={`rounded-full px-3 py-1 text-xs ${
+                          selected
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                        onClick={() => {
+                          const current = new Set(form.allergenIds ?? []);
+                          if (current.has(allergen.id)) current.delete(allergen.id);
+                          else current.add(allergen.id);
+                          setForm({ ...form, allergenIds: Array.from(current) });
+                        }}
+                      >
+                        {allergen.name}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Fiyat</Label>
@@ -273,20 +494,56 @@ export default function MenuProductsPanel({
                 placeholder="120"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Min kişi</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.servesPeopleMin ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    servesPeopleMin: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Max kişi</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.servesPeopleMax ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    servesPeopleMax: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+              />
+            </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs">Açıklama</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs">Açıklama</Label>
+                <RainbowBeamButton
+                  label="Akıllı Özet"
+                  loading={summaryLoading}
+                  disabled={summaryLoading}
+                  onClick={() => void handleSmartSummary()}
+                />
+              </div>
               <Textarea
                 rows={2}
                 value={form.description ?? ""}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs">Görsel URL</Label>
-              <Input
-                value={form.imageUrl ?? ""}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://..."
+            <div className="sm:col-span-2">
+              <ProductImageField
+                menuId={resolvedMenuId}
+                value={form.imageUrl}
+                onChange={(imageUrl) => setForm({ ...form, imageUrl: imageUrl ?? "" })}
+                disabled={loading}
               />
             </div>
           </div>
@@ -376,11 +633,11 @@ export default function MenuProductsPanel({
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Yükleniyor...</p>
-      ) : visibleProducts.length === 0 ? (
+      ) : products.length === 0 ? (
         <p className="text-sm text-muted-foreground">Bu filtrede ürün yok.</p>
       ) : (
         <div className="space-y-2">
-          {visibleProducts.map((product) => (
+          {products.map((product) => (
             <div
               key={product.productId}
               className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2"
@@ -389,7 +646,14 @@ export default function MenuProductsPanel({
                 <p className="text-sm font-medium truncate">{product.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {[
-                    product.categoryPath || product.categoryName || product.category,
+                    [product.mainCategoryName, product.subCategoryName]
+                      .filter(Boolean)
+                      .join(" / ") || product.subCategorySlug,
+                    product.servesPeopleMin != null && product.servesPeopleMax != null
+                      ? product.servesPeopleMin === product.servesPeopleMax
+                        ? `${product.servesPeopleMin} kişilik`
+                        : `${product.servesPeopleMin}–${product.servesPeopleMax} kişilik`
+                      : null,
                     product.price ? `${product.price} ${product.currency}` : null,
                   ]
                     .filter(Boolean)
@@ -397,15 +661,10 @@ export default function MenuProductsPanel({
                 </p>
               </div>
               <div className="flex shrink-0 gap-1">
-                {qrId != null ? (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                    <Link href={DASHBOARD_ROUTES.digitalMenuProductDetail(product.productId, qrId)}>
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                ) : null}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(product)}>
-                  <Pencil className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                  <Link href={DASHBOARD_ROUTES.digitalMenuProductDetail(product.productId, qrId)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Link>
                 </Button>
                 <Button
                   variant="ghost"
@@ -420,6 +679,38 @@ export default function MenuProductsPanel({
           ))}
         </div>
       )}
+
+      {!loading && totalElements > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <p className="text-xs text-muted-foreground">
+            Toplam {totalElements} ürün · Sayfa {page + 1} / {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              disabled={!hasPrev || productsQuery.isFetching}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Önceki
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              disabled={!hasNext || productsQuery.isFetching}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Sonraki
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

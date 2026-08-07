@@ -2,67 +2,83 @@
 
 import Link from "next/link";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
-import {
-  QrCode, Plus, TrendingUp, Eye, Clock, ArrowUpRight, ArrowDownRight, ArrowRight,
+  QrCode,
+  Plus,
+  ArrowRight,
+  Monitor,
+  Shield,
+  ShieldCheck,
+  ShieldOff,
+  UtensilsCrossed,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import PackageUsageCard from "@/components/dashboard/PackageUsageCard";
+import { useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatPackageDate, formatPackagePrice } from "@/lib/package-display";
+import { useMyProfile } from "@/hooks/use-my-profile";
 import { usePackageUsage } from "@/hooks/use-package-usage";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useUserQrs } from "@/hooks/use-user-qrs";
+import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
 
-const metrics = [
-  { label: "Toplam Tarama", value: "4,926", change: "+12.5%", up: true, icon: Eye },
-  { label: "Aktif QR Kodlar", value: "3", change: "+1", up: true, icon: QrCode },
-  { label: "Bu Hafta", value: "342", change: "+8.2%", up: true, icon: TrendingUp },
-  { label: "Ort. Süre", value: "2d 34s", change: "-4.1%", up: false, icon: Clock },
-];
+function sessionTitle(session: UserSessionRow): string {
+  const device = session.device?.trim();
+  if (device) return device;
+  const type = session.deviceType?.trim();
+  if (type) return type;
+  return "Bilinmeyen cihaz";
+}
 
-const trafficData = [
-  { name: "Pzt", views: 1200, visitors: 400 },
-  { name: "Sal", views: 1900, visitors: 600 },
-  { name: "Çar", views: 1600, visitors: 520 },
-  { name: "Per", views: 2200, visitors: 780 },
-  { name: "Cum", views: 2800, visitors: 920 },
-  { name: "Cmt", views: 2100, visitors: 680 },
-  { name: "Paz", views: 1800, visitors: 590 },
-];
+function sessionStatusLabel(session: UserSessionRow): string {
+  if (session.current) return "Bu cihaz";
+  if (session.active) return "Aktif";
+  if (session.revoked) return "İptal edildi";
+  if (session.expired) return "Süresi doldu";
+  return "Pasif";
+}
 
-const recentContent = [
-  { title: "Web Sitesi QR - algorycode.com", status: "Aktif", date: "5 Mar, 2026" },
-  { title: "LinkedIn Profil QR", status: "Aktif", date: "4 Mar, 2026" },
-  { title: "Menü QR Kodu", status: "Aktif", date: "3 Mar, 2026" },
-  { title: "WiFi QR Kodu", status: "Pasif", date: "2 Mar, 2026" },
-  { title: "Kampanya QR Kodu", status: "Aktif", date: "1 Mar, 2026" },
-];
+function formatSessionDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
+}
 
-function useTooltipStyle() {
-  return {
-    backgroundColor: "hsl(var(--card))",
-    border: "1px solid hsl(var(--border))",
-    borderRadius: "8px",
-    fontSize: "12px",
-    color: "hsl(var(--foreground))",
-  };
+function sortSessions(sessions: UserSessionRow[]): UserSessionRow[] {
+  return [...sessions].sort((a, b) => {
+    const aTime = Date.parse(a.lastActivityAt ?? a.loggedInAt ?? "") || 0;
+    const bTime = Date.parse(b.lastActivityAt ?? b.loggedInAt ?? "") || 0;
+    return bTime - aTime;
+  });
 }
 
 export default function DashboardOverviewView() {
-  const tooltipStyle = useTooltipStyle();
   const packageUsage = usePackageUsage();
   const subscription = useSubscription();
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
+  const { data: qrs, isLoading: qrsLoading } = useUserQrs("me");
+  const { menuQrs, loading: menusLoading } = useDigitalMenuOptions();
+  const { sessions, loading: sessionsLoading, error: sessionsError } = useUserSessions(true);
+
   const recentPurchases = (subscription.data?.purchases ?? []).slice(0, 5);
+  const qrList = qrs ?? [];
+  const recentQrs = [...qrList].sort((a, b) => b.id - a.id).slice(0, 5);
+  const recentSessions = sortSessions(sessions).slice(0, 5);
+  const activeSessionCount = sessions.filter((session) => session.active).length;
+  const twoFactorEnabled = profile?.twoFactorEnabled ?? false;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Genel Bakış</h1>
-          <p className="text-sm text-muted-foreground">QR kodlarınızın özeti.</p>
+          <p className="text-sm text-muted-foreground">Hesabınızın özeti.</p>
         </div>
         <Button variant="hero" size="sm" className="gap-2" asChild>
           <Link href={DASHBOARD_ROUTES.qrCodesNew}>
@@ -82,7 +98,7 @@ export default function DashboardOverviewView() {
                 <p className="text-xs text-muted-foreground">Son satın almalarınız</p>
               </div>
               <Button variant="ghost" size="sm" className="gap-1 text-xs" asChild>
-                <Link href={DASHBOARD_ROUTES.accountSubscription}>
+                <Link href={DASHBOARD_ROUTES.accountPaymentHistory}>
                   Tümünü gör
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
@@ -119,59 +135,206 @@ export default function DashboardOverviewView() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <Card key={metric.label} className="glow-card">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{metric.label}</p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{metric.value}</p>
-                </div>
-                <metric.icon className="h-4 w-4 text-muted-foreground" />
+        <Card className="glow-card">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">QR Kodlar</p>
+                {qrsLoading ? (
+                  <div className="mt-2 h-8 w-12 animate-pulse rounded-md bg-muted" />
+                ) : (
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{qrList.length}</p>
+                )}
               </div>
-              <p className={`mt-3 flex items-center gap-1 text-xs ${metric.up ? "text-emerald-500" : "text-rose-500"}`}>
-                {metric.up ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                {metric.change}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+              <QrCode className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <Link
+              href={DASHBOARD_ROUTES.qrCodes}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              QR Kodlarım
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="glow-card">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Aktif Menüler</p>
+                {menusLoading ? (
+                  <div className="mt-2 h-8 w-12 animate-pulse rounded-md bg-muted" />
+                ) : (
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{menuQrs.length}</p>
+                )}
+              </div>
+              <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <Link
+              href={DASHBOARD_ROUTES.digitalMenu}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Dijital Menü
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="glow-card">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Aktif Oturumlar</p>
+                {sessionsLoading ? (
+                  <div className="mt-2 h-8 w-12 animate-pulse rounded-md bg-muted" />
+                ) : (
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{activeSessionCount}</p>
+                )}
+              </div>
+              <Monitor className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <Link
+              href={DASHBOARD_ROUTES.accountSecurity}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Görüntüle
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="glow-card">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">İki Faktörlü Doğrulama</p>
+                {profileLoading ? (
+                  <div className="mt-2 h-8 w-20 animate-pulse rounded-md bg-muted" />
+                ) : (
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                    {twoFactorEnabled ? "Açık" : "Kapalı"}
+                  </p>
+                )}
+              </div>
+              {profileLoading ? (
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              ) : twoFactorEnabled ? (
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              ) : (
+                <ShieldOff className="h-4 w-4 text-amber-500" />
+              )}
+            </div>
+            <Link
+              href={DASHBOARD_ROUTES.accountSecurity}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {twoFactorEnabled ? "Güvenlik ayarları" : "2FA’yı etkinleştir"}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="glow-card">
-        <CardContent className="p-5">
-          <p className="mb-4 text-sm font-medium text-foreground">Trafik</p>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trafficData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="views" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" />
-                <Area type="monotone" dataKey="visitors" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted) / 0.4)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="glow-card">
-        <CardContent className="p-5">
-          <p className="mb-3 text-sm font-medium text-foreground">Son İçerikler</p>
-          <div className="space-y-2">
-            {recentContent.map((item) => (
-              <div key={item.title} className="flex items-center justify-between gap-3 border-b border-border/60 py-2 last:border-0">
-                <div>
-                  <p className="text-sm text-foreground">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.date}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">{item.status}</span>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="glow-card">
+          <CardContent className="space-y-3 p-5">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">Son oturumlar</p>
+                <p className="text-xs text-muted-foreground">Giriş yaptığınız cihazlar</p>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <Button variant="ghost" size="sm" className="gap-1 text-xs" asChild>
+                <Link href={DASHBOARD_ROUTES.accountSecurity}>
+                  Tümünü gör
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+            {sessionsLoading ? (
+              <div className="h-24 animate-pulse rounded-md bg-muted" />
+            ) : sessionsError ? (
+              <p className="text-sm text-destructive">{sessionsError}</p>
+            ) : recentSessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Henüz oturum kaydı yok.</p>
+            ) : (
+              <div className="space-y-2">
+                {recentSessions.map((session) => (
+                  <div
+                    key={session.sessionId}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{sessionTitle(session)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {[
+                          session.ipAddress,
+                          `Giriş: ${formatSessionDate(session.loggedInAt)}`,
+                          `Son: ${formatSessionDate(session.lastActivityAt)}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <span
+                      className={
+                        session.current || session.active
+                          ? "shrink-0 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                          : "shrink-0 text-[10px] font-medium text-muted-foreground"
+                      }
+                    >
+                      {sessionStatusLabel(session)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="glow-card">
+          <CardContent className="space-y-3 p-5">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">Son QR kodlar</p>
+                <p className="text-xs text-muted-foreground">En son oluşturduklarınız</p>
+              </div>
+              <Button variant="ghost" size="sm" className="gap-1 text-xs" asChild>
+                <Link href={DASHBOARD_ROUTES.qrCodes}>
+                  Tümünü gör
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+            {qrsLoading ? (
+              <div className="h-24 animate-pulse rounded-md bg-muted" />
+            ) : recentQrs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Henüz QR kodunuz yok.</p>
+            ) : (
+              <div className="space-y-2">
+                {recentQrs.map((qr) => (
+                  <Link
+                    key={qr.id}
+                    href={DASHBOARD_ROUTES.qrCodeDetail(qr.id)}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2 transition-colors hover:border-primary/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{qr.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {qr.created}
+                        {qr.type ? ` · ${qr.type}` : ""}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {qr.active ? "Aktif" : "Pasif"}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

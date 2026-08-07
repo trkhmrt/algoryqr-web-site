@@ -13,10 +13,10 @@ type PublicMenuFetchResult =
   | { status: "not_found" };
 
 async function fetchPublicMenu(identifier: string): Promise<PublicMenuFetchResult> {
-  const isNumeric = /^\d+$/.test(identifier);
-  const path = isNumeric
-    ? `${API_BASE_URL}/menu/public/id/${identifier}`
-    : `${API_BASE_URL}/menu/public/slug/${encodeURIComponent(identifier)}`;
+  if (!/^\d+$/.test(identifier)) {
+    return { status: "not_found" };
+  }
+  const path = `${API_BASE_URL}/menu/public/id/${identifier}`;
 
   try {
     const response = await axios.get<PublicMenuApiResponse>(path, { timeout: 15_000 });

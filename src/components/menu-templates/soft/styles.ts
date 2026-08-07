@@ -14,6 +14,10 @@ export const SOFT_STYLES = `
     --sf-destructive: #b42318;
     --sf-destructive-soft: color-mix(in srgb, #b42318 10%, transparent);
     --sf-bar: #a8a29e;
+    --menu-frame-bg: #ebe9e4;
+    --menu-frame-border: color-mix(in srgb, #1c1917 10%, transparent);
+    --menu-content-px: 1rem;
+    --menu-section-gap: 0.75rem;
     background-color: var(--sf-bg);
     color: var(--sf-fg);
     font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;

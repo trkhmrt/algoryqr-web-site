@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MenuThemePreviewDialog } from "@/components/menu-templates/MenuThemePreviewDialog";
 import {
   DEFAULT_MENU_THEME_ID,
@@ -9,11 +8,9 @@ import {
   type MenuThemeId,
 } from "@/components/menu-templates/registry";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { checkMenuSlugAvailabilityRequest } from "@/lib/api";
+import { useState } from "react";
 
 export type { MenuThemeId };
-export type MenuUrlMode = "id" | "slug";
 
 export type MenuData = {
   businessName: string;
@@ -22,8 +19,6 @@ export type MenuData = {
   email: string;
   address: string;
   themeId: MenuThemeId;
-  urlMode: MenuUrlMode;
-  publicSlug: string;
 };
 
 export const createInitialMenuData = (): MenuData => ({
@@ -33,8 +28,6 @@ export const createInitialMenuData = (): MenuData => ({
   email: "",
   address: "",
   themeId: DEFAULT_MENU_THEME_ID,
-  urlMode: "id",
-  publicSlug: "",
 });
 
 const THEME_OPTIONS = getMenuTemplateOptions().map((theme) => ({
@@ -49,34 +42,11 @@ type MenuDetailsProps = {
   excludeMenuId?: number;
 };
 
-export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps) {
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+export function MenuDetails({ value, onChange }: MenuDetailsProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const selectedTheme =
     THEME_OPTIONS.find((theme) => theme.id === value.themeId) ?? THEME_OPTIONS[0];
-
-  useEffect(() => {
-    if (value.urlMode !== "slug") {
-      setSlugStatus("idle");
-      return;
-    }
-    const slug = value.publicSlug.trim();
-    if (!slug) {
-      setSlugStatus("idle");
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setSlugStatus("checking");
-      try {
-        const result = await checkMenuSlugAvailabilityRequest(slug, excludeMenuId);
-        setSlugStatus(result.available ? "available" : result.slug ? "taken" : "invalid");
-      } catch {
-        setSlugStatus("invalid");
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [value.publicSlug, value.urlMode, excludeMenuId]);
 
   return (
     <div className="space-y-4">
@@ -167,46 +137,6 @@ export function MenuDetails({ value, onChange, excludeMenuId }: MenuDetailsProps
         open={previewOpen}
         onOpenChange={setPreviewOpen}
       />
-
-      <div className="space-y-3">
-        <Label className="text-xs text-muted-foreground">Public URL Tercihi</Label>
-        <RadioGroup
-          value={value.urlMode}
-          onValueChange={(next) => onChange({ ...value, urlMode: next as MenuUrlMode })}
-          className="grid gap-2 sm:grid-cols-2"
-        >
-          <label className="flex items-center gap-2 rounded-lg border border-border p-3 cursor-pointer">
-            <RadioGroupItem value="id" />
-            <div>
-              <p className="text-sm font-medium">Sayısal ID</p>
-              <p className="text-xs text-muted-foreground">/menu/42</p>
-            </div>
-          </label>
-          <label className="flex items-center gap-2 rounded-lg border border-border p-3 cursor-pointer">
-            <RadioGroupItem value="slug" />
-            <div>
-              <p className="text-sm font-medium">Özel adres</p>
-              <p className="text-xs text-muted-foreground">/menu/kafe-istanbul</p>
-            </div>
-          </label>
-        </RadioGroup>
-      </div>
-
-      {value.urlMode === "slug" && (
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Özel Adres (slug)</Label>
-          <Input
-            placeholder="kafe-istanbul"
-            className="bg-background"
-            value={value.publicSlug}
-            onChange={(e) => onChange({ ...value, publicSlug: e.target.value })}
-          />
-          {slugStatus === "checking" && <p className="text-xs text-muted-foreground">Kontrol ediliyor...</p>}
-          {slugStatus === "available" && <p className="text-xs text-green-600">Bu adres kullanılabilir.</p>}
-          {slugStatus === "taken" && <p className="text-xs text-destructive">Bu adres zaten alınmış.</p>}
-          {slugStatus === "invalid" && <p className="text-xs text-destructive">Geçersiz format (a-z, 0-9, tire, 3-50 karakter).</p>}
-        </div>
-      )}
     </div>
   );
 }

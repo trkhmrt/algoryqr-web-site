@@ -3,6 +3,7 @@ import { ImageIcon } from "lucide-react";
 import type { MenuProductApiItem } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { formatMenuPrice } from "../types";
+import { formatServesPeopleLabel } from "../shared/serves-people";
 
 type ProductCardProps = {
   item: MenuProductApiItem;
@@ -12,6 +13,7 @@ type ProductCardProps = {
 export function SoftProductCard({ item, onOpen }: ProductCardProps) {
   const price = formatMenuPrice(item.price, item.currency);
   const popular = Boolean(item.imageUrl) && item.available !== false;
+  const servesLabel = formatServesPeopleLabel(item.servesPeopleMin, item.servesPeopleMax);
 
   return (
     <button
@@ -48,6 +50,11 @@ export function SoftProductCard({ item, onOpen }: ProductCardProps) {
           </p>
         ) : null}
         <div className="mt-0.5 flex flex-wrap gap-1.5">
+          {servesLabel ? (
+            <Badge className="rounded-full border-0 bg-[var(--sf-bg-soft)] px-2 py-0 text-[10px] font-medium sf-fg hover:bg-[var(--sf-bg-soft)]">
+              {servesLabel}
+            </Badge>
+          ) : null}
           {!item.available ? (
             <Badge className="rounded-full border-0 bg-[var(--sf-destructive-soft)] px-2 py-0 text-[10px] font-medium sf-destructive hover:bg-[var(--sf-destructive-soft)]">
               Tükendi

@@ -1,21 +1,27 @@
-import type { RefObject } from "react";
+import { useMemo } from "react";
 
-import type { MenuCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
-import { findCategoryById, flattenNavCategories } from "../types";
-import { MenuCategoryRail, MenuProductScrollSentinel, searchMenuProducts } from "../shared";
+import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
+import type { TaxonomyNavNode } from "../types";
+import {
+  DenseCategoryGrid,
+  DenseProductRow,
+  DenseStickyToolbar,
+  MenuProductScrollSentinel,
+  resolveNavNodeFromRailCategory,
+  searchMenuProducts,
+  taxonomyNavNodesToRailCategories,
+} from "../shared";
 import { countProductsForCategory } from "./category-utils";
-import { LumiereProductCard } from "./ProductCard";
 import { LUMIERE_HERO_IMAGE, lumiereCategoryImage } from "./styles";
 
 type HomeViewProps = {
   menu: MenuProfileApiItem;
-  categories: MenuCategoryApiItem[];
+  categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   searchValue: string;
   onSearchChange: (value: string) => void;
-  onSelectCategory: (category: MenuCategoryApiItem) => void;
+  onSelectCategory: (category: TaxonomyNavNode) => void;
   onOpenProduct: (product: MenuProductApiItem) => void;
-  infoRef: RefObject<HTMLDivElement | null>;
 };
 
 export function LumiereHomeView({
@@ -26,96 +32,86 @@ export function LumiereHomeView({
   onSearchChange,
   onSelectCategory,
   onOpenProduct,
-  infoRef,
 }: HomeViewProps) {
   const slogan =
     menu.slogan?.trim() ||
     "Mevsimlik lezzetlerden oluşan özenle seçilmiş mutfak deneyimi.";
 
-  const navCategories = flattenNavCategories(categories);
+  const navCategories = taxonomyNavNodesToRailCategories(categories);
   const searchResults = searchValue.trim()
     ? searchMenuProducts(products, searchValue)
     : null;
 
+  const categoryGridItems = useMemo(
+    () =>
+      categories.map((category, index) => ({
+        id: category.categoryId,
+        name: category.name,
+        productCount: countProductsForCategory(products, category),
+        imageUrl: lumiereCategoryImage(index),
+      })),
+    [categories, products],
+  );
+
+  const rowProps = {
+    className: "border-[var(--lm-outline-variant)]",
+    imageClassName: "bg-[var(--lm-surface-container)]",
+    titleClassName: "text-[var(--lm-on-surface)]",
+    priceClassName: "text-[var(--lm-primary)]",
+    descriptionClassName: "text-[var(--lm-on-surface-variant)]",
+    chipClassName: "bg-[var(--lm-surface-container)] text-[var(--lm-on-surface-variant)]",
+    accentChipClassName: "bg-[var(--lm-primary)] text-white",
+    destructiveChipClassName: "bg-[var(--lm-primary-container)] text-white",
+    imagePlaceholderClassName: "text-[var(--lm-on-surface-variant)]",
+  };
+
   return (
     <div>
-      <section className="relative h-[397px] w-full overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src={LUMIERE_HERO_IMAGE}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-[var(--lm-margin)]">
-          <span className="lm-badge mb-1 inline-block rounded px-2 py-1 text-[10px] uppercase tracking-widest">
+      <section className="relative min-h-[180px] max-h-[220px] w-full overflow-hidden">
+        <img
+          src={LUMIERE_HERO_IMAGE}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
+          <span className="lm-badge mb-1 inline-block rounded px-2 py-0.5 text-[10px] uppercase tracking-widest">
             Bugünün seçkisi
           </span>
           <h2 className="lm-headline-lg mb-1 text-white">Lezzetin inceliği</h2>
-          <p className="lm-body-sm max-w-[80%] text-white/80">{slogan}</p>
+          <p className="lm-body-sm line-clamp-2 text-white/80">{slogan}</p>
         </div>
       </section>
 
-      <section className="relative z-20 -mt-6 px-[var(--lm-margin)]">
-        <div
-          className={`flex items-center gap-2 rounded-xl border bg-[var(--lm-surface-container-lowest)] p-1 shadow-lg transition-colors ${
-            searchValue
-              ? "border-[var(--lm-primary)]"
-              : "border-[var(--lm-outline-variant)]"
-          }`}
-        >
-          <div className="flex flex-1 items-center gap-1 px-2 py-4">
-            <span className="material-symbols-outlined text-[20px] text-[var(--lm-on-surface-variant)]">
-              search
-            </span>
-            <input
-              value={searchValue}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Menüde ürün ara…"
-              className="lm-body-lg w-full border-none bg-transparent text-[var(--lm-on-surface)] outline-none placeholder:text-[color-mix(in_srgb,var(--lm-on-surface-variant)_50%,transparent)] focus:ring-0"
-            />
-            {searchValue ? (
-              <button
-                type="button"
-                onClick={() => onSearchChange("")}
-                className="lm-body-sm px-2 text-[var(--lm-on-surface-variant)]"
-              >
-                Temizle
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
-      {navCategories.length > 0 && !searchResults ? (
-        <section className="mt-6 px-[var(--lm-margin)]">
-          <MenuCategoryRail
-            categories={navCategories}
-            activeKey={null}
-            onSelect={(cat) => {
-              if (cat.categoryId == null) return;
-              const found = findCategoryById(categories, cat.categoryId);
-              if (found) onSelectCategory(found);
-            }}
-            activeChipClassName="bg-[var(--lm-primary)] text-white"
-            inactiveChipClassName="bg-[var(--lm-surface-container)] text-[var(--lm-on-surface)] ring-1 ring-[var(--lm-outline-variant)]"
-          />
-        </section>
-      ) : null}
+      <DenseStickyToolbar
+        searchQuery={searchValue}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Menüde ürün ara…"
+        className="border-b border-[var(--lm-outline-variant)] bg-[color-mix(in_srgb,var(--lm-surface)_92%,transparent)]"
+        searchClassName="border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-lowest)] text-[var(--lm-on-surface)] placeholder:text-[color-mix(in_srgb,var(--lm-on-surface-variant)_50%,transparent)] focus:border-[var(--lm-primary)] focus:ring-[color-mix(in_srgb,var(--lm-primary)_20%,transparent)]"
+        categories={navCategories.length > 0 && !searchResults ? navCategories : undefined}
+        activeCategoryKey={null}
+        onSelectCategory={(cat) => {
+          const found = resolveNavNodeFromRailCategory(categories, cat);
+          if (found) onSelectCategory(found);
+        }}
+        activeChipClassName="bg-[var(--lm-primary)] text-white"
+        inactiveChipClassName="bg-[var(--lm-surface-container)] text-[var(--lm-on-surface)] ring-1 ring-[var(--lm-outline-variant)]"
+      />
 
       {searchResults ? (
-        <section className="mt-8 px-[var(--lm-margin)]">
-          <h3 className="lm-headline-md mb-4 text-[var(--lm-on-surface)]">
+        <section className="px-4 pt-4">
+          <h3 className="lm-headline-md mb-3 text-[var(--lm-on-surface)]">
             Arama sonuçları ({searchResults.length})
           </h3>
           {searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
               {searchResults.map((item) => (
-                <LumiereProductCard
+                <DenseProductRow
                   key={item.productId}
                   item={item}
                   onOpen={onOpenProduct}
+                  {...rowProps}
                 />
               ))}
             </div>
@@ -128,39 +124,21 @@ export function LumiereHomeView({
         </section>
       ) : (
         <>
-          <section className="mt-10 px-[var(--lm-margin)]">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="lm-headline-md text-[var(--lm-on-surface)]">
-                Kategorilere göz at
-              </h3>
-            </div>
+          <section className="px-4 pt-4">
+            <h3 className="lm-headline-md mb-3 text-[var(--lm-on-surface)]">
+              Kategorilere göz at
+            </h3>
             {categories.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4">
-                {categories.map((category, index) => {
-                  const count = countProductsForCategory(products, category);
-                  return (
-                    <button
-                      key={category.categoryId}
-                      type="button"
-                      onClick={() => onSelectCategory(category)}
-                      className="group relative aspect-square overflow-hidden rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-low)] transition-all hover:border-[color-mix(in_srgb,var(--lm-primary)_30%,transparent)] active:scale-[0.98]"
-                    >
-                      <img
-                        src={lumiereCategoryImage(index)}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                      <div className="absolute bottom-0 left-0 p-4 text-left">
-                        <p className="lm-headline-md text-white">{category.name}</p>
-                        <p className="text-[12px] text-white/60">
-                          {count} {count === 1 ? "ürün" : "ürün"}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <DenseCategoryGrid
+                categories={categoryGridItems}
+                onSelect={(item) => {
+                  const cat = categories.find((c) => c.categoryId === item.id);
+                  if (cat) onSelectCategory(cat);
+                }}
+                cardClassName="border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-low)]"
+                titleClassName="text-[var(--lm-on-surface)]"
+                metaClassName="text-[var(--lm-on-surface-variant)]"
+              />
             ) : (
               <p className="rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container)] p-6 text-center text-[var(--lm-on-surface-variant)]">
                 Henüz kategori yok.
@@ -168,28 +146,19 @@ export function LumiereHomeView({
             )}
           </section>
 
-          <section className="mt-10 space-y-4 px-[var(--lm-margin)]">
-            <div
-              ref={infoRef}
-              className="flex items-center justify-between rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-lowest)] p-6"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--lm-secondary-container)] text-[var(--lm-on-secondary-container)]">
-                  <span className="material-symbols-outlined">info</span>
-                </div>
-                <div>
-                  <h4 className="lm-body-lg font-bold text-[var(--lm-on-surface)]">
-                    İletişim
-                  </h4>
-                  <p className="text-[12px] text-[var(--lm-on-surface-variant)]">
-                    {menu.phone || menu.address
-                      ? [menu.phone, menu.address].filter(Boolean).join(" · ")
-                      : "İşletme bilgileri"}
+          {(menu.phone || menu.address) && (
+            <section className="mt-4 px-4">
+              <div className="flex items-center gap-3 rounded-xl border border-[var(--lm-outline-variant)] bg-[var(--lm-surface-container-lowest)] p-4">
+                <span className="material-symbols-outlined text-[var(--lm-primary)]">info</span>
+                <div className="min-w-0">
+                  <h4 className="lm-body-lg font-bold text-[var(--lm-on-surface)]">İletişim</h4>
+                  <p className="text-xs text-[var(--lm-on-surface-variant)]">
+                    {[menu.phone, menu.address].filter(Boolean).join(" · ")}
                   </p>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          )}
         </>
       )}
     </div>

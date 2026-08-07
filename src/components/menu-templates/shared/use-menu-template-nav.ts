@@ -33,22 +33,17 @@ export function useMenuTemplateNav({
   analytics,
   defaultCategoryKey = null,
 }: UseMenuTemplateNavArgs) {
-  const initialKey =
-    defaultCategoryKey ?? navCategories[0]?.key ?? null;
+  const initialKey = defaultCategoryKey ?? navCategories[0]?.key ?? null;
 
   const [view, setView] = useState<MenuTemplateView>({
     type: "browse",
     categoryKey: initialKey,
   });
   const [searchQuery, setSearchQuery] = useState("");
-  const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(
-    null,
-  );
+  const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
 
   const activeCategoryKey =
-    view.type === "browse" || view.type === "product"
-      ? view.categoryKey
-      : null;
+    view.type === "browse" || view.type === "product" ? view.categoryKey : null;
 
   const activeCategory = useMemo(
     () =>
@@ -80,7 +75,8 @@ export function useMenuTemplateNav({
     (category: MenuNavCategory) => {
       setPinnedProduct(null);
       setView({ type: "browse", categoryKey: category.key });
-      analytics?.trackCategoryView(category.categoryId);
+      const trackId = category.subCategoryId ?? category.mainCategoryId;
+      if (trackId != null) analytics?.trackCategoryView(trackId);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [analytics],
@@ -91,7 +87,8 @@ export function useMenuTemplateNav({
       const key =
         categoryKey ??
         activeCategoryKey ??
-        navCategories.find((c) => c.categoryId === product.categoryId)?.key ??
+        navCategories.find((c) => c.subCategoryId === product.subCategoryId)?.key ??
+        navCategories.find((c) => c.mainCategoryId === product.mainCategoryId)?.key ??
         null;
       setPinnedProduct(product);
       setView({
@@ -99,7 +96,7 @@ export function useMenuTemplateNav({
         productId: product.productId,
         categoryKey: key,
       });
-      analytics?.trackProductView(product.productId, product.categoryId);
+      analytics?.trackProductView(product.productId, product.subCategoryId);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [activeCategoryKey, analytics, navCategories],

@@ -14,15 +14,25 @@ function resolvePaymentRedirect(status: string | null): "success" | "failed" | "
   return "unknown";
 }
 
+function isCardVerificationConversation(conversationId: string | null): boolean {
+  return conversationId != null && conversationId.startsWith("qr-card-verification-");
+}
+
 function PaymentResultContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const payment = resolvePaymentRedirect(searchParams.get("status"));
-
-  const redirectTarget = useMemo(
-    () => `${DASHBOARD_ROUTES.accountSubscription}?payment=${payment}`,
-    [payment],
+  const conversationId = searchParams.get("conversationId");
+  const cardVerification = isCardVerificationConversation(conversationId);
+  const payment = resolvePaymentRedirect(
+    cardVerification ? searchParams.get("verification") ?? searchParams.get("status") : searchParams.get("status"),
   );
+
+  const redirectTarget = useMemo(() => {
+    if (cardVerification) {
+      return `${DASHBOARD_ROUTES.accountPaymentMethods}?verification=${payment}`;
+    }
+    return `${DASHBOARD_ROUTES.accountSubscription}?payment=${payment}`;
+  }, [cardVerification, payment]);
 
   useEffect(() => {
     if (window.self !== window.top) {
@@ -55,23 +65,35 @@ function PaymentResultContent() {
 
         <div className="space-y-2">
           <h1 className="text-xl font-semibold text-foreground">
-            {isSuccess
-              ? "Ödeme başarılı"
-              : isFailed
-                ? "Ödeme başarısız"
-                : "Ödeme sonucu alınıyor"}
+            {cardVerification
+              ? isSuccess
+                ? "Kart doğrulama başarılı"
+                : isFailed
+                  ? "Kart doğrulama başarısız"
+                  : "Kart doğrulama sonucu alınıyor"
+              : isSuccess
+                ? "Ödeme başarılı"
+                : isFailed
+                  ? "Ödeme başarısız"
+                  : "Ödeme sonucu alınıyor"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isSuccess
-              ? "Paketiniz kısa süre içinde hesabınıza tanımlanacak. Abonelik sayfasına yönlendiriliyorsunuz…"
-              : isFailed
-                ? "Ödeme tamamlanamadı. Abonelik sayfasına yönlendiriliyorsunuz…"
-                : "Lütfen bekleyin…"}
+            {cardVerification
+              ? isSuccess
+                ? "Kartınız kaydediliyor. Kayıtlı kartlar sayfasına yönlendiriliyorsunuz…"
+                : isFailed
+                  ? "Kart doğrulanamadı. Kayıtlı kartlar sayfasına yönlendiriliyorsunuz…"
+                  : "Lütfen bekleyin…"
+              : isSuccess
+                ? "Paketiniz kısa süre içinde hesabınıza tanımlanacak. Abonelik sayfasına yönlendiriliyorsunuz…"
+                : isFailed
+                  ? "Ödeme tamamlanamadı. Abonelik sayfasına yönlendiriliyorsunuz…"
+                  : "Lütfen bekleyin…"}
           </p>
         </div>
 
         <Button variant="outline" onClick={() => router.replace(redirectTarget)}>
-          Aboneliğe git
+          {cardVerification ? "Kartlarıma git" : "Aboneliğe git"}
         </Button>
       </div>
     </div>

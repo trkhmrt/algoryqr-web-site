@@ -12,7 +12,7 @@ export const PURCHASE_ID_STORAGE_KEY = "algory_pending_purchase_id";
 export const PURCHASE_POLL_INTERVAL_MS = 2_000;
 export const PURCHASE_POLL_TIMEOUT_MS = 120_000;
 
-export type PaymentMode = "DIRECT" | "THREE_DS";
+export type PaymentMode = "DIRECT" | "THREE_DS" | "CHECKOUT_FORM";
 
 export interface PurchaseInitiateResponse {
   purchaseId: number;
@@ -20,11 +20,14 @@ export interface PurchaseInitiateResponse {
   conversationId?: string;
   paymentHtml?: string;
   htmlContent?: string;
+  token?: string;
+  paymentPageUrl?: string;
+  checkoutFormContent?: string;
 }
 
 export function getPaymentModes(pkg: PlanPackageApiItem): PaymentMode[] {
   const modes = pkg.allowedPaymentModes?.filter(
-    (mode): mode is PaymentMode => mode === "DIRECT" || mode === "THREE_DS",
+    (mode): mode is "DIRECT" | "THREE_DS" => mode === "DIRECT" || mode === "THREE_DS",
   );
   return modes?.length ? modes : ["THREE_DS"];
 }
@@ -127,6 +130,47 @@ export function canResumeRenewal(purchase: {
   );
 }
 
+export function canPaySubscriptionDebt(purchase: {
+  status?: string | null;
+  paymentStyle?: string | null;
+  subscriptionStatus?: string | null;
+  manualPaymentRequired?: boolean | null;
+  subscriptionGraceEndsAt?: string | null;
+  nextPaymentDueAt?: string | null;
+  paymentApproaching?: boolean | null;
+}): boolean {
+  if (purchase.paymentStyle !== "SUBSCRIPTION") {
+    return false;
+  }
+  if (purchase.status !== "ACTIVE" && purchase.status !== "EXPIRED") {
+    return false;
+  }
+  if (purchase.subscriptionStatus === "PAST_DUE") {
+    if (!purchase.subscriptionGraceEndsAt) {
+      return true;
+    }
+    const graceEndsAt = Date.parse(purchase.subscriptionGraceEndsAt);
+    return Number.isFinite(graceEndsAt) && graceEndsAt >= Date.now();
+  }
+  if (purchase.manualPaymentRequired !== true) {
+    return false;
+  }
+  if (purchase.paymentApproaching) {
+    return true;
+  }
+  if (!purchase.nextPaymentDueAt) {
+    return false;
+  }
+  const dueAt = Date.parse(purchase.nextPaymentDueAt);
+  return Number.isFinite(dueAt) && dueAt <= Date.now();
+}
+
+export function isSubscriptionPastDue(purchase: {
+  subscriptionStatus?: string | null;
+}): boolean {
+  return purchase.subscriptionStatus === "PAST_DUE";
+}
+
 export async function cancelPurchase(purchaseId: number): Promise<PurchaseSummaryApiItem> {
   const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
     `/purchases/${purchaseId}/cancel`,
@@ -151,6 +195,13 @@ export async function cancelPurchaseWithRefund(purchaseId: number): Promise<Purc
 export async function resumePurchaseRenewal(purchaseId: number): Promise<PurchaseSummaryApiItem> {
   const response = await getSiteSameOriginAxios().post<PurchaseSummaryApiItem>(
     `/purchases/${purchaseId}/resume-renewal`,
+  );
+  return response.data;
+}
+
+export async function paySubscriptionDebt(purchaseId: number): Promise<PurchaseInitiateResponse> {
+  const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>(
+    `/purchases/${purchaseId}/pay-debt`,
   );
   return response.data;
 }

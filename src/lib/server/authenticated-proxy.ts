@@ -31,6 +31,9 @@ export async function proxyAuthenticatedRequest(
       }
     }
 
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+
     const upstream = await axios.request({
       url: `${API_BASE_URL}${upstreamPath}${query}`,
       method,
@@ -40,6 +43,8 @@ export async function proxyAuthenticatedRequest(
         Accept: "application/json",
         ...(text ? { "Content-Type": "application/json" } : {}),
         ...(userId != null ? { "X-User-Id": String(userId) } : {}),
+        ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
+        ...(!forwardedFor && realIp ? { "X-Forwarded-For": realIp } : {}),
       },
       validateStatus: () => true,
       timeout: 20_000,

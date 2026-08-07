@@ -20,14 +20,14 @@ export function GlassyGrayTopNav({
   onBack,
 }: TopNavProps) {
   return (
-    <header className="gg-nav fixed top-0 z-50 w-full border-b border-white/10 shadow-2xl backdrop-blur-xl">
-      <div className="flex items-center justify-between px-4 py-4 md:px-12">
-        <div className="flex items-center gap-3">
+    <header className="gg-nav fixed left-0 right-0 top-0 z-50 mx-auto max-w-md border-b border-white/10 shadow-2xl backdrop-blur-xl">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="gg-primary active:scale-95"
+              className="gg-primary shrink-0 active:scale-95"
               aria-label="Geri"
             >
               <span className="material-symbols-outlined">arrow_back</span>
@@ -36,40 +36,38 @@ export function GlassyGrayTopNav({
           <button
             type="button"
             onClick={onHome}
-            className="gg-display gg-primary text-left text-xl font-semibold tracking-tight md:text-2xl"
+            className="gg-display gg-primary truncate text-left text-lg font-semibold tracking-tight"
           >
             {businessName}
           </button>
         </div>
 
-        <div className="hidden items-center gap-6 md:flex">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={onHome}
-            className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
-              active === "home" ? "gg-primary font-bold" : "gg-muted hover:bg-white/10"
+            className={`rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+              active === "home" ? "gg-primary" : "gg-muted"
             }`}
           >
-            Ana Sayfa
+            Ana
           </button>
           <button
             type="button"
             onClick={onMenu}
-            className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
-              active === "menu" ? "gg-primary font-bold" : "gg-muted hover:bg-white/10"
+            className={`rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider ${
+              active === "menu" ? "gg-primary" : "gg-muted"
             }`}
           >
             Menü
           </button>
         </div>
-
-        <div className="w-8 md:w-8" />
       </div>
 
       {showSearch ? (
-        <div className="border-t border-white/5 px-4 pb-3 md:px-12">
-          <div className="flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 md:ml-auto md:max-w-md">
-            <span className="material-symbols-outlined gg-muted mr-2 text-xl">search</span>
+        <div className="border-t border-white/5 px-4 pb-3">
+          <div className="flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-2">
+            <span className="material-symbols-outlined gg-muted mr-2 text-lg">search</span>
             <input
               value={searchValue}
               onChange={(e) => onSearchChange?.(e.target.value)}

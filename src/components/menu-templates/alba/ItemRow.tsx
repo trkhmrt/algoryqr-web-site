@@ -1,6 +1,7 @@
 import type { MenuProductApiItem } from "@/lib/api";
 
 import { formatMenuPrice } from "../types";
+import { formatServesPeopleLabel } from "../shared/serves-people";
 
 type ItemRowProps = {
   item: MenuProductApiItem;
@@ -9,6 +10,7 @@ type ItemRowProps = {
 
 export function ItemRow({ item, onOpen }: ItemRowProps) {
   const price = formatMenuPrice(item.price, item.currency);
+  const servesLabel = formatServesPeopleLabel(item.servesPeopleMin, item.servesPeopleMax);
 
   return (
     <button
@@ -44,11 +46,18 @@ export function ItemRow({ item, onOpen }: ItemRowProps) {
             {item.description}
           </p>
         ) : null}
-        {!item.available ? (
-          <span className="mt-1 w-fit rounded-md bg-[var(--ab-destructive-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ab-destructive">
-            Tükendi
-          </span>
-        ) : null}
+        <div className="mt-1 flex flex-wrap gap-2">
+          {servesLabel ? (
+            <span className="w-fit rounded-md bg-[var(--ab-bg-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ab-accent">
+              {servesLabel}
+            </span>
+          ) : null}
+          {!item.available ? (
+            <span className="w-fit rounded-md bg-[var(--ab-destructive-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ab-destructive">
+              Tükendi
+            </span>
+          ) : null}
+        </div>
       </div>
     </button>
   );

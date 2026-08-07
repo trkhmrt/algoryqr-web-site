@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { MenuViewportFrame } from "../shared";
 import { SOFT_STYLES } from "./styles";
 
 type SoftShellProps = {
@@ -8,9 +9,9 @@ type SoftShellProps = {
 
 export function SoftShell({ children }: SoftShellProps) {
   return (
-    <div className="soft-menu relative min-h-screen overflow-x-hidden">
+    <MenuViewportFrame frameBgClassName="soft-menu" innerClassName="soft-menu bg-[var(--sf-bg)]">
       <style>{SOFT_STYLES}</style>
       {children}
-    </div>
+    </MenuViewportFrame>
   );
 }

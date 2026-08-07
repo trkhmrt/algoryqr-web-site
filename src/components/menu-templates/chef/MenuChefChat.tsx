@@ -3,15 +3,9 @@
 import { MessageCircle, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
-
-import { MenuChefProductCard } from "./MenuChefProductCard";
-
 type ChatMessage =
   | { id: string; role: "assistant"; text: string }
-  | { id: string; role: "user"; text: string }
-  | { id: string; role: "products"; items: ChefProductItem[] }
-  | { id: string; role: "empty" };
+  | { id: string; role: "user"; text: string };
 
 type MenuChefChatProps = {
   menuId: number;
@@ -35,6 +29,7 @@ export function MenuChefChat({ menuId, open, onClose }: MenuChefChatProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>();
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -64,12 +59,16 @@ export function MenuChefChat({ menuId, open, onClose }: MenuChefChatProps) {
       const res = await fetch("/api/menu/chef/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ menuId, message: text }),
+        body: JSON.stringify({ menuId, message: text, conversationId }),
       });
       const data = (await res.json().catch(() => ({}))) as {
-        items?: ChefProductItem[];
+        reply?: string;
+        conversationId?: string;
         message?: string;
       };
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+      }
       if (!res.ok) {
         setMessages((prev) => [
           ...prev,
@@ -81,15 +80,15 @@ export function MenuChefChat({ menuId, open, onClose }: MenuChefChatProps) {
         ]);
         return;
       }
-      const items = data.items ?? [];
-      if (items.length === 0) {
-        setMessages((prev) => [...prev, { id: nextId(), role: "empty" }]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { id: nextId(), role: "products", items },
-        ]);
-      }
+      const reply = data.reply?.trim();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextId(),
+          role: "assistant",
+          text: reply || "Menüde uygun ürün bulamadım. Başka bir şekilde sorabilir misiniz?",
+        },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -113,7 +112,7 @@ export function MenuChefChat({ menuId, open, onClose }: MenuChefChatProps) {
           </span>
           <div>
             <p className="text-sm font-semibold tracking-wide">Şefe danış</p>
-            <p className="text-[11px] text-white/65">Ürün önerisi</p>
+            <p className="text-[11px] text-white/65">Menü asistanı</p>
           </div>
         </div>
         <button
@@ -132,41 +131,18 @@ export function MenuChefChat({ menuId, open, onClose }: MenuChefChatProps) {
             return (
               <div
                 key={msg.id}
-                className="max-w-[90%] rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-sm text-neutral-800 shadow-sm"
+                className="max-w-[90%] whitespace-pre-wrap rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-sm text-neutral-800 shadow-sm"
               >
                 {msg.text}
-              </div>
-            );
-          }
-          if (msg.role === "user") {
-            return (
-              <div
-                key={msg.id}
-                className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-[#1c1917] px-3.5 py-2.5 text-sm text-white"
-              >
-                {msg.text}
-              </div>
-            );
-          }
-          if (msg.role === "empty") {
-            return (
-              <div
-                key={msg.id}
-                className="rounded-2xl border border-dashed border-black/15 bg-white/60 px-3.5 py-3 text-center text-sm text-neutral-500"
-              >
-                Uygun ürün bulunamadı.
               </div>
             );
           }
           return (
-            <div key={msg.id} className="space-y-2">
-              {msg.items.map((item) => (
-                <MenuChefProductCard
-                  key={item.productId}
-                  item={item}
-                  onOpened={onClose}
-                />
-              ))}
+            <div
+              key={msg.id}
+              className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-[#1c1917] px-3.5 py-2.5 text-sm text-white"
+            >
+              {msg.text}
             </div>
           );
         })}

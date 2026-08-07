@@ -6,6 +6,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Zap } from "lucide-react";
 
+import RefundConfirmDialog from "@/components/dashboard/RefundConfirmDialog";
+import RefundStatusBadge from "@/components/dashboard/RefundStatusBadge";
+import RefundStatusPanel from "@/components/dashboard/RefundStatusPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,32 +22,34 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   formatDaysUntilExpiry,
   formatPackageDate,
   formatPackagePrice,
+  purchaseTypeLabel,
 } from "@/lib/package-display";
+import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import {
-  useSubscription,
-} from "@/hooks/use-subscription";
-import {
-  invalidateDigitalMenuTrial,
-  startTrialRequest,
-  useEligibleTrialPackages,
-  useTrialStatus,
-} from "@/hooks/use-commerce";
+import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import {
+  canCancelAtPeriodEnd,
   canCancelPurchase,
+  canCancelWithRefund,
+  canPaySubscriptionDebt,
   canResumeRenewal,
   cancelPurchase,
+  cancelPurchaseAtPeriodEnd,
+  cancelPurchaseWithRefund,
   clearPendingPurchaseId,
+  getPurchaseSummary,
+  isSubscriptionPastDue,
+  paySubscriptionDebt,
   readPendingPurchaseId,
   resumePurchaseRenewal,
+  storePendingPurchaseId,
+  type PurchaseInitiateResponse,
 } from "@/lib/purchase-fulfillment";
 import {
   cancelPlanChange,
@@ -52,8 +57,8 @@ import {
   listMyPlanChanges,
 } from "@/lib/plan-change";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { isRefundInFlight, purchaseStatusLabel } from "@/lib/refund-display";
 import { ApiError } from "@/lib/api/errors";
-import type { PlanPackageApiItem } from "@/lib/api";
 
 interface SubscriptionSectionProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -64,10 +69,6 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { data, isLoading, isError } = useSubscription();
-  const trial = useTrialStatus();
-  const trialStatus = trial.data?.status ?? "NOT_STARTED";
-  const canStartTrial = trialStatus === "NOT_STARTED";
-  const eligibleTrials = useEligibleTrialPackages(canStartTrial);
   const planChangesQuery = useQuery({
     queryKey: ["planChanges"],
     queryFn: listMyPlanChanges,
@@ -75,23 +76,39 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   });
   const [pendingPurchaseId, setPendingPurchaseId] = useState<number | null>(null);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
-  const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [paymentOverlay, setPaymentOverlay] = useState<{
+    kind: "url" | "html";
+    content: string;
+  } | null>(null);
   const handledPurchaseId = useRef<number | null>(null);
   const fulfillment = usePurchaseFulfillment(
-    pendingPurchaseId ?? data?.activePurchase?.id ?? null,
+    pendingPurchaseId,
     pendingPurchaseId ? pollStartedAt : null,
   );
+
+  const activePurchase = data?.activePurchase;
+  const purchaseId = activePurchase?.id;
+  const summaryQuery = useQuery({
+    queryKey: ["purchaseSummary", purchaseId],
+    queryFn: () => getPurchaseSummary(purchaseId!),
+    enabled: purchaseId != null,
+    staleTime: 15_000,
+    refetchInterval: (query) =>
+      isRefundInFlight(query.state.data?.refundStatus) ? 2_500 : false,
+  });
+  const summary = summaryQuery.data;
 
   useEffect(() => {
     const payment = searchParams.get("payment");
     const queryPurchaseId = Number(searchParams.get("purchaseId"));
-    const purchaseId =
+    const resolvedPurchaseId =
       Number.isSafeInteger(queryPurchaseId) && queryPurchaseId > 0
         ? queryPurchaseId
         : readPendingPurchaseId();
-    if (purchaseId) {
+    if (resolvedPurchaseId) {
       const startPolling = window.setTimeout(() => {
-        setPendingPurchaseId(purchaseId);
+        setPendingPurchaseId(resolvedPurchaseId);
         setPollStartedAt(Date.now());
       }, 0);
       return () => window.clearTimeout(startPolling);
@@ -106,14 +123,14 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   }, [onNotify, router, searchParams]);
 
   useEffect(() => {
-    const summary = fulfillment.summary.data;
+    const fulfillmentSummary = fulfillment.summary.data;
     if (
-      !summary ||
-      pendingPurchaseId !== summary.purchaseId ||
-      handledPurchaseId.current === summary.purchaseId
+      !fulfillmentSummary ||
+      pendingPurchaseId !== fulfillmentSummary.purchaseId ||
+      handledPurchaseId.current === fulfillmentSummary.purchaseId
     ) return;
-    if (summary.status === "ACTIVE") {
-      handledPurchaseId.current = summary.purchaseId;
+    if (fulfillmentSummary.status === "ACTIVE") {
+      handledPurchaseId.current = fulfillmentSummary.purchaseId;
       clearPendingPurchaseId();
       void (async () => {
         await refreshAccessAfterEntitlementChange(queryClient);
@@ -123,8 +140,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       })();
       return;
     }
-    if (summary.status === "FAILED" || summary.status === "CANCELLED") {
-      handledPurchaseId.current = summary.purchaseId;
+    if (fulfillmentSummary.status === "FAILED" || fulfillmentSummary.status === "CANCELLED") {
+      handledPurchaseId.current = fulfillmentSummary.purchaseId;
       clearPendingPurchaseId();
       onNotify("danger", "Ödeme tamamlanamadı. Lütfen tekrar deneyin.");
       router.replace(DASHBOARD_ROUTES.accountSubscription);
@@ -138,63 +155,31 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     router.replace(DASHBOARD_ROUTES.accountSubscription);
   }, [fulfillment.timedOut, onNotify, pendingPurchaseId, router]);
 
-  const usedPercent =
-    data?.usage && data.usage.total > 0
-      ? Math.round((data.usage.used / data.usage.total) * 100)
-      : 0;
-  const cancellablePurchase = data?.activePurchase;
-  const showImmediateCancel = cancellablePurchase ? canCancelPurchase(cancellablePurchase) : false;
-  const showResumeRenewal = cancellablePurchase ? canResumeRenewal(cancellablePurchase) : false;
+  const refundPending = isRefundInFlight(
+    summary?.refundStatus ?? activePurchase?.refundStatus,
+  );
   const isActiveTrial =
-    data?.activePurchase?.purchaseType === "TRIAL" &&
-    !!data.activePurchase.usable &&
-    !data.activePurchase.expired;
+    activePurchase?.purchaseType === "TRIAL" &&
+    !!activePurchase.usable &&
+    !activePurchase.expired;
+  const packageName =
+    summary?.packageName ?? activePurchase?.packageName ?? data?.usage.packageName ?? "Paket";
+  const products = summary?.products ?? [];
   const scheduledChange = useMemo(
     () => planChangesQuery.data?.find((item) => item.status === "SCHEDULED") ?? null,
     [planChangesQuery.data],
   );
-
-  const cancelMutation = useMutation({
-    mutationFn: () => {
-      if (!cancellablePurchase?.id) {
-        throw new Error("Aktif paket bulunamadı");
-      }
-      return cancelPurchase(cancellablePurchase.id);
-    },
-    onSuccess: async () => {
-      await refreshAccessAfterEntitlementChange(queryClient);
-      await invalidatePackageUsage(queryClient);
-      onNotify("info", "Paketiniz iptal edildi.");
-    },
-    onError: (error: unknown) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : "Paket iptal edilemedi. Lütfen tekrar deneyin.";
-      onNotify("danger", message);
-    },
-  });
-
-  const resumeRenewalMutation = useMutation({
-    mutationFn: () => {
-      if (!cancellablePurchase?.id) {
-        throw new Error("Aktif paket bulunamadı");
-      }
-      return resumePurchaseRenewal(cancellablePurchase.id);
-    },
-    onSuccess: async () => {
-      await refreshAccessAfterEntitlementChange(queryClient);
-      await invalidatePackageUsage(queryClient);
-      onNotify("info", "Abonelik yenilemesi yeniden açıldı.");
-    },
-    onError: (error: unknown) => {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : "Yenilemeyi açma başarısız. Lütfen tekrar deneyin.";
-      onNotify("danger", message);
-    },
-  });
+  const showImmediateCancel = summary ? canCancelPurchase(summary) && !refundPending : false;
+  const showCancelAtPeriodEnd = summary ? canCancelAtPeriodEnd(summary) && !refundPending : false;
+  const showCancelWithRefund = summary ? canCancelWithRefund(summary) && !refundPending : false;
+  const showResumeRenewal = summary ? canResumeRenewal(summary) && !refundPending : false;
+  const showPayDebt = summary ? canPaySubscriptionDebt(summary) && !refundPending : false;
+  const pastDue = summary
+    ? isSubscriptionPastDue(summary)
+    : isSubscriptionPastDue(activePurchase ?? {});
+  const graceEndsAt = summary?.subscriptionGraceEndsAt ?? activePurchase?.subscriptionGraceEndsAt;
+  const hasSavedCard = !!(summary?.paymentMethodId ?? activePurchase?.paymentMethodId);
+  const isSubscription = summary?.paymentStyle === "SUBSCRIPTION";
 
   const cancelPlanChangeMutation = useMutation({
     mutationFn: (id: number) => cancelPlanChange(id),
@@ -211,35 +196,155 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     },
   });
 
-  const startTrial = async (selectedPackageId: number) => {
-    setStartingPackageId(selectedPackageId);
-    try {
-      const started = await startTrialRequest(selectedPackageId);
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelPurchase(purchaseId!),
+    onSuccess: async () => {
+      setCancelError(null);
       await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
-        invalidateDigitalMenuTrial(queryClient),
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
       ]);
-      onNotify(
-        "info",
-        `${started.packageName ?? "Paket"} denemeniz başlatıldı` +
-          (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
-          ".",
+      onNotify("info", "Paket iptal edildi.");
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Paket iptal edilemedi. Lütfen tekrar deneyin.",
       );
-    } catch (error) {
-      onNotify(
-        "danger",
-        error instanceof ApiError ? error.message : "Deneme süresi başlatılamadı.",
-      );
-    } finally {
-      setStartingPackageId(null);
-    }
-  };
+    },
+  });
 
-  const eligiblePackages = (eligibleTrials.data ?? []) as PlanPackageApiItem[];
+  const cancelAtPeriodEndMutation = useMutation({
+    mutationFn: () => cancelPurchaseAtPeriodEnd(purchaseId!),
+    onSuccess: async () => {
+      setCancelError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+        invalidateAccessProfile(queryClient),
+      ]);
+      onNotify("info", "Yenileme dönem sonunda kapatılacak.");
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Dönem sonu iptal başarısız. Lütfen tekrar deneyin.",
+      );
+    },
+  });
+
+  const cancelWithRefundMutation = useMutation({
+    mutationFn: () => cancelPurchaseWithRefund(purchaseId!),
+    onSuccess: async () => {
+      setCancelError(null);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+      ]);
+      onNotify("info", "İade ile iptal başlatıldı.");
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "İade ile iptal başarısız. Lütfen tekrar deneyin.",
+      );
+    },
+  });
+
+  const resumeRenewalMutation = useMutation({
+    mutationFn: () => resumePurchaseRenewal(purchaseId!),
+    onSuccess: async () => {
+      setCancelError(null);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscription(queryClient),
+        invalidatePackageUsage(queryClient),
+      ]);
+      onNotify("info", "Yenileme tekrar açıldı.");
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Yenilemeyi açma başarısız. Lütfen tekrar deneyin.",
+      );
+    },
+  });
+
+  const payDebtMutation = useMutation({
+    mutationFn: () => paySubscriptionDebt(purchaseId!),
+    onSuccess: (response: PurchaseInitiateResponse) => {
+      setCancelError(null);
+      if (!Number.isSafeInteger(response.purchaseId) || response.purchaseId <= 0) {
+        setCancelError("Borç ödeme kimliği alınamadı.");
+        return;
+      }
+      storePendingPurchaseId(response.purchaseId);
+      setPendingPurchaseId(response.purchaseId);
+      setPollStartedAt(Date.now());
+      if (response.paymentPageUrl) {
+        setPaymentOverlay({ kind: "url", content: response.paymentPageUrl });
+        return;
+      }
+      if (response.checkoutFormContent) {
+        setPaymentOverlay({
+          kind: "html",
+          content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.checkoutFormContent}`,
+        });
+        return;
+      }
+      setCancelError("Güvenli ödeme sayfası alınamadı.");
+    },
+    onError: (error: unknown) => {
+      setCancelError(
+        error instanceof ApiError
+          ? error.message
+          : "Borç ödeme başlatılamadı. Lütfen tekrar deneyin.",
+      );
+    },
+  });
+
+  if (paymentOverlay) {
+    const title =
+      paymentOverlay.kind === "url" ? "Borç ödemesi (iyzico)" : "Borç ödemesi";
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <div className="flex items-center justify-between border-b p-3">
+          <p className="text-sm font-medium">{title}</p>
+          <Button variant="outline" onClick={() => setPaymentOverlay(null)}>
+            İptal
+          </Button>
+        </div>
+        {paymentOverlay.kind === "url" ? (
+          <iframe
+            title={title}
+            src={paymentOverlay.content}
+            className="w-full flex-1 border-0 bg-white"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+          />
+        ) : (
+          <iframe
+            title={title}
+            srcDoc={paymentOverlay.content}
+            className="w-full flex-1 border-0 bg-white"
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-3">
         <Link
           href={DASHBOARD_ROUTES.account}
@@ -249,7 +354,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
         </Link>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Abonelik</h1>
-          <p className="text-sm text-muted-foreground">Aktif paketinizi ve kullanım durumunuzu görün.</p>
+          <p className="text-sm text-muted-foreground">Aktif paket ve abonelik detayları</p>
         </div>
       </div>
 
@@ -263,132 +368,299 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
         <p className="text-sm text-destructive">Abonelik bilgileri yüklenemedi.</p>
       ) : data ? (
         <>
+          {summary ? (
+            <RefundStatusPanel
+              packageName={summary.packageName}
+              price={summary.price}
+              currency={summary.currency}
+              refundableAmount={summary.refundableAmount}
+              refundStatus={summary.refundStatus}
+              refundedAt={summary.refundedAt}
+              cardBrand={summary.cardBrand}
+              cardLastFour={summary.cardLastFour}
+            />
+          ) : null}
+
           <Card className="glow-card border-primary/20">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
+            <CardContent className="space-y-4 p-5">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Zap className="h-4 w-4 text-primary" />
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Aktif abonelik</p>
-                    {isActiveTrial ? (
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Aktif abonelik
+                    </p>
+                    {(summary?.purchaseType ?? activePurchase?.purchaseType) ? (
+                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {purchaseTypeLabel(summary?.purchaseType ?? activePurchase?.purchaseType)}
+                      </span>
+                    ) : isActiveTrial ? (
                       <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
                         Deneme
                       </span>
                     ) : null}
+                    {(summary?.status ?? activePurchase?.status) ? (
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        {purchaseStatusLabel(summary?.status ?? activePurchase?.status)}
+                      </span>
+                    ) : null}
+                    {summary ? (
+                      <RefundStatusBadge
+                        refundStatus={summary.refundStatus}
+                        refundedAt={summary.refundedAt}
+                      />
+                    ) : null}
                   </div>
-                  <h2 className="mt-1 text-xl font-semibold text-foreground">{data.usage.packageName}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {data.usage.unlimited
-                      ? "Sınırsız QR oluşturma"
-                      : `${data.usage.remaining} QR oluşturma hakkı kaldı`}
-                  </p>
-                  {isActiveTrial ? (
-                    <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                      Deneme süreniz: {formatDaysUntilExpiry(data.activePurchase?.daysUntilExpiry)}
+                  <h2 className="mt-1 text-xl font-semibold text-foreground">{packageName}</h2>
+                </div>
+                {summary ? (
+                  <div className="shrink-0 text-right">
+                    <p className="text-xl font-semibold text-foreground">
+                      {formatPackagePrice(summary.price, summary.currency)}
                     </p>
-                  ) : null}
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-3xl font-semibold tabular-nums text-foreground">{data.usage.remaining}</p>
-                  <p className="text-xs text-muted-foreground">/ {data.usage.total} hak</p>
-                </div>
+                    {summary.purchasedAt ? (
+                      <p className="text-xs text-muted-foreground">
+                        Satın alma: {formatPackageDate(summary.purchasedAt)}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              <Progress value={usedPercent} className="h-1.5" />
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>{data.usage.used} kullanıldı</span>
-                {data.activePurchase?.expiresAt && (
-                  <span>
-                    Bitiş: {formatPackageDate(data.activePurchase.expiresAt)} ·{" "}
-                    {formatDaysUntilExpiry(data.activePurchase.daysUntilExpiry)}
-                  </span>
-                )}
-                <span>
-                  Durum:{" "}
-                  {data.activePurchase && data.activePurchase.usable && !data.activePurchase.expired
-                    ? "aktif"
-                    : "pasif"}
-                </span>
-              </div>
-              {data.activePurchase?.paymentStyle === "SUBSCRIPTION" && data.activePurchase.nextPaymentDueAt ? (
-                <p className="text-sm text-foreground">
-                  Sonraki ödeme:{" "}
-                  <span className="font-medium">{formatPackageDate(data.activePurchase.nextPaymentDueAt)}</span>
-                </p>
-              ) : data.activePurchase?.nextPaymentDueAt ? (
-                <p className="text-xs text-muted-foreground">
-                  Sonraki ödeme: {formatPackageDate(data.activePurchase.nextPaymentDueAt)}
-                </p>
-              ) : null}
-              {(data.activePurchase?.paymentApproaching || data.activePurchase?.expiryApproaching) && (
+
+              <dl className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Başlangıç</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPackageDate(summary?.startsAt ?? activePurchase?.startsAt)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                  <dt className="text-muted-foreground">Bitiş</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatPackageDate(summary?.expiresAt ?? activePurchase?.expiresAt)}
+                    {(summary?.daysUntilExpiry ?? activePurchase?.daysUntilExpiry) != null ? (
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        {formatDaysUntilExpiry(
+                          summary?.daysUntilExpiry ?? activePurchase?.daysUntilExpiry,
+                        )}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+                {isSubscription || summary?.paymentStyle ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Yenileme</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {summary?.cancelAtPeriodEnd || activePurchase?.cancelAtPeriodEnd
+                        ? "Kapalı"
+                        : isSubscription
+                          ? "Otomatik"
+                          : "Tek seferlik"}
+                    </dd>
+                  </div>
+                ) : null}
+                {(summary?.nextPaymentDueAt ?? activePurchase?.nextPaymentDueAt) ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Sonraki ödeme</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {formatPackageDate(
+                        summary?.nextPaymentDueAt ?? activePurchase?.nextPaymentDueAt,
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
+                {summary?.cardLastFour ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Kart</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {[summary.cardBrand, `•••• ${summary.cardLastFour}`]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </dd>
+                  </div>
+                ) : isSubscription ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Kart</dt>
+                    <dd className="text-right font-medium text-foreground">Kayıtlı değil</dd>
+                  </div>
+                ) : null}
+                {graceEndsAt && pastDue ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Ödeme süresi</dt>
+                    <dd className="text-right font-medium text-foreground">
+                      {formatPackageDate(graceEndsAt)}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+
+              {(summary?.paymentApproaching || activePurchase?.paymentApproaching) ? (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  {data.activePurchase.paymentApproaching
-                    ? "Ödeme tarihiniz yaklaşıyor."
-                    : "Paket bitiş tarihiniz yaklaşıyor."}
-                </p>
-              )}
-              {cancellablePurchase?.subscriptionStatus === "PAST_DUE" ? (
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Yenileme ödemesi başarısız. Dönem sonuna kadar erişiminiz devam eder; kartınızı
-                  güncelleyerek yenilemeyi sürdürebilirsiniz.
+                  Ödeme tarihiniz yaklaşıyor.
                 </p>
               ) : null}
-              {cancellablePurchase?.cancelAtPeriodEnd ? (
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Yenileme kapalı. Erişiminiz {formatPackageDate(cancellablePurchase.expiresAt)}{" "}
-                  tarihine kadar devam eder.
+              {summary?.expiryApproaching ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Paket bitiş tarihiniz 7 gün içinde.
                 </p>
               ) : null}
-              {(showImmediateCancel || showResumeRenewal) && cancellablePurchase ? (
-                <div className="flex flex-wrap items-center gap-3 border-t border-border/60 pt-4">
-                  {showResumeRenewal ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={resumeRenewalMutation.isPending}
-                      onClick={() => resumeRenewalMutation.mutate()}
-                    >
-                      {resumeRenewalMutation.isPending ? "Açılıyor..." : "Yenilemeyi tekrar aç"}
-                    </Button>
-                  ) : null}
-                  {showImmediateCancel ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                          disabled={cancelMutation.isPending}
-                        >
-                          {cancelMutation.isPending ? "İptal ediliyor..." : "Paketi iptal et"}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {cancellablePurchase.packageName} paketi hemen iptal edilir.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => cancelMutation.mutate()}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Evet, iptal et
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : null}
-                  <Link
-                    href={DASHBOARD_ROUTES.accountPurchaseDetail(cancellablePurchase.id)}
-                    className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-                  >
-                    Satın alma detayı
-                  </Link>
+              {pastDue ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Yenileme ödemesi alınamadı.{" "}
+                  {graceEndsAt
+                    ? `Erişiminiz ${formatPackageDate(graceEndsAt)} tarihine kadar devam eder.`
+                    : "Erişiminiz kısa süre daha devam eder."}{" "}
+                  Dönem ücretini Checkout Form ile ödeyebilirsiniz.
+                </p>
+              ) : null}
+              {!pastDue && isSubscription && !hasSavedCard ? (
+                <p className="text-sm text-muted-foreground">
+                  Kayıtlı kart yok; otomatik yenileme çalışmaz. Kart ekleyebilir veya dönem
+                  gelince borcu manuel ödeyebilirsiniz.
+                </p>
+              ) : null}
+              {(summary?.cancelAtPeriodEnd ?? activePurchase?.cancelAtPeriodEnd) ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Yenileme kapalı. Erişiminiz{" "}
+                  {formatPackageDate(summary?.expiresAt ?? activePurchase?.expiresAt)} tarihine
+                  kadar devam eder.
+                </p>
+              ) : null}
+              {refundPending ? (
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  İade işlemi sürüyor. Lütfen bekleyin; tekrar denemeyin.
+                </p>
+              ) : null}
+
+              {products.length > 0 ? (
+                <div className="space-y-2 border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Paketteki ürünler
+                  </p>
+                  <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+                    {products.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {product.productName}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {product.unlimited
+                            ? "Sınırsız"
+                            : `${product.usedQuantity}/${product.totalQuantity} · ${product.remainingQuantity} kalan`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
+
+              {showImmediateCancel ||
+              showCancelAtPeriodEnd ||
+              showCancelWithRefund ||
+              showResumeRenewal ||
+              showPayDebt ? (
+                <div className="space-y-2 border-t border-border/60 pt-4">
+                  {cancelError ? <p className="text-sm text-destructive">{cancelError}</p> : null}
+                  <div className="flex flex-wrap gap-2">
+                    {showPayDebt ? (
+                      <Button
+                        type="button"
+                        variant="hero"
+                        size="sm"
+                        disabled={payDebtMutation.isPending}
+                        onClick={() => payDebtMutation.mutate()}
+                      >
+                        {payDebtMutation.isPending ? "Ödeme açılıyor…" : "Borcu öde"}
+                      </Button>
+                    ) : null}
+                    {showCancelWithRefund || showCancelAtPeriodEnd ? (
+                      <RefundConfirmDialog
+                        purchase={{
+                          purchaseId: purchaseId!,
+                          packageName: summary!.packageName,
+                          price: summary!.price,
+                          currency: summary!.currency,
+                          refundableAmount: summary!.refundableAmount,
+                          refundEligibleUntil: summary!.refundEligibleUntil,
+                          refundCoolingDays: summary!.refundCoolingDays,
+                          cardBrand: summary!.cardBrand,
+                          cardLastFour: summary!.cardLastFour,
+                        }}
+                        allowRefundNow={showCancelWithRefund}
+                        allowPeriodEnd={showCancelAtPeriodEnd}
+                        isPending={
+                          cancelWithRefundMutation.isPending ||
+                          cancelAtPeriodEndMutation.isPending
+                        }
+                        onConfirm={() => cancelWithRefundMutation.mutate()}
+                        onPreferPeriodEnd={
+                          showCancelAtPeriodEnd
+                            ? () => cancelAtPeriodEndMutation.mutate()
+                            : undefined
+                        }
+                      />
+                    ) : null}
+                    {showResumeRenewal ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={resumeRenewalMutation.isPending}
+                        onClick={() => resumeRenewalMutation.mutate()}
+                      >
+                        {resumeRenewalMutation.isPending ? "Açılıyor…" : "Yenilemeyi tekrar aç"}
+                      </Button>
+                    ) : null}
+                    {showImmediateCancel ? (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            disabled={cancelMutation.isPending}
+                          >
+                            {cancelMutation.isPending ? "İptal ediliyor…" : "Paketi iptal et"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Paket iptal edilsin mi?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {packageName} paketi hemen iptal edilir.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => cancelMutation.mutate()}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Evet, iptal et
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2 border-t border-border/60 pt-4">
+                <Button variant="hero" size="sm" asChild>
+                  <Link href={DASHBOARD_ROUTES.accountPackages}>Paketleri gör</Link>
+                </Button>
+                {isSubscription && !hasSavedCard ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={DASHBOARD_ROUTES.accountPaymentMethods}>Kart ekle</Link>
+                  </Button>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
 
@@ -404,7 +676,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                     {scheduledChange.fromPackageName} → {scheduledChange.toPackageName}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatPackageDate(scheduledChange.effectiveAt)} tarihinde devreye girecek · tahsil:{" "}
+                    {formatPackageDate(scheduledChange.effectiveAt)} tarihinde devreye girecek ·
+                    tahsil:{" "}
                     {formatPackagePrice(scheduledChange.chargeAmount, scheduledChange.currency)}
                   </p>
                 </div>
@@ -420,97 +693,6 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
               </CardContent>
             </Card>
           )}
-
-          {fulfillment.summary.data && (
-            <Card className="glow-card">
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Son ödeme
-                    </p>
-                    <p className="mt-1 font-medium text-foreground">
-                      {fulfillment.summary.data.packageName}
-                    </p>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    {fulfillment.summary.data.status}
-                  </span>
-                </div>
-                {fulfillment.summary.data.status === "PENDING" && (
-                  <p className="text-xs text-muted-foreground">
-                    Ödeme sağlayıcısından kesin sonuç bekleniyor.
-                  </p>
-                )}
-                {(fulfillment.installments.data ??
-                  fulfillment.summary.data.installmentSchedule ??
-                  []).map((item) => (
-                  <div
-                    key={item.installmentNumber}
-                    className="flex items-center justify-between gap-3 border-t border-border pt-2 text-xs text-muted-foreground"
-                  >
-                    <span>
-                      {item.installmentNumber}. taksit
-                      {item.dueAt ? ` · ${formatPackageDate(item.dueAt)}` : ""}
-                    </span>
-                    <span>
-                      {formatPackagePrice(item.amount, fulfillment.summary.data?.currency ?? "TRY")} · {item.status}
-                    </span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {canStartTrial && (
-            <div>
-              <h2 className="mb-1 text-sm font-medium text-foreground">Deneme paketleri</h2>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Bir paket seçin; süre ve haklar seçtiğiniz pakete göre tanımlanır.
-              </p>
-              {eligibleTrials.isLoading || trial.isLoading ? (
-                <p className="mb-6 text-sm text-muted-foreground">Deneme paketleri yükleniyor…</p>
-              ) : (
-                <div className="mb-6">
-                  <TrialPackagePicker
-                    packages={eligiblePackages}
-                    startingPackageId={startingPackageId}
-                    onStart={(id) => void startTrial(id)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div>
-            <h2 className="mb-3 text-sm font-medium text-foreground">Paket kullanım geçmişi</h2>
-            {data.purchases.length === 0 ? (
-              <p className="mb-6 text-sm text-muted-foreground">Henüz satın alma kaydı yok.</p>
-            ) : (
-              <div className="mb-6 space-y-2">
-                {data.purchases.map((purchase) => (
-                  <Link
-                    key={purchase.id}
-                    href={DASHBOARD_ROUTES.accountPurchaseDetail(purchase.id)}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card px-3 py-3 transition-colors hover:border-primary/40"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{purchase.packageName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatPackageDate(purchase.purchasedAt)}
-                        {purchase.status ? ` · ${purchase.status}` : ""}
-                        {purchase.paymentId ? ` · Ödeme: ${purchase.paymentId}` : ""}
-                      </p>
-                    </div>
-                    <p className="shrink-0 text-sm font-medium text-foreground">
-                      {formatPackagePrice(purchase.price ?? 0, purchase.currency)}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
         </>
       ) : null}
     </div>

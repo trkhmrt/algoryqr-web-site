@@ -1,5 +1,6 @@
 import type { MenuProductApiItem } from "@/lib/api";
 import { formatMenuPrice } from "../types";
+import { formatServesPeopleLabel } from "../shared/serves-people";
 
 type ProductCardProps = {
   item: MenuProductApiItem;
@@ -8,6 +9,7 @@ type ProductCardProps = {
 };
 
 export function GlassyGrayProductCard({ item, variant = "grid", onOpen }: ProductCardProps) {
+  const servesLabel = formatServesPeopleLabel(item.servesPeopleMin, item.servesPeopleMax);
   return (
     <article
       className={`gg-glass-heavy group overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-1 hover:border-[rgba(255,182,147,0.4)] ${
@@ -27,11 +29,18 @@ export function GlassyGrayProductCard({ item, variant = "grid", onOpen }: Produc
               <span className="material-symbols-outlined text-4xl">restaurant</span>
             </div>
           )}
-          {!item.available ? (
-            <div className="gg-glass absolute right-4 top-4 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gg-accent)]">
-              Tukendi
-            </div>
-          ) : null}
+          <div className="absolute right-4 top-4 flex flex-col gap-2">
+            {servesLabel ? (
+              <div className="gg-glass rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gg-accent)]">
+                {servesLabel}
+              </div>
+            ) : null}
+            {!item.available ? (
+              <div className="gg-glass rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[var(--gg-accent)]">
+                Tukendi
+              </div>
+            ) : null}
+          </div>
         </div>
       </button>
 

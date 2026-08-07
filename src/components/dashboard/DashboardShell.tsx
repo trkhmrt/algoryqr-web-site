@@ -18,7 +18,6 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
-import TrialStatusBanner from "@/components/dashboard/TrialStatusBanner";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -212,8 +211,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             </div>
           </div>
 
-          <div className="mx-auto max-w-6xl p-6 lg:p-8">
-            <TrialStatusBanner />
+          <div className="mx-auto max-w-3xl p-6 lg:p-8">
             {children}
           </div>
         </main>

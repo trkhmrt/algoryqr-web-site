@@ -7,7 +7,7 @@ import { API_BASE_URL } from "@/lib/config";
 import { getJsonErrorText } from "@/lib/api-error-text";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 
-type Body = { challengeId?: string; newEmail?: string };
+type Body = { challengeId?: string; currentEmail?: string; newEmail?: string };
 
 export async function POST(req: Request) {
   try {
@@ -23,13 +23,17 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as Body;
-    if (!body?.challengeId || !body?.newEmail) {
-      return NextResponse.json({ message: "challengeId ve yeni e-posta gerekli" }, { status: 400 });
+    if (!body?.challengeId || !body?.currentEmail || !body?.newEmail) {
+      return NextResponse.json({ message: "challengeId, mevcut e-posta ve yeni e-posta gerekli" }, { status: 400 });
     }
 
     const upstream = await axios.post(
       `${API_BASE_URL}/account/email-change/request-new-code`,
-      { challengeId: body.challengeId, newEmail: body.newEmail },
+      {
+        challengeId: body.challengeId,
+        currentEmail: body.currentEmail,
+        newEmail: body.newEmail,
+      },
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

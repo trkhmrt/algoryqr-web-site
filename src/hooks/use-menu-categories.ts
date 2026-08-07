@@ -5,19 +5,27 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import {
   getMenuCategoriesByQrRequest,
   getMenuCategoriesRequest,
+  getMenuAllergensRequest,
+  getMenuTagsRequest,
+  getMenuTaxonomyRequest,
+  type MainCategoryApiItem,
+  type MenuAllergenApiItem,
   type MenuCategoriesByQrApiResponse,
-  type MenuCategoryApiItem,
+  type MenuTagApiItem,
 } from "@/lib/api";
 
 export const menuCategoriesQueryKey = (menuId: number | string) =>
   ["menuCategories", menuId] as const;
 export const menuCategoriesByQrQueryKey = (qrId: number | string) =>
   ["menuCategoriesByQr", qrId] as const;
+export const menuTaxonomyQueryKey = ["menuTaxonomy"] as const;
+export const menuTagsQueryKey = ["menuTags"] as const;
+export const menuAllergensQueryKey = ["menuAllergens"] as const;
 
 export function useMenuCategories(menuId: number | null | undefined, enabled = true) {
   return useQuery({
     queryKey: menuCategoriesQueryKey(menuId ?? 0),
-    queryFn: (): Promise<MenuCategoryApiItem[]> => getMenuCategoriesRequest(menuId as number),
+    queryFn: (): Promise<MainCategoryApiItem[]> => getMenuCategoriesRequest(menuId as number),
     enabled: enabled && menuId != null && menuId > 0,
     staleTime: 30_000,
     gcTime: 30 * 60 * 1000,
@@ -37,23 +45,56 @@ export function useMenuCategoriesByQr(qrId: number | null | undefined, enabled =
   });
 }
 
+export function useMenuTaxonomy(enabled = true) {
+  return useQuery({
+    queryKey: menuTaxonomyQueryKey,
+    queryFn: (): Promise<MainCategoryApiItem[]> => getMenuTaxonomyRequest(),
+    enabled,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useMenuTags(enabled = true) {
+  return useQuery({
+    queryKey: menuTagsQueryKey,
+    queryFn: (): Promise<MenuTagApiItem[]> => getMenuTagsRequest(),
+    enabled,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useMenuAllergens(enabled = true) {
+  return useQuery({
+    queryKey: menuAllergensQueryKey,
+    queryFn: (): Promise<MenuAllergenApiItem[]> => getMenuAllergensRequest(),
+    enabled,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+}
+
 export function invalidateMenuCategories(
   queryClient: QueryClient,
   menuId?: number | string | null,
   qrId?: number | string | null,
 ) {
-  const tasks: Promise<unknown>[] = [];
+  const tasks: Promise<unknown>[] = [
+    queryClient.invalidateQueries({ queryKey: menuTaxonomyQueryKey }),
+  ];
   if (menuId != null) {
     tasks.push(queryClient.invalidateQueries({ queryKey: menuCategoriesQueryKey(menuId) }));
   }
   if (qrId != null) {
     tasks.push(queryClient.invalidateQueries({ queryKey: menuCategoriesByQrQueryKey(qrId) }));
   }
-  if (tasks.length === 0) {
-    return Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["menuCategories"], exact: false }),
-      queryClient.invalidateQueries({ queryKey: ["menuCategoriesByQr"], exact: false }),
-    ]);
+  if (menuId == null && qrId == null) {
+    tasks.push(queryClient.invalidateQueries({ queryKey: ["menuCategories"], exact: false }));
+    tasks.push(queryClient.invalidateQueries({ queryKey: ["menuCategoriesByQr"], exact: false }));
   }
   return Promise.all(tasks);
 }
