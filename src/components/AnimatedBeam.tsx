@@ -19,11 +19,12 @@ const outerIcons = [
 ];
 
 const AnimatedBeam = () => {
+  const sectionRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const centerRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [paths, setPaths] = useState<BeamPath[]>([]);
-  const isInView = useInView(containerRef, { once: true, margin: "-50px" });
+  const isInView = useInView(sectionRef, { once: true, margin: "-50px" });
 
   const calculatePaths = useCallback(() => {
     if (!containerRef.current || !centerRef.current) return;
@@ -55,36 +56,56 @@ const AnimatedBeam = () => {
   }, [calculatePaths, isInView]);
 
   return (
-    <section className="py-24 relative overflow-hidden">
-      <div className="container mx-auto px-4">
+    <section ref={sectionRef} className="py-[clamp(3rem,7vw,6rem)] relative overflow-hidden">
+      <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16 space-y-4"
+          className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
-          <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">Entegrasyonlar</p>
-          <h2 className="text-4xl md:text-5xl font-bold">QR ile her şeyi bağlayın</h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
+          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">Entegrasyonlar</p>
+          <h2
+            className="font-bold text-balance"
+            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
+          >
+            QR ile her şeyi bağlayın
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto text-pretty">
             URL, dijital menü, Wi-Fi, vCard ve daha fazlası — tek platformda oluşturun, yapay zeka ile yönetin.
           </p>
         </motion.div>
 
+        <div className="md:hidden grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-md mx-auto">
+          {outerIcons.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-3 min-w-0"
+            >
+              <span className="h-9 w-9 shrink-0 rounded-full border border-border bg-background flex items-center justify-center">
+                <item.icon className="h-4 w-4 text-muted-foreground" />
+              </span>
+              <span className="text-sm font-medium text-foreground truncate">{item.label}</span>
+            </div>
+          ))}
+          <div className="col-span-2 sm:col-span-3 flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-card px-3 py-3.5">
+            <QrCode className="h-5 w-5 text-foreground" />
+            <span className="text-sm font-bold tracking-tight">
+              Algory<span className="text-muted-foreground">QR</span>
+            </span>
+          </div>
+        </div>
+
         <div
           ref={containerRef}
-          className="relative max-w-xl mx-auto aspect-square flex items-center justify-center"
+          className="relative hidden md:flex max-w-xl mx-auto w-full aspect-square items-center justify-center"
         >
-          {/* SVG Beams */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
             {paths.map((path, i) => {
-              const dx = path.to.x - path.from.x;
-              const dy = path.to.y - path.from.y;
-              const length = Math.sqrt(dx * dx + dy * dy);
               const id = `beam-gradient-${i}`;
 
               return (
                 <g key={i}>
-                  {/* Static line */}
                   <line
                     x1={path.from.x}
                     y1={path.from.y}
@@ -93,7 +114,6 @@ const AnimatedBeam = () => {
                     stroke="hsl(var(--border))"
                     strokeWidth="1"
                   />
-                  {/* Animated beam */}
                   <defs>
                     <linearGradient id={id} gradientUnits="userSpaceOnUse"
                       x1={path.from.x} y1={path.from.y}
@@ -152,7 +172,6 @@ const AnimatedBeam = () => {
             })}
           </svg>
 
-          {/* Center node */}
           <motion.div
             ref={centerRef}
             initial={{ scale: 0 }}
@@ -166,10 +185,9 @@ const AnimatedBeam = () => {
             </span>
           </motion.div>
 
-          {/* Outer nodes */}
           {outerIcons.map((item, i) => {
             const angle = (i * 360) / outerIcons.length - 90;
-            const radius = 42; // percentage
+            const radius = 42;
             const x = 50 + radius * Math.cos((angle * Math.PI) / 180);
             const y = 50 + radius * Math.sin((angle * Math.PI) / 180);
 

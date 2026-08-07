@@ -56,10 +56,10 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
-      <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <QrCode className="h-6 w-6 text-foreground" />
-          <span className="text-lg font-bold tracking-tight text-foreground">
+      <div className="container mx-auto flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 max-w-6xl">
+        <Link href="/" className="flex items-center gap-2 min-w-0">
+          <QrCode className="h-5 w-5 sm:h-6 sm:w-6 text-foreground shrink-0" />
+          <span className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
             Algory<span className="text-muted-foreground">QR</span>
           </span>
         </Link>
@@ -122,39 +122,43 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
           )}
         </div>
 
-        {/* Mobile */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
-          <button onClick={() => setOpen(!open)} className="p-2 text-foreground">
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="p-2.5 text-foreground rounded-lg hover:bg-muted/60 transition-colors"
+            aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
+            aria-expanded={open}
+          >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div className="md:hidden glass border-t border-border px-4 pb-4 pt-2 flex flex-col gap-3">
-          <a href="/#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+        <div className="md:hidden glass border-t border-border px-4 sm:px-6 pb-4 pt-2 flex flex-col gap-1 max-h-[min(70vh,calc(100dvh-3.5rem))] overflow-y-auto">
+          <a href="/#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
             Özellikler
           </a>
-          <a href="/#pricing" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+          <a href="/#pricing" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
             Fiyatlandırma
           </a>
-          <Link href="/contact" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2">
+          <Link href="/contact" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
             İletişim
           </Link>
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             {user ? (
               <>
                 <Link href="/dashboard/genel-bakis" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground min-h-11">
                     {userFullName}
                   </Button>
                 </Link>
                 <Button
                   variant="heroOutline"
                   size="sm"
-                  className="w-full"
+                  className="w-full min-h-11"
                   onClick={() => {
                     setOpen(false);
                     logout();
@@ -166,12 +170,12 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
             ) : (
               <>
                 <Link href="/login" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full text-muted-foreground">
+                  <Button variant="ghost" size="sm" className="w-full text-muted-foreground min-h-11">
                     Giriş Yap
                   </Button>
                 </Link>
                 <Link href="/login" onClick={() => setOpen(false)}>
-                  <Button variant="hero" size="sm" className="w-full">
+                  <Button variant="hero" size="sm" className="w-full min-h-11">
                     Ücretsiz Dene
                   </Button>
                 </Link>

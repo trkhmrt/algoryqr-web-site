@@ -37,20 +37,23 @@ const PricingSection = ({ packages = [] }: PricingSectionProps) => {
   const featuredId = featuredPackageId(plans);
   const gridClass =
     plans.length >= 3
-      ? "grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto"
       : plans.length === 2
-        ? "grid md:grid-cols-2 gap-6 max-w-3xl mx-auto"
-        : "grid gap-6 max-w-md mx-auto";
+        ? "grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-3xl mx-auto"
+        : "grid gap-4 sm:gap-6 max-w-md mx-auto";
 
   return (
-    <section id="pricing" className="py-32 relative">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16 space-y-4">
-          <p className="text-sm font-mono text-primary uppercase tracking-widest">Fiyatlandırma</p>
-          <h2 className="text-4xl md:text-5xl font-bold">
+    <section id="pricing" className="py-[clamp(3.5rem,8vw,8rem)] relative">
+      <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <div className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4">
+          <p className="text-xs sm:text-sm font-mono text-primary uppercase tracking-widest">Fiyatlandırma</p>
+          <h2
+            className="font-bold text-balance"
+            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
+          >
             Basit & <span className="text-gradient">Şeffaf</span>
           </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
+          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto text-pretty">
             QR oluşturma, dijital menü ve yapay zeka özelliklerini ihtiyacınıza göre paketleyin.
           </p>
         </div>
@@ -70,41 +73,41 @@ const PricingSection = ({ packages = [] }: PricingSectionProps) => {
               return (
                 <div
                   key={pkg.id}
-                  className={`rounded-xl p-6 flex flex-col ${
+                  className={`rounded-xl p-5 sm:p-6 flex flex-col min-w-0 ${
                     featured
-                      ? "border-2 border-primary/50 bg-card glow-card relative"
+                      ? "border-2 border-primary/50 bg-card glow-card relative sm:col-span-2 lg:col-span-1"
                       : "glass"
                   }`}
                 >
                   {featured && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap">
                       Popüler
                     </div>
                   )}
                   <h3 className="text-lg font-semibold">{pkg.name}</h3>
-                  <div className="mt-3 mb-1">
-                    <span className="text-3xl font-bold">{price}</span>
+                  <div className="mt-3 mb-1 flex flex-wrap items-baseline gap-x-1">
+                    <span className="text-2xl sm:text-3xl font-bold">{price}</span>
                     {period && price !== "Ücretsiz" ? (
                       <span className="text-muted-foreground text-sm">{period}</span>
                     ) : null}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-6">
+                  <p className="text-sm text-muted-foreground mb-5 sm:mb-6 text-pretty">
                     {pkg.description?.trim() || "İşletmeniz için uygun paket"}
                   </p>
 
-                  <ul className="space-y-3 mb-8 flex-1">
+                  <ul className="space-y-2.5 sm:space-y-3 mb-6 sm:mb-8 flex-1">
                     {features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary shrink-0" />
-                        {feature}
+                      <li key={feature} className="flex items-start gap-2 text-sm">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span className="min-w-0">{feature}</span>
                       </li>
                     ))}
                   </ul>
 
-                  <Link href="/register">
+                  <Link href="/register" className="w-full">
                     <Button
                       variant={featured ? "hero" : "heroOutline"}
-                      className="w-full"
+                      className="w-full min-h-11"
                     >
                       {ctaLabel(pkg)}
                     </Button>

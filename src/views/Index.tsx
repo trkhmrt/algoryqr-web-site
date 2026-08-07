@@ -18,17 +18,19 @@ interface IndexProps {
 
 const Index = ({ initialUser = null, packages = [] }: IndexProps) => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar initialUser={initialUser} />
-      <HeroSection />
-      <FeaturesSection />
-      <AnimatedBeam />
-      <StepsCombined />
-      <StatsSection />
-      <TestimonialsSection />
-      <PricingSection packages={packages} />
-      <FaqSection />
-      <CTASection />
+      <main className="w-full">
+        <HeroSection />
+        <FeaturesSection />
+        <AnimatedBeam />
+        <StepsCombined />
+        <StatsSection />
+        <TestimonialsSection />
+        <PricingSection packages={packages} />
+        <FaqSection />
+        <CTASection />
+      </main>
       <Footer />
     </div>
   );

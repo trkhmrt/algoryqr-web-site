@@ -52,39 +52,42 @@ const features = [
 
 const FeaturesSection = () => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
-    <section id="features" ref={ref} className="py-32 relative">
-      <div className="container mx-auto px-4">
+    <section id="features" ref={ref} className="py-[clamp(3.5rem,8vw,8rem)] relative">
+      <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16 space-y-4"
+          className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
-          <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">Özellikler</p>
-          <h2 className="text-4xl md:text-5xl font-bold">
+          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">Özellikler</p>
+          <h2
+            className="font-bold text-balance"
+            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
+          >
             QR, menü ve yapay zeka bir arada
           </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto">
+          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto text-pretty">
             Oluşturmadan yönetmeye, içerikten analitiğe — işletmeniz için gereken araçlar tek platformda.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.08 * i }}
-              className="group rounded-xl border border-border bg-card/50 p-6 hover:border-foreground/20 transition-all duration-300"
+              className="group rounded-xl border border-border bg-card/50 p-4 sm:p-5 md:p-6 hover:border-foreground/20 transition-all duration-300 min-w-0"
             >
-              <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center mb-4 group-hover:bg-foreground/10 transition-colors">
-                <feature.icon className="h-5 w-5 text-foreground/70" />
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-secondary flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-foreground/10 transition-colors">
+                <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-foreground/70" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+              <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2">{feature.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}

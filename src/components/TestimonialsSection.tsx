@@ -26,33 +26,38 @@ const testimonials = [
 
 const TestimonialsSection = () => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const isInView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section ref={ref} className="py-32">
-      <div className="container mx-auto px-4">
+    <section ref={ref} className="py-[clamp(3.5rem,8vw,8rem)]">
+      <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16 space-y-4"
+          className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
-          <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">Müşteri Yorumları</p>
-          <h2 className="text-4xl md:text-5xl font-bold">
+          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">Müşteri Yorumları</p>
+          <h2
+            className="font-bold text-balance"
+            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
+          >
             Kullanıcılarımız ne diyor?
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 max-w-5xl mx-auto">
           {testimonials.map((t, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.15 * i }}
-              className="rounded-xl border border-border bg-card p-6 space-y-4"
+              className={`rounded-xl border border-border bg-card p-4 sm:p-5 md:p-6 space-y-3 sm:space-y-4 min-w-0 ${
+                i === 2 ? "sm:col-span-2 lg:col-span-1" : ""
+              }`}
             >
-              <p className="text-sm text-muted-foreground leading-relaxed">"{t.quote}"</p>
+              <p className="text-sm text-muted-foreground leading-relaxed text-pretty">&ldquo;{t.quote}&rdquo;</p>
               <div>
                 <p className="text-sm font-semibold">{t.name}</p>
                 <p className="text-xs text-muted-foreground">{t.role}</p>
