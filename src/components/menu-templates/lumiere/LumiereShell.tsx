@@ -25,6 +25,7 @@ export function LumiereShell({
       <style>{LUMIERE_STYLES}</style>
       <LumiereTopNav
         businessName={menu.businessName}
+        logoUrl={menu.logoUrl}
         variant={topVariant}
         onBack={onBack}
         onHome={onHome}

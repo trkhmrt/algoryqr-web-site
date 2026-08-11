@@ -21,17 +21,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Token içinde userId yok" }, { status: 401 });
     }
 
-    const includeImage =
-      new URL(req.url).searchParams.get("includeImage") === "true" ? "true" : "false";
+    const searchParams = new URL(req.url).searchParams;
+    const includeImage = searchParams.get("includeImage") === "true" ? "true" : "false";
+    const page = searchParams.get("page") ?? "0";
+    const size = searchParams.get("size") ?? "5";
 
     const upstream = await axios.get(`${QR_API_BASE}/user/${userId}`, {
       headers: buildUpstreamAuthHeaders(accessToken),
-      params: { includeImage },
+      params: { includeImage, page, size },
       validateStatus: () => true,
       timeout: 20_000,
     });
 
-    return NextResponse.json(upstream.data ?? [], { status: upstream.status });
+    return NextResponse.json(upstream.data ?? { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0, hasNext: false }, { status: upstream.status });
   } catch (error) {
     if (error instanceof AxiosError) {
       if (error.code === "ECONNABORTED") {

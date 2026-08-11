@@ -227,3 +227,54 @@
     transform: rotate(360deg);
   }
 }
+
+@keyframes chef-chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-chef-chat-in {
+  animation: chef-chat-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes chef-fab-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+.animate-chef-fab-pulse {
+  animation: chef-fab-pulse 2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes chef-typing-dot {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.animate-chef-typing-dot {
+  animation: chef-typing-dot 1.05s ease-in-out infinite;
+}

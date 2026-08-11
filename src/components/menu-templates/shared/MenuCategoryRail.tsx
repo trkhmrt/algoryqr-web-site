@@ -28,7 +28,7 @@ export function MenuCategoryRail({
   return (
     <nav
       className={cn(
-        "-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin",
+        "-mx-1 flex gap-2 overflow-x-auto px-1 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
       aria-label="Kategoriler"

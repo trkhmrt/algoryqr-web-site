@@ -16,8 +16,8 @@ export function useUserQrs(
   return useQuery({
     queryKey: userQrsQueryKey(id, includeImage),
     queryFn: async (): Promise<DashboardQrItem[]> => {
-      const response = await getUserQrsRequest(id, { includeImage });
-      return response.map(mapUserQrToDashboardItem);
+      const response = await getUserQrsRequest(id, { includeImage, page: 0, size: 50 });
+      return response.content.map(mapUserQrToDashboardItem);
     },
     enabled: true,
     staleTime: 30_000,

@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +9,11 @@ import {
   getMenuTemplateOptions,
   type MenuThemeId,
 } from "@/components/menu-templates/registry";
+import { DEFAULT_CHEF_DISPLAY_NAME } from "@/lib/chef/chef-identity";
+import { ApiError, getChefAvatarsRequest, type ChefAvatarApiItem } from "@/lib/api";
+import { MenuLogoField } from "@/components/dashboard/menu/MenuLogoField";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type { MenuThemeId };
 
@@ -19,6 +24,9 @@ export type MenuData = {
   email: string;
   address: string;
   themeId: MenuThemeId;
+  chefName: string;
+  chefAvatarKey: string;
+  logoUrl: string;
 };
 
 export const createInitialMenuData = (): MenuData => ({
@@ -28,6 +36,9 @@ export const createInitialMenuData = (): MenuData => ({
   email: "",
   address: "",
   themeId: DEFAULT_MENU_THEME_ID,
+  chefName: "",
+  chefAvatarKey: "default",
+  logoUrl: "",
 });
 
 const THEME_OPTIONS = getMenuTemplateOptions().map((theme) => ({
@@ -40,10 +51,33 @@ type MenuDetailsProps = {
   value: MenuData;
   onChange: (value: MenuData) => void;
   excludeMenuId?: number;
+  menuId?: number | null;
 };
 
-export function MenuDetails({ value, onChange }: MenuDetailsProps) {
+export function MenuDetails({ value, onChange, menuId }: MenuDetailsProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [avatars, setAvatars] = useState<ChefAvatarApiItem[]>([]);
+  const [avatarsError, setAvatarsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const items = await getChefAvatarsRequest();
+        if (cancelled) return;
+        setAvatars(items);
+        setAvatarsError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setAvatarsError(
+          error instanceof ApiError ? error.message : "Şef avatarları yüklenemedi.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedTheme =
     THEME_OPTIONS.find((theme) => theme.id === value.themeId) ?? THEME_OPTIONS[0];
@@ -59,6 +93,13 @@ export function MenuDetails({ value, onChange }: MenuDetailsProps) {
           onChange={(e) => onChange({ ...value, businessName: e.target.value })}
         />
       </div>
+      {menuId != null && menuId > 0 ? (
+        <MenuLogoField
+          menuId={menuId}
+          value={value.logoUrl}
+          onChange={(logoUrl) => onChange({ ...value, logoUrl: logoUrl ?? "" })}
+        />
+      ) : null}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Slogan</Label>
         <Input
@@ -67,6 +108,50 @@ export function MenuDetails({ value, onChange }: MenuDetailsProps) {
           value={value.slogan}
           onChange={(e) => onChange({ ...value, slogan: e.target.value })}
         />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Şef adı</Label>
+        <Input
+          placeholder={DEFAULT_CHEF_DISPLAY_NAME}
+          className="bg-background"
+          value={value.chefName}
+          onChange={(e) => onChange({ ...value, chefName: e.target.value })}
+          maxLength={80}
+        />
+        <p className="text-xs text-muted-foreground">
+          Boş bırakılırsa: {DEFAULT_CHEF_DISPLAY_NAME}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Şef avatarı</Label>
+        {avatarsError ? (
+          <p className="text-xs text-destructive">{avatarsError}</p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {avatars.map((avatar) => {
+            const selected = value.chefAvatarKey === avatar.key;
+            return (
+              <button
+                key={avatar.key}
+                type="button"
+                title={avatar.label}
+                onClick={() => onChange({ ...value, chefAvatarKey: avatar.key })}
+                className={cn(
+                  "relative h-16 w-16 overflow-hidden rounded-full border transition",
+                  selected
+                    ? "border-foreground ring-2 ring-foreground/20"
+                    : "border-border hover:border-foreground/30",
+                )}
+              >
+                <img
+                  src={avatar.imageUrl}
+                  alt={avatar.label}
+                  className="h-full w-full object-cover object-top"
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
@@ -111,23 +196,32 @@ export function MenuDetails({ value, onChange }: MenuDetailsProps) {
             Önizle
           </Button>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {THEME_OPTIONS.map((theme) => (
-            <button
-              key={theme.id}
-              type="button"
-              onClick={() => onChange({ ...value, themeId: theme.id })}
-              className={cn(
-                "rounded-lg border p-3 text-left transition-all",
-                value.themeId === theme.id ? "border-foreground/40 ring-1 ring-foreground/20" : "border-border hover:border-foreground/20",
-              )}
-            >
-              <div className={cn("mb-2 h-10 rounded-md px-2 py-1 text-[10px] font-medium", theme.preview)}>
-                {theme.label}
-              </div>
-              <span className="text-xs font-medium">{theme.label}</span>
-            </button>
-          ))}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {THEME_OPTIONS.map((theme) => {
+            const selected = value.themeId === theme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                title={theme.label}
+                onClick={() => onChange({ ...value, themeId: theme.id })}
+                className={cn(
+                  "flex min-w-0 flex-col gap-2 rounded-lg border p-2.5 text-left transition-all",
+                  selected
+                    ? "border-foreground/40 ring-1 ring-foreground/20"
+                    : "border-border hover:border-foreground/20",
+                )}
+              >
+                <div
+                  className={cn("relative h-12 w-full overflow-hidden rounded-md", theme.preview)}
+                  aria-hidden
+                >
+                  <span className="absolute bottom-1.5 left-1.5 h-1.5 w-6 rounded-full bg-current opacity-80" />
+                </div>
+                <span className="truncate text-xs font-medium leading-tight">{theme.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

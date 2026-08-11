@@ -57,7 +57,12 @@ export function MenuTemplateRenderer({
           themeId={themeId}
           analytics={analytics}
         />
-        <MenuChefFab menuId={menu.menuId} />
+        <MenuChefFab
+          menuId={menu.menuId}
+          chefName={menu.chefName}
+          chefDisplayName={menu.chefDisplayName}
+          chefAvatarUrl={menu.chefAvatarUrl}
+        />
       </MenuProductNavigatorProvider>
     </MenuProductFeed>
   );

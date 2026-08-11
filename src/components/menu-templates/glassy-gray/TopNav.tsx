@@ -1,5 +1,6 @@
 type TopNavProps = {
   businessName: string;
+  logoUrl?: string | null;
   active: "home" | "menu";
   showSearch?: boolean;
   searchValue?: string;
@@ -11,6 +12,7 @@ type TopNavProps = {
 
 export function GlassyGrayTopNav({
   businessName,
+  logoUrl,
   active,
   showSearch = false,
   searchValue = "",
@@ -36,9 +38,18 @@ export function GlassyGrayTopNav({
           <button
             type="button"
             onClick={onHome}
-            className="gg-display gg-primary truncate text-left text-lg font-semibold tracking-tight"
+            className="flex min-w-0 items-center gap-2 text-left"
           >
-            {businessName}
+            {logoUrl?.trim() ? (
+              <img
+                src={logoUrl.trim()}
+                alt=""
+                className="h-8 w-8 shrink-0 rounded-lg bg-white/90 object-contain p-0.5"
+              />
+            ) : null}
+            <span className="gg-display gg-primary truncate text-lg font-semibold tracking-tight">
+              {businessName}
+            </span>
           </button>
         </div>
 

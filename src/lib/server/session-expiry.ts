@@ -8,25 +8,30 @@ type SessionRow = {
   refreshExpiresAt?: string | null;
 };
 
+type SessionPage = {
+  content?: SessionRow[];
+};
+
 export async function fetchCurrentSessionRefreshExpiresAt(
   accessToken: string,
 ): Promise<number | undefined> {
   try {
     const userId = getUserIdFromAccessToken(accessToken);
-    const upstream = await axios.get<SessionRow[]>(`${API_BASE_URL}/auth/sessions`, {
+    const upstream = await axios.get<SessionPage>(`${API_BASE_URL}/auth/sessions`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
         ...(userId != null ? { "X-User-Id": String(userId) } : {}),
       },
+      params: { page: 0, size: 50 },
       validateStatus: () => true,
       timeout: 10_000,
     });
-    if (upstream.status < 200 || upstream.status >= 300 || !Array.isArray(upstream.data)) {
+    if (upstream.status < 200 || upstream.status >= 300) {
       return undefined;
     }
-    const current =
-      upstream.data.find((session) => session.current === true) ?? upstream.data[0];
+    const rows = Array.isArray(upstream.data?.content) ? upstream.data.content : [];
+    const current = rows.find((session) => session.current === true) ?? rows[0];
     const exp = isoToEpochSeconds(current?.refreshExpiresAt ?? null);
     return exp ?? undefined;
   } catch {

@@ -46,6 +46,8 @@ export default function DigitalMenuCreateView() {
             email: menu.email.trim() || undefined,
             address: menu.address.trim() || undefined,
             themeId: menu.themeId,
+            chefName: menu.chefName.trim() || undefined,
+            chefAvatarKey: menu.chefAvatarKey.trim() || undefined,
           },
           [],
         ),

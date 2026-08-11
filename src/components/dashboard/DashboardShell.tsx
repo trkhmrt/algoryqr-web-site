@@ -117,16 +117,16 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   return (
     <DashboardBannersProvider onBanner={addBanner}>
       {bannerPortal}
-      <div className="flex min-h-screen bg-background">
-        <aside className="hidden w-64 flex-col gap-6 border-r border-border bg-card/50 p-6 lg:flex">
-          <Link href="/" className="flex items-center gap-2">
+      <div className="flex h-svh overflow-hidden bg-background">
+        <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card/50 p-6 lg:flex">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <QrCode className="h-6 w-6 text-foreground" />
             <span className="text-lg font-bold">
               Algory<span className="text-muted-foreground">QR</span>
             </span>
           </Link>
 
-          <nav className="flex flex-1 flex-col gap-1">
+          <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
             {DASHBOARD_NAV_ITEMS.map((item) => {
               const Icon = NAV_ICONS[item.key];
               const active = isDashboardNavActive(pathname, item.href);
@@ -148,7 +148,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             })}
           </nav>
 
-          <div className="border-t border-border pt-4">
+          <div className="mt-6 shrink-0 border-t border-border pt-4">
             <Button
               variant="ghost"
               size="sm"
@@ -161,7 +161,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
           </div>
         </aside>
 
-        <main className="relative flex-1 overflow-auto">
+        <main className="relative min-h-0 flex-1 overflow-y-auto">
           <header className="flex items-center justify-between border-b border-border bg-card/50 px-4 py-3 lg:hidden">
             <Link href="/" className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-foreground" />

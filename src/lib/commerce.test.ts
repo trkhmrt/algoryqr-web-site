@@ -6,6 +6,7 @@ import {
   calculateTrialDaysRemaining,
   cardSchema,
   checkoutSchema,
+  DEFAULT_IDENTITY_NUMBER,
   formatCardNumber,
   getBin,
   mapTrialStatus,
@@ -15,8 +16,10 @@ describe("commerce schemas and logic", () => {
   it("validates a real individual billing address", () => {
     const result = billingAddressSchema.safeParse({
       type: "INDIVIDUAL",
+      title: "Ev",
       name: "Tarık",
       surname: "Hamarat",
+      tckn: "10000000146",
       country: "Türkiye",
       city: "İstanbul",
       district: "Kadıköy",
@@ -24,20 +27,89 @@ describe("commerce schemas and logic", () => {
       postcode: "34710",
       email: "tarik@example.com",
       phone: "+905551112233",
-      taxpayerInvoice: false,
       defaultAddress: true,
     });
 
     expect(result.success).toBe(true);
   });
 
-  it("nulls unused identity fields for individual addresses", () => {
+  it("allows individual addresses without TCKN", () => {
+    const result = billingAddressSchema.safeParse({
+      type: "INDIVIDUAL",
+      title: "Ev",
+      name: "Tarık",
+      surname: "Hamarat",
+      tckn: "",
+      country: "Türkiye",
+      city: "İstanbul",
+      district: "Kadıköy",
+      address: "Caferağa Mahallesi Moda Caddesi No 1",
+      postcode: "34710",
+      email: "tarik@example.com",
+      phone: "+905551112233",
+      defaultAddress: true,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects incomplete TCKN when provided", () => {
+    const result = billingAddressSchema.safeParse({
+      type: "INDIVIDUAL",
+      title: "Ev",
+      name: "Tarık",
+      surname: "Hamarat",
+      tckn: "123",
+      country: "Türkiye",
+      city: "İstanbul",
+      district: "Kadıköy",
+      address: "Caferağa Mahallesi Moda Caddesi No 1",
+      postcode: "34710",
+      email: "tarik@example.com",
+      phone: "+905551112233",
+      defaultAddress: true,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("defaults missing TCKN and nulls unused corporate fields for individual addresses", () => {
     const payload = buildBillingAddressPayload({
       type: "INDIVIDUAL",
+      title: "Ev",
       name: "Tarik",
       surname: "Hamarat",
       legalName: "",
       tckn: "",
+      vkn: "1234567890",
+      taxOffice: "",
+      mersis: "",
+      country: "Turkiye",
+      city: "Istanbul",
+      district: "Kadikoy",
+      address: "Caferaga Mahallesi Moda Caddesi No 1",
+      postcode: "34710",
+      email: "tarik@example.com",
+      phone: "+905551112233",
+      defaultAddress: true,
+    });
+
+    expect(payload.vkn).toBeNull();
+    expect(payload.tckn).toBe(DEFAULT_IDENTITY_NUMBER);
+    expect(payload.taxpayerInvoice).toBe(false);
+    expect(payload.legalName).toBeNull();
+    expect(payload.name).toBe("Tarik");
+    expect(payload.title).toBe("Ev");
+  });
+
+  it("persists provided TCKN for individual addresses", () => {
+    const payload = buildBillingAddressPayload({
+      type: "INDIVIDUAL",
+      title: "Ev",
+      name: "Tarik",
+      surname: "Hamarat",
+      legalName: "",
+      tckn: "10000000146",
       vkn: "",
       taxOffice: "",
       mersis: "",
@@ -48,14 +120,10 @@ describe("commerce schemas and logic", () => {
       postcode: "34710",
       email: "tarik@example.com",
       phone: "+905551112233",
-      taxpayerInvoice: false,
       defaultAddress: true,
     });
 
-    expect(payload.vkn).toBeNull();
-    expect(payload.tckn).toBeNull();
-    expect(payload.legalName).toBeNull();
-    expect(payload.name).toBe("Tarik");
+    expect(payload.tckn).toBe("10000000146");
   });
 
   it("rejects incomplete card data", () => {

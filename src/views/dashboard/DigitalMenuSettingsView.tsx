@@ -48,6 +48,9 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
       email: profile.email ?? "",
       address: profile.address ?? "",
       themeId,
+      chefName: profile.chefName ?? "",
+      chefAvatarKey: profile.chefAvatarKey ?? "default",
+      logoUrl: profile.logoUrl ?? "",
     });
     setMenuHydratedFor(profile.menuId);
   }, [menuHydratedFor, profile]);
@@ -77,6 +80,8 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
         email: menu.email.trim(),
         address: menu.address.trim(),
         themeId: menu.themeId,
+        chefName: menu.chefName.trim(),
+        chefAvatarKey: menu.chefAvatarKey.trim() || "default",
       });
       await invalidateMenuByQr(queryClient, qrId);
       notify("info", "Menü bilgileri güncellendi.");
@@ -139,7 +144,7 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
           {menuId != null ? (
             <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
               <div className="space-y-5">
-                <MenuDetails value={menu} onChange={setMenu} excludeMenuId={menuId} />
+                <MenuDetails value={menu} onChange={setMenu} excludeMenuId={menuId} menuId={menuId} />
                 <div className="flex justify-end">
                   <Button type="button" disabled={saving} onClick={() => void saveProfile()}>
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kaydet"}

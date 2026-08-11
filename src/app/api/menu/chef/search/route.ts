@@ -2,6 +2,7 @@ import axios, { AxiosError } from "axios";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { normalizeChefProducts } from "@/lib/chef/normalize-chef-products";
 import { QR_AGENT_BASE_URL } from "@/lib/config";
 
 const bodySchema = z.object({
@@ -14,6 +15,7 @@ type AgentChatResponse = {
   reply?: string;
   conversationId?: string;
   message?: string;
+  products?: unknown;
 };
 
 export async function POST(req: Request) {
@@ -55,6 +57,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       reply: upstream.data.reply ?? "",
       conversationId: upstream.data.conversationId,
+      products: normalizeChefProducts(upstream.data.products),
     });
   } catch (error) {
     if (error instanceof AxiosError) {

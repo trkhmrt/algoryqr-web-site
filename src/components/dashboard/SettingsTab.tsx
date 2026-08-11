@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,10 +27,14 @@ import { ChangePasswordDialog } from "@/components/dashboard/ChangePasswordDialo
 import { ChangeEmailDialog } from "@/components/dashboard/ChangeEmailDialog";
 import { ApiError } from "@/lib/api";
 import { getStoredUser, setStoredUser } from "@/lib/api/storage";
-import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
+import { useUserSessions } from "@/hooks/use-user-sessions";
 import { useSubscription } from "@/hooks/use-subscription";
 import { formatDaysUntilExpiry } from "@/lib/package-display";
 import { isDateUsablePurchase } from "@/lib/product-access";
+import {
+  formatSessionDate,
+  sessionTitle,
+} from "@/lib/user-sessions-display";
 import { cn } from "@/lib/utils";
 
 const NEXT_REFRESH_AT_KEY = "algory_next_refresh_at";
@@ -53,29 +58,7 @@ interface SettingsTabProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
 }
 
-function formatSessionDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(d);
-}
-
-function sessionTitle(session: UserSessionRow): string {
-  const device = session.device?.trim();
-  if (device) return device;
-  const type = session.deviceType?.trim();
-  if (type) return type;
-  return "Bilinmeyen cihaz";
-}
-
-function sessionStatusLabel(session: UserSessionRow): string {
-  if (session.revoked) return "İptal edildi";
-  if (session.expired) return "Süresi doldu";
-  return "Pasif";
-}
+const PREVIEW_SESSION_LIMIT = 5;
 
 function formatCountdown(expiresAt: number): string {
   const now = Math.floor(Date.now() / 1000);
@@ -163,21 +146,13 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const [weeklyReport, setWeeklyReport] = useState(false);
   const [marketingEmails, setMarketingEmails] = useState(false);
   const [notificationsSaving, setNotificationsSaving] = useState(false);
-  const [showPastSessions, setShowPastSessions] = useState(false);
   const {
-    sessions,
+    sessions: previewSessions,
     loading: sessionsLoading,
     error: sessionsError,
     revokingId,
     revoke: revokeSession,
-  } = useUserSessions(view === "security");
-
-  const activeSessions = sessions.filter((session) => session.active);
-  const pastSessions = sessions.filter((session) => !session.active);
-
-  useEffect(() => {
-    if (view !== "security") setShowPastSessions(false);
-  }, [view]);
+  } = useUserSessions(view === "security", { page: 0, size: PREVIEW_SESSION_LIMIT });
 
   const fetchTokenExp = useCallback(() => {
     setTokenLoading(true);
@@ -990,26 +965,22 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
               <Monitor className="h-4 w-4 text-muted-foreground" /> Aktif Oturumlar
             </h2>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setShowPastSessions((value) => !value)}
+            <Link
+              href={DASHBOARD_ROUTES.accountSessions}
+              className="text-sm text-primary underline-offset-4 hover:underline"
             >
-              <History className="h-3.5 w-3.5" />
-              {showPastSessions ? "Geçmişi gizle" : "Geçmiş oturumları göster"}
-            </Button>
+              Tüm oturumlar
+            </Link>
           </div>
 
           {sessionsLoading ? (
             <p className="text-sm text-muted-foreground">Oturumlar yükleniyor…</p>
           ) : sessionsError ? (
             <p className="text-sm text-destructive">{sessionsError}</p>
-          ) : activeSessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aktif oturum bulunamadı.</p>
+          ) : previewSessions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Oturum bulunamadı.</p>
           ) : (
-            activeSessions.map((session) => (
+            previewSessions.map((session) => (
               <div
                 key={session.sessionId}
                 className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0"
@@ -1026,7 +997,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium shrink-0">
                     Bu cihaz
                   </span>
-                ) : (
+                ) : session.active ? (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1048,44 +1019,15 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                   >
                     {revokingId === session.sessionId ? "Sonlandırılıyor…" : "Sonlandır"}
                   </Button>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium shrink-0">
+                    Pasif
+                  </span>
                 )}
               </div>
             ))
           )}
 
-          {showPastSessions && (
-            <div className="space-y-3 border-t border-border pt-4">
-              <h3 className="text-sm font-medium text-foreground">Geçmiş oturumlar</h3>
-              {pastSessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Geçmiş oturum bulunamadı.</p>
-              ) : (
-                pastSessions.map((session) => (
-                  <div
-                    key={session.sessionId}
-                    className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm text-foreground">{sessionTitle(session)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {[
-                          session.ipAddress,
-                          `Giriş: ${formatSessionDate(session.loggedInAt)}`,
-                          session.revokedAt
-                            ? `İptal: ${formatSessionDate(session.revokedAt)}`
-                            : `Bitiş: ${formatSessionDate(session.refreshExpiresAt)}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium shrink-0">
-                      {sessionStatusLabel(session)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </div>
       </div>
     );

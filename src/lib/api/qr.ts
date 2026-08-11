@@ -82,6 +82,15 @@ export interface UserQrApiItem {
   createdAt: string;
 }
 
+export interface UserQrPageApiResponse {
+  content: UserQrApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
 type CreateQrGatewayResponse = {
   imgSrc: string;
 };
@@ -112,11 +121,13 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
 
 export async function getUserQrsRequest(
   userId: number | string,
-  options?: { includeImage?: boolean },
-): Promise<UserQrApiItem[]> {
+  options?: { includeImage?: boolean; page?: number; size?: number },
+): Promise<UserQrPageApiResponse> {
   const includeImage = options?.includeImage === true;
-  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`, {
-    params: { includeImage },
+  const page = options?.page ?? 0;
+  const size = options?.size ?? 5;
+  const response = await api.get<UserQrPageApiResponse>(`/qr/user/${userId}`, {
+    params: { includeImage, page, size },
   });
   return response.data;
 }

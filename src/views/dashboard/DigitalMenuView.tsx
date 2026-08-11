@@ -119,7 +119,7 @@ export default function DigitalMenuView() {
                 <Link
                   key={menuQr.id}
                   href={DASHBOARD_ROUTES.digitalMenuEdit(menuQr.id)}
-                  className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/50"
+                  className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-foreground">{menuQr.name}</p>

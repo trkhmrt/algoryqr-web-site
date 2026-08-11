@@ -5,6 +5,8 @@ export type MenuCreateProfile = {
   email?: string;
   address?: string;
   themeId: string;
+  chefName?: string;
+  chefAvatarKey?: string;
 };
 
 export type MenuCreateProduct = {
@@ -26,6 +28,8 @@ export function buildMenuCreateDetails(
     email: menu.email,
     address: menu.address,
     themeId: menu.themeId,
+    chefName: menu.chefName,
+    chefAvatarKey: menu.chefAvatarKey,
     products,
   };
 }

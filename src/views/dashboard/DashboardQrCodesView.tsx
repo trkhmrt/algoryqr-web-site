@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   QrCode, Plus, Eye, Calendar, Download, Share2, Trash2, Edit, Copy,
   Link as LinkIcon, Wifi, Mail, Phone, FileText, MapPin, Paintbrush, RotateCcw, Check, ArrowLeft,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import PackageUsageCard from "@/components/dashboard/PackageUsageCard";
@@ -71,9 +72,10 @@ interface DashboardQrCodesViewProps {
   initialUser?: StoredUser | null;
 }
 
+const QR_PAGE_SIZE = 5;
+
 const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCodesViewProps) => {
   const tooltipStyle = useTooltipStyle();
-   // Arka planda access token süresi bitmeden refresh (şu an refresh çağrısı yorumda)
   const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
 
   const router = useRouter();
@@ -83,8 +85,10 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const { data: accessProfile } = useAccessProfile();
   const canCreateQr = hasScope(accessProfile, "QR_CREATE_OWNER");
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  // QR Creation state
   const [selectedQrType, setSelectedQrType] = useState<QrTypeValue>("link");
   const [qrName, setQrName] = useState("");
   const [qrTypeData, setQrTypeData] = useState<QrTypeData>(() => createInitialQrTypeData());
@@ -119,9 +123,20 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
     setIsLoading(true);
     try {
-      const response = await getUserQrsRequest(user?.id ?? "me", { includeImage: true });
-      const mapped = response.map(mapUserQrToDashboardItem);
+      const pageSize = mode === "detail" ? 50 : QR_PAGE_SIZE;
+      const pageIndex = mode === "detail" ? 0 : page;
+      const response = await getUserQrsRequest(user?.id ?? "me", {
+        includeImage: true,
+        page: pageIndex,
+        size: pageSize,
+      });
+      const mapped = (response.content ?? []).map(mapUserQrToDashboardItem);
       setUserQrs(mapped);
+      setTotalElements(response.totalElements ?? mapped.length);
+      setTotalPages(response.totalPages ?? 0);
+      if (mode === "list" && mapped.length === 0 && pageIndex > 0) {
+        setPage((current) => Math.max(0, current - 1));
+      }
       return mapped;
     } catch (error) {
       const message = error instanceof Error ? error.message : "QR kodlar getirilemedi.";
@@ -130,13 +145,13 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     } finally {
       setIsLoading(false);
     }
-  }, [notify, user?.id]);
+  }, [mode, notify, page, user?.id]);
 
   const handleDeleteQr = useCallback(async (qr: DashboardQrItem) => {
     try {
       await deleteQrRequest(qr.id);
-      setUserQrs((prev) => prev.filter((item) => item.id !== qr.id));
       setSelectedQR((prev) => (prev?.id === qr.id ? null : prev));
+      await fetchUserQrs();
       setIsEditing(false);
       await invalidatePackageUsage(queryClient);
       router.push(DASHBOARD_ROUTES.qrCodes);
@@ -145,7 +160,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       const message = error instanceof Error ? error.message : "QR kod silinemedi.";
       notify("danger", message);
     }
-  }, [notify, queryClient, router]);
+  }, [fetchUserQrs, notify, queryClient, router]);
 
   const handleCopyQr = useCallback(async (qr: DashboardQrItem) => {
     try {
@@ -381,7 +396,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h1 className="text-2xl font-semibold tracking-tight text-foreground">QR Kodlarım</h1>
-                  <p className="text-sm text-muted-foreground">{userQrs.length} QR kod oluşturuldu</p>
+                  <p className="text-sm text-muted-foreground">{totalElements} QR kod oluşturuldu</p>
                 </div>
                 <Button variant="hero" size="sm" className="gap-2 self-start sm:self-auto" asChild>
                   <Link href={DASHBOARD_ROUTES.qrCodesNew}>
@@ -474,6 +489,38 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                   </Card>
                 ))}
               </div>
+
+              {totalElements > QR_PAGE_SIZE ? (
+                <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    Sayfa {page + 1} / {Math.max(1, totalPages)}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      disabled={page <= 0}
+                      onClick={() => setPage((value) => Math.max(0, value - 1))}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Önceki
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      disabled={page + 1 >= totalPages}
+                      onClick={() => setPage((value) => value + 1)}
+                    >
+                      Sonraki
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 

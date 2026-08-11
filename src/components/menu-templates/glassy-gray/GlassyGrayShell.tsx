@@ -60,6 +60,7 @@ export function GlassyGrayShell({
 
       <GlassyGrayTopNav
         businessName={menu.businessName}
+        logoUrl={menu.logoUrl}
         active={activeNav}
         showSearch={showSearch}
         searchValue={searchValue}

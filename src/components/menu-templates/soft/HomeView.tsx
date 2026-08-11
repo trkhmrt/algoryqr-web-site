@@ -6,6 +6,7 @@ import { MapPin, Phone } from "lucide-react";
 import type { MainCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import {
   DenseProductRow,
+  MenuBrandLogo,
   MenuProductScrollSentinel,
   MenuRatingControl,
   searchMenuProducts,
@@ -88,6 +89,14 @@ export function SoftHomeView({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--sf-bg)] via-[color-mix(in_srgb,var(--sf-fg)_35%,transparent)] to-[color-mix(in_srgb,var(--sf-fg)_45%,transparent)]" />
         <div className="relative z-10 flex h-full flex-col justify-end px-4 pb-5 pt-8">
+          <div className="mb-3">
+            <MenuBrandLogo
+              logoUrl={menu.logoUrl}
+              businessName={menu.businessName}
+              size={56}
+              className="bg-white/95"
+            />
+          </div>
           <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/80">
             Dijital Menü
           </p>

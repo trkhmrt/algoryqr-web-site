@@ -64,7 +64,10 @@ export default function DashboardOverviewView() {
   const { data: profile, isLoading: profileLoading } = useMyProfile();
   const { data: qrs, isLoading: qrsLoading } = useUserQrs("me");
   const { menuQrs, loading: menusLoading } = useDigitalMenuOptions();
-  const { sessions, loading: sessionsLoading, error: sessionsError } = useUserSessions(true);
+  const { sessions, loading: sessionsLoading, error: sessionsError } = useUserSessions(true, {
+    page: 0,
+    size: 50,
+  });
 
   const recentPurchases = (subscription.data?.purchases ?? []).slice(0, 5);
   const qrList = qrs ?? [];

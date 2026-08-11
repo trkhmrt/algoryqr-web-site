@@ -7,6 +7,7 @@ export type BillingAddressType = "INDIVIDUAL" | "CORPORATE";
 export interface BillingAddress {
   id: number;
   type: BillingAddressType;
+  title?: string | null;
   name?: string | null;
   surname?: string | null;
   legalName?: string | null;
@@ -53,8 +54,11 @@ export interface DigitalMenuTrialStatus {
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
+export const DEFAULT_IDENTITY_NUMBER = "11111111111";
+
 export const billingAddressSchema = z.object({
   type: z.enum(["INDIVIDUAL", "CORPORATE"]),
+  title: z.string().trim().min(1, "Adres adı zorunludur").max(80, "Adres adı en fazla 80 karakter olabilir"),
   name: z.string().trim().optional(),
   surname: z.string().trim().optional(),
   legalName: z.string().trim().optional(),
@@ -69,13 +73,13 @@ export const billingAddressSchema = z.object({
   postcode: z.string().trim().min(3, "Posta kodu zorunludur"),
   email: z.string().trim().email("Geçerli e-posta girin"),
   phone: requiredText("Telefon zorunludur"),
-  taxpayerInvoice: z.boolean(),
   defaultAddress: z.boolean(),
 }).superRefine((value, context) => {
   if (value.type === "INDIVIDUAL") {
     if (!value.name?.trim()) context.addIssue({ code: "custom", path: ["name"], message: "Ad zorunludur" });
     if (!value.surname?.trim()) context.addIssue({ code: "custom", path: ["surname"], message: "Soyad zorunludur" });
-    if (value.taxpayerInvoice && !/^\d{11}$/.test(value.tckn ?? "")) {
+    const tckn = value.tckn?.trim() ?? "";
+    if (tckn.length > 0 && !/^\d{11}$/.test(tckn)) {
       context.addIssue({ code: "custom", path: ["tckn"], message: "TCKN 11 haneli olmalıdır" });
     }
   }
@@ -93,18 +97,20 @@ function optionalText(value: string | undefined | null): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+export function resolveIdentityNumber(tckn?: string | null, vkn?: string | null): string {
+  return optionalText(tckn) ?? optionalText(vkn) ?? DEFAULT_IDENTITY_NUMBER;
+}
+
 export function buildBillingAddressPayload(values: BillingAddressForm) {
   return {
     type: values.type,
+    title: values.title.trim(),
     name: optionalText(values.name),
     surname: optionalText(values.surname),
     legalName: optionalText(values.legalName),
     taxOffice: optionalText(values.taxOffice),
     mersis: optionalText(values.mersis),
-    tckn:
-      values.type === "INDIVIDUAL" && values.taxpayerInvoice
-        ? optionalText(values.tckn)
-        : null,
+    tckn: values.type === "INDIVIDUAL" ? resolveIdentityNumber(values.tckn) : null,
     vkn: values.type === "CORPORATE" ? optionalText(values.vkn) : null,
     country: values.country.trim(),
     city: values.city.trim(),
@@ -113,7 +119,7 @@ export function buildBillingAddressPayload(values: BillingAddressForm) {
     postcode: values.postcode.trim(),
     email: values.email.trim(),
     phone: values.phone.trim(),
-    taxpayerInvoice: values.taxpayerInvoice,
+    taxpayerInvoice: false,
     defaultAddress: values.defaultAddress,
   };
 }
@@ -202,6 +208,7 @@ export function calculateTrialDaysRemaining(status: DigitalMenuTrialStatus, now 
 }
 
 export function displayBillingName(address: BillingAddress): string {
+  if (address.title?.trim()) return address.title.trim();
   if (address.type === "CORPORATE") return address.legalName || "Kurumsal adres";
   return [address.name, address.surname].filter(Boolean).join(" ") || "Bireysel adres";
 }

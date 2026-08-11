@@ -15,6 +15,7 @@ export { MenuPartySizeControl } from "./MenuPartySizeControl";
 export { MenuRatingControl } from "./MenuRatingControl";
 export { MenuProductFeed } from "./MenuProductFeed";
 export { MenuProductScrollSentinel } from "./MenuProductScrollSentinel";
+export { MenuBrandLogo } from "./MenuBrandLogo";
 export { MenuSearchField } from "./MenuSearchField";
 export {
   MenuProductNavigatorProvider,

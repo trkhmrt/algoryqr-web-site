@@ -10,6 +10,7 @@ import {
 import {
   DenseProductRow,
   DenseStickyToolbar,
+  MenuBrandLogo,
   MenuProductScrollSentinel,
   searchMenuProducts,
   useMenuTemplateNav,
@@ -95,6 +96,9 @@ export function DarkMenuTemplate({
   return (
     <DarkShell>
       <header className="border-b border-neutral-800 px-4 py-5">
+        <div className="mb-3">
+          <MenuBrandLogo logoUrl={menu.logoUrl} businessName={menu.businessName} size={56} />
+        </div>
         <h1 className="text-2xl font-bold">{menu.businessName}</h1>
         {menu.slogan ? (
           <p className="mt-1.5 line-clamp-2 text-sm text-neutral-300">{menu.slogan}</p>

@@ -80,6 +80,8 @@ export type QrRequestDetails =
       email?: string;
       address?: string;
       themeId: string;
+      chefName?: string;
+      chefAvatarKey?: string;
       products?: Array<{
         name: string;
         description?: string;
@@ -146,6 +148,15 @@ export interface UserQrApiItem {
   imgSrc?: string | null;
   details: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface UserQrPageApiResponse {
+  content: UserQrApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
 }
 
 export interface UserEntitlementApiItem {
@@ -419,6 +430,11 @@ export interface MenuProfileApiItem {
   themeId: string;
   businessName: string;
   slogan?: string;
+  chefName?: string | null;
+  chefDisplayName?: string | null;
+  chefAvatarKey?: string | null;
+  chefAvatarUrl?: string | null;
+  logoUrl?: string | null;
   phone?: string;
   email?: string;
   address?: string;
@@ -509,6 +525,16 @@ export interface MainCategoryApiItem {
   name: string;
   sortOrder: number;
   subs: SubCategoryApiItem[];
+}
+
+export interface TaxonomyPageApiResponse {
+  content: MainCategoryApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  q?: string | null;
 }
 
 /** @deprecated legacy tree shape — prefer MainCategoryApiItem */
@@ -857,6 +883,28 @@ export async function getMenuTaxonomyRequest(): Promise<MainCategoryApiItem[]> {
   return Array.isArray(response.data) ? response.data : [];
 }
 
+export async function getMenuTaxonomyPageRequest(options?: {
+  page?: number;
+  size?: number;
+  q?: string;
+}): Promise<TaxonomyPageApiResponse> {
+  const page = options?.page ?? 0;
+  const size = options?.size ?? 5;
+  const q = options?.q?.trim();
+  const response = await api.get<TaxonomyPageApiResponse>("/menu/taxonomy/page", {
+    params: { page, size, ...(q ? { q } : {}) },
+  });
+  return {
+    content: Array.isArray(response.data?.content) ? response.data.content : [],
+    page: response.data?.page ?? page,
+    size: response.data?.size ?? size,
+    totalElements: response.data?.totalElements ?? 0,
+    totalPages: response.data?.totalPages ?? 0,
+    hasNext: Boolean(response.data?.hasNext),
+    q: response.data?.q ?? null,
+  };
+}
+
 export async function getMenuTagsRequest(): Promise<MenuTagApiItem[]> {
   const response = await api.get<MenuTagApiItem[]>("/menu/tags");
   return Array.isArray(response.data) ? response.data : [];
@@ -889,10 +937,24 @@ export interface MenuUpdateRequestBody {
   themeId?: string;
   businessName?: string;
   slogan?: string;
+  chefName?: string | null;
+  chefAvatarKey?: string | null;
+  logoUrl?: string | null;
   phone?: string;
   email?: string;
   address?: string;
   active?: boolean;
+}
+
+export interface ChefAvatarApiItem {
+  key: string;
+  label: string;
+  imageUrl: string;
+}
+
+export async function getChefAvatarsRequest(): Promise<ChefAvatarApiItem[]> {
+  const response = await api.get<ChefAvatarApiItem[]>("/menu/chef-avatars");
+  return response.data ?? [];
 }
 
 export async function updateMenuRequest(menuId: number | string, payload: MenuUpdateRequestBody): Promise<MenuProfileApiItem> {
@@ -967,11 +1029,13 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
 
 export async function getUserQrsRequest(
   userId: number | string,
-  options?: { includeImage?: boolean },
-): Promise<UserQrApiItem[]> {
+  options?: { includeImage?: boolean; page?: number; size?: number },
+): Promise<UserQrPageApiResponse> {
   const includeImage = options?.includeImage === true;
-  const response = await api.get<UserQrApiItem[]>(`/qr/user/${userId}`, {
-    params: { includeImage },
+  const page = options?.page ?? 0;
+  const size = options?.size ?? 5;
+  const response = await api.get<UserQrPageApiResponse>(`/qr/user/${userId}`, {
+    params: { includeImage, page, size },
   });
   return response.data;
 }

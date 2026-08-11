@@ -22,8 +22,27 @@ export interface UserSessionRow {
   deviceType: string | null;
 }
 
-export function useUserSessions(enabled: boolean) {
+export interface UserSessionPage {
+  content: UserSessionRow[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+export type UseUserSessionsOptions = {
+  page?: number;
+  size?: number;
+};
+
+export function useUserSessions(enabled: boolean, options?: UseUserSessionsOptions) {
+  const page = options?.page ?? 0;
+  const size = options?.size ?? 10;
   const [sessions, setSessions] = useState<UserSessionRow[]>([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
@@ -33,15 +52,25 @@ export function useUserSessions(enabled: boolean) {
     setLoading(true);
     setError(null);
     try {
-      const response = await getSiteSameOriginAxios().get<UserSessionRow[]>("/auth/sessions");
-      setSessions(Array.isArray(response.data) ? response.data : []);
+      const response = await getSiteSameOriginAxios().get<UserSessionPage>("/auth/sessions", {
+        params: { page, size },
+      });
+      const data = response.data;
+      const content = Array.isArray(data?.content) ? data.content : [];
+      setSessions(content);
+      setTotalElements(data?.totalElements ?? content.length);
+      setTotalPages(data?.totalPages ?? 0);
+      setHasNext(Boolean(data?.hasNext));
     } catch (err) {
       setSessions([]);
+      setTotalElements(0);
+      setTotalPages(0);
+      setHasNext(false);
       setError(err instanceof ApiError ? err.message : "Oturumlar yüklenemedi.");
     } finally {
       setLoading(false);
     }
-  }, [enabled]);
+  }, [enabled, page, size]);
 
   useEffect(() => {
     void reload();
@@ -60,5 +89,15 @@ export function useUserSessions(enabled: boolean) {
     }
   }, [reload]);
 
-  return { sessions, loading, error, revokingId, reload, revoke };
+  return {
+    sessions,
+    totalElements,
+    totalPages,
+    hasNext,
+    loading,
+    error,
+    revokingId,
+    reload,
+    revoke,
+  };
 }

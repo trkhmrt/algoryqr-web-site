@@ -28,6 +28,7 @@ export const DASHBOARD_ROUTES = {
   qrCodeDetail: (id: number | string) => `/dashboard/qr-kodlarim/${id}`,
   account: "/dashboard/hesabim",
   accountSecurity: "/dashboard/hesabim/guvenlik",
+  accountSessions: "/dashboard/hesabim/oturumlar",
   accountSubscription: "/dashboard/hesabim/abonelik",
   accountPackages: "/dashboard/hesabim/abonelik/paketler",
   accountPackagesHighlight: (highlight: string) =>

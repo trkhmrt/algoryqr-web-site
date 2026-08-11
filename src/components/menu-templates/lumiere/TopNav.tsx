@@ -1,5 +1,6 @@
 type TopNavProps = {
   businessName: string;
+  logoUrl?: string | null;
   variant?: "home" | "detail";
   onBack?: () => void;
   onHome?: () => void;
@@ -7,6 +8,7 @@ type TopNavProps = {
 
 export function LumiereTopNav({
   businessName,
+  logoUrl,
   variant = "home",
   onBack,
   onHome,
@@ -40,9 +42,17 @@ export function LumiereTopNav({
           onClick={onHome}
           className="flex min-w-0 items-center gap-2 text-left"
         >
-          <span className="material-symbols-outlined text-[var(--lm-primary)]">
-            restaurant_menu
-          </span>
+          {logoUrl?.trim() ? (
+            <img
+              src={logoUrl.trim()}
+              alt=""
+              className="h-8 w-8 shrink-0 rounded-lg object-contain ring-1 ring-[var(--lm-outline-variant)]"
+            />
+          ) : (
+            <span className="material-symbols-outlined text-[var(--lm-primary)]">
+              restaurant_menu
+            </span>
+          )}
           <h1 className="lm-headline-md truncate text-[var(--lm-on-surface)]">{title}</h1>
         </button>
       </div>

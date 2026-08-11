@@ -10,6 +10,7 @@ import {
   DenseFeaturedSlider,
   DenseProductRow,
   DenseStickyToolbar,
+  MenuBrandLogo,
   MenuProductScrollSentinel,
   searchMenuProducts,
 } from "../shared";
@@ -78,6 +79,9 @@ export function AlbaHomeView({
   return (
     <div className="min-h-screen pb-16">
       <header className="relative min-h-[180px] max-h-[220px] overflow-hidden px-4 pb-5 pt-10 text-center">
+        <div className="mb-3 flex justify-center">
+          <MenuBrandLogo logoUrl={menu.logoUrl} businessName={menu.businessName} size={64} />
+        </div>
         <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.24em] ab-muted">
           Dijital menü
         </p>

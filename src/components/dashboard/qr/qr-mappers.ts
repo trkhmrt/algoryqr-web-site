@@ -42,6 +42,8 @@ export const getQrDetailsByType = (type: QrTypeValue, data: QrTypeData) => {
       email: data.menu.email,
       address: data.menu.address,
       themeId: data.menu.themeId,
+      chefName: data.menu.chefName,
+      chefAvatarKey: data.menu.chefAvatarKey,
     };
   }
   return data.location;
@@ -70,6 +72,9 @@ export const mapDetailsToQrTypeData = (details: Record<string, unknown>): QrType
         email: String(details.email ?? ""),
         address: String(details.address ?? ""),
         themeId,
+        chefName: String(details.chefName ?? ""),
+        chefAvatarKey: String(details.chefAvatarKey ?? "default"),
+        logoUrl: String(details.logoUrl ?? ""),
       },
     };
   }
@@ -129,6 +134,7 @@ export const getReadableDetailRows = (details: Record<string, unknown>) => {
     return [
       { label: "İşletme", value: String(details.businessName ?? "") },
       { label: "Slogan", value: String(details.slogan ?? "") },
+      { label: "Şef", value: String(details.chefName ?? "") || "Akıllı Şef" },
       { label: "Telefon", value: String(details.phone ?? "") },
       { label: "E-posta", value: String(details.email ?? "") },
       { label: "Adres", value: String(details.address ?? "") },

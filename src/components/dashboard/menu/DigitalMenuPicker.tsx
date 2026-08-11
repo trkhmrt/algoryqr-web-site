@@ -76,8 +76,8 @@ export function useDigitalMenuOptions(enabled = true) {
         if (!(error instanceof ApiError) || error.status !== 404) {
           throw error;
         }
-        const qrs = await getUserQrsRequest("me", { includeImage: false });
-        return qrs
+        const qrs = await getUserQrsRequest("me", { includeImage: false, page: 0, size: 50 });
+        return qrs.content
           .filter((qr) => isMenuQrDetails(qr.details ?? {}))
           .map(mapUserQrToDashboardItem);
       }

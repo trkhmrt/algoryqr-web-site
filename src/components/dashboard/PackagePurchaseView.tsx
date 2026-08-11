@@ -23,6 +23,7 @@ import {
   checkoutSchema,
   displayBillingName,
   buildBillingAddressPayload,
+  resolveIdentityNumber,
   type BillingAddress,
   type BillingAddressForm as BillingAddressFormValues,
   type BillingPeriod,
@@ -171,10 +172,10 @@ export default function PackagePurchaseView({
     }
 
     const usingNewCard = paymentMethodId == null;
+    const selectedAddress = addresses.data?.find((item) => item.id === billingAddressId);
 
     setIsPaying(true);
     try {
-      const selectedAddress = addresses.data?.find((item) => item.id === billingAddressId);
       const payload: Record<string, unknown> = {
         packageId,
         paymentMode: usingNewCard ? "CHECKOUT_FORM" : "THREE_DS",
@@ -182,7 +183,7 @@ export default function PackagePurchaseView({
         billingPeriod,
         billingAddressId,
         paymentMethodId: paymentMethodId != null ? Number(paymentMethodId) : undefined,
-        identityNumber: selectedAddress?.tckn || selectedAddress?.vkn || undefined,
+        identityNumber: resolveIdentityNumber(selectedAddress?.tckn, selectedAddress?.vkn),
         recurringConsent,
       };
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", payload);

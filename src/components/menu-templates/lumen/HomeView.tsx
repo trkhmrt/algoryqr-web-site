@@ -10,6 +10,7 @@ import {
   DenseFeaturedSlider,
   DenseProductRow,
   DenseStickyToolbar,
+  MenuBrandLogo,
   MenuProductScrollSentinel,
   searchMenuProducts,
 } from "../shared";
@@ -86,6 +87,9 @@ export function LumenHomeView({
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_oklch,var(--ln-bg)_50%,transparent)] to-[var(--ln-bg)]" />
         <div className="relative px-4 pb-5 pt-10 text-center">
+          <div className="mb-3 flex justify-center">
+            <MenuBrandLogo logoUrl={menu.logoUrl} businessName={menu.businessName} size={64} />
+          </div>
           <p className="mb-2 text-[10px] uppercase tracking-[0.22em] ln-muted">
             Hoş geldiniz
           </p>

@@ -12,6 +12,7 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import type { StoredUser } from "@/lib/api";
 import DashboardOverviewView from "@/views/dashboard/DashboardOverviewView";
 import DashboardQrCodesView from "@/views/dashboard/DashboardQrCodesView";
+import AccountSessionsView from "@/views/dashboard/AccountSessionsView";
 import BillingAddressesView from "@/views/dashboard/BillingAddressesView";
 import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
 import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
@@ -69,6 +70,9 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     }
     if (pathname === DASHBOARD_ROUTES.accountBillingAddresses) {
       return { mode: "billingAddresses" as const };
+    }
+    if (pathname === DASHBOARD_ROUTES.accountSessions) {
+      return { mode: "sessions" as const };
     }
     if (pathname === DASHBOARD_ROUTES.accountPaymentHistory) {
       return { mode: "paymentHistory" as const };
@@ -264,6 +268,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (accountRoute?.mode === "billingAddresses") {
     return <BillingAddressesView />;
+  }
+
+  if (accountRoute?.mode === "sessions") {
+    return <AccountSessionsView />;
   }
 
   if (accountRoute?.mode === "paymentHistory") {
