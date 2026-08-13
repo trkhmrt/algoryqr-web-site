@@ -15,10 +15,16 @@ export type MenuTemplateProps = {
 
 export type MenuTemplateRendererProps = MenuTemplateProps & {
   themeId: string;
+  /** Public menu QR identifier (path segment /menu/[identifier]). */
+  identifier?: string;
   productPage?: number;
   productSize?: number;
   productTotalElements?: number;
   productHasNext?: boolean;
+  categoryPage?: number;
+  categorySize?: number;
+  categoryTotalElements?: number;
+  categoryHasNext?: boolean;
 };
 
 export type MenuNavCategory = {

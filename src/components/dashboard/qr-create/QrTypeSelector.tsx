@@ -1,4 +1,6 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+"use client";
+
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QrTypeValue } from "./QrTypeDetails";
 import { LucideIcon } from "lucide-react";
@@ -22,18 +24,14 @@ export function QrTypeSelector({ value, options, onChange }: QrTypeSelectorProps
   if (isMobile) {
     return (
       <div className="space-y-2">
-        <Select value={value} onValueChange={(next) => onChange(next as QrTypeValue)}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Tip seçin" />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          className="bg-background"
+          value={value}
+          onValueChange={(next) => onChange(next as QrTypeValue)}
+          options={options.map((type) => ({ value: type.value, label: type.label }))}
+          placeholder="Tip seçin"
+          searchPlaceholder="Tip ara..."
+        />
       </div>
     );
   }

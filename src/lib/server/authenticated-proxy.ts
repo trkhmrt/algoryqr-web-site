@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
+import { clientContextHeaders } from "@/lib/server/client-headers";
 
 export async function proxyAuthenticatedRequest(
   request: Request,
@@ -31,9 +32,6 @@ export async function proxyAuthenticatedRequest(
       }
     }
 
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const realIp = request.headers.get("x-real-ip");
-
     const upstream = await axios.request({
       url: `${API_BASE_URL}${upstreamPath}${query}`,
       method,
@@ -43,8 +41,7 @@ export async function proxyAuthenticatedRequest(
         Accept: "application/json",
         ...(text ? { "Content-Type": "application/json" } : {}),
         ...(userId != null ? { "X-User-Id": String(userId) } : {}),
-        ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
-        ...(!forwardedFor && realIp ? { "X-Forwarded-For": realIp } : {}),
+        ...clientContextHeaders(request),
       },
       validateStatus: () => true,
       timeout: 20_000,

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getExpFromAccessToken, isoToEpochSeconds } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
 import { setAuthCookies, setTokenExpiryCookies, setTwoFactorPendingCookie } from "@/lib/server/auth-cookies";
+import { clientContextHeaders } from "@/lib/server/client-headers";
 import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 
 type LoginBody = {
@@ -27,7 +28,11 @@ export async function POST(req: Request) {
       `${API_BASE_URL}/auth/login`,
       loginPayload,
       {
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...clientContextHeaders(req),
+        },
         validateStatus: () => true,
         timeout: 20_000,
       },

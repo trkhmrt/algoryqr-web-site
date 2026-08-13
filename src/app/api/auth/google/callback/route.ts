@@ -12,10 +12,18 @@ import {
   setTokenExpiryCookies,
 } from "@/lib/server/auth-cookies";
 import { getAppOrigin } from "@/lib/server/app-origin";
+import { clientContextHeaders } from "@/lib/server/client-headers";
+import {
+  CUSTOMER_OAUTH_RETURN_COOKIE,
+  clearCustomerOAuthReturnCookie,
+  setCustomerAuthCookies,
+} from "@/lib/server/customer-auth-cookies";
 import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 import {
   type GoogleAuthErrorCode,
   googleAuthErrorRedirect,
+  isCustomerGoogleAuthIntent,
+  parseAnyGoogleAuthIntent,
   parseGoogleAuthIntent,
   safeGoogleAuthErrorCode,
 } from "@/lib/server/google-auth-flow";
@@ -26,6 +34,7 @@ type RedeemResponse = {
   refreshToken?: unknown;
   refresh_token?: unknown;
   userId?: unknown;
+  customerId?: unknown;
   intent?: unknown;
   code?: unknown;
   error?: unknown;
@@ -60,24 +69,45 @@ function errorForStatus(status: number): GoogleAuthErrorCode {
   return "oauth_failed";
 }
 
+function resolveCustomerReturnUrl(req: NextRequest): string {
+  const fromCookie = req.cookies.get(CUSTOMER_OAUTH_RETURN_COOKIE)?.value?.trim();
+  if (fromCookie) {
+    try {
+      const parsed = new URL(fromCookie, getAppOrigin(req));
+      if (parsed.origin === new URL(getAppOrigin(req)).origin) {
+        return parsed.toString();
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return new URL("/", getAppOrigin(req)).toString();
+}
+
 export async function GET(req: NextRequest) {
   const searchParams = new URL(req.url).searchParams;
+  const cookieIntent = req.cookies.get("googleAuthIntent")?.value;
   const requestedIntent =
-    parseGoogleAuthIntent(searchParams.get("intent")) ??
-    parseGoogleAuthIntent(req.cookies.get("googleAuthIntent")?.value) ??
+    parseAnyGoogleAuthIntent(searchParams.get("intent")) ??
+    parseAnyGoogleAuthIntent(cookieIntent) ??
     "login";
+  const customerReturnUrl = isCustomerGoogleAuthIntent(requestedIntent)
+    ? resolveCustomerReturnUrl(req)
+    : null;
+
   const callbackError = searchParams.get("error");
   if (callbackError) {
     return googleAuthErrorRedirect(
       req,
       requestedIntent,
       safeGoogleAuthErrorCode(callbackError),
+      customerReturnUrl,
     );
   }
 
   const ticket = searchParams.get("ticket")?.trim() ?? "";
   if (!TICKET_PATTERN.test(ticket)) {
-    return googleAuthErrorRedirect(req, requestedIntent, "invalid_ticket");
+    return googleAuthErrorRedirect(req, requestedIntent, "invalid_ticket", customerReturnUrl);
   }
 
   try {
@@ -88,6 +118,7 @@ export async function GET(req: NextRequest) {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          ...clientContextHeaders(req),
         },
         timeout: 20_000,
         validateStatus: () => true,
@@ -97,7 +128,7 @@ export async function GET(req: NextRequest) {
       typeof upstream.data === "object" && upstream.data != null
         ? upstream.data
         : {};
-    const intent = parseGoogleAuthIntent(data.intent) ?? requestedIntent;
+    const intent = parseAnyGoogleAuthIntent(data.intent) ?? requestedIntent;
 
     if (upstream.status < 200 || upstream.status >= 300) {
       const upstreamCode = data.code ?? data.error;
@@ -105,13 +136,14 @@ export async function GET(req: NextRequest) {
         req,
         intent,
         safeGoogleAuthErrorCode(upstreamCode, errorForStatus(upstream.status)),
+        customerReturnUrl,
       );
     }
 
     const accessToken = readString(data.accessToken ?? data.access_token);
     const refreshToken = readString(data.refreshToken ?? data.refresh_token);
     if (!accessToken || !refreshToken) {
-      return googleAuthErrorRedirect(req, intent, "oauth_failed");
+      return googleAuthErrorRedirect(req, intent, "oauth_failed", customerReturnUrl);
     }
 
     const clearGoogleIntentCookie = {
@@ -122,7 +154,27 @@ export async function GET(req: NextRequest) {
       maxAge: 0,
     };
 
-    if (intent === "register") {
+    if (isCustomerGoogleAuthIntent(intent)) {
+      const customerId =
+        readPositiveNumber(data.customerId) ??
+        readPositiveNumber(data.userId) ??
+        getUserIdFromAccessToken(accessToken) ??
+        undefined;
+      const response = NextResponse.redirect(
+        customerReturnUrl ?? new URL("/", getAppOrigin(req)).toString(),
+        303,
+      );
+      response.headers.set("Cache-Control", "no-store");
+      response.headers.set("Referrer-Policy", "no-referrer");
+      response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
+      clearCustomerOAuthReturnCookie(response);
+      setCustomerAuthCookies(response, accessToken, refreshToken, customerId);
+      return response;
+    }
+
+    const merchantIntent = parseGoogleAuthIntent(intent) ?? "login";
+
+    if (merchantIntent === "register") {
       const registerUrl = new URL("/register", getAppOrigin(req));
       registerUrl.searchParams.set("registered", "1");
       const response = NextResponse.redirect(registerUrl, 303);
@@ -160,6 +212,11 @@ export async function GET(req: NextRequest) {
     );
     return response;
   } catch {
-    return googleAuthErrorRedirect(req, requestedIntent, "upstream_unavailable");
+    return googleAuthErrorRedirect(
+      req,
+      requestedIntent,
+      "upstream_unavailable",
+      customerReturnUrl,
+    );
   }
 }

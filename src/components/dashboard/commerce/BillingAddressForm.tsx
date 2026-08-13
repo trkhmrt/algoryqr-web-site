@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { billingAddressSchema, type BillingAddressForm as BillingAddressFormValues } from "@/lib/commerce";
 
 const DEFAULT_VALUES: BillingAddressFormValues = {
@@ -69,18 +69,16 @@ export default function BillingAddressForm({
     <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
       <div className="space-y-2">
         <Label>Adres tipi (zorunlu)</Label>
-        <Select
+        <SearchableSelect
           value={type}
           onValueChange={(value) => form.setValue("type", value as BillingAddressFormValues["type"])}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="INDIVIDUAL">Bireysel</SelectItem>
-            <SelectItem value="CORPORATE">Kurumsal</SelectItem>
-          </SelectContent>
-        </Select>
+          options={[
+            { value: "INDIVIDUAL", label: "Bireysel" },
+            { value: "CORPORATE", label: "Kurumsal" },
+          ]}
+          placeholder="Adres tipi seçin"
+          searchPlaceholder="Tip ara..."
+        />
       </div>
 
       {field("title", "Adres adı (zorunlu)", "Örn. Ev, Ofis")}

@@ -1,5 +1,24 @@
 export { MenuCategoryRail } from "./MenuCategoryRail";
 export { MenuViewportFrame } from "./MenuViewportFrame";
+export { AddToOrderButton } from "./AddToOrderButton";
+export { CartFab } from "./CartFab";
+export { CartSheet } from "./CartSheet";
+export { CustomerAccountMenu, CustomerAccountTrigger } from "./CustomerAccountMenu";
+export { CustomerAuthDialog } from "./CustomerAuthDialog";
+export { WaiterAuthDialog } from "./WaiterAuthDialog";
+export { MenuEntryGate } from "./MenuEntryGate";
+export { MenuLanguagePicker } from "./MenuLanguagePicker";
+export {
+  MENU_LOCALES,
+  MenuLocaleProvider,
+  useMenuLocale,
+  useMenuLocaleOptional,
+} from "./menu-locale";
+export type { MenuLocaleCode } from "./menu-locale";
+export { OrderHistoryPanel } from "./OrderHistoryPanel";
+export { OrderingProvider, useOrdering, useOrderingOptional } from "./ordering-context";
+export { SharedMenuChrome } from "./SharedMenuChrome";
+export { MenuHomeLink } from "./MenuHomeLink";
 export {
   DenseCategoryGrid,
   DenseFeaturedSlider,
@@ -13,7 +32,21 @@ export type { DenseCategoryGridItem } from "./dense";
 export { MenuNutritionFacts } from "./MenuNutritionFacts";
 export { MenuPartySizeControl } from "./MenuPartySizeControl";
 export { MenuRatingControl } from "./MenuRatingControl";
+export { FeedbackForm } from "./FeedbackForm";
+export { useMenuFeedback } from "./use-menu-feedback";
+export { MenuExperienceProvider, useMenuExperience, useMenuExperienceOptional } from "./menu-experience";
+export type { MenuExperienceStage, MenuWelcomePanel } from "./menu-experience";
+export { MenuWelcomeStage } from "./MenuWelcomeStage";
+export { MenuLandingHub } from "./MenuLandingHub";
+export { MenuLandingPanelShell } from "./MenuLandingPanelShell";
+export { MenuLandingScreens } from "./MenuLandingScreens";
+export { ReservationForm } from "./ReservationForm";
+export { ContactPanel } from "./ContactPanel";
+export type { MenuLandingAction, MenuLandingPanel } from "./menu-landing";
 export { MenuProductFeed } from "./MenuProductFeed";
+export { MenuCategoryFeed, useMenuCategoryFeed } from "./MenuCategoryFeed";
+export { MenuCategoryScrollSentinel } from "./MenuCategoryScrollSentinel";
+export { PublicMenuThemeProvider, usePublicMenuTheme } from "./public-menu-theme";
 export { MenuProductScrollSentinel } from "./MenuProductScrollSentinel";
 export { MenuBrandLogo } from "./MenuBrandLogo";
 export { MenuSearchField } from "./MenuSearchField";

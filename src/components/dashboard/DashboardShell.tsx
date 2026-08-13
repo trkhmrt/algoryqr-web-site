@@ -11,15 +11,23 @@ import {
   LogOut,
   BarChart3,
   User,
+  Users,
+  UsersRound,
   Info,
   AlertTriangle,
   XCircle,
   X,
   UtensilsCrossed,
+  MonitorSmartphone,
+  PanelLeft,
+  PanelLeftClose,
+  TrendingUp,
+  CalendarDays,
 } from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DashboardBannersProvider,
   useDashboardBannerState,
@@ -37,6 +45,11 @@ import { cn } from "@/lib/utils";
 const NAV_ICONS = {
   overview: BarChart3,
   digitalMenu: UtensilsCrossed,
+  reservations: CalendarDays,
+  orderPanel: MonitorSmartphone,
+  reports: TrendingUp,
+  menuUsers: Users,
+  menuCustomers: UsersRound,
   qrCodes: QrCode,
   account: User,
 } as const;
@@ -49,6 +62,27 @@ const bannerStyles = {
 
 const bannerIcons = { info: Info, warning: AlertTriangle, danger: XCircle };
 
+const SIDEBAR_COLLAPSED_KEY = "algory-dashboard-sidebar-collapsed";
+
+const SIDEBAR_ITEM =
+  "flex h-10 w-full items-center justify-start gap-3 overflow-hidden rounded-lg px-2.5 text-sm font-medium transition-colors";
+
+function sidebarItemClass(active: boolean) {
+  return cn(
+    SIDEBAR_ITEM,
+    active
+      ? "bg-primary text-primary-foreground"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+  );
+}
+
+function sidebarLabelClass(collapsed: boolean) {
+  return cn(
+    "min-w-0 truncate whitespace-nowrap transition-opacity duration-200 ease-in-out",
+    collapsed ? "pointer-events-none opacity-0 duration-150" : "opacity-100 delay-100",
+  );
+}
+
 interface DashboardShellProps {
   initialUser?: StoredUser | null;
   children: ReactNode;
@@ -59,12 +93,33 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   const pathname = usePathname();
   const { banners, addBanner, removeBanner } = useDashboardBannerState();
   const [portalReady, setPortalReady] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   useTokenRefresh();
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPortalReady(true), 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
   const userInitials = useMemo(() => {
@@ -118,46 +173,94 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
     <DashboardBannersProvider onBanner={addBanner}>
       {bannerPortal}
       <div className="flex h-svh overflow-hidden bg-background">
-        <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card/50 p-6 lg:flex">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
-            <QrCode className="h-6 w-6 text-foreground" />
-            <span className="text-lg font-bold">
-              Algory<span className="text-muted-foreground">QR</span>
-            </span>
-          </Link>
+        <aside
+          className={cn(
+            "hidden h-full shrink-0 flex-col overflow-hidden border-r border-border bg-card/50 p-3 transition-[width] duration-300 ease-in-out lg:flex",
+            collapsed ? "w-[4.5rem]" : "w-64",
+          )}
+        >
+          <div className="flex h-10 shrink-0 items-center">
+            <Tooltip open={collapsed ? undefined : false}>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/"
+                  className={cn(SIDEBAR_ITEM, "text-foreground hover:bg-muted hover:text-foreground")}
+                >
+                  <QrCode className="size-4 shrink-0" />
+                  <span className={cn(sidebarLabelClass(collapsed), "text-base font-bold")}>
+                    Algory<span className="text-muted-foreground">QR</span>
+                  </span>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={12}>
+                AlgoryQR
+              </TooltipContent>
+            </Tooltip>
+          </div>
 
-          <nav className="mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+          <nav className="mt-3 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
             {DASHBOARD_NAV_ITEMS.map((item) => {
               const Icon = NAV_ICONS[item.key];
               const active = isDashboardNavActive(pathname, item.href);
               return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                <Tooltip key={item.key} open={collapsed ? undefined : false}>
+                  <TooltipTrigger asChild>
+                    <Link href={item.href} className={sidebarItemClass(active)}>
+                      <Icon className="size-4 shrink-0" />
+                      <span className={sidebarLabelClass(collapsed)}>{item.label}</span>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={12}>
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </nav>
 
-          <div className="mt-6 shrink-0 border-t border-border pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2 text-muted-foreground"
-              onClick={logout}
-            >
-              <LogOut className="h-4 w-4" />
-              Çıkış Yap
-            </Button>
+          <div className="mt-3 shrink-0 space-y-1 border-t border-border pt-3">
+            <Tooltip open={collapsed ? undefined : false}>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={sidebarItemClass(false)}
+                  onClick={toggleCollapsed}
+                  aria-label={collapsed ? "Menüyü genişlet" : "Menüyü küçült"}
+                  aria-expanded={!collapsed}
+                >
+                  {collapsed ? (
+                    <PanelLeft className="size-4 shrink-0" />
+                  ) : (
+                    <PanelLeftClose className="size-4 shrink-0" />
+                  )}
+                  <span className={sidebarLabelClass(collapsed)}>
+                    {collapsed ? "Genişlet" : "Küçült"}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={12}>
+                {collapsed ? "Menüyü genişlet" : "Menüyü küçült"}
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip open={collapsed ? undefined : false}>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={cn(sidebarItemClass(false), "text-muted-foreground")}
+                  onClick={logout}
+                  aria-label="Çıkış Yap"
+                >
+                  <LogOut className="size-4 shrink-0" />
+                  <span className={sidebarLabelClass(collapsed)}>Çıkış Yap</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={12}>
+                Çıkış Yap
+              </TooltipContent>
+            </Tooltip>
           </div>
         </aside>
 

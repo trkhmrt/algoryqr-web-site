@@ -12,6 +12,7 @@ import {
   type ChefChatMessage,
 } from "@/lib/chef/chef-chat-session";
 import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
+import { stripProductListFromReply } from "@/lib/chef/strip-product-list-from-reply";
 
 import { MenuChefProductCard } from "./MenuChefProductCard";
 
@@ -176,6 +177,14 @@ function AssistantBubble({
   const onEnteredRef = useRef(onEntered);
   onEnteredRef.current = onEntered;
 
+  const products = msg.products?.length ? msg.products : undefined;
+  const displayText = products
+    ? stripProductListFromReply(
+        msg.text,
+        products.map((product) => product.name),
+      )
+    : msg.text;
+
   return (
     <motion.div
       layout
@@ -199,30 +208,41 @@ function AssistantBubble({
         />
       </motion.div>
       <div className="min-w-0 flex-1 space-y-2.5">
-        <motion.div
-          initial={animateEnter ? bubbleShellMotion.initial : false}
-          animate={bubbleShellMotion.animate}
-          transition={{ ...bubbleTransition, delay: 0.06 }}
-          className="origin-bottom-left whitespace-pre-wrap rounded-[1.35rem] rounded-bl-md border border-white/70 bg-white/80 px-4 py-3 text-[14.5px] leading-relaxed tracking-[-0.01em] text-[#24302c] shadow-[0_8px_28px_rgba(28,40,36,0.05)] backdrop-blur-sm"
-        >
-          {msg.text}
-        </motion.div>
-        {msg.products?.length ? (
-          <div className="space-y-2">
-            {msg.products.map((product, index) => (
+        {displayText ? (
+          <motion.div
+            initial={animateEnter ? bubbleShellMotion.initial : false}
+            animate={bubbleShellMotion.animate}
+            transition={{ ...bubbleTransition, delay: 0.06 }}
+            className="origin-bottom-left whitespace-pre-wrap rounded-[1.35rem] rounded-bl-md border border-white/70 bg-white/80 px-4 py-3 text-[14.5px] leading-relaxed tracking-[-0.01em] text-[#24302c] shadow-[0_8px_28px_rgba(28,40,36,0.05)] backdrop-blur-sm"
+          >
+            {displayText}
+          </motion.div>
+        ) : null}
+        {products ? (
+          <motion.div
+            initial={animateEnter ? { opacity: 0, y: 10 } : false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...bubbleTransition, delay: 0.1 }}
+            role="list"
+            aria-label="Önerilen ürünler"
+            tabIndex={0}
+            className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain px-1 pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2a3833]/25 [&::-webkit-scrollbar]:hidden"
+          >
+            {products.map((product, index) => (
               <motion.div
                 key={product.productId}
-                initial={animateEnter ? { opacity: 0, y: 14, scale: 0.96 } : false}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                role="listitem"
+                initial={animateEnter ? { opacity: 0, x: 16, scale: 0.96 } : false}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
                 transition={{
                   ...bubbleTransition,
-                  delay: 0.08 + index * 0.07,
+                  delay: 0.12 + index * 0.05,
                 }}
               >
                 <MenuChefProductCard item={product} onOpened={onOpened} />
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : null}
       </div>
     </motion.div>

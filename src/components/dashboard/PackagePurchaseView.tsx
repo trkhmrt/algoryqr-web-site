@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { invalidateBillingAddresses, invalidatePaymentMethods, useBillingAddresses, usePaymentMethods } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { useActivePackages } from "@/hooks/use-subscription";
@@ -338,22 +338,17 @@ export default function PackagePurchaseView({
                     : "Fatura adresleri yüklenemedi."}
                 </p>
               ) : addresses.data?.length ? (
-                <Select
+                <SearchableSelect
                   value={billingAddressId ? String(billingAddressId) : ""}
                   onValueChange={(value) => setBillingAddressId(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Fatura adresi seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {addresses.data.map((address) => (
-                      <SelectItem key={address.id} value={String(address.id)}>
-                        {displayBillingName(address)} · {address.city}
-                        {address.defaultAddress ? " · Aktif" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  options={addresses.data.map((address) => ({
+                    value: String(address.id),
+                    label: `${displayBillingName(address)} · ${address.city}${address.defaultAddress ? " · Aktif" : ""}`,
+                  }))}
+                  placeholder="Fatura adresi seçin"
+                  searchPlaceholder="Adres ara..."
+                  emptyText="Adres bulunamadı."
+                />
               ) : (
                 <Button variant="outline" onClick={() => setCreatingAddress(true)}>Fatura adresi oluştur</Button>
               )}
@@ -368,17 +363,19 @@ export default function PackagePurchaseView({
               </div>
 
               {methods.data?.length ? (
-                <Select value={paymentMethodId == null ? "new" : paymentMethodId} onValueChange={(value) => setPaymentMethodId(value === "new" ? null : value)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {methods.data.map((method) => (
-                      <SelectItem key={method.id} value={method.id}>
-                        {method.cardAlias || method.brand || "Kart"} · •••• {method.lastFour}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="new">Yeni kart kullan</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={paymentMethodId == null ? "new" : paymentMethodId}
+                  onValueChange={(value) => setPaymentMethodId(value === "new" ? null : value)}
+                  options={[
+                    ...methods.data.map((method) => ({
+                      value: method.id,
+                      label: `${method.cardAlias || method.brand || "Kart"} · •••• ${method.lastFour}`,
+                    })),
+                    { value: "new", label: "Yeni kart kullan" },
+                  ]}
+                  placeholder="Kart seçin"
+                  searchPlaceholder="Kart ara..."
+                />
               ) : null}
 
               {paymentMethodId == null && (

@@ -13,12 +13,15 @@ import type { StoredUser } from "@/lib/api";
 import DashboardOverviewView from "@/views/dashboard/DashboardOverviewView";
 import DashboardQrCodesView from "@/views/dashboard/DashboardQrCodesView";
 import AccountSessionsView from "@/views/dashboard/AccountSessionsView";
+import AccountSessionsDetailView from "@/views/dashboard/AccountSessionsDetailView";
 import BillingAddressesView from "@/views/dashboard/BillingAddressesView";
 import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
+import OrderPanelView from "@/views/dashboard/OrderPanelView";
 import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
 import DigitalMenuEditorView from "@/views/dashboard/DigitalMenuEditorView";
 import DigitalMenuSettingsView from "@/views/dashboard/DigitalMenuSettingsView";
 import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
+import DigitalMenuProductCreateView from "@/views/dashboard/DigitalMenuProductCreateView";
 import DigitalMenuProductDetailView from "@/views/dashboard/DigitalMenuProductDetailView";
 import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
 import PackageComparisonView from "@/views/dashboard/PackageComparisonView";
@@ -27,8 +30,15 @@ import PaymentHistoryView from "@/views/dashboard/PaymentHistoryView";
 import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
 import PlanChangeView from "@/views/dashboard/PlanChangeView";
 import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
+import FeedbackView from "@/views/dashboard/FeedbackView";
+import ReservationsView from "@/views/dashboard/ReservationsView";
+import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
 import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
 import SmartReportsView from "@/views/dashboard/SmartReportsView";
+import MenuCustomersView from "@/views/dashboard/MenuCustomersView";
+import MenuUserDetailView from "@/views/dashboard/MenuUserDetailView";
+import MenuUsersView from "@/views/dashboard/MenuUsersView";
+import WaiterOrdersView from "@/views/dashboard/WaiterOrdersView";
 
 interface DashboardPageClientProps {
   initialUser?: StoredUser | null;
@@ -70,6 +80,9 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     }
     if (pathname === DASHBOARD_ROUTES.accountBillingAddresses) {
       return { mode: "billingAddresses" as const };
+    }
+    if (pathname === DASHBOARD_ROUTES.accountSessionsDetail) {
+      return { mode: "sessionsDetail" as const };
     }
     if (pathname === DASHBOARD_ROUTES.accountSessions) {
       return { mode: "sessions" as const };
@@ -162,6 +175,78 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return <SmartReportsView />;
   }
 
+  if (pathname === DASHBOARD_ROUTES.feedback) {
+    return (
+      <Suspense fallback={null}>
+        <FeedbackView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.reservations) {
+    return (
+      <Suspense fallback={null}>
+        <ReservationsView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.restaurantLayout) {
+    return (
+      <Suspense fallback={null}>
+        <RestaurantLayoutView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.orderPanel) {
+    return <OrderPanelView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.orderPanelReports) {
+    return (
+      <Suspense fallback={null}>
+        <AnalyticsTab variant="orders" />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.waiter) {
+    return (
+      <Suspense fallback={null}>
+        <WaiterOrdersView />
+      </Suspense>
+    );
+  }
+
+  const menuUserDetailPrefix = `${DASHBOARD_ROUTES.menuUsers}/`;
+  if (pathname.startsWith(menuUserDetailPrefix)) {
+    const waiterId = Number(pathname.slice(menuUserDetailPrefix.length).split("/")[0]);
+    if (Number.isSafeInteger(waiterId) && waiterId > 0) {
+      return (
+        <Suspense fallback={null}>
+          <MenuUserDetailView waiterId={waiterId} />
+        </Suspense>
+      );
+    }
+  }
+
+  if (pathname === DASHBOARD_ROUTES.menuUsers) {
+    return (
+      <Suspense fallback={null}>
+        <MenuUsersView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.menuCustomers) {
+    return (
+      <Suspense fallback={null}>
+        <MenuCustomersView />
+      </Suspense>
+    );
+  }
+
   const smartReportDetailPrefix = `${DASHBOARD_ROUTES.smartReports}/`;
   if (pathname.startsWith(smartReportDetailPrefix)) {
     const jobId = pathname.slice(smartReportDetailPrefix.length).split("/")[0];
@@ -182,6 +267,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (pathname === DASHBOARD_ROUTES.digitalMenuCreate) {
     return <DigitalMenuCreateView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenuProductCreate) {
+    return (
+      <Suspense fallback={null}>
+        <DigitalMenuProductCreateView />
+      </Suspense>
+    );
   }
 
   if (digitalMenuProductId != null) {
@@ -272,6 +365,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (accountRoute?.mode === "sessions") {
     return <AccountSessionsView />;
+  }
+
+  if (accountRoute?.mode === "sessionsDetail") {
+    return <AccountSessionsDetailView />;
   }
 
   if (accountRoute?.mode === "paymentHistory") {

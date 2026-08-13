@@ -62,9 +62,7 @@ export default function DigitalMenuCategoriesView() {
               menuId={menuId ?? 0}
               qrId={qrId}
               onAddProduct={(categoryId) => {
-                router.push(
-                  `${DASHBOARD_ROUTES.digitalMenuProducts}?qr=${qrId}&category=${categoryId}`,
-                );
+                router.push(DASHBOARD_ROUTES.digitalMenuProductCreateFor(qrId, categoryId));
               }}
             />
           </div>

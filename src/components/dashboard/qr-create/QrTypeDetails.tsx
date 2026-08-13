@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { MenuData, MenuDetails, createInitialMenuData } from "./MenuDetails";
 
 export type QrTypeValue = "link" | "wifi" | "mail" | "contact" | "text" | "location" | "menu";
@@ -115,19 +115,18 @@ export const WifiDetails = ({ value, onChange }: WifiDetailsProps) => (
     </div>
     <div className="space-y-2">
       <Label className="text-xs text-muted-foreground">Şifreleme</Label>
-      <Select
+      <SearchableSelect
+        className="bg-background"
         value={value.security}
         onValueChange={(security) => onChange({ ...value, security: security as WifiData["security"] })}
-      >
-        <SelectTrigger className="bg-background">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="WPA">WPA/WPA2</SelectItem>
-          <SelectItem value="WEP">WEP</SelectItem>
-          <SelectItem value="NONE">Şifresiz</SelectItem>
-        </SelectContent>
-      </Select>
+        options={[
+          { value: "WPA", label: "WPA/WPA2" },
+          { value: "WEP", label: "WEP" },
+          { value: "NONE", label: "Şifresiz" },
+        ]}
+        placeholder="Şifreleme seçin"
+        searchPlaceholder="Şifreleme ara..."
+      />
     </div>
   </div>
 );

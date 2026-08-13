@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/dashboard/qr-create/MenuDetails";
 import { resolveMenuThemeId } from "@/components/menu-templates/registry";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidateMenuByQr, useMenuByQr } from "@/hooks/use-menu-by-qr";
 import { ApiError, updateMenuRequest } from "@/lib/api";
@@ -34,8 +35,6 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
 
   const profile = menuQuery.data ?? null;
   const menuId = profile?.menuId ?? null;
-  const imgSrc = profile?.qr?.imgSrc ?? null;
-  const publicUrl = profile?.publicUrl ?? null;
 
   useEffect(() => {
     if (!profile) return;
@@ -129,57 +128,43 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
               : "İşletme bilgileri, tema ve yayın ayarları"}
           </p>
         </div>
-        {publicUrl ? (
-          <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <a href={publicUrl} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-3.5 w-3.5" />
-              Aç
-            </a>
-          </Button>
-        ) : null}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          {menuId != null ? (
-            <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
-              <div className="space-y-5">
-                <MenuDetails value={menu} onChange={setMenu} excludeMenuId={menuId} menuId={menuId} />
+      {menuId != null ? (
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+          <Tabs defaultValue="info" className="space-y-5">
+            <TabsList className="grid h-auto w-full grid-cols-2">
+              <TabsTrigger value="info">Menü bilgileri</TabsTrigger>
+              <TabsTrigger value="appearance">Görünüm</TabsTrigger>
+            </TabsList>
+            {(["info", "appearance"] as const).map((section) => (
+              <TabsContent key={section} value={section} className="mt-0 space-y-5">
+                <MenuDetails
+                  value={menu}
+                  onChange={setMenu}
+                  excludeMenuId={menuId}
+                  menuId={menuId}
+                  section={section}
+                  qrPreview={
+                    profile
+                      ? {
+                          imgSrc: profile.qr?.imgSrc ?? null,
+                          name: profile.qr?.name?.trim() || menu.businessName.trim() || "Menü QR",
+                          content: profile.publicUrl,
+                        }
+                      : null
+                  }
+                />
                 <div className="flex justify-end">
                   <Button type="button" disabled={saving} onClick={() => void saveProfile()}>
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kaydet"}
                   </Button>
                 </div>
-              </div>
-            </div>
-          ) : null}
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
-
-        <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-          <h2 className="mb-3 text-sm font-medium text-foreground lg:mb-4">QR Kod</h2>
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex aspect-square w-full max-w-[14rem] items-center justify-center overflow-hidden rounded-lg bg-muted">
-              {imgSrc ? (
-                <img
-                  src={`data:image/png;base64,${imgSrc}`}
-                  alt={profile?.qr?.name || "Menü QR"}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <p className="px-4 text-center text-xs text-muted-foreground">
-                  QR görseli bulunamadı.
-                </p>
-              )}
-            </div>
-            {profile?.qr?.name ? (
-              <p className="text-sm font-medium text-foreground">{profile.qr.name}</p>
-            ) : null}
-            {publicUrl ? (
-              <p className="break-all text-center text-xs text-muted-foreground">{publicUrl}</p>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }

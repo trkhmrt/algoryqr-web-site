@@ -6,6 +6,7 @@ import type { NutritionFacts, MenuProductApiItem } from "@/lib/api";
 import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
 
 import { useMenuProductNavigatorOptional } from "./menu-product-navigator";
+import { useMenuExperienceOptional } from "./menu-experience";
 
 export function chefItemToMenuProduct(item: ChefProductItem): MenuProductApiItem {
   return {
@@ -41,9 +42,20 @@ export function useRegisterChefOpenProduct(
   openProduct: (product: MenuProductApiItem) => void,
 ) {
   const navigator = useMenuProductNavigatorOptional();
+  const experience = useMenuExperienceOptional();
 
   useEffect(() => {
     if (!navigator) return;
-    return navigator.registerOpenProduct(openProduct);
-  }, [navigator, openProduct]);
+    return navigator.registerOpenProduct((product) => {
+      experience?.enterMenu();
+      openProduct(product);
+    });
+  }, [experience, navigator, openProduct]);
+
+  useEffect(() => {
+    if (!experience?.pendingProduct) return;
+    const product = experience.pendingProduct;
+    experience.clearPendingProduct();
+    openProduct(product);
+  }, [experience, experience?.pendingProduct, openProduct]);
 }

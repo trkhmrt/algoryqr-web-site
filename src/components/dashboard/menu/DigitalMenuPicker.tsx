@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import type { DashboardQrItem } from "@/components/dashboard/qr/qr-mappers";
 import { isMenuQrDetails, mapUserQrToDashboardItem } from "@/components/dashboard/qr/qr-mappers";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
 import {
@@ -176,31 +177,38 @@ export function DigitalMenuPicker({
   selectedQrId,
   onSelectQrId,
   disabled,
+  compact = false,
 }: {
   menuQrs: DashboardQrItem[];
   selectedQrId: number | null;
   onSelectQrId: (qrId: number) => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   if (menuQrs.length === 0) {
     return null;
   }
 
   return (
-    <div className="max-w-md space-y-1.5">
-      <Label className="text-xs text-muted-foreground">Menü seçin</Label>
-      <select
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-        value={selectedQrId ?? ""}
+    <div className={compact ? "min-w-[12rem] max-w-xs flex-1" : "max-w-md space-y-1.5"}>
+      {compact ? (
+        <span className="sr-only">Menü seçin</span>
+      ) : (
+        <Label className="text-xs text-muted-foreground">Menü seçin</Label>
+      )}
+      <SearchableSelect
+        className={compact ? "h-9 text-xs" : undefined}
+        value={selectedQrId != null ? String(selectedQrId) : ""}
+        onValueChange={(next) => {
+          const id = Number(next);
+          if (Number.isFinite(id) && id > 0) onSelectQrId(id);
+        }}
+        options={menuQrs.map((item) => ({ value: String(item.id), label: item.name }))}
+        placeholder="Menü seçin"
+        searchPlaceholder="Menü ara..."
+        emptyText="Menü bulunamadı."
         disabled={disabled}
-        onChange={(event) => onSelectQrId(Number(event.target.value))}
-      >
-        {menuQrs.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.name}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }

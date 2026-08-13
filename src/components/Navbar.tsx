@@ -68,9 +68,6 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
           <a href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Özellikler
           </a>
-          <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Fiyatlandırma
-          </a>
           <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             İletişim
           </Link>
@@ -140,9 +137,6 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
         <div className="md:hidden glass border-t border-border px-4 sm:px-6 pb-4 pt-2 flex flex-col gap-1 max-h-[min(70vh,calc(100dvh-3.5rem))] overflow-y-auto">
           <a href="/#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
             Özellikler
-          </a>
-          <a href="/#pricing" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
-            Fiyatlandırma
           </a>
           <Link href="/contact" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
             İletişim

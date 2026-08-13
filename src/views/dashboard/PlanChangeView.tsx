@@ -9,13 +9,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { usePaymentMethods } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
@@ -340,18 +334,17 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
                     )}
                   </p>
                 ) : (
-                  <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Kart seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {methods.data!.map((method) => (
-                        <SelectItem key={method.id} value={method.id}>
-                          {(method.brand ?? "Kart").toUpperCase()} ······ {method.lastFour}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={paymentMethodId}
+                    onValueChange={setPaymentMethodId}
+                    options={methods.data!.map((method) => ({
+                      value: method.id,
+                      label: `${(method.brand ?? "Kart").toUpperCase()} ······ ${method.lastFour}`,
+                    }))}
+                    placeholder="Kart seçin"
+                    searchPlaceholder="Kart ara..."
+                    emptyText="Kart bulunamadı."
+                  />
                 )}
               </div>
 

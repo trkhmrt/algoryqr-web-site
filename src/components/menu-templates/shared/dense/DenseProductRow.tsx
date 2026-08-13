@@ -11,6 +11,7 @@ import { DenseMetaChips } from "./DenseMetaChips";
 type DenseProductRowProps = {
   item: MenuProductApiItem;
   onOpen: (item: MenuProductApiItem) => void;
+  variant?: "row" | "card";
   className?: string;
   imageClassName?: string;
   titleClassName?: string;
@@ -25,6 +26,7 @@ type DenseProductRowProps = {
 export function DenseProductRow({
   item,
   onOpen,
+  variant = "row",
   className,
   imageClassName,
   titleClassName,
@@ -36,19 +38,24 @@ export function DenseProductRow({
   imagePlaceholderClassName,
 }: DenseProductRowProps) {
   const price = formatMenuPrice(item.price, item.currency);
+  const isCard = variant === "card";
 
   return (
     <button
       type="button"
       onClick={() => onOpen(item)}
       className={cn(
-        "group flex w-full items-stretch gap-2.5 border-b py-3 text-left transition last:border-0 active:scale-[0.995]",
+        "group flex w-full text-left transition active:scale-[0.995]",
+        isCard
+          ? "flex-col gap-3 border p-0"
+          : "items-stretch gap-2.5 border-b py-3 last:border-0",
         className,
       )}
     >
       <div
         className={cn(
-          "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl",
+          "relative shrink-0 overflow-hidden",
+          isCard ? "h-44 w-full" : "h-16 w-16 rounded-xl",
           imageClassName,
         )}
       >
@@ -70,7 +77,12 @@ export function DenseProductRow({
           </div>
         )}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col justify-center gap-0.5",
+          isCard && "px-3 pb-3",
+        )}
+      >
         <div className="flex items-start justify-between gap-2">
           <h3 className={cn("text-[15px] font-semibold leading-tight", titleClassName)}>
             {item.name}

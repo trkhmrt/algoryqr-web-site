@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   try {
     const searchParams = new URL(req.url).searchParams;
     const page = searchParams.get("page") ?? "0";
-    const size = searchParams.get("size") ?? "5";
+    const size = searchParams.get("size") ?? "6";
     const q = searchParams.get("q") ?? undefined;
 
     const upstream = await axios.get(`${API_BASE_URL}/menu/taxonomy/page`, {
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       upstream.data ?? {
         content: [],
         page: 0,
-        size: 5,
+        size: 6,
         totalElements: 0,
         totalPages: 0,
         hasNext: false,

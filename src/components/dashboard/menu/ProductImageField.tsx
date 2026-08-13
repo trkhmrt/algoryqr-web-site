@@ -100,7 +100,7 @@ export function ProductImageField({
   return (
     <div className="space-y-2">
       <Label className="text-xs">Ürün görseli</Label>
-      <div className="flex flex-wrap items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3 rounded-md border border-border p-2">
         <div
           className={cn(
             "flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/30",

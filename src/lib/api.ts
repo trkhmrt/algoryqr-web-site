@@ -557,6 +557,10 @@ export interface PublicMenuApiResponse {
   productSize?: number;
   productTotalElements?: number;
   productHasNext?: boolean;
+  categoryPage?: number;
+  categorySize?: number;
+  categoryTotalElements?: number;
+  categoryHasNext?: boolean;
 }
 
 export interface MenuRatingApiResponse {
@@ -889,7 +893,7 @@ export async function getMenuTaxonomyPageRequest(options?: {
   q?: string;
 }): Promise<TaxonomyPageApiResponse> {
   const page = options?.page ?? 0;
-  const size = options?.size ?? 5;
+  const size = options?.size ?? 6;
   const q = options?.q?.trim();
   const response = await api.get<TaxonomyPageApiResponse>("/menu/taxonomy/page", {
     params: { page, size, ...(q ? { q } : {}) },
@@ -987,16 +991,47 @@ export async function getPublicMenuRatingRequest(
 export async function submitPublicMenuRatingRequest(
   identifier: number | string,
   rating: number,
+  comment?: string,
 ): Promise<MenuRatingApiResponse> {
   const response = await fetch(`/api/menu/public/${encodeURIComponent(String(identifier))}/rating`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rating }),
+    body: JSON.stringify({ score: rating, comment }),
   });
   if (!response.ok) {
     throw new ApiError(response.status, "Menü puanı kaydedilemedi");
   }
   return response.json() as Promise<MenuRatingApiResponse>;
+}
+
+export interface ProductRatingApiResponse {
+  productId?: number;
+  menuId?: number;
+  score?: number;
+  comment?: string | null;
+  ratingAvg?: number | string | null;
+  ratingCount?: number | null;
+  userRating?: number | null;
+}
+
+export async function submitPublicProductRatingRequest(
+  menuId: number | string,
+  productId: number | string,
+  rating: number,
+  comment?: string,
+): Promise<ProductRatingApiResponse> {
+  const response = await fetch(
+    `/api/menu/public/${encodeURIComponent(String(menuId))}/products/${encodeURIComponent(String(productId))}/ratings`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ score: rating, comment }),
+    },
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, "Ürün puanı kaydedilemedi");
+  }
+  return response.json() as Promise<ProductRatingApiResponse>;
 }
 
 export async function createQrRequest(payload: CreateQrRequestBody): Promise<CreateQrResponse> {
@@ -1103,6 +1138,211 @@ export async function getMenuAnalyticsReportRequest(
   const response = await api.get<MenuAnalyticsReportResponse>(
     `/analytics/menu/${menuId}/report`,
     { params: { from, to } },
+  );
+  return response.data;
+}
+
+export interface MenuRevenueKpis {
+  totalRevenue?: number | string | null;
+  orderCount?: number;
+  itemCount?: number;
+  avgOrderValue?: number | string | null;
+  currency?: string | null;
+}
+
+export interface MenuRevenueProductRow {
+  productId: number;
+  name: string;
+  quantity: number;
+  revenue?: number | string | null;
+}
+
+export interface MenuRevenueReportResponse {
+  menuId: number;
+  menuName?: string | null;
+  from: string;
+  to: string;
+  kpis: MenuRevenueKpis;
+  daily: { date: string; revenue?: number | string | null; orderCount?: number }[];
+  products: MenuRevenueProductRow[];
+  categories: {
+    categoryId?: number | null;
+    name: string;
+    quantity: number;
+    revenue?: number | string | null;
+  }[];
+  spotlight?: {
+    byQuantity?: MenuRevenueProductRow | null;
+    byRevenue?: MenuRevenueProductRow | null;
+    leastSoldByQuantity?: MenuRevenueProductRow | null;
+  } | null;
+  hourly?: { hour: number; revenue?: number | string | null; orderCount?: number }[];
+  unsold?: {
+    count?: number;
+    products?: { productId: number; name: string }[];
+  } | null;
+}
+
+export async function getMenuRevenueReportRequest(
+  menuId: number | string,
+  from: string,
+  to: string,
+): Promise<MenuRevenueReportResponse> {
+  const response = await api.get<MenuRevenueReportResponse>(
+    `/analytics/menu/${menuId}/revenue`,
+    { params: { from, to } },
+  );
+  return response.data;
+}
+
+export type FeedbackTypeFilter = "all" | "menu" | "product";
+
+export interface FeedbackItemApi {
+  id: number;
+  type: "menu" | "product" | string;
+  productId?: number | null;
+  productName?: string | null;
+  score: number;
+  comment?: string | null;
+  deviceType?: string | null;
+  createdAt?: string | null;
+}
+
+export interface FeedbackPageApiResponse {
+  content: FeedbackItemApi[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+export interface FeedbackBucketSummaryApi {
+  ratingAvg?: number | string | null;
+  ratingCount?: number | null;
+  scoreHistogram?: Array<{ score: number; count: number }>;
+}
+
+export interface FeedbackSummaryApiResponse {
+  menuId: number;
+  menu: FeedbackBucketSummaryApi;
+  products: FeedbackBucketSummaryApi;
+}
+
+export async function getMenuFeedbackRequest(
+  menuId: number | string,
+  params?: {
+    type?: FeedbackTypeFilter;
+    from?: string;
+    to?: string;
+    minScore?: number;
+    page?: number;
+    size?: number;
+  },
+): Promise<FeedbackPageApiResponse> {
+  const response = await api.get<FeedbackPageApiResponse>(`/menu/${menuId}/feedback`, {
+    params,
+  });
+  return response.data;
+}
+
+export async function getMenuFeedbackSummaryRequest(
+  menuId: number | string,
+): Promise<FeedbackSummaryApiResponse> {
+  const response = await api.get<FeedbackSummaryApiResponse>(`/menu/${menuId}/feedback/summary`);
+  return response.data;
+}
+
+export type MenuReservationStatus = "PENDING" | "ACTIVE" | "CANCELED";
+
+export interface MenuReservationApiItem {
+  id: number;
+  menuId: number;
+  customerName: string;
+  phone?: string | null;
+  email?: string | null;
+  partySize: number;
+  reservationAt: string;
+  status: MenuReservationStatus;
+  note?: string | null;
+  deviceType?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface MenuReservationCreateBody {
+  customerName: string;
+  phone?: string;
+  email?: string;
+  partySize: number;
+  reservationAt: string;
+  note?: string;
+}
+
+export interface MenuReservationUpdateBody {
+  status?: MenuReservationStatus;
+  reservationAt?: string;
+}
+
+export interface MenuReservationPageApiResponse {
+  content: MenuReservationApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+export async function createPublicReservationRequest(
+  menuId: number | string,
+  payload: MenuReservationCreateBody,
+): Promise<MenuReservationApiItem> {
+  const response = await fetch(
+    `/api/menu/public/${encodeURIComponent(String(menuId))}/reservations`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!response.ok) {
+    let message = "Rezervasyon oluşturulamadı";
+    try {
+      const data = (await response.json()) as { message?: string };
+      if (data?.message) message = data.message;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(response.status, message);
+  }
+  return response.json() as Promise<MenuReservationApiItem>;
+}
+
+export async function getMenuReservationsRequest(
+  menuId: number | string,
+  params?: {
+    status?: MenuReservationStatus | "all";
+    from?: string;
+    to?: string;
+    q?: string;
+    page?: number;
+    size?: number;
+  },
+): Promise<MenuReservationPageApiResponse> {
+  const response = await api.get<MenuReservationPageApiResponse>(`/menu/${menuId}/reservations`, {
+    params,
+  });
+  return response.data;
+}
+
+export async function updateMenuReservationRequest(
+  menuId: number | string,
+  reservationId: number | string,
+  payload: MenuReservationUpdateBody,
+): Promise<MenuReservationApiItem> {
+  const response = await api.patch<MenuReservationApiItem>(
+    `/menu/${menuId}/reservations/${reservationId}`,
+    payload,
   );
   return response.data;
 }

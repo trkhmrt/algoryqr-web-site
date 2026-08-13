@@ -2,20 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BarChart3,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Crown,
   Eye,
   Users,
   ShoppingBag,
   Layers,
+  type LucideIcon,
   Loader2,
 } from "lucide-react";
 import {
@@ -36,7 +35,8 @@ import {
   Legend,
 } from "recharts";
 
-import { useDigitalMenuOptions, useDigitalMenuSelection } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DigitalMenuPicker, useDigitalMenuSelection } from "@/components/dashboard/menu/DigitalMenuPicker";
+import AnalyticsRevenuePanel from "@/components/dashboard/AnalyticsRevenuePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,11 +59,13 @@ import {
 } from "@/components/ui/dialog";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import { useMenuAnalyticsReport } from "@/hooks/use-menu-analytics-report";
+import { useMenuRevenueReport } from "@/hooks/use-menu-revenue-report";
 import { useSmartReportJob } from "@/hooks/use-smart-report-job";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { hasProduct, hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { SlidingTabSelect } from "@/components/ui/sliding-tab-select";
 import { formatPackagePrice, packageFeatures } from "@/lib/package-display";
 import {
   hasActiveProductAccess,
@@ -72,6 +74,12 @@ import {
 } from "@/lib/product-access";
 import { downloadSmartReportPdf } from "@/lib/smart-report-pdf";
 import { getSmartReportQuotaRequest, buildSmartReportMarkdown, isSmartReportQuotaExhausted, normalizeSmartReportResult } from "@/lib/smart-report";
+import {
+  buildVisitReportView,
+  reportingPeriodRange,
+  type AnalyticsPeriod,
+  type VisitKpiId,
+} from "@/reporting";
 
 const c = (token: string) => `hsl(var(--chart-${token}))`;
 
@@ -86,7 +94,6 @@ const COLORS = {
 };
 
 const DEVICE_FILLS = [COLORS.indigo, COLORS.orange, COLORS.teal];
-const JOURNEY_PAGE_SIZE = 5;
 
 function SmartReportButton({
   className,
@@ -124,6 +131,7 @@ function useTooltipStyle() {
       borderRadius: "8px",
       fontSize: "12px",
       color: "hsl(0 0% 10%)",
+      boxShadow: "0 2px 8px hsl(0 0% 0% / 0.08)",
     };
   }
   const isDark = document.documentElement.classList.contains("dark");
@@ -140,24 +148,22 @@ function useTooltipStyle() {
 const gridStroke = "hsl(0 0% 15%)";
 const axisStroke = "hsl(0 0% 40%)";
 
-type AnalyticsPeriod = "1d" | "7d" | "30d";
+type ReportView = "visits" | "revenue";
+export type AnalyticsVariant = "menu" | "orders";
 
-function periodRange(period: AnalyticsPeriod) {
-  const to = new Date();
-  const from = new Date();
-  if (period !== "1d") {
-    const days = period === "7d" ? 6 : 29;
-    from.setDate(to.getDate() - days);
-  }
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { from: fmt(from), to: fmt(to) };
-}
+const VISIT_KPI_ICONS: Record<VisitKpiId, LucideIcon> = {
+  sessions: Users,
+  menuOpens: Eye,
+  productViews: ShoppingBag,
+  averageProductsPerSession: Layers,
+};
 
-function formatShortDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
-}
+const VISIT_KPI_COLORS: Record<VisitKpiId, string> = {
+  sessions: COLORS.indigo,
+  menuOpens: COLORS.teal,
+  productViews: COLORS.green,
+  averageProductsPerSession: COLORS.orange,
+};
 
 function TreemapContent(props: {
   x?: number;
@@ -229,7 +235,21 @@ const ANALYTICS_FEATURES = [
   "Oturum yolculuk örnekleri",
 ] as const;
 
-function AnalyticsLockedView({ backHref }: { backHref: string }) {
+const ORDER_ANALYTICS_FEATURES = [
+  "Onaylanan siparişlerden ciro takibi",
+  "Günlük satış ve sipariş adedi",
+  "Kategori ve ürün cirosu",
+  "Ortalama sepet tutarı",
+] as const;
+
+function AnalyticsLockedView({
+  backHref,
+  variant = "menu",
+}: {
+  backHref: string;
+  variant?: AnalyticsVariant;
+}) {
+  const isOrders = variant === "orders";
   const packages = useActivePackages();
   const ultimate =
     packages.data?.find((pkg) =>
@@ -237,7 +257,11 @@ function AnalyticsLockedView({ backHref }: { backHref: string }) {
     ) ??
     packages.data?.find((pkg) => pkg.code === "ULTIMATE_PACKAGE") ??
     null;
-  const features = ultimate ? packageFeatures(ultimate).slice(0, 5) : [...ANALYTICS_FEATURES];
+  const features = isOrders
+    ? [...ORDER_ANALYTICS_FEATURES]
+    : ultimate
+      ? packageFeatures(ultimate).slice(0, 5)
+      : [...ANALYTICS_FEATURES];
   const checkoutHref = ultimate
     ? DASHBOARD_ROUTES.accountSubscriptionCheckout(ultimate.id)
                 : DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING");
@@ -253,13 +277,17 @@ function AnalyticsLockedView({ backHref }: { backHref: string }) {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Raporlama</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {isOrders ? "Sipariş Raporları" : "Raporlar"}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Akıllı Raporlama için Ultimate paket gerekir.
+              {isOrders
+                ? "Sipariş cirosu ve satış raporları için Ultimate paket gerekir."
+                : "Akıllı Raporlama için Ultimate paket gerekir."}
             </p>
           </div>
         </div>
-        <SmartReportButton disabled />
+        {isOrders ? null : <SmartReportButton disabled />}
       </div>
 
       <Card className="glow-card overflow-hidden border-primary/30">
@@ -279,7 +307,9 @@ function AnalyticsLockedView({ backHref }: { backHref: string }) {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {ultimate?.description?.trim() ||
-                      "Akıllı Raporlama ile menü ziyaretlerini ve ürün performansını takip edin."}
+                      (isOrders
+                        ? "Onaylanan siparişlerden ciro ve satış performansını takip edin."
+                        : "Akıllı Raporlama ile menü ziyaretlerini ve ürün performansını takip edin.")}
                   </p>
                 </div>
               </div>
@@ -338,26 +368,29 @@ function AnalyticsLockedView({ backHref }: { backHref: string }) {
   );
 }
 
-export default function AnalyticsTab() {
+export default function AnalyticsTab({ variant = "menu" }: { variant?: AnalyticsVariant }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const isOrders = variant === "orders";
   const initialQrId = useMemo(() => {
     const raw = Number(searchParams.get("qr"));
     return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
   }, [searchParams]);
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
+  const [reportView, setReportView] = useState<ReportView>(isOrders ? "revenue" : "visits");
+  const activeReportView: ReportView = isOrders ? "revenue" : reportView;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [journeyPage, setJourneyPage] = useState(0);
   const tooltipStyle = useTooltipStyle();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { accessLoading, canUse } = useAnalyticsAccess();
-  const { menuQrs, loading: menusLoading } = useDigitalMenuOptions();
-  const { selection, loading: selectionLoading } = useDigitalMenuSelection(initialQrId);
-  const range = useMemo(() => periodRange(period), [period]);
+  const { menuQrs, selection, loading: selectionLoading, selectQrId } = useDigitalMenuSelection(initialQrId);
+  const range = useMemo(() => reportingPeriodRange(period), [period]);
   const menuId = selection?.menu.menuId ?? null;
-  const reportQuery = useMenuAnalyticsReport(menuId, range.from, range.to, canUse && menuId != null);
+  const reportQuery = useMenuAnalyticsReport(menuId, range.from, range.to, canUse && menuId != null && !isOrders);
+  const revenueQuery = useMenuRevenueReport(menuId, range.from, range.to, canUse && menuId != null);
   const report = reportQuery.data;
   const smartReport = useSmartReportJob({
     menuId,
@@ -371,8 +404,9 @@ export default function AnalyticsTab() {
   });
   const quota = quotaQuery.data;
   const quotaExhausted = isSmartReportQuotaExhausted(quota);
-  const backHref =
-    selection?.qr.id != null
+  const backHref = isOrders
+    ? DASHBOARD_ROUTES.orderPanel
+    : selection?.qr.id != null
       ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
       : initialQrId != null
         ? DASHBOARD_ROUTES.digitalMenuEdit(initialQrId)
@@ -391,10 +425,6 @@ export default function AnalyticsTab() {
       wasGeneratingRef.current = true;
     }
   }, [smartReport.isGenerating]);
-
-  useEffect(() => {
-    setJourneyPage(0);
-  }, [menuId, range.from, range.to]);
 
   useEffect(() => {
     if (!smartReport.isReady || !wasGeneratingRef.current) return;
@@ -512,68 +542,31 @@ export default function AnalyticsTab() {
 
   if (!canUse) {
     return (
-      <AnalyticsLockedView backHref={backHref} />
+      <AnalyticsLockedView backHref={backHref} variant={variant} />
     );
   }
 
-  const daily = (report?.daily ?? []).map((row) => ({
-    ...row,
-    dateLabel: formatShortDate(row.date),
-  }));
-  const hourly = (report?.hourly ?? []).map((row) => ({
-    hour: String(row.hour).padStart(2, "0"),
-    views: row.views,
-  }));
-  const deviceTotal = (report?.devices ?? []).reduce((sum, d) => sum + d.value, 0);
-  const devices = (report?.devices ?? []).map((d, i) => ({
+  const visit = buildVisitReportView(report);
+  const daily = visit.daily;
+  const hourly = visit.hourly;
+  const devices = visit.devices.map((d, i) => ({
     ...d,
     fill: DEVICE_FILLS[i % DEVICE_FILLS.length],
-    pct: deviceTotal > 0 ? Math.round((d.value / deviceTotal) * 100) : 0,
   }));
-  const funnel = [
-    { name: "Menü", value: report?.funnel.menuOpens ?? 0 },
-    { name: "Kategori", value: report?.funnel.categoryViews ?? 0 },
-    { name: "Ürün", value: report?.funnel.productViews ?? 0 },
-  ];
-  const treeData = (report?.categoryProductTree ?? []).map((node) => ({
-    name: node.name,
-    size: node.size,
-    children: (node.children ?? []).map((child) => ({
-      name: child.name,
-      size: child.size,
-    })),
+  const funnel = visit.funnel;
+  const treeData = visit.treeData;
+  const kpis = visit.kpis.map((m) => ({
+    ...m,
+    icon: VISIT_KPI_ICONS[m.id],
+    color: VISIT_KPI_COLORS[m.id],
   }));
-  const kpis = [
-    {
-      label: "Oturum",
-      value: report?.kpis.sessions ?? 0,
-      icon: Users,
-      color: COLORS.indigo,
-    },
-    {
-      label: "Menü açılışı",
-      value: report?.kpis.menuOpens ?? 0,
-      icon: Eye,
-      color: COLORS.teal,
-    },
-    {
-      label: "Ürün görüntüleme",
-      value: report?.kpis.productViews ?? 0,
-      icon: ShoppingBag,
-      color: COLORS.green,
-    },
-    {
-      label: "Ort. ürün / oturum",
-      value: (report?.kpis.avgProductsPerSession ?? 0).toFixed(1),
-      icon: Layers,
-      color: COLORS.orange,
-    },
-  ];
-  const loading = menusLoading || selectionLoading || reportQuery.isLoading;
-  const empty = !loading && (report?.kpis.sessions ?? 0) === 0 && (report?.kpis.menuOpens ?? 0) === 0;
+  const visitLoading = selectionLoading || reportQuery.isLoading;
+  const revenueLoading = selectionLoading || revenueQuery.isLoading;
+  const loading = activeReportView === "revenue" ? revenueLoading : visitLoading;
+  const empty = !visitLoading && visit.empty;
   const canGenerate =
     menuId != null &&
-    !loading &&
+    !visitLoading &&
     !reportQuery.isError &&
     !!report &&
     !smartReport.isGenerating &&
@@ -587,17 +580,10 @@ export default function AnalyticsTab() {
         : failed
           ? "Tekrar dene"
           : "Akıllı Rapor";
-  const sampleJourneys = report?.sampleJourneys ?? [];
-  const journeyTotalPages = Math.max(1, Math.ceil(sampleJourneys.length / JOURNEY_PAGE_SIZE));
-  const safeJourneyPage = Math.min(journeyPage, journeyTotalPages - 1);
-  const pagedJourneys = sampleJourneys.slice(
-    safeJourneyPage * JOURNEY_PAGE_SIZE,
-    safeJourneyPage * JOURNEY_PAGE_SIZE + JOURNEY_PAGE_SIZE,
-  );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-w-0 space-y-6 animate-fade-in">
+      <div className="sticky top-0 z-10 flex flex-col gap-4 bg-background/95 py-1 backdrop-blur sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href={backHref}
@@ -606,34 +592,42 @@ export default function AnalyticsTab() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Raporlama</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {isOrders ? "Sipariş Raporları" : "Raporlar"}
+            </h1>
             <p className="text-sm text-muted-foreground">
               {menuLabel
-                ? `${menuLabel} · menü ziyaret ve yolculuk raporları`
-                : "Menü QR ziyaret ve yolculuk raporları."}
+                ? activeReportView === "revenue"
+                  ? `${menuLabel} · onaylanan sipariş ciro ve satış raporları`
+                  : `${menuLabel} · menü ziyaret ve yolculuk raporları`
+                : activeReportView === "revenue"
+                  ? "Onaylanan siparişlerden ciro, satış ve sepet raporları."
+                  : "Menü QR ziyaret ve yolculuk raporları."}
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-3 sm:ml-auto">
-          <Link
-            href={DASHBOARD_ROUTES.smartReports}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            Rapor gecmisi
-          </Link>
-          <SmartReportButton
-            loading={smartReport.isGenerating}
-            disabled={
-              smartReport.isReady
-                ? false
-                : smartReport.isGenerating
-                  ? true
-                  : !canGenerate
-            }
-            label={smartReportLabel}
-            onClick={() => handleSmartReportClick()}
-          />
-        </div>
+        {isOrders ? null : (
+          <div className="flex shrink-0 flex-nowrap items-center justify-end gap-3 sm:ml-auto">
+            <Link
+              href={DASHBOARD_ROUTES.smartReports}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Rapor gecmisi
+            </Link>
+            <SmartReportButton
+              loading={smartReport.isGenerating}
+              disabled={
+                smartReport.isReady
+                  ? false
+                  : smartReport.isGenerating
+                    ? true
+                    : !canGenerate
+              }
+              label={smartReportLabel}
+              onClick={() => handleSmartReportClick()}
+            />
+          </div>
+        )}
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -731,7 +725,9 @@ export default function AnalyticsTab() {
 
       {menuQrs.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          Raporlama için önce bir menü QR oluşturun.{" "}
+          {isOrders
+            ? "Sipariş raporları için önce bir menü QR oluşturun. "
+            : "Raporlar için önce bir menü QR oluşturun. "}
           <Link
             href={DASHBOARD_ROUTES.digitalMenuCreate}
             className="font-medium text-foreground underline-offset-2 hover:underline"
@@ -739,7 +735,52 @@ export default function AnalyticsTab() {
             Menü oluştur
           </Link>
         </div>
-      ) : null}
+      ) : (
+        <div className="space-y-3">
+          {isOrders ? null : (
+            <SlidingTabSelect
+              variant="line"
+              size="md"
+              ariaLabel="Rapor türü"
+              value={reportView}
+              onValueChange={(next) => setReportView(next as ReportView)}
+              items={[
+                { value: "visits", label: "Ürün & Ziyaret" },
+                { value: "revenue", label: "Ciro" },
+              ]}
+            />
+          )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <DigitalMenuPicker
+              compact
+              menuQrs={menuQrs}
+              selectedQrId={selection?.qr.id ?? initialQrId}
+              onSelectQrId={(qrId) => {
+                void selectQrId(qrId);
+                router.replace(
+                  isOrders
+                    ? DASHBOARD_ROUTES.orderPanelReportsForQr(qrId)
+                    : DASHBOARD_ROUTES.digitalMenuAnalytics(qrId),
+                  { scroll: false },
+                );
+              }}
+            />
+            <div className="flex justify-end">
+              <SlidingTabSelect
+                size="sm"
+                ariaLabel="Rapor dönemi"
+                value={period}
+                onValueChange={(next) => setPeriod(next as AnalyticsPeriod)}
+                items={[
+                  { value: "1d", label: "Bugün" },
+                  { value: "7d", label: "7 Gün" },
+                  { value: "30d", label: "30 Gün" },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {menuId != null && loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -747,39 +788,24 @@ export default function AnalyticsTab() {
         </div>
       ) : null}
 
-      {menuId != null && reportQuery.isError ? (
+      {activeReportView === "visits" && menuId != null && reportQuery.isError ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Rapor yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
 
-      {menuId != null && !loading && !reportQuery.isError ? (
-        <>
-          <div className="flex justify-end">
-            <div className="flex gap-1 rounded-lg border border-border bg-card p-1">
-              {(
-                [
-                  { key: "1d" as const, label: "Bugün" },
-                  { key: "7d" as const, label: "7 Gün" },
-                  { key: "30d" as const, label: "30 Gün" },
-                ] as const
-              ).map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => setPeriod(p.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    period === p.key
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      {activeReportView === "revenue" && menuId != null && revenueQuery.isError ? (
+        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+          Ciro raporu yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
+        </div>
+      ) : null}
 
+      {activeReportView === "revenue" && menuId != null && !revenueLoading && !revenueQuery.isError && revenueQuery.data ? (
+        <AnalyticsRevenuePanel report={revenueQuery.data} tooltipStyle={tooltipStyle} />
+      ) : null}
+
+      {activeReportView === "visits" && menuId != null && !visitLoading && !reportQuery.isError ? (
+        <>
           {empty ? (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
               Seçilen dönemde henüz ziyaret verisi yok. Public menü taramaları burada görünecek.
@@ -789,7 +815,7 @@ export default function AnalyticsTab() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {kpis.map((m, i) => (
               <motion.div
-                key={m.label}
+                key={m.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
@@ -798,7 +824,7 @@ export default function AnalyticsTab() {
                 <div className="p-5">
                   <m.icon className="h-4 w-4" style={{ color: m.color }} />
                   <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
-                    {typeof m.value === "number" ? m.value.toLocaleString("tr-TR") : m.value}
+                    {m.display}
                   </p>
                   <p className="text-xs text-muted-foreground">{m.label}</p>
                 </div>
@@ -882,7 +908,7 @@ export default function AnalyticsTab() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={[...(report?.topProducts ?? [])].reverse()}
+                    data={[...visit.topProducts].reverse()}
                     layout="vertical"
                     margin={{ left: 16 }}
                   >
@@ -908,7 +934,7 @@ export default function AnalyticsTab() {
               <h2 className="mb-4 text-sm font-medium text-foreground">En çok görüntülenen kategoriler</h2>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={report?.topCategories ?? []}>
+                  <BarChart data={visit.topCategories}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
                     <XAxis dataKey="name" stroke={axisStroke} fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis stroke={axisStroke} fontSize={11} tickLine={false} axisLine={false} />
@@ -954,75 +980,6 @@ export default function AnalyticsTab() {
                 </ResponsiveContainer>
               </div>
             </div>
-          </div>
-
-          <div className="glow-card rounded-lg border bg-card p-6">
-            <h2 className="mb-4 text-sm font-medium text-foreground">Örnek oturum yolculukları</h2>
-            {sampleJourneys.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Henüz yolculuk örneği yok.</p>
-            ) : (
-              <div className="space-y-4">
-                {pagedJourneys.map((journey) => (
-                  <div key={journey.sessionId} className="rounded-lg border border-border p-4">
-                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono">{journey.sessionId.slice(0, 8)}</span>
-                      <span>
-                        {new Date(journey.startedAt).toLocaleString("tr-TR", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {journey.steps.map((step, idx) => (
-                        <span
-                          key={`${journey.sessionId}-${idx}`}
-                          className="rounded-md border border-border bg-accent/40 px-2 py-1 text-xs text-foreground"
-                        >
-                          {step.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {journeyTotalPages > 1 ? (
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                    <p className="text-xs text-muted-foreground">
-                      Toplam {sampleJourneys.length} yolculuk · Sayfa {safeJourneyPage + 1} /{" "}
-                      {journeyTotalPages}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        disabled={safeJourneyPage <= 0}
-                        onClick={() => setJourneyPage((current) => Math.max(0, current - 1))}
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                        Önceki
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="gap-1"
-                        disabled={safeJourneyPage >= journeyTotalPages - 1}
-                        onClick={() =>
-                          setJourneyPage((current) => Math.min(journeyTotalPages - 1, current + 1))
-                        }
-                      >
-                        Sonraki
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
           </div>
         </>
       ) : null}

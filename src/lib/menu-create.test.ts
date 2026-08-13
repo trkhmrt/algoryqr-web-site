@@ -8,7 +8,7 @@ describe("buildMenuCreateDetails", () => {
       {
         businessName: "Kafe İstanbul",
         slogan: "Lezzetin adresi",
-        themeId: "soft",
+        themeId: "luxury",
       },
       [{ name: "Espresso", price: 120, category: "İçecekler" }],
     );

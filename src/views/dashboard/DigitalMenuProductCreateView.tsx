@@ -1,0 +1,543 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+
+import {
+  DigitalMenuGate,
+  useDigitalMenuAccess,
+  useDigitalMenuSelection,
+} from "@/components/dashboard/menu/DigitalMenuPicker";
+import {
+  buildNutritionFactsFromForm,
+  emptyNutritionFacts,
+} from "@/components/dashboard/menu/ProductNutritionPanel";
+import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
+import { RainbowBeamButton } from "@/components/dashboard/RainbowBeamButton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  createMenuProductRequest,
+  MenuProductRequestBody,
+  NutritionBasis,
+  NutritionFacts,
+} from "@/lib/api";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import {
+  hasActiveProductAccess,
+  isDateUsablePurchase,
+  matchesProductCode,
+} from "@/lib/product-access";
+import { createSmartSummaryRequest } from "@/lib/smart-summary";
+import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
+import { invalidateMenuProducts } from "@/hooks/use-menu-products";
+import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+
+type NutritionFormFields = {
+  basis: NutritionBasis;
+  energyKj: string;
+  energyKcal: string;
+  fat: string;
+  saturatedFat: string;
+  carbohydrate: string;
+  sugars: string;
+  fibre: string;
+  protein: string;
+  salt: string;
+};
+
+const emptyNutritionForm = (): NutritionFormFields => ({
+  basis: "PER_100G",
+  energyKj: "",
+  energyKcal: "",
+  fat: "",
+  saturatedFat: "",
+  carbohydrate: "",
+  sugars: "",
+  fibre: "",
+  protein: "",
+  salt: "",
+});
+
+const emptyForm = (subCategoryId?: number | null): MenuProductRequestBody => ({
+  name: "",
+  description: "",
+  price: "",
+  currency: "TRY",
+  subCategoryId: subCategoryId ?? 0,
+  tagIds: [],
+  allergenIds: [],
+  imageUrl: "",
+  available: true,
+  servesPeopleMin: 1,
+  servesPeopleMax: 1,
+  nutrition: emptyNutritionFacts(),
+});
+
+export default function DigitalMenuProductCreateView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const { notify } = useDashboardBanners();
+  const subscription = useSubscription();
+  const packages = useActivePackages();
+
+  const initialQrId = useMemo(() => {
+    const raw = Number(searchParams.get("qr"));
+    return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
+  }, [searchParams]);
+  const presetCategoryId = useMemo(() => {
+    const raw = Number(searchParams.get("category"));
+    return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
+  }, [searchParams]);
+
+  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const selectionState = useDigitalMenuSelection(initialQrId);
+  const qrId = selectionState.selection?.qr.id ?? initialQrId;
+
+  const categoriesQuery = useMenuCategoriesByQr(qrId);
+  const tagsQuery = useMenuTags();
+  const allergensQuery = useMenuAllergens();
+  const categories = useMemo(
+    () => categoriesQuery.data?.categories ?? [],
+    [categoriesQuery.data],
+  );
+  const tags = tagsQuery.data ?? [];
+  const allergens = allergensQuery.data ?? [];
+  const menuId =
+    selectionState.selection?.menu.menuId ?? categoriesQuery.data?.menuId ?? 0;
+
+  const [form, setForm] = useState<MenuProductRequestBody>(() => emptyForm(presetCategoryId));
+  const [mainCategoryId, setMainCategoryId] = useState<number | "">("");
+  const [nutritionForm, setNutritionForm] = useState<NutritionFormFields>(emptyNutritionForm());
+  const [saving, setSaving] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    if (presetCategoryId == null || categories.length === 0) return;
+    const main = categories.find((item) =>
+      (item.subs ?? []).some((sub) => sub.id === presetCategoryId),
+    );
+    if (main) setMainCategoryId(main.id);
+  }, [categories, presetCategoryId]);
+
+  useEffect(() => {
+    if (categoriesQuery.isError) {
+      notify(
+        "danger",
+        categoriesQuery.error instanceof Error
+          ? categoriesQuery.error.message
+          : "Kategoriler yüklenemedi.",
+      );
+    }
+  }, [categoriesQuery.error, categoriesQuery.isError, notify]);
+
+  const entitlements = Array.isArray(subscription.data?.entitlements)
+    ? subscription.data.entitlements
+    : [];
+  const purchases = Array.isArray(subscription.data?.purchases) ? subscription.data.purchases : [];
+  const activePurchase = subscription.data?.activePurchase ?? null;
+  const activePackage =
+    packages.data?.find(
+      (pkg) => activePurchase?.packageId != null && pkg.id === activePurchase.packageId,
+    ) ??
+    packages.data?.find(
+      (pkg) => !!activePurchase?.packageCode && pkg.code === activePurchase.packageCode,
+    ) ??
+    null;
+  const activePackageHasSmartSummary =
+    !!activePurchase &&
+    isDateUsablePurchase(activePurchase) &&
+    !!activePackage?.items?.some((item) => matchesProductCode(item.productCode, "SMART_SUMMARY"));
+  const canUseSmartSummary =
+    hasActiveProductAccess(entitlements, purchases, "SMART_SUMMARY") ||
+    activePackageHasSmartSummary;
+
+  const selectedMain = categories.find((main) => main.id === mainCategoryId);
+  const subOptions = selectedMain?.subs ?? [];
+  const selectedSub = subOptions.find((sub) => sub.id === form.subCategoryId);
+  const mainCategorySelectOptions = categories.map((main) => ({
+    value: String(main.id),
+    label: main.name,
+  }));
+  const subCategorySelectOptions = subOptions.map((sub) => ({
+    value: String(sub.id),
+    label: sub.name,
+  }));
+
+  const backHref =
+    qrId != null
+      ? DASHBOARD_ROUTES.digitalMenuProductsForQr(qrId)
+      : DASHBOARD_ROUTES.digitalMenuProducts;
+
+  const resolveNutritionPayload = (): NutritionFacts | null => {
+    const kcal = Number(String(nutritionForm.energyKcal).replace(",", "."));
+    const energyKj =
+      nutritionForm.energyKj.trim() !== ""
+        ? nutritionForm.energyKj
+        : Number.isFinite(kcal)
+          ? String(Math.round(kcal * 4.184))
+          : "";
+    return buildNutritionFactsFromForm({
+      ...nutritionForm,
+      energyKj,
+      fibre: nutritionForm.fibre.trim() !== "" ? nutritionForm.fibre : "0",
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name?.trim()) {
+      notify("warning", "Ürün adı zorunlu.");
+      return;
+    }
+    if (!form.subCategoryId) {
+      notify("warning", "Alt kategori seçimi zorunlu.");
+      return;
+    }
+    if (menuId <= 0) {
+      notify("warning", "Menü bilgisi yüklenemedi.");
+      return;
+    }
+
+    const nutrition = resolveNutritionPayload();
+    if (!nutrition) {
+      notify("warning", "Zorunlu besin alanlarını doldurun.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const created = await createMenuProductRequest(menuId, {
+        ...form,
+        nutrition,
+      });
+      notify("info", "Ürün eklendi.");
+      await invalidateMenuProducts(queryClient, menuId, qrId ?? undefined);
+      router.push(
+        qrId != null
+          ? DASHBOARD_ROUTES.digitalMenuProductDetail(created.productId, qrId)
+          : backHref,
+      );
+    } catch (error) {
+      notify("danger", error instanceof Error ? error.message : "İşlem başarısız.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSmartSummary = async () => {
+    if (!canUseSmartSummary) {
+      notify("warning", "Akıllı Özet için paketinizde bu özellik bulunmuyor.");
+      router.push(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_SUMMARY"));
+      return;
+    }
+    if (!form.name?.trim()) {
+      notify("warning", "Akıllı özet için önce ürün adı girin.");
+      return;
+    }
+    const selectedTags = tags.filter((tag) => (form.tagIds ?? []).includes(tag.id));
+    const selectedAllergens = allergens.filter((item) =>
+      (form.allergenIds ?? []).includes(item.id),
+    );
+    const priceText =
+      form.price != null && String(form.price).trim() !== ""
+        ? String(form.price).trim()
+        : undefined;
+    setSummaryLoading(true);
+    try {
+      const result = await createSmartSummaryRequest({
+        product: {
+          name: form.name.trim(),
+          description: form.description?.trim() || undefined,
+          price: priceText,
+          currency: form.currency || "TRY",
+          mainCategoryName: selectedMain?.name,
+          subCategoryName: selectedSub?.name,
+          tags: selectedTags.map((tag) => tag.name),
+          allergens: selectedAllergens.map((item) => item.name),
+          servesPeopleMin: form.servesPeopleMin ?? null,
+          servesPeopleMax: form.servesPeopleMax ?? null,
+          chefRecommended: Boolean(form.chefRecommended),
+          available: form.available ?? true,
+          nutrition: resolveNutritionPayload() ?? undefined,
+        },
+        locale: "tr",
+      });
+      setForm({ ...form, description: result.description });
+      notify("info", "Akıllı özet açıklamaya yazıldı.");
+    } catch (error) {
+      notify("danger", error instanceof Error ? error.message : "Akıllı özet üretilemedi.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const busy = saving || summaryLoading;
+
+  return (
+    <DigitalMenuGate accessLoading={accessLoading} canUse={canUseDigitalMenu}>
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-start gap-3">
+          <Link
+            href={backHref}
+            className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ürün Ekle</h1>
+            <p className="text-sm text-muted-foreground">
+              Ürün bilgilerini girin ve bir alt kategoriye bağlayın.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-xs">Ürün Adı</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Ana Kategori</Label>
+              <SearchableSelect
+                value={mainCategoryId === "" ? "" : String(mainCategoryId)}
+                onValueChange={(next) => {
+                  setMainCategoryId(next ? Number(next) : "");
+                  setForm({ ...form, subCategoryId: 0 });
+                }}
+                options={mainCategorySelectOptions}
+                placeholder="Ana kategori seçin"
+                searchPlaceholder="Kategori ara..."
+                emptyText="Kategori bulunamadı."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Alt Kategori</Label>
+              <SearchableSelect
+                value={form.subCategoryId ? String(form.subCategoryId) : ""}
+                onValueChange={(next) =>
+                  setForm({
+                    ...form,
+                    subCategoryId: next ? Number(next) : 0,
+                  })
+                }
+                options={subCategorySelectOptions}
+                placeholder="Alt kategori seçin"
+                searchPlaceholder="Alt kategori ara..."
+                emptyText="Alt kategori bulunamadı."
+                disabled={mainCategoryId === ""}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Fiyat</Label>
+              <Input
+                value={String(form.price ?? "")}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                placeholder="120"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Min kişi</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.servesPeopleMin ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      servesPeopleMin: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Max kişi</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.servesPeopleMax ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      servesPeopleMax: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <ProductImageField
+                menuId={menuId}
+                value={form.imageUrl}
+                onChange={(imageUrl) => setForm({ ...form, imageUrl: imageUrl ?? "" })}
+                disabled={busy || menuId <= 0}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-md border border-border/60 p-3">
+            <p className="text-xs font-medium text-foreground">Besin değerleri (zorunlu)</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Birim</Label>
+                <SearchableSelect
+                  value={nutritionForm.basis}
+                  onValueChange={(next) =>
+                    setNutritionForm({ ...nutritionForm, basis: next as NutritionBasis })
+                  }
+                  options={[
+                    { value: "PER_100G", label: "100g başına" },
+                    { value: "PER_100ML", label: "100ml başına" },
+                  ]}
+                  placeholder="Birim seçin"
+                  searchPlaceholder="Birim ara..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Enerji (kcal)</Label>
+                <Input
+                  value={nutritionForm.energyKcal}
+                  onChange={(e) =>
+                    setNutritionForm({ ...nutritionForm, energyKcal: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Yağ</Label>
+                <Input
+                  value={nutritionForm.fat}
+                  onChange={(e) => setNutritionForm({ ...nutritionForm, fat: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Karbonhidrat</Label>
+                <Input
+                  value={nutritionForm.carbohydrate}
+                  onChange={(e) =>
+                    setNutritionForm({ ...nutritionForm, carbohydrate: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Protein</Label>
+                <Input
+                  value={nutritionForm.protein}
+                  onChange={(e) => setNutritionForm({ ...nutritionForm, protein: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tuz</Label>
+                <Input
+                  value={nutritionForm.salt}
+                  onChange={(e) => setNutritionForm({ ...nutritionForm, salt: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Etiketler</Label>
+            <div className="flex flex-wrap gap-2 rounded-md border border-border p-2">
+              {tags.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Etiket yok.</p>
+              ) : (
+                tags.map((tag) => {
+                  const selected = (form.tagIds ?? []).includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs ${
+                        selected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                      onClick={() => {
+                        const current = new Set(form.tagIds ?? []);
+                        if (current.has(tag.id)) current.delete(tag.id);
+                        else current.add(tag.id);
+                        setForm({ ...form, tagIds: Array.from(current) });
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Alerjen maddeler</Label>
+            <div className="flex flex-wrap gap-2 rounded-md border border-border p-2">
+              {allergens.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Alerjen yok.</p>
+              ) : (
+                allergens.map((allergen) => {
+                  const selected = (form.allergenIds ?? []).includes(allergen.id);
+                  return (
+                    <button
+                      key={allergen.id}
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs ${
+                        selected
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                      onClick={() => {
+                        const current = new Set(form.allergenIds ?? []);
+                        if (current.has(allergen.id)) current.delete(allergen.id);
+                        else current.add(allergen.id);
+                        setForm({ ...form, allergenIds: Array.from(current) });
+                      }}
+                    >
+                      {allergen.name}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs">Açıklama</Label>
+              <RainbowBeamButton
+                label="Akıllı Özet"
+                loading={summaryLoading}
+                disabled={busy}
+                onClick={() => void handleSmartSummary()}
+              />
+            </div>
+            <Textarea
+              rows={2}
+              value={form.description ?? ""}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
+              {saving ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href={backHref}>İptal</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </DigitalMenuGate>
+  );
+}

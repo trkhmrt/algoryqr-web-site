@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getAppOrigin } from "@/lib/server/app-origin";
 
 export type GoogleAuthIntent = "login" | "register";
+export type CustomerGoogleAuthIntent = "customer_login" | "customer_register";
+export type AnyGoogleAuthIntent = GoogleAuthIntent | CustomerGoogleAuthIntent;
 
 export type GoogleAuthErrorCode =
   | "access_denied"
@@ -39,6 +41,20 @@ export function parseGoogleAuthIntent(value: unknown): GoogleAuthIntent | null {
   return value === "login" || value === "register" ? value : null;
 }
 
+export function parseCustomerGoogleAuthIntent(value: unknown): CustomerGoogleAuthIntent | null {
+  return value === "customer_login" || value === "customer_register" ? value : null;
+}
+
+export function parseAnyGoogleAuthIntent(value: unknown): AnyGoogleAuthIntent | null {
+  return parseGoogleAuthIntent(value) ?? parseCustomerGoogleAuthIntent(value);
+}
+
+export function isCustomerGoogleAuthIntent(
+  value: unknown,
+): value is CustomerGoogleAuthIntent {
+  return value === "customer_login" || value === "customer_register";
+}
+
 export function safeGoogleAuthErrorCode(
   value: unknown,
   fallback: GoogleAuthErrorCode = "oauth_failed",
@@ -52,10 +68,22 @@ export function safeGoogleAuthErrorCode(
 
 export function googleAuthErrorRedirect(
   req: Request,
-  intent: GoogleAuthIntent,
+  intent: AnyGoogleAuthIntent,
   error: GoogleAuthErrorCode,
+  customerReturnUrl?: string | null,
 ): NextResponse {
-  const target = new URL(intent === "register" ? "/register" : "/login", getAppOrigin(req));
+  let target: URL;
+  if (isCustomerGoogleAuthIntent(intent)) {
+    try {
+      target = customerReturnUrl
+        ? new URL(customerReturnUrl, getAppOrigin(req))
+        : new URL("/", getAppOrigin(req));
+    } catch {
+      target = new URL("/", getAppOrigin(req));
+    }
+  } else {
+    target = new URL(intent === "register" ? "/register" : "/login", getAppOrigin(req));
+  }
   target.searchParams.set("error", error);
   const response = NextResponse.redirect(target, 303);
   response.headers.set("Cache-Control", "no-store");

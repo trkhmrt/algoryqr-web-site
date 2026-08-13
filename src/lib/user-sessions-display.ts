@@ -26,6 +26,23 @@ export function sessionStatusLabel(session: UserSessionRow): string {
   return "Pasif";
 }
 
+export function matchesSessionSearch(session: UserSessionRow, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    session.ipAddress,
+    session.device,
+    session.deviceType,
+    session.userAgent,
+    sessionTitle(session),
+    sessionStatusLabel(session),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 export function sortSessions(sessions: UserSessionRow[]): UserSessionRow[] {
   return [...sessions].sort((a, b) => {
     if (a.current !== b.current) return a.current ? -1 : 1;

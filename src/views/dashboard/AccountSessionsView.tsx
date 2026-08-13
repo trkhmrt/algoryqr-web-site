@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Monitor } from "lucide-react";
+import { ArrowLeft, Monitor } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { useUserSessions } from "@/hooks/use-user-sessions";
+import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
@@ -16,28 +14,89 @@ import {
   sessionTitle,
 } from "@/lib/user-sessions-display";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
+const PREVIEW_LIMIT = 5;
+
+function sessionMeta(session: UserSessionRow): string {
+  if (session.current) {
+    return `Giriş: ${formatSessionDate(session.loggedInAt)}`;
+  }
+  return [
+    session.ipAddress,
+    `Giriş: ${formatSessionDate(session.loggedInAt)}`,
+    session.active
+      ? `Son: ${formatSessionDate(session.lastActivityAt)}`
+      : session.revokedAt
+        ? `İptal: ${formatSessionDate(session.revokedAt)}`
+        : `Bitiş: ${formatSessionDate(session.refreshExpiresAt)}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function SessionRow({
+  session,
+  revokingId,
+  onRevoke,
+}: {
+  session: UserSessionRow;
+  revokingId: string | null;
+  onRevoke: (sessionId: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0">
+      <div className="min-w-0">
+        <p className="text-sm text-foreground truncate">{sessionTitle(session)}</p>
+        <p className="text-xs text-muted-foreground truncate">{sessionMeta(session)}</p>
+      </div>
+      {session.active && !session.current ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 shrink-0 text-xs text-destructive"
+          disabled={revokingId === session.sessionId}
+          onClick={() => onRevoke(session.sessionId)}
+        >
+          {revokingId === session.sessionId ? "Sonlandırılıyor…" : "Sonlandır"}
+        </Button>
+      ) : (
+        <span
+          className={
+            session.current
+              ? "shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success"
+              : "shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning"
+          }
+        >
+          {session.current ? "Aktif oturum" : sessionStatusLabel(session)}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function AccountSessionsView() {
   const { notify } = useDashboardBanners();
-  const [page, setPage] = useState(0);
-  const {
-    sessions,
-    totalElements,
-    totalPages,
-    loading,
-    error,
-    revokingId,
-    revoke,
-  } = useUserSessions(true, { page, size: PAGE_SIZE });
+  const { sessions, loading, error, revokingId, revoke } = useUserSessions(true, {
+    page: 0,
+    size: PAGE_SIZE,
+  });
 
-  useEffect(() => {
-    if (!loading && sessions.length === 0 && page > 0) {
-      setPage((current) => Math.max(0, current - 1));
-    }
-  }, [loading, page, sessions.length]);
+  const currentSession = sessions.find((session) => session.current) ?? null;
+  const otherActiveSessions = sessions.filter((session) => !session.current && session.active);
+  const oldSessions = sessions.filter((session) => !session.current && !session.active);
+  const otherActivePreview = otherActiveSessions.slice(0, PREVIEW_LIMIT);
+  const oldPreview = oldSessions.slice(0, PREVIEW_LIMIT);
 
-  const safeTotalPages = Math.max(1, totalPages);
+  const handleRevoke = (sessionId: string) => {
+    void (async () => {
+      try {
+        const message = await revoke(sessionId);
+        notify("info", message);
+      } catch (err) {
+        notify("danger", err instanceof ApiError ? err.message : "Oturum sonlandırılamadı.");
+      }
+    })();
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -47,122 +106,112 @@ export default function AccountSessionsView() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Oturumlar</h1>
           <p className="text-sm text-muted-foreground">
-            Aktif ve geçmiş oturumlarınızı görüntüleyin, gerekirse sonlandırın.
+            Açık cihazlar ve geçmiş oturumların özeti.
           </p>
         </div>
       </div>
 
-      <Card className="glow-card">
-        <CardContent className="space-y-4 p-6">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Monitor className="h-4 w-4 text-muted-foreground" />
-            Tüm oturumlar
-            {!loading && !error ? (
-              <span className="text-muted-foreground font-normal">({totalElements})</span>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Oturumlar yükleniyor…</p>
+      ) : error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-lg border border-success/40 bg-success/5 p-5 flex flex-col gap-3 min-h-[180px]">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-success" /> Bu Cihaz
+              </h2>
+              {currentSession ? (
+                <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                  Aktif oturum
+                </span>
+              ) : null}
+            </div>
+            {currentSession ? (
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-foreground">{sessionTitle(currentSession)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Giriş: {formatSessionDate(currentSession.loggedInAt)}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground flex-1">Aktif oturum bulunamadı.</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-[hsl(var(--chart-violet)/0.35)] bg-gradient-to-b from-[hsl(var(--chart-violet)/0.14)] via-[hsl(var(--chart-violet)/0.06)] to-transparent p-5 flex flex-col gap-3 min-h-[180px]">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-[hsl(var(--chart-violet))]" /> Diğer aktif oturumlar
+              </h2>
+              {otherActiveSessions.length > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {Math.min(otherActiveSessions.length, PREVIEW_LIMIT)}
+                  {otherActiveSessions.length > PREVIEW_LIMIT
+                    ? ` / ${otherActiveSessions.length}`
+                    : ""}
+                </span>
+              ) : null}
+            </div>
+            {otherActivePreview.length === 0 ? (
+              <p className="text-sm text-muted-foreground flex-1">Başka aktif oturum yok.</p>
+            ) : (
+              <div className="flex-1">
+                {otherActivePreview.map((session) => (
+                  <SessionRow
+                    key={session.sessionId}
+                    session={session}
+                    revokingId={revokingId}
+                    onRevoke={handleRevoke}
+                  />
+                ))}
+              </div>
+            )}
+            {otherActiveSessions.length > PREVIEW_LIMIT ? (
+              <Button variant="outline" size="sm" className="w-full mt-auto" asChild>
+                <Link href={DASHBOARD_ROUTES.accountSessionsDetail}>Tümünü gör</Link>
+              </Button>
             ) : null}
           </div>
 
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Oturumlar yükleniyor…</p>
-          ) : error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Oturum bulunamadı.</p>
-          ) : (
-            <div className="space-y-0">
-              {sessions.map((session) => (
-                <div
-                  key={session.sessionId}
-                  className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm text-foreground">{sessionTitle(session)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {[
-                        session.ipAddress,
-                        `Giriş: ${formatSessionDate(session.loggedInAt)}`,
-                        session.active
-                          ? `Son: ${formatSessionDate(session.lastActivityAt)}`
-                          : session.revokedAt
-                            ? `İptal: ${formatSessionDate(session.revokedAt)}`
-                            : `Bitiş: ${formatSessionDate(session.refreshExpiresAt)}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  {session.current ? (
-                    <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-                      Bu cihaz
-                    </span>
-                  ) : session.active ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 shrink-0 text-xs text-destructive"
-                      disabled={revokingId === session.sessionId}
-                      onClick={() => {
-                        void (async () => {
-                          try {
-                            const message = await revoke(session.sessionId);
-                            notify("info", message);
-                          } catch (err) {
-                            notify(
-                              "danger",
-                              err instanceof ApiError ? err.message : "Oturum sonlandırılamadı.",
-                            );
-                          }
-                        })();
-                      }}
-                    >
-                      {revokingId === session.sessionId ? "Sonlandırılıyor…" : "Sonlandır"}
-                    </Button>
-                  ) : (
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {sessionStatusLabel(session)}
-                    </span>
-                  )}
-                </div>
-              ))}
+          <div className="rounded-lg border border-border bg-card p-5 space-y-3 lg:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-muted-foreground" /> Eski oturumlar
+              </h2>
+              {oldSessions.length > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {Math.min(oldSessions.length, PREVIEW_LIMIT)}
+                  {oldSessions.length > PREVIEW_LIMIT ? ` / ${oldSessions.length}` : ""}
+                </span>
+              ) : null}
             </div>
-          )}
-
-          {!loading && !error && totalElements > PAGE_SIZE ? (
-            <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-              <p className="text-xs text-muted-foreground">
-                Sayfa {page + 1} / {safeTotalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                  disabled={page <= 0}
-                  onClick={() => setPage((value) => Math.max(0, value - 1))}
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  Önceki
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                  disabled={page + 1 >= totalPages}
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  Sonraki
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
+            {oldPreview.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Eski oturum yok.</p>
+            ) : (
+              <div>
+                {oldPreview.map((session) => (
+                  <SessionRow
+                    key={session.sessionId}
+                    session={session}
+                    revokingId={revokingId}
+                    onRevoke={handleRevoke}
+                  />
+                ))}
               </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+            )}
+            {oldSessions.length > PREVIEW_LIMIT ? (
+              <Button variant="outline" size="sm" className="w-full" asChild>
+                <Link href={DASHBOARD_ROUTES.accountSessionsDetail}>Tümünü gör</Link>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

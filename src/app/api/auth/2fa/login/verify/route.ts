@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getExpFromAccessToken } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
 import { setAuthCookies, setTokenExpiryCookies } from "@/lib/server/auth-cookies";
+import { clientContextHeaders } from "@/lib/server/client-headers";
 import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 
 /** POST /authservice/2fa/login/verify — Bearer pending JWT + { code }. */
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
           "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${pending}`,
+          ...clientContextHeaders(req),
         },
         validateStatus: () => true,
         timeout: 20_000,

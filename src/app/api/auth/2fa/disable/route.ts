@@ -10,6 +10,7 @@ import {
   TOTP_WRONG_USER_MESSAGE,
 } from "@/lib/api-error-text";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
+import { forbidGoogleOAuthTwoFactor } from "@/lib/server/two-factor-auth";
 
 type Body = { code?: string };
 
@@ -20,6 +21,9 @@ export async function POST(req: Request) {
     if (!accessToken) {
       return NextResponse.json({ message: "Oturum gerekli" }, { status: 401 });
     }
+
+    const oauthBlock = forbidGoogleOAuthTwoFactor(accessToken);
+    if (oauthBlock) return oauthBlock;
 
     const userId = getUserIdFromAccessToken(accessToken);
     if (userId == null) {

@@ -1,11 +1,7 @@
 import type { ComponentType } from "react";
 
-import { AlbaMenuTemplate } from "./alba";
-import { DarkMenuTemplate } from "./dark";
-import { GlassyGrayMenuTemplate } from "./glassy-gray";
-import { LumiereMenuTemplate } from "./lumiere";
-import { LumenMenuTemplate } from "./lumen";
-import { SoftMenuTemplate } from "./soft";
+import { LuxuryMenuTemplate } from "./luxury";
+import { TechGourmetMenuTemplate } from "./tech-gourmet";
 import type { MenuTemplateProps } from "./types";
 
 export type MenuTemplateDefinition = {
@@ -17,46 +13,58 @@ export type MenuTemplateDefinition = {
 
 export const MENU_TEMPLATES = [
   {
-    id: "dark",
-    name: "Koyu",
-    previewClassName: "bg-neutral-950 text-neutral-100",
-    Component: DarkMenuTemplate,
-  },
-  {
-    id: "glassy-gray",
-    name: "Glassy Gray",
-    previewClassName: "bg-[#131313] text-[#ffb693]",
-    Component: GlassyGrayMenuTemplate,
-  },
-  {
-    id: "lumiere",
-    name: "Lumière",
-    previewClassName: "bg-[#f8f9fb] text-[#b80035]",
-    Component: LumiereMenuTemplate,
-  },
-  {
-    id: "lumen",
-    name: "Lumen",
+    id: "luxury",
+    name: "Luxury",
     previewClassName: "bg-[#2a241c] text-[#e8c57a]",
-    Component: LumenMenuTemplate,
+    Component: LuxuryMenuTemplate,
   },
   {
-    id: "alba",
-    name: "Alba",
-    previewClassName: "bg-[#f4f7f9] text-[#1f6f78]",
-    Component: AlbaMenuTemplate,
+    id: "petite-patisserie",
+    name: "Petite Patisserie",
+    previewClassName: "bg-[#F9F6EE] text-[#4E7B6C]",
+    Component: LuxuryMenuTemplate,
   },
   {
-    id: "soft",
-    name: "Soft",
-    previewClassName: "bg-[#f7f6f3] text-[#1c1917]",
-    Component: SoftMenuTemplate,
+    id: "folio-rouge",
+    name: "Plexi Rouge",
+    previewClassName: "bg-[#E3E1DD] text-[#B21833]",
+    Component: LuxuryMenuTemplate,
+  },
+  {
+    id: "lucite-gris",
+    name: "Lucite Gris",
+    previewClassName: "bg-[#D6D4D0] text-[#B08D57]",
+    Component: LuxuryMenuTemplate,
+  },
+  {
+    id: "rubric",
+    name: "Rubric",
+    previewClassName: "bg-[#F6F4F0] text-[#A50021]",
+    Component: LuxuryMenuTemplate,
+  },
+  {
+    id: "bigarade",
+    name: "Bigarade",
+    previewClassName: "bg-[#FFF4EA] text-[#FF4F0F]",
+    Component: LuxuryMenuTemplate,
+  },
+  {
+    id: "elixir",
+    name: "Elixir",
+    previewClassName: "bg-[#10102e] text-[#c0c1ff]",
+    Component: LuxuryMenuTemplate,
+  },
+  {
+    id: "tech-gourmet",
+    name: "Tech.Gourmet",
+    previewClassName: "bg-[#131313] text-[#b7cbbf]",
+    Component: TechGourmetMenuTemplate,
   },
 ] as const satisfies readonly MenuTemplateDefinition[];
 
 export type MenuThemeId = (typeof MENU_TEMPLATES)[number]["id"];
 
-export const DEFAULT_MENU_THEME_ID: MenuThemeId = "soft";
+export const DEFAULT_MENU_THEME_ID: MenuThemeId = "luxury";
 
 const TEMPLATE_BY_ID = Object.fromEntries(
   MENU_TEMPLATES.map((template) => [template.id, template]),

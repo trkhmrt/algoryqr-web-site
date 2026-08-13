@@ -58,7 +58,7 @@ interface SettingsTabProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
 }
 
-const PREVIEW_SESSION_LIMIT = 5;
+const PREVIEW_SESSION_LIMIT = 50;
 
 function formatCountdown(expiresAt: number): string {
   const now = Math.floor(Date.now() / 1000);
@@ -150,9 +150,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     sessions: previewSessions,
     loading: sessionsLoading,
     error: sessionsError,
-    revokingId,
-    revoke: revokeSession,
   } = useUserSessions(view === "security", { page: 0, size: PREVIEW_SESSION_LIMIT });
+  const currentSession = previewSessions.find((session) => session.current) ?? null;
 
   const fetchTokenExp = useCallback(() => {
     setTokenLoading(true);
@@ -397,14 +396,25 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     setTotpCode("");
   };
 
+  useEffect(() => {
+    if (!isGoogleAccount) return;
+    setTwoFactorSetup(null);
+    setTotpCode("");
+    setTotpDisableCode("");
+  }, [isGoogleAccount]);
+
   const handleCopyTwoFactorSecret = async () => {
-    if (!twoFactorSetup) return;
+    if (isGoogleAccount || !twoFactorSetup) return;
     const ok = await copyTextToClipboard(twoFactorSetup.secret);
     if (ok) onNotify("info", "Gizli anahtar panoya kopyalandı.");
     else onNotify("warning", "Kopyalama başarısız.");
   };
 
   const handleStartTwoFactorSetup = async () => {
+    if (isGoogleAccount) {
+      onNotify("warning", "Google hesabıyla giriş yapan kullanıcılar için 2FA kullanılamaz.");
+      return;
+    }
     setTwoFactorSetupLoading(true);
     try {
       const payload = await authService.fetchTwoFactorSetup();
@@ -420,6 +430,10 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   };
 
   const handleDisableTwoFactor = async () => {
+    if (isGoogleAccount) {
+      onNotify("warning", "Google hesabıyla giriş yapan kullanıcılar için 2FA kullanılamaz.");
+      return;
+    }
     const code = totpDisableCode.trim();
     if (!/^\d{6}$/.test(code)) {
       onNotify("warning", "Kapatmak için 6 haneli kodu girin.");
@@ -440,6 +454,10 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   };
 
   const handleConfirmTwoFactor = async () => {
+    if (isGoogleAccount) {
+      onNotify("warning", "Google hesabıyla giriş yapan kullanıcılar için 2FA kullanılamaz.");
+      return;
+    }
     const code = totpCode.trim();
     if (!/^\d{6}$/.test(code)) {
       onNotify("warning", "Authenticator’daki 6 haneli kodu girin.");
@@ -831,203 +849,172 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         )}
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Smartphone className="h-4 w-4 text-muted-foreground" /> İki Faktörlü Doğrulama
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-foreground">Authenticator (TOTP)</p>
-              <p className="text-xs text-muted-foreground">
-                İki yol: başka cihazda QR taratın veya aynı telefonda aşağıdaki gizli anahtarı Authenticator’da “Kurulum anahtarını gir” ile ekleyin. Sonra üretilen 6 haneli kodu yazıp etkinleştirin.
-              </p>
-            </div>
-            {myProfileLoading ? (
-              <p className="text-sm text-muted-foreground">Güvenlik bilgisi yükleniyor…</p>
-            ) : twoFactorEnabled ? (
-              <div className="space-y-3 max-w-sm">
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">2FA hesabınızda açık.</p>
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <div className="rounded-lg border border-border bg-card p-6 space-y-5">
+            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-muted-foreground" /> İki Faktörlü Doğrulama
+            </h2>
+            <div className={cn("space-y-4", isGoogleAccount && "opacity-60")}>
+              <div>
+                <p className="text-sm text-foreground">Authenticator (TOTP)</p>
                 <p className="text-xs text-muted-foreground">
-                  Kapatmak için Authenticator&apos;dan güncel 6 haneli kodu girin.
+                  İki yol: başka cihazda QR taratın veya aynı telefonda aşağıdaki gizli anahtarı Authenticator’da “Kurulum anahtarını gir” ile ekleyin. Sonra üretilen 6 haneli kodu yazıp etkinleştirin.
                 </p>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Doğrulama kodu</Label>
-                  <Input
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    placeholder="000000"
-                    className="bg-background tracking-widest font-mono"
-                    value={totpDisableCode}
-                    onChange={(e) => setTotpDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="gap-2"
-                  disabled={twoFactorDisableLoading || totpDisableCode.length !== 6}
-                  onClick={handleDisableTwoFactor}
-                >
-                  {twoFactorDisableLoading ? "Kapatılıyor…" : "2FA'yı kapat"}
-                </Button>
               </div>
-            ) : !twoFactorSetup ? (
-              <Button
-                type="button"
-                variant="secondary"
-                className="gap-2"
-                disabled={twoFactorSetupLoading}
-                onClick={handleStartTwoFactorSetup}
-              >
-                <Smartphone className="h-4 w-4" />
-                {twoFactorSetupLoading ? "Hazırlanıyor…" : "Kurulumu başlat (QR + anahtar)"}
-              </Button>
-            ) : (
-              <div className="space-y-4 max-w-md">
-                <p className="text-xs text-muted-foreground">
-                  Uygulamaya ekledikten sonra aşağıya güncel 6 haneli kodu yazın.
-                </p>
-                <Image
-                  src={`data:image/png;base64,${twoFactorSetup.qrImageBase64}`}
-                  alt="İki adımlı doğrulama QR"
-                  width={200}
-                  height={200}
-                  className="rounded-md border border-border bg-white p-2"
-                />
-                <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                  <p className="text-xs font-medium text-foreground">Tek telefonda (QR taratmadan)</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Google Authenticator / Microsoft Authenticator: <span className="text-foreground">+</span> →{" "}
-                    <span className="text-foreground">Kurulum anahtarını gir</span> → hesap adı olarak e-postanızı, anahtar
-                    olarak aşağıdaki metni kullanın; tür: zamana dayalı, 30 sn.
+              {isGoogleAccount ? (
+                <div className="space-y-3 max-w-sm">
+                  <p className="text-xs text-muted-foreground">
+                    Google hesabıyla giriş yaptığınız için iki faktörlü doğrulama kullanılamaz.
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <code className="text-[11px] break-all rounded bg-background px-2 py-1.5 font-mono border border-border flex-1 min-w-0">
-                      {twoFactorSetup.secret}
-                    </code>
-                    <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={() => void handleCopyTwoFactorSecret()}>
-                      <Copy className="h-3.5 w-3.5" />
-                      Kopyala
-                    </Button>
-                  </div>
-                  <Button type="button" variant="outline" size="sm" className="w-full gap-2" asChild>
-                    <a href={twoFactorSetup.otpAuthUri}>Authenticator’da açmayı dene</a>
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground">
-                    “Açmayı dene” bazı cihazlarda doğrudan uygulamayı açar; açılmazsa yukarıdaki anahtarı elle girin.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">6 haneli kod</Label>
-                  <Input
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    placeholder="000000"
-                    className="bg-background tracking-widest font-mono"
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
+                    variant="secondary"
                     className="gap-2"
-                    disabled={twoFactorActivateLoading || totpCode.length !== 6}
-                    onClick={handleConfirmTwoFactor}
+                    disabled
                   >
-                    <Check className="h-4 w-4" />
-                    {twoFactorActivateLoading ? "Doğrulanıyor…" : "Etkinleştir"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={clearTwoFactorQr}>
-                    İptal
+                    <Smartphone className="h-4 w-4" />
+                    Kurulumu başlat (QR + anahtar)
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-            <div>
-              <p className="text-sm text-foreground">Oturum Uyarıları</p>
-              <p className="text-xs text-muted-foreground">Yeni cihazdan giriş yapıldığında bildirim alın</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <ComingSoonBadge />
-              <Switch checked={false} disabled aria-readonly />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Monitor className="h-4 w-4 text-muted-foreground" /> Aktif Oturumlar
-            </h2>
-            <Link
-              href={DASHBOARD_ROUTES.accountSessions}
-              className="text-sm text-primary underline-offset-4 hover:underline"
-            >
-              Tüm oturumlar
-            </Link>
-          </div>
-
-          {sessionsLoading ? (
-            <p className="text-sm text-muted-foreground">Oturumlar yükleniyor…</p>
-          ) : sessionsError ? (
-            <p className="text-sm text-destructive">{sessionsError}</p>
-          ) : previewSessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Oturum bulunamadı.</p>
-          ) : (
-            previewSessions.map((session) => (
-              <div
-                key={session.sessionId}
-                className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm text-foreground">{sessionTitle(session)}</p>
+              ) : myProfileLoading ? (
+                <p className="text-sm text-muted-foreground">Güvenlik bilgisi yükleniyor…</p>
+              ) : twoFactorEnabled ? (
+                <div className="space-y-3 max-w-sm">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">2FA hesabınızda açık.</p>
                   <p className="text-xs text-muted-foreground">
-                    {[session.ipAddress, `Giriş: ${formatSessionDate(session.loggedInAt)}`, `Son: ${formatSessionDate(session.lastActivityAt)}`]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    Kapatmak için Authenticator&apos;dan güncel 6 haneli kodu girin.
                   </p>
-                </div>
-                {session.current ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium shrink-0">
-                    Bu cihaz
-                  </span>
-                ) : session.active ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Doğrulama kodu</Label>
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      placeholder="000000"
+                      className="bg-background tracking-widest font-mono"
+                      value={totpDisableCode}
+                      onChange={(e) => setTotpDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                  </div>
                   <Button
-                    variant="ghost"
+                    type="button"
+                    variant="destructive"
                     size="sm"
-                    className="text-xs text-destructive h-7 shrink-0"
-                    disabled={revokingId === session.sessionId}
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          const message = await revokeSession(session.sessionId);
-                          onNotify("info", message);
-                        } catch (error) {
-                          onNotify(
-                            "danger",
-                            error instanceof ApiError ? error.message : "Oturum sonlandırılamadı.",
-                          );
-                        }
-                      })();
-                    }}
+                    className="gap-2"
+                    disabled={twoFactorDisableLoading || totpDisableCode.length !== 6}
+                    onClick={handleDisableTwoFactor}
                   >
-                    {revokingId === session.sessionId ? "Sonlandırılıyor…" : "Sonlandır"}
+                    {twoFactorDisableLoading ? "Kapatılıyor…" : "2FA'yı kapat"}
                   </Button>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium shrink-0">
-                    Pasif
-                  </span>
-                )}
-              </div>
-            ))
-          )}
+                </div>
+              ) : !twoFactorSetup ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="gap-2"
+                  disabled={twoFactorSetupLoading}
+                  onClick={handleStartTwoFactorSetup}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  {twoFactorSetupLoading ? "Hazırlanıyor…" : "Kurulumu başlat (QR + anahtar)"}
+                </Button>
+              ) : (
+                <div className="space-y-4 max-w-md">
+                  <p className="text-xs text-muted-foreground">
+                    Uygulamaya ekledikten sonra aşağıya güncel 6 haneli kodu yazın.
+                  </p>
+                  <Image
+                    src={`data:image/png;base64,${twoFactorSetup.qrImageBase64}`}
+                    alt="İki adımlı doğrulama QR"
+                    width={200}
+                    height={200}
+                    className="rounded-md border border-border bg-white p-2"
+                  />
+                  <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                    <p className="text-xs font-medium text-foreground">Tek telefonda (QR taratmadan)</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Google Authenticator / Microsoft Authenticator: <span className="text-foreground">+</span> →{" "}
+                      <span className="text-foreground">Kurulum anahtarını gir</span> → hesap adı olarak e-postanızı, anahtar
+                      olarak aşağıdaki metni kullanın; tür: zamana dayalı, 30 sn.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="text-[11px] break-all rounded bg-background px-2 py-1.5 font-mono border border-border flex-1 min-w-0">
+                        {twoFactorSetup.secret}
+                      </code>
+                      <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={() => void handleCopyTwoFactorSecret()}>
+                        <Copy className="h-3.5 w-3.5" />
+                        Kopyala
+                      </Button>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="w-full gap-2" asChild>
+                      <a href={twoFactorSetup.otpAuthUri}>Authenticator’da açmayı dene</a>
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground">
+                      “Açmayı dene” bazı cihazlarda doğrudan uygulamayı açar; açılmazsa yukarıdaki anahtarı elle girin.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">6 haneli kod</Label>
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      placeholder="000000"
+                      className="bg-background tracking-widest font-mono"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      className="gap-2"
+                      disabled={twoFactorActivateLoading || totpCode.length !== 6}
+                      onClick={handleConfirmTwoFactor}
+                    >
+                      <Check className="h-4 w-4" />
+                      {twoFactorActivateLoading ? "Doğrulanıyor…" : "Etkinleştir"}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={clearTwoFactorQr}>
+                      İptal
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
+          <div className="rounded-lg border border-success/40 bg-success/5 p-6 flex flex-col gap-4 h-full">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-success" /> Bu Cihaz
+              </h2>
+              {currentSession ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium shrink-0">
+                  Aktif oturum
+                </span>
+              ) : null}
+            </div>
+            <div className="min-w-0 flex-1">
+              {sessionsLoading ? (
+                <p className="text-sm text-muted-foreground">Oturum yükleniyor…</p>
+              ) : sessionsError ? (
+                <p className="text-sm text-destructive">{sessionsError}</p>
+              ) : currentSession ? (
+                <>
+                  <p className="text-sm text-foreground">{sessionTitle(currentSession)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Giriş: {formatSessionDate(currentSession.loggedInAt)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Aktif oturum bulunamadı.</p>
+              )}
+            </div>
+            <Button variant="outline" size="sm" className="w-full mt-auto" asChild>
+              <Link href={DASHBOARD_ROUTES.accountSessions}>Tüm oturumlar</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -1065,6 +1052,22 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
               <Switch checked={item.state} onCheckedChange={item.set} disabled={myProfileLoading} />
             </div>
           ))}
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
+          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Monitor className="h-4 w-4 text-muted-foreground" /> Oturum Bildirimleri
+          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-foreground">Oturum Uyarıları</p>
+              <p className="text-xs text-muted-foreground">Yeni cihazdan giriş yapıldığında bildirim alın</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <ComingSoonBadge />
+              <Switch checked={false} disabled aria-readonly />
+            </div>
+          </div>
         </div>
 
         <Button

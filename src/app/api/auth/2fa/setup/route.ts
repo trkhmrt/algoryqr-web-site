@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getUserIdFromAccessToken } from "@/lib/auth-user";
 import { API_BASE_URL } from "@/lib/config";
 import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
+import { forbidGoogleOAuthTwoFactor } from "@/lib/server/two-factor-auth";
 
 export async function POST() {
   try {
@@ -13,6 +14,9 @@ export async function POST() {
     if (!accessToken) {
       return NextResponse.json({ message: "Oturum gerekli" }, { status: 401 });
     }
+
+    const oauthBlock = forbidGoogleOAuthTwoFactor(accessToken);
+    if (oauthBlock) return oauthBlock;
 
     const userId = getUserIdFromAccessToken(accessToken);
     if (userId == null) {

@@ -6,6 +6,7 @@ import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import {
   NutritionBasis,
   NutritionFacts,
@@ -206,14 +207,17 @@ export default function ProductNutritionPanel({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         <div className="space-y-1">
           <Label className="text-xs">Birim</Label>
-          <select
-            className="flex h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+          <SearchableSelect
+            className="h-9"
             value={form.basis}
-            onChange={(e) => updateField("basis", e.target.value as NutritionBasis)}
-          >
-            <option value="PER_100G">100g</option>
-            <option value="PER_100ML">100ml</option>
-          </select>
+            onValueChange={(next) => updateField("basis", next as NutritionBasis)}
+            options={[
+              { value: "PER_100G", label: "100g" },
+              { value: "PER_100ML", label: "100ml" },
+            ]}
+            placeholder="Birim seçin"
+            searchPlaceholder="Birim ara..."
+          />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Enerji (kJ)</Label>

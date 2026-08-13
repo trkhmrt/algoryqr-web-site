@@ -1,6 +1,6 @@
 import { UserQrApiItem } from "@/lib/api";
 import { createInitialMenuData } from "@/components/dashboard/qr-create/MenuDetails";
-import { resolveMenuThemeId } from "@/components/menu-templates/registry";
+import { getMenuTemplate, resolveMenuThemeId } from "@/components/menu-templates/registry";
 import { QrTypeData, QrTypeValue } from "@/components/dashboard/qr-create/QrTypeDetails";
 
 export type DashboardQrItem = {
@@ -138,7 +138,7 @@ export const getReadableDetailRows = (details: Record<string, unknown>) => {
       { label: "Telefon", value: String(details.phone ?? "") },
       { label: "E-posta", value: String(details.email ?? "") },
       { label: "Adres", value: String(details.address ?? "") },
-      { label: "Tema", value: String(details.themeId ?? "") },
+      { label: "Tema", value: getMenuTemplate(String(details.themeId ?? "")).name },
     ];
   }
   if ("url" in details) return [{ label: "Link", value: String(details.url ?? "") }];

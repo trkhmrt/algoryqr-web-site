@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { API_BASE_URL } from "@/lib/config";
 import { messageFromRegisterUpstream } from "@/lib/register-upstream-error";
+import { clientContextHeaders } from "@/lib/server/client-headers";
 import { normalizePhoneNumber } from "@/lib/server/upstream-config";
 
 type RegisterBody = {
@@ -48,7 +49,11 @@ export async function POST(req: Request) {
       `${API_BASE_URL}/auth/register`,
       registerPayload,
       {
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...clientContextHeaders(req),
+        },
         validateStatus: () => true,
         timeout: 20_000,
       },
