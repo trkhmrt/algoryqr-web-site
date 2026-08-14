@@ -220,7 +220,7 @@ export const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => 
   packageName: qr.packageName ?? null,
   legacy: qr.legacy ?? false,
   activePackage: qr.activePackage ?? false,
-  menuId: qr.menuId ?? null,
+  menuId: qr.menuId ?? undefined,
 });
 
 export const isMenuQrDetails = (details: Record<string, unknown>) =>
