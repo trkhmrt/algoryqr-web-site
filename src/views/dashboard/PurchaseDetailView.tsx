@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { formatEntitlementRemaining, formatEntitlementUsed } from "@/lib/entitlement-display";
 import { formatDaysUntilExpiry, formatPackageDate, formatPackagePrice } from "@/lib/package-display";
 import {
   canCancelPurchase,
@@ -519,12 +520,10 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                             {product.productName}
                           </TableCell>
                           <TableCell className="px-3 py-2.5 text-right text-muted-foreground">
-                            {product.unlimited
-                              ? "—"
-                              : `${product.usedQuantity}/${product.totalQuantity}`}
+                            {formatEntitlementUsed(product)}
                           </TableCell>
                           <TableCell className="px-3 py-2.5 text-right font-medium text-foreground">
-                            {product.unlimited ? "Sınırsız" : product.remainingQuantity}
+                            {formatEntitlementRemaining(product)}
                           </TableCell>
                         </TableRow>
                       ))}

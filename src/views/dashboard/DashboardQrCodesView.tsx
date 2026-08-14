@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  createQrRequest, deleteQrRequest, getStoredUser, getUserQrsRequest,
-  QrResponse, StoredUser, updateQrNameRequest, updateQrRequest,
+  createQrRequest, deleteMenuRequest, deleteQrRequest, getMenuByQrIdRequest, getStoredUser,
+  getUserQrsRequest, QrResponse, StoredUser, updateQrActiveRequest, updateQrNameRequest, updateQrRequest,
 } from "@/lib/api";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -33,6 +34,7 @@ import {
   isMenuQrDetails,
   type DashboardQrItem,
 } from "@/components/dashboard/qr/qr-mappers";
+import type { QrListScope } from "@/lib/api/qr";
 import {
   copyQrImageToClipboard,
   copyTextToClipboard,
@@ -41,6 +43,7 @@ import {
 } from "@/components/dashboard/qr/qr-actions";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage, usePackageUsage } from "@/hooks/use-package-usage";
+import { invalidateSubscription } from "@/hooks/use-subscription";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { hasScope } from "@/lib/auth-user";
 import { useAccessProfile } from "@/hooks/use-access-profile";
@@ -73,6 +76,11 @@ interface DashboardQrCodesViewProps {
 }
 
 const QR_PAGE_SIZE = 5;
+const QR_SCOPE_OPTIONS: { value: QrListScope; label: string }[] = [
+  { value: "ALL", label: "Tümü" },
+  { value: "CURRENT", label: "Aktif paket" },
+  { value: "LEGACY", label: "Önceki paketler" },
+];
 
 const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCodesViewProps) => {
   const tooltipStyle = useTooltipStyle();
@@ -85,6 +93,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const { data: accessProfile } = useAccessProfile();
   const canCreateQr = hasScope(accessProfile, "QR_CREATE_OWNER");
   const [isLoading, setIsLoading] = useState(false);
+  const [listScope, setListScope] = useState<QrListScope>("ALL");
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -118,6 +127,9 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     ? editQrType === editOriginalType && JSON.stringify(editQrTypeData) === JSON.stringify(editOriginalDetailsData)
     : false;
   const nameOnlyEditForUi = selectedQR ? nameChangedForUi && activeUnchangedForUi && detailsUnchangedForUi : false;
+  const menuActiveOnlyEditForUi = selectedQR
+    ? isMenuQrDetails(selectedQR.details) && !nameChangedForUi && !activeUnchangedForUi && detailsUnchangedForUi
+    : false;
   const hasChangesForUi = selectedQR ? nameChangedForUi || !activeUnchangedForUi || !detailsUnchangedForUi : false;
 
   const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
@@ -129,6 +141,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
         includeImage: true,
         page: pageIndex,
         size: pageSize,
+        scope: mode === "list" ? listScope : "ALL",
       });
       const mapped = (response.content ?? []).map(mapUserQrToDashboardItem);
       setUserQrs(mapped);
@@ -145,7 +158,11 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     } finally {
       setIsLoading(false);
     }
-  }, [mode, notify, page, user?.id]);
+  }, [listScope, mode, notify, page, user?.id]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [listScope]);
 
   const handleDeleteQr = useCallback(async (qr: DashboardQrItem) => {
     try {
@@ -154,6 +171,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       await fetchUserQrs();
       setIsEditing(false);
       await invalidatePackageUsage(queryClient);
+      await invalidateSubscription(queryClient);
       router.push(DASHBOARD_ROUTES.qrCodes);
       notify("info", `"${qr.name}" silindi.`);
     } catch (error) {
@@ -161,6 +179,34 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       notify("danger", message);
     }
   }, [fetchUserQrs, notify, queryClient, router]);
+
+  const resolveMenuId = useCallback((qr: DashboardQrItem): number | null => {
+    if (qr.menuId != null) return qr.menuId;
+    const fromDetails = qr.details.menuId;
+    if (typeof fromDetails === "number") return fromDetails;
+    return null;
+  }, []);
+
+  const handleDeleteMenu = useCallback(async (qr: DashboardQrItem) => {
+    try {
+      let targetMenuId = resolveMenuId(qr);
+      if (targetMenuId == null) {
+        const profile = await getMenuByQrIdRequest(qr.id);
+        targetMenuId = profile.menuId;
+      }
+      await deleteMenuRequest(targetMenuId);
+      setSelectedQR((prev) => (prev?.id === qr.id ? null : prev));
+      await fetchUserQrs();
+      setIsEditing(false);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await invalidatePackageUsage(queryClient);
+      await invalidateSubscription(queryClient);
+      notify("info", `"${qr.name}" menüsü silindi.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Menü silinemedi.";
+      notify("danger", message);
+    }
+  }, [fetchUserQrs, notify, queryClient, resolveMenuId]);
 
   const handleCopyQr = useCallback(async (qr: DashboardQrItem) => {
     try {
@@ -237,6 +283,27 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     }
 
     const nameOnlyEdit = nameChanged && activeUnchanged && detailsUnchanged;
+    const menuActiveOnlyEdit =
+      isMenuQrDetails(selectedQR.details) && !nameChanged && !activeUnchanged && detailsUnchanged;
+
+    if (menuActiveOnlyEdit) {
+      try {
+        await updateQrActiveRequest(selectedQR.id, { active: editActive });
+        const refreshedQrs = await fetchUserQrs();
+        const refreshedSelected = refreshedQrs.find((item) => item.id === selectedQR.id) || null;
+        setSelectedQR(refreshedSelected);
+        setIsEditing(false);
+        setEditActive(refreshedSelected?.active ?? editActive);
+        await invalidatePackageUsage(queryClient);
+        await invalidateSubscription(queryClient);
+        notify("info", editActive ? `"${selectedQR.name}" aktif edildi.` : `"${selectedQR.name}" pasif edildi.`);
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Menü durumu güncellenemedi.";
+        notify("danger", message);
+        return;
+      }
+    }
 
     // Name-only edit: PATCH /qr/update-name -> yeni QR üretmez.
     if (nameOnlyEdit) {
@@ -314,7 +381,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       const message = error instanceof Error ? error.message : "QR kod güncellenemedi.";
       notify("danger", message);
     }
-  }, [editActive, editName, editQrType, editQrTypeData, fetchUserQrs, notify, selectedQR]);
+  }, [editActive, editName, editQrType, editQrTypeData, fetchUserQrs, notify, queryClient, selectedQR]);
 
   useEffect(() => {
     if (true) {
@@ -376,6 +443,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       setQrBgColor("#ffffff");
       setSelectedQrType("link");
       void invalidatePackageUsage(queryClient);
+      void invalidateSubscription(queryClient);
       await fetchUserQrs();
       if (response.qrId != null) {
         router.push(DASHBOARD_ROUTES.qrCodeDetail(response.qrId));
@@ -393,10 +461,24 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
           {/* ── QR Codes ── */}
           {!isLoading && mode === "list" && (
             <div className="space-y-6 animate-fade-in">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">QR Kodlarım</h1>
+                <p className="text-sm text-muted-foreground">{totalElements} QR kod oluşturuldu</p>
+              </div>
+
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold tracking-tight text-foreground">QR Kodlarım</h1>
-                  <p className="text-sm text-muted-foreground">{totalElements} QR kod oluşturuldu</p>
+                <div className="flex flex-wrap gap-2">
+                  {QR_SCOPE_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      size="sm"
+                      variant={listScope === option.value ? "default" : "outline"}
+                      onClick={() => setListScope(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
                 </div>
                 <Button variant="hero" size="sm" className="gap-2 self-start sm:self-auto" asChild>
                   <Link href={DASHBOARD_ROUTES.qrCodesNew}>
@@ -439,6 +521,16 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                               <span className={`inline-flex w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${qr.active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                                 {qr.active ? "Aktif" : "Pasif"}
                               </span>
+                              {qr.activePackage && qr.packageName ? (
+                                <span className="inline-flex w-fit shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                  {qr.packageName}
+                                </span>
+                              ) : null}
+                              {qr.legacy ? (
+                                <span className="inline-flex w-fit shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                                  Önceki paket
+                                </span>
+                              ) : null}
                             </div>
                             <p className="mt-0.5 break-words text-xs leading-5 text-muted-foreground">{qr.content}</p>
                             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
@@ -472,14 +564,32 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>QR silinsin mi?</AlertDialogTitle>
+                                <AlertDialogTitle>
+                                  {isMenuQrDetails(qr.details) ? "Menü silinsin mi?" : "QR silinsin mi?"}
+                                </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  <span className="font-medium">{qr.name}</span> QR’ını tamamen silersiniz. Bu işlem geri alınamaz.
+                                  {isMenuQrDetails(qr.details) ? (
+                                    <>
+                                      <span className="font-medium">{qr.name}</span> menüsü ve bağlı QR kodu devre dışı
+                                      bırakılır. Menü kotanız geri açılır. Bu işlem geri alınamaz.
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="font-medium">{qr.name}</span> QR’ını tamamen silersiniz. Bu işlem
+                                      geri alınamaz.
+                                    </>
+                                  )}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => void handleDeleteQr(qr)}>Sil</AlertDialogAction>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    void (isMenuQrDetails(qr.details) ? handleDeleteMenu(qr) : handleDeleteQr(qr))
+                                  }
+                                >
+                                  Sil
+                                </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -578,15 +688,17 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                           onChange={setEditQrTypeData}
                         />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">Durum</p>
-                          <p className="text-xs text-muted-foreground">QR kodu aktif veya pasif yapın</p>
+                      {selectedQR && isMenuQrDetails(selectedQR.details) ? (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Durum</p>
+                            <p className="text-xs text-muted-foreground">Menü QR kodunu aktif veya pasif yapın</p>
+                          </div>
+                          <Switch checked={editActive} onCheckedChange={setEditActive} />
                         </div>
-                        <Switch checked={editActive} onCheckedChange={setEditActive} />
-                      </div>
+                      ) : null}
                       <div className="flex gap-3 pt-2">
-                        {nameOnlyEditForUi ? (
+                        {nameOnlyEditForUi || menuActiveOnlyEditForUi ? (
                           <Button className="gap-2" onClick={() => void handleSaveQrEdit()}>
                             <Check className="h-4 w-4" />
                             Kaydet
@@ -735,31 +847,33 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                       <Button variant="outline" size="icon" className="h-9 w-full" title="İndir" aria-label="İndir" onClick={() => handleDownloadQr(selectedQR)}><Download className="h-4 w-4" /></Button>
                       <Button variant="outline" size="icon" className="h-9 w-full" title="Kopyala" aria-label="Kopyala" onClick={() => void handleCopyQr(selectedQR)}><Copy className="h-4 w-4" /></Button>
                       <Button variant="outline" size="icon" className="h-9 w-full" title="Paylaş" aria-label="Paylaş" onClick={() => void handleShareQr(selectedQR)}><Share2 className="h-4 w-4" /></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-full text-destructive hover:text-destructive"
-                            title="Sil"
-                            aria-label="Sil"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>QR silinsin mi?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              <span className="font-medium">{selectedQR.name}</span> QR’ını tamamen silersiniz. Bu işlem geri alınamaz.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => void handleDeleteQr(selectedQR)}>Sil</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      {!isMenuQrDetails(selectedQR.details) ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-9 w-full text-destructive hover:text-destructive"
+                              title="Sil"
+                              aria-label="Sil"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>QR silinsin mi?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                <span className="font-medium">{selectedQR.name}</span> QR’ını tamamen silersiniz. Bu işlem geri alınamaz.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => void handleDeleteQr(selectedQR)}>Sil</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
                     </div>
                   </div>
                 </div>

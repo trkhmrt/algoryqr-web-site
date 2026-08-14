@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import {
@@ -12,12 +12,26 @@ import {
   type MenuData,
 } from "@/components/dashboard/qr-create/MenuDetails";
 import { resolveMenuThemeId } from "@/components/menu-templates/registry";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidateMenuByQr, useMenuByQr } from "@/hooks/use-menu-by-qr";
-import { ApiError, updateMenuRequest } from "@/lib/api";
+import { invalidatePackageUsage } from "@/hooks/use-package-usage";
+import { invalidateSubscription } from "@/hooks/use-subscription";
+import { ApiError, deleteMenuRequest, updateMenuRequest } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
 type DigitalMenuSettingsViewProps = {
   qrId: number;
@@ -30,6 +44,7 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const menuQuery = useMenuByQr(qrId);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [menu, setMenu] = useState<MenuData>(createInitialMenuData());
   const [menuHydratedFor, setMenuHydratedFor] = useState<number | null>(null);
 
@@ -88,6 +103,23 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
       notify("danger", error instanceof ApiError ? error.message : "Menü güncellenemedi.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteMenu = async () => {
+    if (menuId == null) return;
+    setDeleting(true);
+    try {
+      await deleteMenuRequest(menuId);
+      await refreshAccessAfterEntitlementChange(queryClient);
+      await invalidatePackageUsage(queryClient);
+      await invalidateSubscription(queryClient);
+      notify("info", `"${profile?.businessName ?? "Menü"}" silindi.`);
+      router.push(DASHBOARD_ROUTES.digitalMenu);
+    } catch (error) {
+      notify("danger", error instanceof ApiError ? error.message : "Menü silinemedi.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -163,6 +195,40 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
               </TabsContent>
             ))}
           </Tabs>
+        </div>
+      ) : null}
+
+      {menuId != null ? (
+        <div className="rounded-xl border border-destructive/30 bg-card p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-sm font-medium text-foreground">Menüyü sil</h2>
+              <p className="text-xs text-muted-foreground">
+                Menü ve bağlı QR kodu kalıcı olarak silinmez; soft delete uygulanır. Menü kotanız geri açılır.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" className="gap-2" disabled={deleting}>
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Menüyü Sil
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Menü silinsin mi?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    <span className="font-medium">{profile?.businessName ?? "Bu menü"}</span> ve bağlı QR kodu
+                    devre dışı bırakılır. Bu işlem geri alınamaz.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void handleDeleteMenu()}>Sil</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       ) : null}
     </div>

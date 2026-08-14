@@ -1,3 +1,5 @@
+import type { ProductScope } from "@/lib/auth-user";
+
 export const DASHBOARD_ROUTES = {
   root: "/dashboard",
   overview: "/dashboard/genel-bakis",
@@ -105,6 +107,7 @@ export type DashboardNavItem = {
   label: string;
   href: string;
   mobileLabel: string;
+  requiredScope?: ProductScope;
 };
 
 export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
@@ -126,6 +129,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Sipariş Paneli",
     mobileLabel: "Sipariş",
     href: DASHBOARD_ROUTES.orderPanel,
+    requiredScope: "WAITER_PANEL_OWNER",
   },
   {
     key: "reports",
@@ -138,12 +142,14 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Kullanıcılar",
     mobileLabel: "Kullanıcılar",
     href: DASHBOARD_ROUTES.menuUsers,
+    requiredScope: "WAITER_PANEL_OWNER",
   },
   {
     key: "menuCustomers",
     label: "Müşteriler",
     mobileLabel: "Müşteriler",
     href: DASHBOARD_ROUTES.menuCustomers,
+    requiredScope: "WAITER_PANEL_OWNER",
   },
   { key: "qrCodes", label: "QR Kodlarım", mobileLabel: "QR Kodlar", href: DASHBOARD_ROUTES.qrCodes },
   { key: "account", label: "Hesabım", mobileLabel: "Hesabım", href: DASHBOARD_ROUTES.account },

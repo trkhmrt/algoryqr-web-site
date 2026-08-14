@@ -5,7 +5,7 @@ export async function GET(
   context: { params: Promise<{ menuId: string }> },
 ) {
   const { menuId } = await context.params;
-  return proxyAuthenticatedRequest(request, `/menu/${menuId}/waiters`, "GET");
+  return proxyAuthenticatedRequest(request, `/waiter-panel/menu/${menuId}/waiters`, "GET");
 }
 
 export async function POST(
@@ -13,5 +13,5 @@ export async function POST(
   context: { params: Promise<{ menuId: string }> },
 ) {
   const { menuId } = await context.params;
-  return proxyAuthenticatedRequest(request, `/menu/${menuId}/waiters`, "POST");
+  return proxyAuthenticatedRequest(request, `/waiter-panel/menu/${menuId}/waiters`, "POST");
 }

@@ -4,12 +4,13 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import {
   QrCode,
-  UtensilsCrossed,
   Sparkles,
   Bot,
   LineChart,
   Palette,
 } from "lucide-react";
+
+import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 
 const features = [
   {
@@ -19,7 +20,7 @@ const features = [
       "Menü, kampanya veya ödeme bağlantınızı yazdırmadan güncelleyin; tek QR ile her zaman güncel kalın.",
   },
   {
-    icon: UtensilsCrossed,
+    icon: DigitalMenuIcon,
     title: "Dijital Menü",
     description:
       "Hazır şablonlarla markanıza uygun menü yayınlayın. Fiyat ve ürün değişikliklerini anında yansıtın.",

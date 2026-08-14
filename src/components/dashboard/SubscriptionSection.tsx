@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { prefetchActivePackages } from "@/hooks/use-subscription";
 import {
   formatDaysUntilExpiry,
   formatPackageDate,
@@ -57,6 +58,7 @@ import {
   listMyPlanChanges,
 } from "@/lib/plan-change";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { formatEntitlementUsageSummary } from "@/lib/entitlement-display";
 import { isRefundInFlight, purchaseStatusLabel } from "@/lib/refund-display";
 import { ApiError } from "@/lib/api/errors";
 
@@ -549,9 +551,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                           </p>
                         </div>
                         <p className="shrink-0 text-xs text-muted-foreground">
-                          {product.unlimited
-                            ? "Sınırsız"
-                            : `${product.usedQuantity}/${product.totalQuantity} · ${product.remainingQuantity} kalan`}
+                          {formatEntitlementUsageSummary(product)}
                         </p>
                       </div>
                     ))}
@@ -653,7 +653,12 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
 
               <div className="flex flex-wrap gap-2 border-t border-border/60 pt-4">
                 <Button variant="hero" size="sm" asChild>
-                  <Link href={DASHBOARD_ROUTES.accountPackages}>Paketleri gör</Link>
+                  <Link
+                    href={DASHBOARD_ROUTES.accountPackages}
+                    onMouseEnter={() => prefetchActivePackages(queryClient)}
+                  >
+                    Paketleri gör
+                  </Link>
                 </Button>
                 {isSubscription && !hasSavedCard ? (
                   <Button variant="outline" size="sm" asChild>

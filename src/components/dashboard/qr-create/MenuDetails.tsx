@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import { MenuThemePreviewDialog } from "@/components/menu-templates/MenuThemePreviewDialog";
 import { DEFAULT_MENU_THEME_ID, getMenuTemplate, getMenuTemplateOptions, type MenuThemeId } from "@/components/menu-templates/registry";
 import { DEFAULT_CHEF_DISPLAY_NAME } from "@/lib/chef/chef-identity";
@@ -217,12 +218,12 @@ export function MenuDetails({ value, onChange, menuId, section = "all", qrPrevie
                   >
                     <div
                       className={cn(
-                        "relative h-12 w-16 shrink-0 overflow-hidden rounded-md",
+                        "relative flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md",
                         option.previewClassName,
                       )}
                       aria-hidden
                     >
-                      <span className="absolute bottom-1.5 left-1.5 h-1.5 w-6 rounded-full bg-current opacity-80" />
+                      <DigitalMenuIcon className="h-7 w-7 opacity-90" />
                     </div>
                     <span className="text-xs font-medium leading-tight">{option.name}</span>
                   </button>

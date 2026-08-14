@@ -56,6 +56,14 @@ export function invalidateSubscription(queryClient: QueryClient) {
   return queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY, exact: false });
 }
 
+export function prefetchActivePackages(queryClient: QueryClient) {
+  return queryClient.prefetchQuery({
+    queryKey: ACTIVE_PACKAGES_QUERY_KEY,
+    queryFn: (): Promise<PlanPackageApiItem[]> => getActivePackagesRequest(),
+    staleTime: 60_000,
+  });
+}
+
 export function invalidateActivePackages(queryClient: QueryClient) {
   return queryClient.invalidateQueries({ queryKey: ACTIVE_PACKAGES_QUERY_KEY, exact: false });
 }

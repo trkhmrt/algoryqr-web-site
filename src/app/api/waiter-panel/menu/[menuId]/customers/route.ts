@@ -5,5 +5,5 @@ export async function GET(
   context: { params: Promise<{ menuId: string }> },
 ) {
   const { menuId } = await context.params;
-  return proxyAuthenticatedRequest(request, `/menu/${menuId}/orders`, "GET");
+  return proxyAuthenticatedRequest(request, `/waiter-panel/menu/${menuId}/customers`, "GET");
 }

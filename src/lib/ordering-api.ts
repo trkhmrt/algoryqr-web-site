@@ -212,7 +212,7 @@ export async function getCustomerOrder(orderId: number | string): Promise<OrderR
 }
 
 export async function listMenuTables(menuId: number): Promise<RestaurantTable[]> {
-  const response = await fetch(`/api/menu/${menuId}/tables`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/tables`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -232,7 +232,7 @@ export async function createMenuTable(
   menuId: number,
   payload: { name: string; tableNumber?: number | null },
 ): Promise<RestaurantTable> {
-  const response = await fetch(`/api/menu/${menuId}/tables`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/tables`, {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     credentials: "same-origin",
@@ -250,7 +250,7 @@ export async function updateMenuTable(
   tableId: number,
   payload: { name?: string; tableNumber?: number | null; active?: boolean },
 ): Promise<RestaurantTable> {
-  const response = await fetch(`/api/menu/${menuId}/tables/${tableId}`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/tables/${tableId}`, {
     method: "PATCH",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     credentials: "same-origin",
@@ -267,7 +267,7 @@ export async function regenerateMenuTableQr(
   menuId: number,
   tableId: number,
 ): Promise<RestaurantTable> {
-  const response = await fetch(`/api/menu/${menuId}/tables/${tableId}/regenerate-qr`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/tables/${tableId}/regenerate-qr`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -280,7 +280,7 @@ export async function regenerateMenuTableQr(
 }
 
 export async function deleteMenuTable(menuId: number, tableId: number): Promise<void> {
-  const response = await fetch(`/api/menu/${menuId}/tables/${tableId}`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/tables/${tableId}`, {
     method: "DELETE",
     credentials: "same-origin",
   });
@@ -295,7 +295,7 @@ export async function listMerchantOrders(
   status = "SUBMITTED",
 ): Promise<OrderResponse[]> {
   const params = new URLSearchParams({ status });
-  const response = await fetch(`/api/menu/${menuId}/orders?${params}`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders?${params}`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -315,7 +315,7 @@ export async function confirmMerchantOrder(
   menuId: number,
   orderId: number,
 ): Promise<OrderResponse> {
-  const response = await fetch(`/api/menu/${menuId}/orders/${orderId}/confirm`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders/${orderId}/confirm`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -331,7 +331,7 @@ export async function rejectMerchantOrder(
   menuId: number,
   orderId: number,
 ): Promise<OrderResponse> {
-  const response = await fetch(`/api/menu/${menuId}/orders/${orderId}/reject`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders/${orderId}/reject`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",

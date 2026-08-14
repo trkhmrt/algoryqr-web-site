@@ -4,7 +4,11 @@ import type { PlanPackageApiItem } from "./api";
 import {
   buildPackageComparisonRows,
   diffPackages,
+  featureTooltip,
+  formatYearlySavingsBadge,
   planActionLabel,
+  resolvePackagePricing,
+  resolveYearlySavingsPercent,
 } from "./package-display";
 
 function pkg(overrides: Partial<PlanPackageApiItem> & { id: number; code: string; name: string }): PlanPackageApiItem {
@@ -18,6 +22,14 @@ function pkg(overrides: Partial<PlanPackageApiItem> & { id: number; code: string
     ...overrides,
   };
 }
+
+describe("featureTooltip", () => {
+  it("uses product hints for known features", () => {
+    expect(featureTooltip("Özel tasarım menü", "CUSTOM_DESIGN")).toContain("butik menü tasarımı");
+    expect(featureTooltip("Garson paneli", "WAITER_PANEL")).toContain("Garson");
+    expect(featureTooltip("Menü ürün hakkı", "MENU_PRODUCT")).toContain("ürün adedini");
+  });
+});
 
 describe("buildPackageComparisonRows", () => {
   it("builds fixed catalog product rows with quantities and presence", () => {
@@ -50,6 +62,8 @@ describe("buildPackageComparisonRows", () => {
           { id: 5, productCode: "SMART_ASSISTANT", productName: "Akilli Asistan", quantity: 1, unlimited: true },
           { id: 6, productCode: "SMART_SUMMARY", productName: "Akilli Ozet", quantity: 1, unlimited: true },
           { id: 7, productCode: "SMART_REPORTING", productName: "Akilli Raporlama", quantity: 1, unlimited: true },
+          { id: 8, productCode: "CUSTOM_DESIGN", productName: "Ozel Tasarim", quantity: 1, unlimited: true },
+          { id: 9, productCode: "WAITER_PANEL", productName: "Garson Paneli", quantity: 1, unlimited: true },
         ],
       }),
     ];
@@ -57,9 +71,13 @@ describe("buildPackageComparisonRows", () => {
     const productIds = rows.filter((r) => r.id.startsWith("product:")).map((r) => r.id);
     expect(productIds).toEqual([
       "product:QR_CREATE",
+      "product:QR_MENU",
+      "product:MENU_PRODUCT",
+      "product:SMART_REPORTING",
       "product:SMART_ASSISTANT",
       "product:SMART_SUMMARY",
-      "product:SMART_REPORTING",
+      "product:CUSTOM_DESIGN",
+      "product:WAITER_PANEL",
     ]);
     expect(rows.find((r) => r.id === "product:QR_CREATE")?.values["1"]).toBe("5 adet");
     expect(rows.find((r) => r.id === "product:QR_CREATE")?.values["2"]).toBe("30 adet");
@@ -69,8 +87,10 @@ describe("buildPackageComparisonRows", () => {
     expect(rows.find((r) => r.id === "product:SMART_SUMMARY")?.values["3"]).toBe("Var");
     expect(rows.find((r) => r.id === "product:SMART_SUMMARY")?.values["2"]).toBe("Yok");
     expect(rows.find((r) => r.id === "product:SMART_REPORTING")?.values["3"]).toBe("Var");
-    expect(rows.find((r) => r.id === "price")?.values["3"]).toContain("649");
-    expect(rows.some((r) => r.id === "product:QR_MENU")).toBe(false);
+    expect(rows.find((r) => r.id === "product:CUSTOM_DESIGN")?.values["3"]).toBe("Var");
+    expect(rows.find((r) => r.id === "product:WAITER_PANEL")?.values["3"]).toBe("Var");
+    expect(rows.find((r) => r.id === "product:CUSTOM_DESIGN")?.values["2"]).toBe("Yok");
+    expect(rows.find((r) => r.id === "product:QR_MENU")?.values["1"]).toBe("Yok");
   });
 
   it("merges legacy QR_AGENT into a single SMART_ASSISTANT row", () => {
@@ -102,10 +122,15 @@ describe("buildPackageComparisonRows", () => {
     const rows = buildPackageComparisonRows(packages);
     expect(rows.filter((r) => r.id.startsWith("product:")).map((r) => r.id)).toEqual([
       "product:QR_CREATE",
+      "product:QR_MENU",
+      "product:MENU_PRODUCT",
+      "product:SMART_REPORTING",
       "product:SMART_ASSISTANT",
       "product:SMART_SUMMARY",
-      "product:SMART_REPORTING",
+      "product:CUSTOM_DESIGN",
+      "product:WAITER_PANEL",
     ]);
+    expect(rows.find((r) => r.id === "product:QR_MENU")?.values["2"]).toBe("1 adet");
     expect(rows.find((r) => r.id === "product:SMART_ASSISTANT")?.values["2"]).toBe("Var");
     expect(rows.find((r) => r.id === "product:SMART_ASSISTANT")?.values["3"]).toBe("Var");
     expect(rows.find((r) => r.id === "product:SMART_REPORTING")?.values["3"]).toBe("Var");
@@ -183,5 +208,93 @@ describe("planActionLabel", () => {
     expect(
       planActionLabel(2, pkg({ id: 1, code: "FREE_PACKAGE", name: "Free", price: 0 }), 199, "PAID"),
     ).toBeNull();
+  });
+});
+
+describe("resolvePackagePricing", () => {
+  it("shows monthly price without strikethrough when no campaign discount", () => {
+    const pricing = resolvePackagePricing(
+      pkg({
+        id: 2,
+        code: "PRO_PACKAGE",
+        name: "Pro",
+        price: 249,
+        yearlyPrice: 2490,
+      }),
+      "MONTHLY",
+    );
+    expect(pricing.amount).toBe(249);
+    expect(pricing.compareAmount).toBeNull();
+    expect(pricing.yearlySavings).toBeNull();
+  });
+
+  it("shows campaign list price when monthly discount applies", () => {
+    const pricing = resolvePackagePricing(
+      pkg({
+        id: 2,
+        code: "PRO_PACKAGE",
+        name: "Pro",
+        price: 249,
+        monthlyDiscount: 50,
+        effectiveMonthlyPrice: 199,
+      }),
+      "MONTHLY",
+    );
+    expect(pricing.amount).toBe(199);
+    expect(pricing.compareAmount).toBe(249);
+    expect(pricing.hasPromotionalDiscount).toBe(true);
+  });
+
+  it("shows annual monthly total and savings for yearly billing", () => {
+    const pricing = resolvePackagePricing(
+      pkg({
+        id: 2,
+        code: "PRO_PACKAGE",
+        name: "Pro",
+        price: 249,
+        yearlyPrice: 2490,
+      }),
+      "YEARLY",
+    );
+    expect(pricing.amount).toBe(2490);
+    expect(pricing.compareAmount).toBe(249 * 12);
+    expect(pricing.yearlySavings).toBe(249 * 12 - 2490);
+    expect(pricing.suffix).toBe("/ yıl");
+  });
+
+  it("uses effective prices when campaign discounts exist", () => {
+    const pricing = resolvePackagePricing(
+      pkg({
+        id: 2,
+        code: "PRO_PACKAGE",
+        name: "Pro",
+        price: 249,
+        monthlyDiscount: 50,
+        effectiveMonthlyPrice: 199,
+        yearlyPrice: 2490,
+        yearlyDiscount: 500,
+        effectiveYearlyPrice: 1990,
+      }),
+      "YEARLY",
+    );
+    expect(pricing.amount).toBe(1990);
+    expect(pricing.compareAmount).toBe(199 * 12);
+    expect(pricing.yearlySavings).toBe(199 * 12 - 1990);
+  });
+
+  it("formats yearly savings badge with percent and amount", () => {
+    const pricing = resolvePackagePricing(
+      pkg({
+        id: 1,
+        code: "PRO_PACKAGE",
+        name: "Pro",
+        price: 249,
+        yearlyPrice: 2490,
+      }),
+      "YEARLY",
+    );
+
+    expect(resolveYearlySavingsPercent(pricing)).toBe(17);
+    expect(formatYearlySavingsBadge(498, "TRY", 17)).toBe("%17 indirim ile ₺498 tasarruf");
   });
 });

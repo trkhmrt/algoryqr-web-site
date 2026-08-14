@@ -16,6 +16,10 @@ export type DashboardQrItem = {
   details: Record<string, unknown>;
   menuId?: number;
   publicUrl?: string;
+  purchaseId?: number | null;
+  packageName?: string | null;
+  legacy?: boolean;
+  activePackage?: boolean;
 };
 
 export const createInitialQrTypeData = (): QrTypeData => ({
@@ -209,9 +213,14 @@ export const mapUserQrToDashboardItem = (qr: UserQrApiItem): DashboardQrItem => 
   scans: 0,
   created: new Date(qr.createdAt).toLocaleDateString("tr-TR"),
   type: formatQrType(qr.details),
-  active: true,
+  active: qr.active ?? true,
   imgSrc: qr.imgSrc,
   details: qr.details,
+  purchaseId: qr.purchaseId ?? null,
+  packageName: qr.packageName ?? null,
+  legacy: qr.legacy ?? false,
+  activePackage: qr.activePackage ?? false,
+  menuId: qr.menuId ?? null,
 });
 
 export const isMenuQrDetails = (details: Record<string, unknown>) =>

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Search } from "lucide-react";
 
-import {
-  useDigitalMenuAccess,
-  useDigitalMenuOptions,
-} from "@/components/dashboard/menu/DigitalMenuPicker";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
+import {
+  useWaiterPanelAccess,
+  WaiterPanelGate,
+} from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,18 +22,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { listMenuCustomers, type MenuCustomerItem } from "@/lib/waiter-api";
+import { listBusinessCustomers, type MenuCustomerItem } from "@/lib/waiter-api";
 import { cn } from "@/lib/utils";
 
 const ALL_MENUS = "all";
 
 type SortKey = "name" | "email" | "menu" | "date";
 type SortDir = "asc" | "desc";
-
-type CustomerRow = MenuCustomerItem & {
-  menuId: number;
-  menuName: string;
-};
 
 function formatDate(value?: string | null): string {
   if (!value) return "—";
@@ -51,6 +46,11 @@ function customerName(item: MenuCustomerItem): string {
   return name || "—";
 }
 
+function menuLabel(item: MenuCustomerItem): string {
+  const name = item.menuName?.trim() || (item.menuId != null ? `Menü #${item.menuId}` : "—");
+  return item.menuDeleted ? `${name} (silindi)` : name;
+}
+
 function matchesSearch(haystack: string, query: string): boolean {
   if (!query) return true;
   return haystack.toLocaleLowerCase("tr").includes(query);
@@ -63,15 +63,18 @@ function dateValue(item: MenuCustomerItem): number {
   return Number.isNaN(t) ? 0 : t;
 }
 
-function compareRows(a: CustomerRow, b: CustomerRow, key: SortKey, dir: SortDir): number {
+function compareRows(
+  a: MenuCustomerItem,
+  b: MenuCustomerItem,
+  key: SortKey,
+  dir: SortDir,
+): number {
   const mul = dir === "asc" ? 1 : -1;
   if (key === "date") {
     return (dateValue(a) - dateValue(b)) * mul;
   }
-  const left =
-    key === "name" ? customerName(a) : key === "email" ? a.email || "" : a.menuName;
-  const right =
-    key === "name" ? customerName(b) : key === "email" ? b.email || "" : b.menuName;
+  const left = key === "name" ? customerName(a) : key === "email" ? a.email || "" : menuLabel(a);
+  const right = key === "name" ? customerName(b) : key === "email" ? b.email || "" : menuLabel(b);
   return left.localeCompare(right, "tr", { sensitivity: "base" }) * mul;
 }
 
@@ -106,55 +109,43 @@ function SortHead({
 }
 
 export default function MenuCustomersView() {
-  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const { menuQrs, loading, error } = useDigitalMenuOptions(canUseDigitalMenu && !accessLoading);
+  const { accessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
 
   const [search, setSearch] = useState("");
   const [menuFilter, setMenuFilter] = useState(ALL_MENUS);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const menuTargets = useMemo(
-    () =>
-      menuQrs
-        .map((qr) => {
-          const fromDetails =
-            typeof qr.details?.menuId === "number" ? qr.details.menuId : null;
-          const menuId = qr.menuId ?? fromDetails;
-          return menuId != null ? { menuId, menuName: qr.name } : null;
-        })
-        .filter((item): item is { menuId: number; menuName: string } => item != null),
-    [menuQrs],
-  );
-
   const customersQuery = useQuery({
-    queryKey: ["menu-customers-all", menuTargets.map((item) => item.menuId)],
-    enabled: menuTargets.length > 0,
-    queryFn: async (): Promise<CustomerRow[]> => {
-      const groups = await Promise.all(
-        menuTargets.map(async (target) => {
-          const items = await listMenuCustomers(target.menuId);
-          return items.map((item) => ({
-            ...item,
-            menuId: target.menuId,
-            menuName: target.menuName,
-          }));
-        }),
-      );
-      return groups.flat();
-    },
+    queryKey: ["business-customers"],
+    enabled: canUseWaiterPanel && !accessLoading,
+    queryFn: listBusinessCustomers,
   });
 
   const customers = customersQuery.data ?? [];
   const query = search.trim().toLocaleLowerCase("tr");
 
+  const menuFilterOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const item of customers) {
+      if (item.menuId == null) continue;
+      const key = String(item.menuId);
+      if (!seen.has(key)) {
+        seen.set(key, menuLabel(item));
+      }
+    }
+    return [...seen.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "tr", { sensitivity: "base" }));
+  }, [customers]);
+
   const filtered = useMemo(() => {
     const scoped =
       menuFilter === ALL_MENUS
         ? customers
-        : customers.filter((item) => String(item.menuId) === menuFilter);
+        : customers.filter((item) => item.menuId != null && String(item.menuId) === menuFilter);
     const searched = scoped.filter((item) =>
-      matchesSearch(`${customerName(item)} ${item.email ?? ""} ${item.menuName}`, query),
+      matchesSearch(`${customerName(item)} ${item.email ?? ""} ${menuLabel(item)}`, query),
     );
     return [...searched].sort((a, b) => compareRows(a, b, sortKey, sortDir));
   }, [customers, menuFilter, query, sortKey, sortDir]);
@@ -168,7 +159,7 @@ export default function MenuCustomersView() {
     setSortDir(column === "date" ? "desc" : "asc");
   }
 
-  if (accessLoading || loading) {
+  if (accessLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
@@ -176,30 +167,29 @@ export default function MenuCustomersView() {
     );
   }
 
-  if (!canUseDigitalMenu) {
+  if (!canUseWaiterPanel) {
     return (
-      <div className="space-y-4">
-        <Button variant="outline" asChild>
-          <Link href={DASHBOARD_ROUTES.digitalMenu}>Dijital Menüye Dön</Link>
-        </Button>
-        <p className="text-sm text-muted-foreground">Bu özellik için PRO paket gerekir.</p>
-      </div>
+      <WaiterPanelGate accessLoading={false} canUse={false}>
+        {null}
+      </WaiterPanelGate>
     );
   }
 
   const scopedEmpty =
     menuFilter === ALL_MENUS
       ? customers.length === 0
-      : customers.every((item) => String(item.menuId) !== menuFilter);
+      : customers.every((item) => item.menuId == null || String(item.menuId) !== menuFilter);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5 animate-fade-in pb-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Müşteriler</h1>
-        <p className="text-sm text-muted-foreground">Menüye kayıtlı müşteriler</p>
+        <p className="text-sm text-muted-foreground">
+          İşletmenize kayıtlı tüm müşteriler (silinen menüler dahil)
+        </p>
       </div>
 
-      {menuQrs.length > 0 ? (
+      {menuFilterOptions.length > 0 ? (
         <div className="max-w-md space-y-1.5">
           <Label className="text-xs text-muted-foreground">Menü</Label>
           <SearchableSelect
@@ -207,10 +197,7 @@ export default function MenuCustomersView() {
             onValueChange={setMenuFilter}
             options={[
               { value: ALL_MENUS, label: "Tümü" },
-              ...menuTargets.map((item) => ({
-                value: String(item.menuId),
-                label: item.menuName,
-              })),
+              ...menuFilterOptions,
             ]}
             placeholder="Menü seçin"
             searchPlaceholder="Menü ara..."
@@ -218,15 +205,16 @@ export default function MenuCustomersView() {
           />
         </div>
       ) : null}
-      {error ? (
+
+      {customersQuery.isError ? (
         <p className="text-sm text-destructive">
-          {error instanceof Error ? error.message : "Menüler yüklenemedi."}
+          {customersQuery.error instanceof Error
+            ? customersQuery.error.message
+            : "Müşteriler yüklenemedi."}
         </p>
       ) : null}
 
-      {menuTargets.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Menü bulunamadı.</p>
-      ) : customersQuery.isLoading ? (
+      {customersQuery.isLoading ? (
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
@@ -277,12 +265,12 @@ export default function MenuCustomersView() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((item) => (
-                    <TableRow key={`${item.customerId}-${item.menuId}`}>
+                    <TableRow key={`${item.customerId}-${item.menuId ?? "na"}`}>
                       <TableCell className="py-3 font-medium">{customerName(item)}</TableCell>
                       <TableCell className="max-w-[14rem] truncate py-3 text-muted-foreground">
                         {item.email || "—"}
                       </TableCell>
-                      <TableCell className="py-3 text-muted-foreground">{item.menuName}</TableCell>
+                      <TableCell className="py-3 text-muted-foreground">{menuLabel(item)}</TableCell>
                       <TableCell className="py-3 text-muted-foreground">
                         {formatDate(item.memberSince || item.joinedAt)}
                       </TableCell>

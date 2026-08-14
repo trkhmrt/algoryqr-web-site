@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronRight, Crown, Loader2, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronRight, Crown, Loader2 } from "lucide-react";
+
+import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 
 import { useDigitalMenuAccess, useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
 import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
@@ -17,9 +19,14 @@ import {
   useEligibleTrialPackages,
   useTrialStatus,
 } from "@/hooks/use-commerce";
-import { useActivePackages } from "@/hooks/use-subscription";
+import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import { ApiError, type PlanPackageApiItem } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import {
+  canCreateMenu,
+  formatMenuQuotaLabel,
+  summarizeMenuEntitlements,
+} from "@/lib/entitlement-display";
 import { formatPackageDate } from "@/lib/package-display";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
@@ -38,6 +45,10 @@ export default function DigitalMenuView() {
   const trial = useTrialStatus(!canUseDigitalMenu && !accessLoading);
   const eligibleTrials = useEligibleTrialPackages(!canUseDigitalMenu && !accessLoading);
   const packages = useActivePackages(!canUseDigitalMenu && !accessLoading);
+  const subscription = useSubscription(canUseDigitalMenu);
+  const menuQuota = summarizeMenuEntitlements(subscription.data?.entitlements ?? []);
+  const menuQuotaLabel = formatMenuQuotaLabel(menuQuota);
+  const canCreateNewMenu = canCreateMenu(menuQuota);
   const { menuQrs, loading: menusLoading } = useDigitalMenuOptions(canUseDigitalMenu);
   const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
   const status = trial.data?.status ?? "NOT_STARTED";
@@ -95,8 +106,16 @@ export default function DigitalMenuView() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü</h1>
             <p className="text-sm text-muted-foreground">Menü QR&apos;larınızı oluşturun ve yönetin.</p>
+            {menuQuotaLabel ? (
+              <p className="mt-1 text-xs text-muted-foreground">{menuQuotaLabel}</p>
+            ) : null}
           </div>
-          <Button onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}>Menü QR Oluştur</Button>
+          <Button
+            onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}
+            disabled={!canCreateNewMenu}
+          >
+            Menü QR Oluştur
+          </Button>
         </div>
 
         <div className="space-y-3">
@@ -109,7 +128,11 @@ export default function DigitalMenuView() {
           ) : menuQrs.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
               <p className="text-sm text-muted-foreground">Henüz menü oluşturmadınız.</p>
-              <Button className="mt-4" onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}>
+              <Button
+                className="mt-4"
+                disabled={!canCreateNewMenu}
+                onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}
+              >
                 İlk menüyü oluştur
               </Button>
             </div>
@@ -155,7 +178,7 @@ export default function DigitalMenuView() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <UtensilsCrossed className="h-6 w-6 text-primary" />
+                    <DigitalMenuIcon className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">

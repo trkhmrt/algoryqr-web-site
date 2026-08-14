@@ -29,7 +29,14 @@ import {
   type BillingPeriod,
 } from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { formatPackagePrice, packageFeatures } from "@/lib/package-display";
+import {
+  formatPackagePrice,
+  formatYearlySavingsBadge,
+  formatYearlySavingsLabel,
+  packageFeatures,
+  resolvePackagePricing,
+  resolveYearlySavingsPercent,
+} from "@/lib/package-display";
 import {
   clearPendingPurchaseId,
   storePendingPurchaseId,
@@ -40,11 +47,6 @@ interface PackagePurchaseViewProps {
   packageId: number;
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
   returnHref?: string;
-}
-
-function money(value: number | string | null | undefined): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
 }
 
 type PaymentOverlay =
@@ -145,18 +147,22 @@ export default function PackagePurchaseView({
 
   const pricing = useMemo(() => {
     if (!pkg) {
-      return { list: 0, effective: 0, discount: 0, suffix: "/ ay" };
+      return resolvePackagePricing(
+        {
+          id: 0,
+          code: "",
+          name: "",
+          description: "",
+          price: 0,
+          currency: "TRY",
+          active: true,
+          validityDays: 30,
+          items: [],
+        },
+        billingPeriod,
+      );
     }
-    if (billingPeriod === "YEARLY") {
-      const list = money(pkg.yearlyPrice);
-      const discount = money(pkg.yearlyDiscount);
-      const effective = money(pkg.effectiveYearlyPrice ?? list - discount);
-      return { list, effective, discount, suffix: "/ yıl" };
-    }
-    const list = money(pkg.price);
-    const discount = money(pkg.monthlyDiscount);
-    const effective = money(pkg.effectiveMonthlyPrice ?? list - discount);
-    return { list, effective, discount, suffix: "/ ay" };
+    return resolvePackagePricing(pkg, billingPeriod);
   }, [billingPeriod, pkg]);
 
   const pay = async () => {
@@ -248,8 +254,9 @@ export default function PackagePurchaseView({
   if (packages.isLoading) return <div className="h-64 animate-pulse rounded-lg bg-muted" />;
   if (!pkg) return <p className="text-sm text-destructive">Paket bulunamadı veya satışta değil.</p>;
 
-  const priceLabel = formatPackagePrice(pricing.effective, pkg.currency);
-  const listLabel = formatPackagePrice(pricing.list, pkg.currency);
+  const priceLabel = formatPackagePrice(pricing.amount, pkg.currency);
+  const compareLabel =
+    pricing.compareAmount != null ? formatPackagePrice(pricing.compareAmount, pkg.currency) : null;
   const nextDueLabel = (() => {
     const next = new Date();
     next.setMonth(next.getMonth() + (billingPeriod === "YEARLY" ? 12 : 1));
@@ -274,14 +281,28 @@ export default function PackagePurchaseView({
             <div>
               <p className="text-xs uppercase text-muted-foreground">Paket</p>
               <h2 className="mt-1 text-xl font-semibold">{pkg.name}</h2>
-              <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                {pricing.discount > 0 ? (
-                  <span className="text-lg text-muted-foreground line-through">{listLabel}</span>
-                ) : null}
-                <p className="text-2xl font-bold">
-                  {priceLabel}
-                  <span className="ml-1 text-sm font-normal text-muted-foreground">{pricing.suffix}</span>
-                </p>
+              <div className="mt-1 min-h-[2.75rem]">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  {compareLabel ? (
+                    <span className="text-lg text-muted-foreground line-through">{compareLabel}</span>
+                  ) : null}
+                  <p className="text-2xl font-bold">
+                    {priceLabel}
+                    <span className="ml-1 text-sm font-normal text-muted-foreground">{pricing.suffix}</span>
+                  </p>
+                  {pricing.yearlySavings != null && pricing.yearlySavings > 0 ? (
+                    <span
+                      className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium leading-none text-emerald-600 dark:text-emerald-400"
+                      title={formatYearlySavingsLabel(pricing.yearlySavings, pkg.currency)}
+                    >
+                      {formatYearlySavingsBadge(
+                        pricing.yearlySavings,
+                        pkg.currency,
+                        resolveYearlySavingsPercent(pricing),
+                      )}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
             <ul className="space-y-2 border-t pt-4">

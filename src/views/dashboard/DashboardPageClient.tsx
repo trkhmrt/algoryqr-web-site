@@ -1,13 +1,16 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
+import { PackageComparisonPageSkeleton } from "@/components/dashboard/PackageComparisonSkeleton";
 import PackagePurchaseView from "@/components/dashboard/PackagePurchaseView";
 import SettingsTab from "@/components/dashboard/SettingsTab";
 import SubscriptionSection from "@/components/dashboard/SubscriptionSection";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { prefetchActivePackages } from "@/hooks/use-subscription";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import type { StoredUser } from "@/lib/api";
 import DashboardOverviewView from "@/views/dashboard/DashboardOverviewView";
@@ -46,7 +49,14 @@ interface DashboardPageClientProps {
 
 export default function DashboardPageClient({ initialUser = null }: DashboardPageClientProps) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
+
+  useEffect(() => {
+    if (pathname.startsWith(`${DASHBOARD_ROUTES.account}/`)) {
+      void prefetchActivePackages(queryClient);
+    }
+  }, [pathname, queryClient]);
 
   const qrRoute = useMemo(() => {
     if (!pathname.startsWith(DASHBOARD_ROUTES.qrCodes)) return null;
@@ -333,7 +343,7 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (accountRoute?.mode === "packages") {
     return (
-      <Suspense fallback={null}>
+      <Suspense fallback={<PackageComparisonPageSkeleton />}>
         <PackageComparisonView />
       </Suspense>
     );

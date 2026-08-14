@@ -10,10 +10,11 @@ import {
   Loader2,
   MessageSquareText,
   Settings2,
-  UtensilsCrossed,
 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import { Button } from "@/components/ui/button";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -26,7 +27,7 @@ const HUB_ITEMS = [
   {
     key: "products",
     title: "Ürünler",
-    icon: UtensilsCrossed,
+    icon: DigitalMenuIcon,
     href: (qrId: number) => DASHBOARD_ROUTES.digitalMenuProductsForQr(qrId),
   },
   {
@@ -52,9 +53,13 @@ const HUB_ITEMS = [
 export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewProps) {
   const router = useRouter();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const { canUseWaiterPanel } = useWaiterPanelAccess();
   const menuQuery = useMenuByQr(qrId, canUseDigitalMenu);
   const menuName = menuQuery.data?.businessName?.trim() || "";
   const menuHref = `/menu/${qrId}`;
+  const hubItems = HUB_ITEMS.filter(
+    (item) => item.key !== "restaurantLayout" || canUseWaiterPanel,
+  );
 
   if (accessLoading) {
     return (
@@ -102,7 +107,7 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
-        {HUB_ITEMS.map((item) => {
+        {hubItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link

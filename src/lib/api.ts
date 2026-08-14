@@ -148,6 +148,12 @@ export interface UserQrApiItem {
   imgSrc?: string | null;
   details: Record<string, unknown>;
   createdAt: string;
+  purchaseId?: number | null;
+  packageName?: string | null;
+  legacy?: boolean;
+  activePackage?: boolean;
+  active?: boolean;
+  menuId?: number | null;
 }
 
 export interface UserQrPageApiResponse {
@@ -358,15 +364,18 @@ export function aggregatePackageUsage(
   entitlements: UserEntitlementApiItem[],
   purchases: PurchaseApiItem[],
 ): PackageUsageSummary {
+  const activePurchase = pickActivePurchase(purchases);
   const activeEntitlements = entitlements.filter(
     (item) => (item.productCode === "QR_CREATE" || item.productCode === "QR_MENU") && item.usable && !item.expired,
   );
-  const qrEntitlements = activeEntitlements.filter((item) => item.productCode === "QR_CREATE");
+  const scopedEntitlements = activePurchase
+    ? activeEntitlements.filter((item) => item.purchaseId === activePurchase.id)
+    : activeEntitlements;
+  const qrEntitlements = scopedEntitlements.filter((item) => item.productCode === "QR_CREATE");
   const unlimited = qrEntitlements.some((item) => item.unlimited);
   const remaining = qrEntitlements.reduce((sum, item) => sum + item.remainingQuantity, 0);
   const total = qrEntitlements.reduce((sum, item) => sum + item.totalQuantity, 0);
   const used = qrEntitlements.reduce((sum, item) => sum + item.usedQuantity, 0);
-  const activePurchase = pickActivePurchase(purchases);
 
   return {
     packageName: activePurchase?.packageName ?? "Ücretsiz Paket",
@@ -966,6 +975,10 @@ export async function updateMenuRequest(menuId: number | string, payload: MenuUp
   return response.data;
 }
 
+export async function deleteMenuRequest(menuId: number | string): Promise<void> {
+  await api.delete(`/menu/${menuId}`);
+}
+
 export async function getPublicMenuRequest(identifier: string): Promise<PublicMenuApiResponse> {
   const response = await fetch(`/api/menu/public/${encodeURIComponent(identifier)}`, {
     cache: "no-store",
@@ -1062,21 +1075,41 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
   };
 }
 
+export type QrListScope = "ALL" | "CURRENT" | "LEGACY";
+
 export async function getUserQrsRequest(
   userId: number | string,
-  options?: { includeImage?: boolean; page?: number; size?: number },
+  options?: { includeImage?: boolean; page?: number; size?: number; scope?: QrListScope },
 ): Promise<UserQrPageApiResponse> {
   const includeImage = options?.includeImage === true;
   const page = options?.page ?? 0;
   const size = options?.size ?? 5;
+  const scope = options?.scope ?? "ALL";
   const response = await api.get<UserQrPageApiResponse>(`/qr/user/${userId}`, {
-    params: { includeImage, page, size },
+    params: { includeImage, page, size, scope },
   });
   return response.data;
 }
 
 export async function deleteQrRequest(qrId: number | string): Promise<string> {
   const response = await api.delete<string>(`/qr/delete/${qrId}`);
+  return response.data;
+}
+
+export interface UpdateQrActiveRequestBody {
+  active: boolean;
+}
+
+export interface UpdateQrActiveResponse {
+  qrId: number;
+  active: boolean;
+}
+
+export async function updateQrActiveRequest(
+  qrId: number | string,
+  payload: UpdateQrActiveRequestBody,
+): Promise<UpdateQrActiveResponse> {
+  const response = await api.patch<UpdateQrActiveResponse>(`/qr/update-active/${qrId}`, payload);
   return response.data;
 }
 

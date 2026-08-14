@@ -23,6 +23,10 @@ export type MenuUsersResponse = {
 
 export type MenuCustomerItem = {
   customerId: number;
+  menuId?: number | null;
+  businessId?: number | null;
+  menuName?: string | null;
+  menuDeleted?: boolean | null;
   firstName?: string | null;
   lastName?: string | null;
   email?: string | null;
@@ -110,7 +114,7 @@ function messageFromUnknown(data: unknown, fallback: string): string {
 /* ── Merchant: waiters & customers ── */
 
 export async function listMenuUsers(menuId: number): Promise<MenuUsersResponse> {
-  const response = await fetch(`/api/menu/${menuId}/waiters`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -129,7 +133,7 @@ export async function createMenuWaiter(
   menuId: number,
   payload: { username: string; password: string; displayName: string },
 ): Promise<MenuWaiterMember> {
-  const response = await fetch(`/api/menu/${menuId}/waiters`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -147,7 +151,7 @@ export async function updateMenuWaiter(
   waiterId: number,
   payload: { displayName?: string; active?: boolean; password?: string },
 ): Promise<MenuWaiterMember> {
-  const response = await fetch(`/api/menu/${menuId}/waiters/${waiterId}`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -161,7 +165,7 @@ export async function updateMenuWaiter(
 }
 
 export async function deleteMenuWaiter(menuId: number, waiterId: number): Promise<void> {
-  const response = await fetch(`/api/menu/${menuId}/waiters/${waiterId}`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
     method: "DELETE",
     credentials: "same-origin",
   });
@@ -172,7 +176,20 @@ export async function deleteMenuWaiter(menuId: number, waiterId: number): Promis
 }
 
 export async function listMenuCustomers(menuId: number): Promise<MenuCustomerItem[]> {
-  const response = await fetch(`/api/menu/${menuId}/customers`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/customers`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<MenuCustomerItem[] | { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, messageFromUnknown(data, "Müşteriler alınamadı"));
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+export async function listBusinessCustomers(): Promise<MenuCustomerItem[]> {
+  const response = await fetch("/api/waiter-panel/customers/my", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",

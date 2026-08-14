@@ -7,7 +7,7 @@ export async function POST(
   const { menuId, orderId } = await context.params;
   return proxyAuthenticatedRequest(
     request,
-    `/menu/${menuId}/orders/${orderId}/reject`,
+    `/waiter-panel/menu/${menuId}/orders/${orderId}/confirm`,
     "POST",
   );
 }

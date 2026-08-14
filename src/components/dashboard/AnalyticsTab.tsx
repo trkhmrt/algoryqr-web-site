@@ -36,6 +36,9 @@ import {
 } from "recharts";
 
 import { DigitalMenuPicker, useDigitalMenuSelection } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { RainbowBeamButton } from "@/components/dashboard/RainbowBeamButton";
+import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
+import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import AnalyticsRevenuePanel from "@/components/dashboard/AnalyticsRevenuePanel";
 import {
   AlertDialog,
@@ -57,21 +60,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAccessProfile } from "@/hooks/use-access-profile";
 import { useMenuAnalyticsReport } from "@/hooks/use-menu-analytics-report";
 import { useMenuRevenueReport } from "@/hooks/use-menu-revenue-report";
 import { useSmartReportJob } from "@/hooks/use-smart-report-job";
-import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { useSmartReportingAccess } from "@/hooks/use-smart-reporting-access";
+import { useActivePackages } from "@/hooks/use-subscription";
 import { useToast } from "@/hooks/use-toast";
-import { hasProduct, hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { SlidingTabSelect } from "@/components/ui/sliding-tab-select";
 import { formatPackagePrice, packageFeatures } from "@/lib/package-display";
-import {
-  hasActiveProductAccess,
-  isDateUsablePurchase,
-  matchesProductCode,
-} from "@/lib/product-access";
+import { matchesProductCode } from "@/lib/product-access";
 import { downloadSmartReportPdf } from "@/lib/smart-report-pdf";
 import { getSmartReportQuotaRequest, buildSmartReportMarkdown, isSmartReportQuotaExhausted, normalizeSmartReportResult } from "@/lib/smart-report";
 import {
@@ -94,34 +93,6 @@ const COLORS = {
 };
 
 const DEVICE_FILLS = [COLORS.indigo, COLORS.orange, COLORS.teal];
-
-function SmartReportButton({
-  className,
-  disabled,
-  loading,
-  label = "Akıllı Rapor",
-  onClick,
-}: {
-  className?: string;
-  disabled?: boolean;
-  loading?: boolean;
-  label?: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled || loading}
-      onClick={onClick}
-      className={`rainbow-beam shrink-0 disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ""}`}
-    >
-      <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white">
-        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-        {label}
-      </span>
-    </button>
-  );
-}
 
 function useTooltipStyle() {
   if (typeof document === "undefined") {
@@ -193,41 +164,6 @@ function TreemapContent(props: {
   );
 }
 
-function useAnalyticsAccess() {
-  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
-  const subscription = useSubscription();
-  const packages = useActivePackages();
-  const entitlements = Array.isArray(subscription.data?.entitlements)
-    ? subscription.data.entitlements
-    : [];
-  const purchases = Array.isArray(subscription.data?.purchases) ? subscription.data.purchases : [];
-  const activePurchase = subscription.data?.activePurchase ?? null;
-  const activePackage =
-    packages.data?.find(
-      (pkg) => activePurchase?.packageId != null && pkg.id === activePurchase.packageId,
-    ) ??
-    packages.data?.find(
-      (pkg) =>
-        !!activePurchase?.packageCode && pkg.code === activePurchase.packageCode,
-    ) ??
-    null;
-  const activePackageHasSmartReporting =
-    !!activePurchase &&
-    isDateUsablePurchase(activePurchase) &&
-    !!activePackage?.items?.some((item) =>
-      matchesProductCode(item.productCode, "SMART_REPORTING"),
-    );
-  const canUse =
-    hasActiveProductAccess(entitlements, purchases, "SMART_REPORTING") ||
-    hasScope(accessProfile, "QR_ANALYTICS_OWNER") ||
-    hasProduct(accessProfile, "QR_ANALYTICS") ||
-    activePackageHasSmartReporting;
-  return {
-    accessLoading: accessLoading || subscription.isLoading || packages.isLoading,
-    canUse,
-  };
-}
-
 const ANALYTICS_FEATURES = [
   "Menü ziyaret ve oturum raporları",
   "Ürün ve kategori görüntüleme analizi",
@@ -282,12 +218,12 @@ function AnalyticsLockedView({
             </h1>
             <p className="text-sm text-muted-foreground">
               {isOrders
-                ? "Sipariş cirosu ve satış raporları için Ultimate paket gerekir."
+                ? "Sipariş cirosu ve satış raporları için Garson Paneli (Ultimate) gerekir."
                 : "Akıllı Raporlama için Ultimate paket gerekir."}
             </p>
           </div>
         </div>
-        {isOrders ? null : <SmartReportButton disabled />}
+        {isOrders ? null : <RainbowBeamButton disabled label="Akıllı Rapor" />}
       </div>
 
       <Card className="glow-card overflow-hidden border-primary/30">
@@ -385,12 +321,26 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   const tooltipStyle = useTooltipStyle();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { accessLoading, canUse } = useAnalyticsAccess();
+  const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
+  const { accessLoading: smartReportAccessLoading, canUseSmartReporting, smartReportingPackageNames } =
+    useSmartReportingAccess();
+  const accessLoading = isOrders ? waiterAccessLoading : false;
+  const canUseRevenue = canUseSmartReporting || canUseWaiterPanel;
   const { menuQrs, selection, loading: selectionLoading, selectQrId } = useDigitalMenuSelection(initialQrId);
   const range = useMemo(() => reportingPeriodRange(period), [period]);
   const menuId = selection?.menu.menuId ?? null;
-  const reportQuery = useMenuAnalyticsReport(menuId, range.from, range.to, canUse && menuId != null && !isOrders);
-  const revenueQuery = useMenuRevenueReport(menuId, range.from, range.to, canUse && menuId != null);
+  const reportQuery = useMenuAnalyticsReport(
+    menuId,
+    range.from,
+    range.to,
+    menuId != null && !isOrders,
+  );
+  const revenueQuery = useMenuRevenueReport(
+    menuId,
+    range.from,
+    range.to,
+    canUseRevenue && menuId != null,
+  );
   const report = reportQuery.data;
   const smartReport = useSmartReportJob({
     menuId,
@@ -400,7 +350,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   const quotaQuery = useQuery({
     queryKey: ["smart-reports", "quota"],
     queryFn: getSmartReportQuotaRequest,
-    enabled: canUse,
+    enabled: canUseSmartReporting,
   });
   const quota = quotaQuery.data;
   const quotaExhausted = isSmartReportQuotaExhausted(quota);
@@ -411,11 +361,6 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       : initialQrId != null
         ? DASHBOARD_ROUTES.digitalMenuEdit(initialQrId)
         : DASHBOARD_ROUTES.digitalMenu;
-  const menuLabel =
-    selection?.menu.businessName?.trim() ||
-    selection?.qr.name ||
-    null;
-
   const result = normalizeSmartReportResult(smartReport.job);
   const failed = smartReport.isFailed;
   const wasGeneratingRef = useRef(false);
@@ -436,7 +381,19 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
     });
   }, [smartReport.isReady, toast]);
 
+  function handleSmartReportHistoryClick() {
+    if (!canUseSmartReporting) {
+      router.push(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
+      return;
+    }
+    router.push(DASHBOARD_ROUTES.smartReports);
+  }
+
   function handleSmartReportClick() {
+    if (!canUseSmartReporting) {
+      router.push(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
+      return;
+    }
     if (smartReport.isReady) {
       setDialogOpen(true);
       return;
@@ -532,7 +489,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
     }
   }
 
-  if (accessLoading) {
+  if (isOrders && accessLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
@@ -540,7 +497,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
     );
   }
 
-  if (!canUse) {
+  if (isOrders && !canUseWaiterPanel) {
     return (
       <AnalyticsLockedView backHref={backHref} variant={variant} />
     );
@@ -595,41 +552,52 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {isOrders ? "Sipariş Raporları" : "Raporlar"}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {menuLabel
-                ? activeReportView === "revenue"
-                  ? `${menuLabel} · onaylanan sipariş ciro ve satış raporları`
-                  : `${menuLabel} · menü ziyaret ve yolculuk raporları`
-                : activeReportView === "revenue"
-                  ? "Onaylanan siparişlerden ciro, satış ve sepet raporları."
-                  : "Menü QR ziyaret ve yolculuk raporları."}
-            </p>
           </div>
         </div>
-        {isOrders ? null : (
-          <div className="flex shrink-0 flex-nowrap items-center justify-end gap-3 sm:ml-auto">
-            <Link
-              href={DASHBOARD_ROUTES.smartReports}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Rapor gecmisi
-            </Link>
-            <SmartReportButton
-              loading={smartReport.isGenerating}
-              disabled={
-                smartReport.isReady
-                  ? false
-                  : smartReport.isGenerating
-                    ? true
-                    : !canGenerate
-              }
-              label={smartReportLabel}
-              onClick={() => handleSmartReportClick()}
-            />
-          </div>
-        )}
       </div>
 
+      {!isOrders ? (
+        <SmartFeaturePanel
+          title="Akıllı Rapor"
+          hint={PRODUCT_HINTS.SMART_REPORTING}
+          description={
+            canUseSmartReporting
+              ? "Yapay zeka destekli özet, içgörü ve PDF rapor oluşturun."
+              : `Aktif paketinizde Akıllı Rapor yok. ${
+                  smartReportingPackageNames.length > 0
+                    ? smartReportingPackageNames.join(" veya ")
+                    : "uygun paketler"
+                } ile yapay zeka destekli raporlar alın.`
+          }
+          actionLabel={canUseSmartReporting ? smartReportLabel : "Paketi incele"}
+          loading={smartReport.isGenerating}
+          loadingSkeleton={smartReportAccessLoading}
+          disabled={
+            smartReportAccessLoading ||
+            (canUseSmartReporting
+              ? smartReportLabel === "İndirmeye hazır"
+                ? false
+                : smartReport.isGenerating
+                  ? true
+                  : !canGenerate
+              : false)
+          }
+          prominent={!canUseSmartReporting}
+          onActionClick={() => handleSmartReportClick()}
+          secondaryAction={
+            canUseSmartReporting
+              ? {
+                  label: "Rapor geçmişi",
+                  onClick: handleSmartReportHistoryClick,
+                  disabled: smartReportAccessLoading,
+                }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {canUseSmartReporting ? (
+        <>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -722,6 +690,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      ) : null}
 
       {menuQrs.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -743,7 +713,13 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
               size="md"
               ariaLabel="Rapor türü"
               value={reportView}
-              onValueChange={(next) => setReportView(next as ReportView)}
+              onValueChange={(next) => {
+                if (next === "revenue" && !canUseRevenue) {
+                  router.push(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
+                  return;
+                }
+                setReportView(next as ReportView);
+              }}
               items={[
                 { value: "visits", label: "Ürün & Ziyaret" },
                 { value: "revenue", label: "Ciro" },
@@ -794,13 +770,25 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         </div>
       ) : null}
 
-      {activeReportView === "revenue" && menuId != null && revenueQuery.isError ? (
+      {activeReportView === "revenue" && menuId != null && !canUseRevenue ? (
+        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+          Ciro raporları Pro veya Ultimate paket ile kullanılabilir.{" "}
+          <Link
+            href={DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING")}
+            className="font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            Paketleri incele
+          </Link>
+        </div>
+      ) : null}
+
+      {activeReportView === "revenue" && menuId != null && canUseRevenue && revenueQuery.isError ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Ciro raporu yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
 
-      {activeReportView === "revenue" && menuId != null && !revenueLoading && !revenueQuery.isError && revenueQuery.data ? (
+      {activeReportView === "revenue" && menuId != null && canUseRevenue && !revenueLoading && !revenueQuery.isError && revenueQuery.data ? (
         <AnalyticsRevenuePanel report={revenueQuery.data} tooltipStyle={tooltipStyle} />
       ) : null}
 

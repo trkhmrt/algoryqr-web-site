@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   hasActiveProductAccess,
+  hasActivePackageProduct,
   hasExpiredProductAccess,
+  packageIncludesProduct,
   pickActivePurchase,
   type ProductAccessEntitlement,
   type ProductAccessPurchase,
@@ -77,6 +79,43 @@ describe("hasActiveProductAccess", () => {
         [entitlement({ productCode: "SMART_REPORTING" })],
         [purchase()],
         "QR_ANALYTICS",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("packageIncludesProduct", () => {
+  it("returns true when package items include the product", () => {
+    expect(
+      packageIncludesProduct(
+        { code: "PRO_PACKAGE", items: [{ productCode: "SMART_REPORTING" }] },
+        "SMART_REPORTING",
+      ),
+    ).toBe(true);
+  });
+
+  it("returns false when package items omit the product", () => {
+    expect(
+      packageIncludesProduct(
+        { code: "STARTER_PACKAGE", items: [{ productCode: "QR_MENU" }] },
+        "SMART_REPORTING",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("hasActivePackageProduct", () => {
+  it("checks active purchase package items in catalog", () => {
+    expect(
+      hasActivePackageProduct(
+        {
+          id: 1,
+          usable: true,
+          expired: false,
+          packageCode: "PRO_PACKAGE",
+        },
+        [{ code: "PRO_PACKAGE", items: [{ productCode: "SMART_REPORTING" }] }],
+        "SMART_REPORTING",
       ),
     ).toBe(true);
   });

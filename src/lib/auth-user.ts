@@ -8,9 +8,36 @@ export interface AuthUser {
 
 type JwtPayload = Record<string, unknown>;
 
-export type PackageCode = "FREE_PACKAGE" | "PRO_PACKAGE" | "ULTIMATE_PACKAGE";
-export type ProductCode = "QR_CREATE" | "QR_MENU" | "QR_AGENT" | "QR_ANALYTICS";
-export type ProductScope = "QR_CREATE_OWNER" | "QR_MENU_OWNER" | "QR_ANALYTICS_OWNER";
+export type PackageCode =
+  | "FREE_PACKAGE"
+  | "STARTER_PACKAGE"
+  | "PRO_PACKAGE"
+  | "ULTIMATE_PACKAGE"
+  | "CORPORATE_PACKAGE";
+
+export type ProductCode =
+  | "QR_CREATE"
+  | "QR_MENU"
+  | "MENU_PRODUCT"
+  | "WAITER_PANEL"
+  | "SMART_ASSISTANT"
+  | "SMART_SUMMARY"
+  | "SMART_REPORTING"
+  | "CUSTOM_DESIGN"
+  | "QR_AGENT"
+  | "QR_ANALYTICS";
+
+export type ProductScope =
+  | "QR_CREATE_OWNER"
+  | "QR_MENU_OWNER"
+  | "MENU_PRODUCT_OWNER"
+  | "WAITER_PANEL_OWNER"
+  | "SMART_ASSISTANT_OWNER"
+  | "SMART_SUMMARY_OWNER"
+  | "SMART_REPORTING_OWNER"
+  | "CUSTOM_DESIGN_OWNER"
+  | "QR_ANALYTICS_OWNER";
+
 export type AuthProvider = "GOOGLE" | "BASIC";
 
 export interface AccessProfile {
@@ -20,6 +47,39 @@ export interface AccessProfile {
   roles: string[];
   provider: AuthProvider | null;
 }
+
+const KNOWN_PRODUCT_CODES = new Set<string>([
+  "QR_CREATE",
+  "QR_MENU",
+  "MENU_PRODUCT",
+  "WAITER_PANEL",
+  "SMART_ASSISTANT",
+  "SMART_SUMMARY",
+  "SMART_REPORTING",
+  "CUSTOM_DESIGN",
+  "QR_AGENT",
+  "QR_ANALYTICS",
+]);
+
+const KNOWN_PRODUCT_SCOPES = new Set<string>([
+  "QR_CREATE_OWNER",
+  "QR_MENU_OWNER",
+  "MENU_PRODUCT_OWNER",
+  "WAITER_PANEL_OWNER",
+  "SMART_ASSISTANT_OWNER",
+  "SMART_SUMMARY_OWNER",
+  "SMART_REPORTING_OWNER",
+  "CUSTOM_DESIGN_OWNER",
+  "QR_ANALYTICS_OWNER",
+]);
+
+const PACKAGE_CODES = new Set<string>([
+  "FREE_PACKAGE",
+  "STARTER_PACKAGE",
+  "PRO_PACKAGE",
+  "ULTIMATE_PACKAGE",
+  "CORPORATE_PACKAGE",
+]);
 
 function decodeBase64Url(input: string): string | null {
   try {
@@ -125,27 +185,26 @@ export function getUserFromAccessToken(token?: string | null): AuthUser | null {
 }
 
 function isProductCode(value: string): value is ProductCode {
-  return (
-    value === "QR_CREATE" ||
-    value === "QR_MENU" ||
-    value === "QR_AGENT" ||
-    value === "QR_ANALYTICS"
-  );
+  return KNOWN_PRODUCT_CODES.has(value);
 }
 
 function normalizeProductCode(value: string): ProductCode | null {
   if (isProductCode(value)) return value;
-  if (value === "SMART_REPORTING") return "QR_ANALYTICS";
-  if (value === "SMART_ASSISTANT") return "QR_AGENT";
+  if (value === "SMART_REPORTING") return "SMART_REPORTING";
+  if (value === "SMART_ASSISTANT") return "SMART_ASSISTANT";
+  if (value === "SMART_SUMMARY") return "SMART_SUMMARY";
   return null;
 }
 
 function isProductScope(value: string): value is ProductScope {
-  return (
-    value === "QR_CREATE_OWNER" ||
-    value === "QR_MENU_OWNER" ||
-    value === "QR_ANALYTICS_OWNER"
-  );
+  if (KNOWN_PRODUCT_SCOPES.has(value)) return true;
+  if (value === "SMART_REPORTING_OWNER") return true;
+  return false;
+}
+
+function normalizeProductScope(value: string): ProductScope | null {
+  if (value === "SMART_REPORTING_OWNER") return "SMART_REPORTING_OWNER";
+  return isProductScope(value) ? value : null;
 }
 
 export function getAccessProfileFromToken(token?: string | null): AccessProfile {
@@ -156,15 +215,17 @@ export function getAccessProfileFromToken(token?: string | null): AccessProfile 
   const products = readStringArray(payload.products)
     .map(normalizeProductCode)
     .filter((item): item is ProductCode => item != null);
+  const activePackageRaw =
+    typeof payload.activePackage === "string" ? payload.activePackage : null;
   return {
     activePackage:
-      payload.activePackage === "FREE_PACKAGE" ||
-      payload.activePackage === "PRO_PACKAGE" ||
-      payload.activePackage === "ULTIMATE_PACKAGE"
-        ? payload.activePackage
+      activePackageRaw && PACKAGE_CODES.has(activePackageRaw)
+        ? (activePackageRaw as PackageCode)
         : null,
     products: [...new Set(products)],
-    scopes: readStringArray(payload.scopes).filter(isProductScope),
+    scopes: readStringArray(payload.scopes)
+      .map(normalizeProductScope)
+      .filter((item): item is ProductScope => item != null),
     roles: readStringArray(payload.roles),
     provider: parseAuthProvider(payload.provider),
   };
@@ -178,11 +239,20 @@ function parseAuthProvider(value: unknown): AuthProvider | null {
 }
 
 export function hasScope(profile: AccessProfile | null | undefined, scope: ProductScope): boolean {
-  return profile?.scopes.includes(scope) ?? false;
+  if (!profile) return false;
+  if (profile.scopes.includes(scope)) return true;
+  if (scope === "SMART_REPORTING_OWNER" && profile.scopes.includes("QR_ANALYTICS_OWNER")) {
+    return true;
+  }
+  return false;
 }
 
 export function hasProduct(profile: AccessProfile | null | undefined, product: ProductCode): boolean {
-  return profile?.products.includes(product) ?? false;
+  if (!profile) return false;
+  if (profile.products.includes(product)) return true;
+  if (product === "QR_ANALYTICS" && profile.products.includes("SMART_REPORTING")) return true;
+  if (product === "QR_AGENT" && profile.products.includes("SMART_ASSISTANT")) return true;
+  return false;
 }
 
 export function tokenHasScope(token: string | null | undefined, scope: ProductScope): boolean {

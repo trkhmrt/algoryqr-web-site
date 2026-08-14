@@ -5,7 +5,11 @@ export async function PATCH(
   context: { params: Promise<{ menuId: string; waiterId: string }> },
 ) {
   const { menuId, waiterId } = await context.params;
-  return proxyAuthenticatedRequest(request, `/menu/${menuId}/waiters/${waiterId}`, "PATCH");
+  return proxyAuthenticatedRequest(
+    request,
+    `/waiter-panel/menu/${menuId}/waiters/${waiterId}`,
+    "PATCH",
+  );
 }
 
 export async function DELETE(
@@ -13,5 +17,9 @@ export async function DELETE(
   context: { params: Promise<{ menuId: string; waiterId: string }> },
 ) {
   const { menuId, waiterId } = await context.params;
-  return proxyAuthenticatedRequest(request, `/menu/${menuId}/waiters/${waiterId}`, "DELETE");
+  return proxyAuthenticatedRequest(
+    request,
+    `/waiter-panel/menu/${menuId}/waiters/${waiterId}`,
+    "DELETE",
+  );
 }

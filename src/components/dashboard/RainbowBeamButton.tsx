@@ -7,6 +7,7 @@ type RainbowBeamButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   label?: string;
+  prominent?: boolean;
   onClick?: () => void;
 };
 
@@ -15,6 +16,7 @@ export function RainbowBeamButton({
   disabled,
   loading,
   label = "Akıllı Özet",
+  prominent = false,
   onClick,
 }: RainbowBeamButtonProps) {
   return (
@@ -22,7 +24,9 @@ export function RainbowBeamButton({
       type="button"
       disabled={disabled || loading}
       onClick={onClick}
-      className={`rainbow-beam shrink-0 disabled:cursor-not-allowed disabled:opacity-60 ${className ?? ""}`}
+      className={`rainbow-beam shrink-0 disabled:cursor-not-allowed disabled:opacity-60 ${
+        prominent ? "rainbow-beam-prominent" : ""
+      } ${className ?? ""}`}
     >
       <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white">
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}

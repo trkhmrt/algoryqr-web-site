@@ -1,6 +1,9 @@
 "use client";
 
-import { CalendarDays, MessageSquareText, Phone, UtensilsCrossed } from "lucide-react";
+import type { ComponentType } from "react";
+import { CalendarDays, MessageSquareText, Phone } from "lucide-react";
+
+import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 
 import type { MenuLandingAction } from "./menu-landing";
 
@@ -8,7 +11,7 @@ const ACTIONS: Array<{
   key: MenuLandingAction;
   title: string;
   description: string;
-  icon: typeof UtensilsCrossed;
+  icon: ComponentType<{ className?: string }>;
 }> = [
   {
     key: "reservation",
@@ -20,7 +23,7 @@ const ACTIONS: Array<{
     key: "menu",
     title: "Menü",
     description: "Ürünlere göz atın",
-    icon: UtensilsCrossed,
+    icon: DigitalMenuIcon,
   },
   {
     key: "feedback",

@@ -80,7 +80,15 @@ export interface UserQrApiItem {
   imgSrc: string;
   details: Record<string, unknown>;
   createdAt: string;
+  purchaseId?: number | null;
+  packageName?: string | null;
+  legacy?: boolean;
+  activePackage?: boolean;
+  active?: boolean;
+  menuId?: number | null;
 }
+
+export type QrListScope = "ALL" | "CURRENT" | "LEGACY";
 
 export interface UserQrPageApiResponse {
   content: UserQrApiItem[];
@@ -121,19 +129,37 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
 
 export async function getUserQrsRequest(
   userId: number | string,
-  options?: { includeImage?: boolean; page?: number; size?: number },
+  options?: { includeImage?: boolean; page?: number; size?: number; scope?: QrListScope },
 ): Promise<UserQrPageApiResponse> {
   const includeImage = options?.includeImage === true;
   const page = options?.page ?? 0;
   const size = options?.size ?? 5;
+  const scope = options?.scope ?? "ALL";
   const response = await api.get<UserQrPageApiResponse>(`/qr/user/${userId}`, {
-    params: { includeImage, page, size },
+    params: { includeImage, page, size, scope },
   });
   return response.data;
 }
 
 export async function deleteQrRequest(qrId: number | string): Promise<string> {
   const response = await api.delete<string>(`/qr/delete/${qrId}`);
+  return response.data;
+}
+
+export interface UpdateQrActiveRequestBody {
+  active: boolean;
+}
+
+export interface UpdateQrActiveResponse {
+  qrId: number;
+  active: boolean;
+}
+
+export async function updateQrActiveRequest(
+  qrId: number | string,
+  payload: UpdateQrActiveRequestBody,
+): Promise<UpdateQrActiveResponse> {
+  const response = await api.patch<UpdateQrActiveResponse>(`/qr/update-active/${qrId}`, payload);
   return response.data;
 }
 

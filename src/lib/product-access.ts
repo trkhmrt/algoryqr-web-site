@@ -100,6 +100,40 @@ export function matchesProductCode(actual: string, expected: string): boolean {
   return aliases.includes(actual);
 }
 
+export type PackageWithItems = {
+  id?: number;
+  code?: string;
+  items?: { productCode: string }[];
+};
+
+export function findPackageForPurchase(
+  packages: PackageWithItems[],
+  purchase: { packageId?: number | null; packageCode?: string | null } | null,
+): PackageWithItems | null {
+  if (!purchase) return null;
+  return (
+    packages.find((pkg) => purchase.packageId != null && pkg.id === purchase.packageId) ??
+    packages.find((pkg) => !!purchase.packageCode && pkg.code === purchase.packageCode) ??
+    null
+  );
+}
+
+export function packageIncludesProduct(
+  pkg: PackageWithItems | null | undefined,
+  productCode: string,
+): boolean {
+  return !!pkg?.items?.some((item) => matchesProductCode(item.productCode, productCode));
+}
+
+export function hasActivePackageProduct(
+  purchase: ProductAccessPurchase | null,
+  packages: PackageWithItems[],
+  productCode: string,
+): boolean {
+  if (!purchase || !isDateUsablePurchase(purchase)) return false;
+  return packageIncludesProduct(findPackageForPurchase(packages, purchase), productCode);
+}
+
 export function hasActiveProductAccess(
   entitlements: ProductAccessEntitlement[],
   purchases: ProductAccessPurchase[],

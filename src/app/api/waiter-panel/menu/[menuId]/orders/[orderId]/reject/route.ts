@@ -2,12 +2,12 @@ import { proxyAuthenticatedRequest } from "@/lib/server/authenticated-proxy";
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ menuId: string; tableId: string }> },
+  context: { params: Promise<{ menuId: string; orderId: string }> },
 ) {
-  const { menuId, tableId } = await context.params;
+  const { menuId, orderId } = await context.params;
   return proxyAuthenticatedRequest(
     request,
-    `/menu/${menuId}/tables/${tableId}/regenerate-qr`,
+    `/waiter-panel/menu/${menuId}/orders/${orderId}/reject`,
     "POST",
   );
 }

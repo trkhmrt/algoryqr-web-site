@@ -10,9 +10,15 @@ import { MenuDetails, createInitialMenuData, type MenuData } from "@/components/
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
+import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
 import { invalidateUserQrs } from "@/hooks/use-user-qrs";
 import { ApiError, createQrRequest, getStoredUser } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import {
+  canCreateMenu,
+  formatMenuQuotaLabel,
+  summarizeMenuEntitlements,
+} from "@/lib/entitlement-display";
 import { buildMenuCreateDetails } from "@/lib/menu-create";
 
 export default function DigitalMenuCreateView() {
@@ -20,12 +26,20 @@ export default function DigitalMenuCreateView() {
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const subscription = useSubscription(canUseDigitalMenu);
+  const menuQuota = summarizeMenuEntitlements(subscription.data?.entitlements ?? []);
+  const menuQuotaLabel = formatMenuQuotaLabel(menuQuota);
+  const canCreateNewMenu = canCreateMenu(menuQuota);
   const [menu, setMenu] = useState<MenuData>(createInitialMenuData());
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!canUseDigitalMenu) {
       notify("warning", "Menü QR oluşturmak için PRO paket gerekli.");
+      return;
+    }
+    if (!canCreateNewMenu) {
+      notify("warning", "Dijital menü hakkınız doldu. Yeni menü için mevcut bir menüyü silin veya paketinizi yükseltin.");
       return;
     }
     if (!menu.businessName.trim()) {
@@ -53,6 +67,7 @@ export default function DigitalMenuCreateView() {
         ),
       });
       await invalidatePackageUsage(queryClient);
+      await invalidateSubscription(queryClient);
       const storedUser = getStoredUser();
       await Promise.all([
         invalidateUserQrs(queryClient, storedUser?.id != null ? String(storedUser.id) : "me"),
@@ -105,6 +120,9 @@ export default function DigitalMenuCreateView() {
           <p className="text-sm text-muted-foreground">
             İşletme bilgilerini girin. Ürün ve kategorileri menü oluşturulduktan sonra ekleyebilirsiniz.
           </p>
+          {menuQuotaLabel ? (
+            <p className="mt-1 text-xs text-muted-foreground">{menuQuotaLabel}</p>
+          ) : null}
         </div>
       </div>
 
@@ -117,7 +135,7 @@ export default function DigitalMenuCreateView() {
         <Button type="button" variant="outline" onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}>
           Vazgeç
         </Button>
-        <Button type="button" variant="hero" disabled={saving} onClick={() => void submit()}>
+        <Button type="button" variant="hero" disabled={saving || !canCreateNewMenu} onClick={() => void submit()}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Menü QR Oluştur"}
         </Button>
       </div>

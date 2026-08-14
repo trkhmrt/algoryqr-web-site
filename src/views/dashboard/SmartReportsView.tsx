@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, FileText, Loader2, RefreshCw } from "lucide-react";
 
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { useSmartReportingAccess } from "@/hooks/use-smart-reporting-access";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getSmartReportQuotaRequest,
   isSmartReportCompleted,
@@ -106,14 +109,51 @@ function QuotaCountdownCard({
 }
 
 export default function SmartReportsView() {
+  const router = useRouter();
+  const { accessLoading, canUseSmartReporting } = useSmartReportingAccess();
   const listQuery = useQuery({
     queryKey: ["smart-reports", "list", "completed"],
     queryFn: () => listSmartReportsRequest({ page: 0, size: 50, status: "completed" }),
+    enabled: canUseSmartReporting,
   });
   const quotaQuery = useQuery({
     queryKey: ["smart-reports", "quota"],
     queryFn: getSmartReportQuotaRequest,
+    enabled: canUseSmartReporting,
   });
+
+  useEffect(() => {
+    if (accessLoading || canUseSmartReporting) return;
+    router.replace(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
+  }, [accessLoading, canUseSmartReporting, router]);
+
+  if (accessLoading) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+        </div>
+        <Skeleton className="h-20 w-full rounded-lg" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!canUseSmartReporting) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
 
   const items = (listQuery.data?.content ?? []).filter((item) =>
     isSmartReportCompleted(item.status ?? "completed"),
@@ -160,7 +200,7 @@ export default function SmartReportsView() {
             href={DASHBOARD_ROUTES.analytics}
             className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
           >
-            Analitikten rapor olustur
+            Raporlardan akıllı rapor oluştur
           </Link>
         </div>
       ) : (

@@ -18,42 +18,74 @@ type LiveAccessProfile = {
   scopes?: unknown;
 };
 
+const PACKAGE_CODES = new Set<string>([
+  "FREE_PACKAGE",
+  "STARTER_PACKAGE",
+  "PRO_PACKAGE",
+  "ULTIMATE_PACKAGE",
+  "CORPORATE_PACKAGE",
+]);
+
 function readStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function isPackageCode(value: string): value is PackageCode {
-  return value === "FREE_PACKAGE" || value === "PRO_PACKAGE" || value === "ULTIMATE_PACKAGE";
+  return PACKAGE_CODES.has(value);
 }
 
 function normalizeProductCode(value: string): ProductCode | null {
-  if (value === "QR_CREATE" || value === "QR_MENU" || value === "QR_AGENT" || value === "QR_ANALYTICS") {
-    return value;
-  }
-  if (value === "SMART_REPORTING") return "QR_ANALYTICS";
-  if (value === "SMART_ASSISTANT") return "QR_AGENT";
+  const known = [
+    "QR_CREATE",
+    "QR_MENU",
+    "MENU_PRODUCT",
+    "WAITER_PANEL",
+    "SMART_ASSISTANT",
+    "SMART_SUMMARY",
+    "SMART_REPORTING",
+    "CUSTOM_DESIGN",
+    "QR_AGENT",
+    "QR_ANALYTICS",
+  ] as const;
+  if ((known as readonly string[]).includes(value)) return value;
+  if (value === "SMART_REPORTING") return "SMART_REPORTING";
+  if (value === "SMART_ASSISTANT") return "SMART_ASSISTANT";
+  if (value === "SMART_SUMMARY") return "SMART_SUMMARY";
   return null;
 }
 
 function normalizeProductScope(value: string): ProductScope | null {
-  if (value === "QR_CREATE_OWNER" || value === "QR_MENU_OWNER" || value === "QR_ANALYTICS_OWNER") {
-    return value;
-  }
+  const known = [
+    "QR_CREATE_OWNER",
+    "QR_MENU_OWNER",
+    "MENU_PRODUCT_OWNER",
+    "WAITER_PANEL_OWNER",
+    "SMART_ASSISTANT_OWNER",
+    "SMART_SUMMARY_OWNER",
+    "SMART_REPORTING_OWNER",
+    "CUSTOM_DESIGN_OWNER",
+    "QR_ANALYTICS_OWNER",
+  ] as const;
+  if ((known as readonly string[]).includes(value)) return value;
   return null;
 }
 
 function mergeLiveProfile(tokenProfile: AccessProfile, live: LiveAccessProfile): AccessProfile {
   const activePackageRaw = typeof live.activePackage === "string" ? live.activePackage : null;
-  const products = readStringArray(live.products)
+  const liveProducts = readStringArray(live.products)
     .map(normalizeProductCode)
     .filter((item): item is ProductCode => item != null);
-  const scopes = readStringArray(live.scopes)
+  const liveScopes = readStringArray(live.scopes)
     .map(normalizeProductScope)
     .filter((item): item is ProductScope => item != null);
+  const mergedActivePackage =
+    activePackageRaw && isPackageCode(activePackageRaw)
+      ? activePackageRaw
+      : tokenProfile.activePackage;
   return {
-    activePackage: activePackageRaw && isPackageCode(activePackageRaw) ? activePackageRaw : null,
-    products: [...new Set(products)],
-    scopes: [...new Set(scopes)],
+    activePackage: mergedActivePackage,
+    products: [...new Set([...tokenProfile.products, ...liveProducts])],
+    scopes: [...new Set([...tokenProfile.scopes, ...liveScopes])],
     roles: tokenProfile.roles,
     provider: tokenProfile.provider,
   };

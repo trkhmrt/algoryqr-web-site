@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   XCircle,
   X,
-  UtensilsCrossed,
   MonitorSmartphone,
   PanelLeft,
   PanelLeftClose,
@@ -25,6 +24,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 
+import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,18 +33,20 @@ import {
   useDashboardBannerState,
 } from "@/contexts/dashboard-banners";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
+import { useAccessProfile } from "@/hooks/use-access-profile";
 import {
   DASHBOARD_NAV_ITEMS,
   DASHBOARD_ROUTES,
   isDashboardNavActive,
 } from "@/lib/dashboard-routes";
+import { navItemHasScope } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import type { StoredUser } from "@/lib/api";
 import { getStoredUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const NAV_ICONS = {
   overview: BarChart3,
-  digitalMenu: UtensilsCrossed,
+  digitalMenu: DigitalMenuIcon,
   reservations: CalendarDays,
   orderPanel: MonitorSmartphone,
   reports: TrendingUp,
@@ -95,6 +97,14 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   const [portalReady, setPortalReady] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   useTokenRefresh();
+  const { data: accessProfile } = useAccessProfile();
+  const visibleNavItems = useMemo(
+    () =>
+      DASHBOARD_NAV_ITEMS.filter((item) =>
+        navItemHasScope(item.requiredScope, accessProfile?.scopes ?? []),
+      ),
+    [accessProfile?.scopes],
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPortalReady(true), 0);
@@ -199,7 +209,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
           </div>
 
           <nav className="mt-3 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
-            {DASHBOARD_NAV_ITEMS.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = NAV_ICONS[item.key];
               const active = isDashboardNavActive(pathname, item.href);
               return (
@@ -277,7 +287,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
 
           <div className="overflow-x-auto border-b border-border lg:hidden">
             <div className="flex min-w-full">
-              {DASHBOARD_NAV_ITEMS.map((item) => {
+              {visibleNavItems.map((item) => {
                 const active = isDashboardNavActive(pathname, item.href);
                 return (
                   <Link
@@ -314,7 +324,12 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             </div>
           </div>
 
-          <div className="mx-auto max-w-3xl p-6 lg:p-8">
+          <div
+            className={cn(
+              "mx-auto p-6 lg:p-8",
+              pathname === DASHBOARD_ROUTES.overview ? "max-w-5xl" : "max-w-3xl",
+            )}
+          >
             {children}
           </div>
         </main>

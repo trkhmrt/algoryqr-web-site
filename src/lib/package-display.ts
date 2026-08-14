@@ -1,10 +1,111 @@
 import type { PlanPackageApiItem } from "@/lib/api";
+import type { BillingPeriod } from "@/lib/commerce";
+import { getProductHint, getProductHintByCode } from "@/lib/product-hints";
+
+function money(value: number | string | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export type PackagePricing = {
+  period: BillingPeriod;
+  suffix: string;
+  /** Seçilen periyot için ödenen tutar (kampanya indirimi uygulanmış). */
+  amount: number;
+  /** Üstü çizili karşılaştırma fiyatı (yıllık: 12× aylık; kampanya: liste fiyatı). */
+  compareAmount: number | null;
+  compareSuffix: string | null;
+  /** Yıllık ödemede aylık faturalamaya göre tasarruf. */
+  yearlySavings: number | null;
+  /** monthlyDiscount / yearlyDiscount kampanya indirimi var mı */
+  hasPromotionalDiscount: boolean;
+};
+
+function effectiveMonthlyPrice(pkg: PlanPackageApiItem): number {
+  const list = money(pkg.price);
+  const promo = money(pkg.monthlyDiscount);
+  return money(pkg.effectiveMonthlyPrice ?? list - promo);
+}
+
+function effectiveYearlyPrice(pkg: PlanPackageApiItem): number {
+  const list = money(pkg.yearlyPrice);
+  if (list <= 0) return 0;
+  const promo = money(pkg.yearlyDiscount);
+  return money(pkg.effectiveYearlyPrice ?? list - promo);
+}
+
+export function resolvePackagePricing(
+  pkg: PlanPackageApiItem,
+  billingPeriod: BillingPeriod,
+): PackagePricing {
+  const monthlyAmount = effectiveMonthlyPrice(pkg);
+  const yearlyAmount = effectiveYearlyPrice(pkg);
+  const monthlyList = money(pkg.price);
+  const yearlyList = money(pkg.yearlyPrice);
+  const monthlyPromo = money(pkg.monthlyDiscount);
+  const yearlyPromo = money(pkg.yearlyDiscount);
+
+  if (billingPeriod === "YEARLY") {
+    const annualIfMonthly = monthlyAmount * 12;
+    const yearlySavings =
+      yearlyAmount > 0 && annualIfMonthly > yearlyAmount ? annualIfMonthly - yearlyAmount : null;
+
+    let compareAmount: number | null = null;
+    if (yearlySavings != null) {
+      compareAmount = annualIfMonthly;
+    } else if (yearlyPromo > 0 && yearlyList > yearlyAmount) {
+      compareAmount = yearlyList;
+    }
+
+    return {
+      period: "YEARLY",
+      suffix: "/ yıl",
+      amount: yearlyAmount,
+      compareAmount,
+      compareSuffix: compareAmount != null ? "/ yıl" : null,
+      yearlySavings,
+      hasPromotionalDiscount: yearlyPromo > 0,
+    };
+  }
+
+  return {
+    period: "MONTHLY",
+    suffix: "/ ay",
+    amount: monthlyAmount,
+    compareAmount: monthlyPromo > 0 && monthlyList > monthlyAmount ? monthlyList : null,
+    compareSuffix: monthlyPromo > 0 ? "/ ay" : null,
+    yearlySavings: null,
+    hasPromotionalDiscount: monthlyPromo > 0,
+  };
+}
 
 export function formatPackagePrice(price: number | string, currency?: string): string {
   const amount = typeof price === "string" ? parseFloat(price) : price;
   if (!Number.isFinite(amount) || amount === 0) return "Ücretsiz";
   const symbol = currency === "TRY" || currency === "TL" ? "₺" : currency === "USD" ? "$" : "₺";
   return `${symbol}${amount.toLocaleString("tr-TR", { maximumFractionDigits: 0 })}`;
+}
+
+export function formatYearlySavingsLabel(amount: number, currency?: string): string {
+  return `Aylık ödemeye göre ${formatPackagePrice(amount, currency)} tasarruf`;
+}
+
+export function formatYearlySavingsBadge(
+  amount: number,
+  currency?: string,
+  percent?: number | null,
+): string {
+  const savingsText = `${formatPackagePrice(amount, currency)} tasarruf`;
+  if (percent != null && percent > 0) {
+    return `%${percent} indirim ile ${savingsText}`;
+  }
+  return savingsText;
+}
+
+export function resolveYearlySavingsPercent(pricing: PackagePricing): number | null {
+  if (pricing.yearlySavings == null || pricing.yearlySavings <= 0) return null;
+  if (pricing.compareAmount == null || pricing.compareAmount <= 0) return null;
+  return Math.round((pricing.yearlySavings / pricing.compareAmount) * 100);
 }
 
 export function formatPackageDate(iso?: string | null): string {
@@ -45,11 +146,23 @@ export function packageFeatures(pkg: PlanPackageApiItem): string[] {
     );
   }
   if (menuItem) {
-    features.push(menuItem.unlimited || menuItem.quantity > 0 ? "Dijital menü" : "Dijital menü yok");
+    if (menuItem.unlimited) {
+      features.push("Sınırsız dijital menü");
+    } else if (menuItem.quantity > 1) {
+      features.push(`${menuItem.quantity} dijital menü`);
+    } else {
+      features.push("Dijital menü");
+    }
   } else {
     features.push("Dijital menü yok");
   }
-  for (const code of ["SMART_SUMMARY", "SMART_ASSISTANT", "SMART_REPORTING"] as const) {
+  for (const code of [
+    "SMART_REPORTING",
+    "SMART_ASSISTANT",
+    "SMART_SUMMARY",
+    "CUSTOM_DESIGN",
+    "WAITER_PANEL",
+  ] as const) {
     if (findPackageItem(pkg, code)) {
       features.push(productDisplayName(code));
     }
@@ -80,22 +193,32 @@ export function packageHasFeature(pkg: PlanPackageApiItem, feature: string): boo
   return packageFeatures(pkg).some((f) => f.trim().toLowerCase() === needle);
 }
 
-export function featureTooltip(feature: string): string {
-  const f = feature.toLowerCase();
+export function featureTooltip(feature: string, productCode?: string): string {
+  if (productCode) {
+    const hint = getProductHint(productCode);
+    if (hint) return hint.description;
+  }
+  const f = feature.trim().toLowerCase();
   if (f.includes("qr oluştur") || f.includes("qr olustur"))
-    return "Bu paketle oluşturabileceğiniz dinamik QR kod adedini belirtir.";
+    return getProductHintByCode("QR_CREATE").description;
+  if (f.includes("özel tasar") || f.includes("ozel tasar") || f.includes("custom design"))
+    return getProductHintByCode("CUSTOM_DESIGN").description;
+  if (f.includes("garson") || f.includes("waiter") || f.includes("sipariş panel") || f.includes("siparis panel"))
+    return getProductHintByCode("WAITER_PANEL").description;
+  if (f.includes("ürün hakk") || f.includes("urun hakk") || f.includes("menu urun"))
+    return getProductHintByCode("MENU_PRODUCT").description;
   if (f.includes("menü") || f.includes("menu"))
-    return "Dijital menü oluşturma, şablon seçimi ve yayınlama imkânı.";
+    return getProductHintByCode("QR_MENU").description;
   if (f.includes("asistan") || f.includes("agent"))
-    return "Menüdeki misafirlere yapay zeka ile öneri ve yanıt sunan Akıllı Asistan.";
+    return getProductHintByCode("SMART_ASSISTANT").description;
   if (f.includes("rapor") || f.includes("analitik"))
-    return "Ziyaret ve ürün ilgisine dayalı Akıllı Raporlama ile performans özetleri.";
+    return getProductHintByCode("SMART_REPORTING").description;
   if (f.includes("geçerlilik") || f.includes("gecerlilik"))
     return "Paketin aktif kalacağı süre.";
   if (f.includes("fiyat")) return "Paketin listelenen satış fiyatı.";
   if (f.includes("deneme")) return "Bu paket için deneme sürümü başlatılabilir mi?";
   if (f.includes("özet") || f.includes("ozet"))
-    return "Ürün açıklamalarını yapay zeka ile hızlıca üreten Akıllı Özet.";
+    return getProductHintByCode("SMART_SUMMARY").description;
   if (f.includes("temel")) return "Temel kullanım ve temel özelliklere erişim.";
   return "Bu paketin ilgili ürünü hakkında kısa bilgi.";
 }
@@ -103,15 +226,20 @@ export function featureTooltip(feature: string): string {
 export type ComparisonRow = {
   id: string;
   label: string;
+  productCode?: string;
   values: Record<string, string>;
   kind?: "text" | "bool" | "qty";
 };
 
 const PRODUCT_ORDER = [
   "QR_CREATE",
+  "QR_MENU",
+  "MENU_PRODUCT",
+  "SMART_REPORTING",
   "SMART_ASSISTANT",
   "SMART_SUMMARY",
-  "SMART_REPORTING",
+  "CUSTOM_DESIGN",
+  "WAITER_PANEL",
 ] as const;
 
 const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
@@ -120,6 +248,9 @@ const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
   SMART_SUMMARY: ["SMART_SUMMARY"],
   QR_CREATE: ["QR_CREATE"],
   QR_MENU: ["QR_MENU"],
+  MENU_PRODUCT: ["MENU_PRODUCT"],
+  CUSTOM_DESIGN: ["CUSTOM_DESIGN"],
+  WAITER_PANEL: ["WAITER_PANEL"],
 };
 
 function packageKey(pkg: PlanPackageApiItem): string {
@@ -138,13 +269,19 @@ function productDisplayName(code: string): string {
       return "Akıllı Özet";
     case "SMART_REPORTING":
       return "Akıllı Raporlama";
+    case "MENU_PRODUCT":
+      return "Menü ürün hakkı";
+    case "CUSTOM_DESIGN":
+      return "Özel tasarım menü";
+    case "WAITER_PANEL":
+      return "Garson paneli";
     default:
       return code;
   }
 }
 
 function isQuantityProduct(code: string): boolean {
-  return code === "QR_CREATE";
+  return code === "QR_CREATE" || code === "QR_MENU" || code === "MENU_PRODUCT";
 }
 
 function findPackageItem(pkg: PlanPackageApiItem, productCode: string) {
@@ -185,6 +322,7 @@ export function buildPackageComparisonRows(packages: PlanPackageApiItem[]): Comp
     return {
       id: `product:${code}`,
       label: productDisplayName(code),
+      productCode: code,
       values,
       kind,
     };

@@ -11,6 +11,10 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import {
+  useWaiterPanelAccess,
+  WaiterPanelGate,
+} from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,10 +53,12 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
   const queryClient = useQueryClient();
   const [password, setPassword] = useState("");
 
-  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
+  const { accessLoading: menuAccessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const accessLoading = waiterAccessLoading || menuAccessLoading;
   const { menuQrs, selection, loading, error, selectQrId } = useDigitalMenuSelection(
     initialQrId,
-    canUseDigitalMenu && !accessLoading,
+    canUseWaiterPanel && canUseDigitalMenu && !accessLoading,
   );
 
   const menuId = selection?.menu.menuId ?? null;
@@ -102,6 +108,14 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
       </div>
+    );
+  }
+
+  if (!canUseWaiterPanel) {
+    return (
+      <WaiterPanelGate accessLoading={false} canUse={false}>
+        {null}
+      </WaiterPanelGate>
     );
   }
 

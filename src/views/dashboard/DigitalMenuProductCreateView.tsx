@@ -17,7 +17,7 @@ import {
 } from "@/components/dashboard/menu/ProductNutritionPanel";
 import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
-import { RainbowBeamButton } from "@/components/dashboard/RainbowBeamButton";
+import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,16 +29,12 @@ import {
   NutritionFacts,
 } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import {
-  hasActiveProductAccess,
-  isDateUsablePurchase,
-  matchesProductCode,
-} from "@/lib/product-access";
+import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import { invalidateMenuProducts } from "@/hooks/use-menu-products";
-import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
 
 type NutritionFormFields = {
   basis: NutritionBasis;
@@ -86,8 +82,11 @@ export default function DigitalMenuProductCreateView() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const subscription = useSubscription();
-  const packages = useActivePackages();
+  const {
+    accessLoading: smartSummaryAccessLoading,
+    canUseSmartSummary,
+    smartSummaryPackageNames,
+  } = useSmartSummaryAccess();
 
   const initialQrId = useMemo(() => {
     const raw = Number(searchParams.get("qr"));
@@ -138,27 +137,6 @@ export default function DigitalMenuProductCreateView() {
       );
     }
   }, [categoriesQuery.error, categoriesQuery.isError, notify]);
-
-  const entitlements = Array.isArray(subscription.data?.entitlements)
-    ? subscription.data.entitlements
-    : [];
-  const purchases = Array.isArray(subscription.data?.purchases) ? subscription.data.purchases : [];
-  const activePurchase = subscription.data?.activePurchase ?? null;
-  const activePackage =
-    packages.data?.find(
-      (pkg) => activePurchase?.packageId != null && pkg.id === activePurchase.packageId,
-    ) ??
-    packages.data?.find(
-      (pkg) => !!activePurchase?.packageCode && pkg.code === activePurchase.packageCode,
-    ) ??
-    null;
-  const activePackageHasSmartSummary =
-    !!activePurchase &&
-    isDateUsablePurchase(activePurchase) &&
-    !!activePackage?.items?.some((item) => matchesProductCode(item.productCode, "SMART_SUMMARY"));
-  const canUseSmartSummary =
-    hasActiveProductAccess(entitlements, purchases, "SMART_SUMMARY") ||
-    activePackageHasSmartSummary;
 
   const selectedMain = categories.find((main) => main.id === mainCategoryId);
   const subOptions = selectedMain?.subs ?? [];
@@ -511,21 +489,34 @@ export default function DigitalMenuProductCreateView() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
+          <div className="space-y-3">
+            <SmartFeaturePanel
+              title="Akıllı Özet"
+              hint={PRODUCT_HINTS.SMART_SUMMARY}
+              description={
+                canUseSmartSummary
+                  ? "Yapay zeka destekli ürün açıklaması oluşturun."
+                  : `Aktif paketinizde Akıllı Özet yok. ${
+                      smartSummaryPackageNames.length > 0
+                        ? smartSummaryPackageNames.join(" veya ")
+                        : "uygun paketler"
+                    } ile yapay zeka destekli açıklamalar oluşturun.`
+              }
+              actionLabel={canUseSmartSummary ? "Akıllı Özet" : "Paketi incele"}
+              loading={summaryLoading}
+              loadingSkeleton={smartSummaryAccessLoading}
+              disabled={busy && !summaryLoading}
+              prominent={!canUseSmartSummary}
+              onActionClick={() => void handleSmartSummary()}
+            />
+            <div className="space-y-1.5">
               <Label className="text-xs">Açıklama</Label>
-              <RainbowBeamButton
-                label="Akıllı Özet"
-                loading={summaryLoading}
-                disabled={busy}
-                onClick={() => void handleSmartSummary()}
+              <Textarea
+                rows={2}
+                value={form.description ?? ""}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
             </div>
-            <Textarea
-              rows={2}
-              value={form.description ?? ""}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
           </div>
 
           <div className="flex gap-2">
