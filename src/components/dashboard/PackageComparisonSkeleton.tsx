@@ -52,7 +52,7 @@ export function PackageComparisonSkeleton({ cardCount = 3 }: { cardCount?: numbe
         <Skeleton className="h-6 w-11 rounded-full" />
         <Skeleton className="h-4 w-10" />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 min-[720px]:grid-cols-3 min-[720px]:gap-3 lg:gap-4 xl:gap-5">
         {Array.from({ length: cardCount }).map((_, index) => (
           <PackageCardSkeleton key={index} />
         ))}

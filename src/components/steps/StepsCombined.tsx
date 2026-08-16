@@ -46,11 +46,8 @@ const StepsCombined = () => {
     <section className="py-[clamp(3rem,7vw,6rem)] relative overflow-hidden">
       <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3">
-          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">Nasıl Çalışır</p>
-          <h2
-            className="font-bold text-balance"
-            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
-          >
+          <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">Nasıl Çalışır</p>
+          <h2 className="sr-heading text-3xl leading-[1.05] sm:text-5xl text-balance">
             4 adımda akıllı QR deneyimi
           </h2>
         </div>
@@ -84,10 +81,10 @@ const StepsCombined = () => {
                     <div className="rounded-xl overflow-hidden mb-4 bg-muted">
                       <img src={step.image} alt={step.title} className="w-full h-44 object-contain" />
                     </div>
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+                    <span className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
                       Adım {i + 1}
                     </span>
-                    <h3 className="text-xl font-bold mt-1 mb-2">{step.title}</h3>
+                    <h3 className="mt-8 text-lg font-bold">{step.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                   </div>
                 </div>

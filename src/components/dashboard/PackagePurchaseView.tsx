@@ -33,6 +33,7 @@ import {
   formatPackagePrice,
   formatYearlySavingsBadge,
   formatYearlySavingsLabel,
+  isPackageVisibleInCatalog,
   packageFeatures,
   resolvePackagePricing,
   resolveYearlySavingsPercent,
@@ -76,7 +77,8 @@ export default function PackagePurchaseView({
   const addressInitialized = useRef(false);
   const methodInitialized = useRef(false);
   const fulfillment = usePurchaseFulfillment(purchaseId, pollStartedAt);
-  const pkg = packages.data?.find((item) => item.id === packageId);
+  const rawPkg = packages.data?.find((item) => item.id === packageId);
+  const pkg = rawPkg && isPackageVisibleInCatalog(rawPkg) ? rawPkg : undefined;
 
   useEffect(() => {
     if (!addressInitialized.current && addresses.data?.length) {

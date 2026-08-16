@@ -6,9 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import {
-  DigitalMenuGate,
   DigitalMenuPicker,
-  useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import MenuProductsPanel from "@/components/dashboard/menu/MenuProductsPanel";
@@ -24,15 +22,13 @@ export default function DigitalMenuProductsView() {
     const raw = Number(searchParams.get("category"));
     return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
   }, [searchParams]);
-  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const fromHub = initialQrId != null;
   const selectionState = useDigitalMenuSelection(undefined, !fromHub);
   const qrId = fromHub ? initialQrId : selectionState.selection?.qr.id ?? null;
   const menuId = fromHub ? null : selectionState.selection?.menu.menuId ?? null;
 
   return (
-    <DigitalMenuGate accessLoading={accessLoading} canUse={canUseDigitalMenu}>
-      <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
         <div className="flex items-start gap-3">
           {fromHub ? (
             <Link
@@ -70,7 +66,6 @@ export default function DigitalMenuProductsView() {
         ) : selectionState.loading ? null : selectionState.error ? (
           <p className="text-sm text-destructive">{selectionState.error}</p>
         ) : null}
-      </div>
-    </DigitalMenuGate>
+    </div>
   );
 }

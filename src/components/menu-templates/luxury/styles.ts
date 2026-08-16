@@ -1,5 +1,7 @@
+import { ALGORY_MENU_FONT_FACE, ALGORY_MENU_SANS } from "@/components/menu-templates/shared/algory-fonts";
+
 export const LUXURY_STYLES = `
-  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap");
+  ${ALGORY_MENU_FONT_FACE}
 
   .luxury-menu {
     --lx-bg: #D4CFC4;
@@ -20,14 +22,15 @@ export const LUXURY_STYLES = `
     --lx-chip: rgba(20, 8, 20, 0.72);
     background-color: var(--lx-bg);
     color: var(--lx-fg);
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: ${ALGORY_MENU_SANS};
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
   .luxury-menu .font-display {
-    font-family: "Playfair Display", ui-serif, Georgia, serif;
-    letter-spacing: -0.02em;
+    font-family: ${ALGORY_MENU_SANS};
+    letter-spacing: -0.035em;
+    font-weight: 700;
   }
 
   .luxury-menu .text-gradient-gold {

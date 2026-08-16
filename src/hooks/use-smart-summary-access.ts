@@ -1,6 +1,7 @@
 "use client";
 
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { filterCatalogPackages } from "@/lib/package-display";
 import {
   hasActiveProductAccess,
   hasActivePackageProduct,
@@ -42,7 +43,7 @@ export function useSmartSummaryAccess() {
     activePackageHasSmartSummary ||
     hasActivePackageProduct(activePurchase, catalogPackages, SMART_SUMMARY_PRODUCT);
 
-  const smartSummaryPackageNames = catalogPackages
+  const smartSummaryPackageNames = filterCatalogPackages(catalogPackages)
     .filter((pkg) => packageIncludesProduct(pkg, SMART_SUMMARY_PRODUCT))
     .map((pkg) => pkg.name?.trim())
     .filter((name): name is string => !!name);

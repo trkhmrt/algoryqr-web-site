@@ -12,8 +12,8 @@ import {
   Settings2,
 } from "lucide-react";
 
+import { RequireScope } from "@/components/auth/RequireScope";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
-import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import { Button } from "@/components/ui/button";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
@@ -47,35 +47,21 @@ const HUB_ITEMS = [
     title: "Restoran Düzeni",
     icon: LayoutGrid,
     href: (qrId: number) => DASHBOARD_ROUTES.restaurantLayoutForQr(qrId),
+    requiredScope: "WAITER_PANEL_OWNER" as const,
   },
 ] as const;
 
 export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewProps) {
   const router = useRouter();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const { canUseWaiterPanel } = useWaiterPanelAccess();
   const menuQuery = useMenuByQr(qrId, canUseDigitalMenu);
   const menuName = menuQuery.data?.businessName?.trim() || "";
   const menuHref = `/menu/${qrId}`;
-  const hubItems = HUB_ITEMS.filter(
-    (item) => item.key !== "restaurantLayout" || canUseWaiterPanel,
-  );
 
   if (accessLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!canUseDigitalMenu) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}>
-          Dijital Menüye Dön
-        </Button>
-        <p className="text-sm text-muted-foreground">Bu menüyü düzenlemek için PRO paket gerekir.</p>
       </div>
     );
   }
@@ -107,11 +93,10 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
-        {hubItems.map((item) => {
+        {HUB_ITEMS.map((item) => {
           const Icon = item.icon;
-          return (
+          const link = (
             <Link
-              key={item.key}
               href={item.href(qrId)}
               className="flex w-full items-center justify-between gap-3 bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
             >
@@ -124,6 +109,16 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </Link>
           );
+
+          if ("requiredScope" in item && item.requiredScope) {
+            return (
+              <RequireScope key={item.key} scope={item.requiredScope}>
+                {link}
+              </RequireScope>
+            );
+          }
+
+          return <div key={item.key}>{link}</div>;
         })}
       </div>
     </div>

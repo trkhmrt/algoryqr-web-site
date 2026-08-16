@@ -36,13 +36,10 @@ const StatsSection = () => {
               transition={{ duration: 0.5, delay: 0.1 * i }}
               className="text-center space-y-1.5 sm:space-y-2 min-w-0"
             >
-              <p
-                className="font-bold tracking-tight"
-                style={{ fontSize: "clamp(1.75rem, 1.2rem + 2vw, 3rem)" }}
-              >
+              <p className="text-[44px] md:text-[56px] font-extrabold heading-tight tabular">
                 {stat.value}
               </p>
-              <p className="text-xs sm:text-sm text-muted-foreground text-pretty px-1">{stat.label}</p>
+              <p className="text-sm text-muted-foreground text-pretty px-1">{stat.label}</p>
             </motion.div>
           ))}
         </div>

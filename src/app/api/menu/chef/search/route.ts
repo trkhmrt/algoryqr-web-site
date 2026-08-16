@@ -11,14 +11,26 @@ const bodySchema = z.object({
   conversationId: z.string().trim().min(1).max(100).optional(),
 });
 
+type ChatTiming = {
+  path: "agent";
+  totalMs: number;
+  moderationMs: number;
+  agentMs?: number;
+  mcpConnectMs?: number;
+  searchMs?: number;
+};
+
 type AgentChatResponse = {
   reply?: string;
   conversationId?: string;
   message?: string;
   products?: unknown;
+  timing?: ChatTiming;
 };
 
 export async function POST(req: Request) {
+  const bffStarted = performance.now();
+
   try {
     const json = await req.json().catch(() => null);
     const parsed = bodySchema.safeParse(json);
@@ -54,10 +66,27 @@ export async function POST(req: Request) {
       );
     }
 
+    const bffMs = Math.round(performance.now() - bffStarted);
+    const timing = upstream.data.timing
+      ? { ...upstream.data.timing, bffMs }
+      : undefined;
+
+    if (timing) {
+      console.error(
+        JSON.stringify({
+          event: "chef_bff_timing",
+          menuId: parsed.data.menuId,
+          conversationId: upstream.data.conversationId,
+          ...timing,
+        }),
+      );
+    }
+
     return NextResponse.json({
       reply: upstream.data.reply ?? "",
       conversationId: upstream.data.conversationId,
       products: normalizeChefProducts(upstream.data.products),
+      timing,
     });
   } catch (error) {
     if (error instanceof AxiosError) {

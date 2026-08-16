@@ -1,13 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { PUBLIC_API_BASE_URL } from "@/lib/config";
+import {
+  setMerchantReturnUrlCookie,
+  resolveSafeMerchantReturnUrl,
+} from "@/lib/server/merchant-auth-cookies";
 import {
   googleAuthErrorRedirect,
   parseGoogleAuthIntent,
 } from "@/lib/server/google-auth-flow";
 
-export function GET(req: Request) {
-  const intent = parseGoogleAuthIntent(new URL(req.url).searchParams.get("intent"));
+export function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const intent = parseGoogleAuthIntent(url.searchParams.get("intent"));
   if (!intent) {
     return googleAuthErrorRedirect(req, "login", "invalid_intent");
   }
@@ -23,5 +28,11 @@ export function GET(req: Request) {
     path: "/api/auth/google",
     maxAge: 600,
   });
+
+  const returnUrl = resolveSafeMerchantReturnUrl(req, url.searchParams.get("returnUrl"));
+  if (returnUrl) {
+    setMerchantReturnUrlCookie(response, returnUrl);
+  }
+
   return response;
 }

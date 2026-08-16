@@ -49,6 +49,7 @@ export const DASHBOARD_ROUTES = {
   orderPanelReports: "/dashboard/siparis-paneli/raporlar",
   orderPanelReportsForQr: (qrId: number | string) =>
     `/dashboard/siparis-paneli/raporlar?qr=${qrId}`,
+  muhasebe: "/dashboard/muhasebe",
   waiter: "/dashboard/garson",
   waiterForQr: (qrId: number | string) =>
     `/dashboard/garson?qr=${qrId}`,
@@ -62,6 +63,13 @@ export const DASHBOARD_ROUTES = {
   menuCustomers: "/dashboard/musteriler",
   menuCustomersForQr: (qrId: number | string) =>
     `/dashboard/musteriler?qr=${qrId}`,
+  campaigns: "/dashboard/kampanyalar",
+  campaignsCreate: "/dashboard/kampanyalar/yeni",
+  campaignDetail: (campaignId: number | string) => `/dashboard/kampanyalar/${campaignId}`,
+  campaignDetailForQr: (campaignId: number | string, qrId: number | string) =>
+    `/dashboard/kampanyalar/${campaignId}?qr=${qrId}`,
+  campaignsForQr: (qrId: number | string) =>
+    `/dashboard/kampanyalar?qr=${qrId}`,
   waiterLogin: "/waiter/login",
   waiterPanel: "/waiter",
 
@@ -89,6 +97,7 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/hesabim/odeme-gecmisi/${purchaseId}`,
   accountPaymentMethods: "/dashboard/hesabim/kayitli-kartlarim",
   accountBillingAddresses: "/dashboard/hesabim/fatura-adreslerim",
+  trialStart: "/dashboard/deneme/baslat",
 } as const;
 
 export type DashboardNavKey =
@@ -97,8 +106,10 @@ export type DashboardNavKey =
   | "reservations"
   | "orderPanel"
   | "reports"
+  | "accounting"
   | "menuUsers"
   | "menuCustomers"
+  | "campaigns"
   | "qrCodes"
   | "account";
 
@@ -117,12 +128,14 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Dijital Menü",
     mobileLabel: "Menü",
     href: DASHBOARD_ROUTES.digitalMenu,
+    requiredScope: "QR_MENU_OWNER",
   },
   {
     key: "reservations",
     label: "Rezervasyonlar",
     mobileLabel: "Rezervasyon",
     href: DASHBOARD_ROUTES.reservations,
+    requiredScope: "QR_MENU_OWNER",
   },
   {
     key: "orderPanel",
@@ -136,6 +149,13 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Raporlar",
     mobileLabel: "Raporlar",
     href: DASHBOARD_ROUTES.analytics,
+    requiredScope: "SMART_REPORTING_OWNER",
+  },
+  {
+    key: "accounting",
+    label: "Muhasebe",
+    mobileLabel: "Muhasebe",
+    href: DASHBOARD_ROUTES.muhasebe,
   },
   {
     key: "menuUsers",
@@ -151,7 +171,20 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     href: DASHBOARD_ROUTES.menuCustomers,
     requiredScope: "WAITER_PANEL_OWNER",
   },
-  { key: "qrCodes", label: "QR Kodlarım", mobileLabel: "QR Kodlar", href: DASHBOARD_ROUTES.qrCodes },
+  {
+    key: "campaigns",
+    label: "Kampanyalar",
+    mobileLabel: "Kampanyalar",
+    href: DASHBOARD_ROUTES.campaigns,
+    requiredScope: "QR_MENU_OWNER",
+  },
+  {
+    key: "qrCodes",
+    label: "QR Kodlarım",
+    mobileLabel: "QR Kodlar",
+    href: DASHBOARD_ROUTES.qrCodes,
+    requiredScope: "QR_CREATE_OWNER",
+  },
   { key: "account", label: "Hesabım", mobileLabel: "Hesabım", href: DASHBOARD_ROUTES.account },
 ];
 
@@ -167,6 +200,9 @@ export function isDashboardNavActive(pathname: string, href: string): boolean {
   }
   if (href === DASHBOARD_ROUTES.analytics) {
     return isReportsSectionActive(pathname);
+  }
+  if (href === DASHBOARD_ROUTES.muhasebe) {
+    return pathname === DASHBOARD_ROUTES.muhasebe;
   }
   if (href === DASHBOARD_ROUTES.menuUsers) {
     return (

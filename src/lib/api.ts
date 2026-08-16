@@ -310,6 +310,11 @@ export interface PurchaseSummaryApiItem {
   updateCardAvailable?: boolean;
 }
 
+export interface SubscriptionOverviewApiItem {
+  activePackage: PurchaseSummaryApiItem | null;
+  entitlements: UserEntitlementApiItem[];
+}
+
 export interface PlanPackageItemApi {
   id: number;
   productId?: number;
@@ -334,6 +339,7 @@ export interface PlanPackageApiItem {
   currency: string;
   active: boolean;
   validityDays: number;
+  trialDays?: number | null;
   trialEligible?: boolean;
   priority?: number | null;
   items: PlanPackageItemApi[];
@@ -412,6 +418,14 @@ export async function getMyPurchasesRequest(): Promise<PurchaseApiItem[]> {
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.content)) return data.content;
   return [];
+}
+
+export async function getMySubscriptionOverviewRequest(): Promise<SubscriptionOverviewApiItem> {
+  const response = await api.get<SubscriptionOverviewApiItem>("/purchases/subscription-overview");
+  return {
+    activePackage: response.data.activePackage ?? null,
+    entitlements: Array.isArray(response.data.entitlements) ? response.data.entitlements : [],
+  };
 }
 
 export async function getActivePackagesRequest(): Promise<PlanPackageApiItem[]> {
@@ -1096,6 +1110,11 @@ export async function deleteQrRequest(qrId: number | string): Promise<string> {
   return response.data;
 }
 
+export async function deleteMenuQrRequest(qrId: number | string): Promise<string> {
+  const response = await api.delete<string>(`/qr/delete-menu/${qrId}`);
+  return response.data;
+}
+
 export interface UpdateQrActiveRequestBody {
   active: boolean;
 }
@@ -1223,6 +1242,46 @@ export async function getMenuRevenueReportRequest(
 ): Promise<MenuRevenueReportResponse> {
   const response = await api.get<MenuRevenueReportResponse>(
     `/analytics/menu/${menuId}/revenue`,
+    { params: { from, to } },
+  );
+  return response.data;
+}
+
+export interface MenuWaiterPerformanceKpis {
+  activeWaiterCount?: number;
+  assignedOrderCount?: number;
+  unassignedOrderCount?: number;
+  totalRevenue?: number | string | null;
+  currency?: string | null;
+}
+
+export interface MenuWaiterPerformanceRow {
+  waiterId?: number | null;
+  displayName: string;
+  orderCount?: number;
+  revenue?: number | string | null;
+  avgOrderValue?: number | string | null;
+  revenueSharePercent?: number;
+  orderSharePercent?: number;
+  active?: boolean;
+}
+
+export interface MenuWaiterPerformanceReportResponse {
+  menuId: number;
+  menuName?: string | null;
+  from: string;
+  to: string;
+  kpis: MenuWaiterPerformanceKpis;
+  waiters: MenuWaiterPerformanceRow[];
+}
+
+export async function getMenuWaiterPerformanceReportRequest(
+  menuId: number | string,
+  from: string,
+  to: string,
+): Promise<MenuWaiterPerformanceReportResponse> {
+  const response = await api.get<MenuWaiterPerformanceReportResponse>(
+    `/analytics/menu/${menuId}/waiter-performance`,
     { params: { from, to } },
   );
   return response.data;
@@ -1378,4 +1437,142 @@ export async function updateMenuReservationRequest(
     payload,
   );
   return response.data;
+}
+
+export type PlatformFeedbackStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
+
+export type PlatformFeedbackSubject =
+  | "Teknik sorun"
+  | "Abonelik / Ödeme"
+  | "Dijital menü"
+  | "Garson paneli"
+  | "Öneri"
+  | "Diğer";
+
+export const PLATFORM_FEEDBACK_SUBJECTS: PlatformFeedbackSubject[] = [
+  "Teknik sorun",
+  "Abonelik / Ödeme",
+  "Dijital menü",
+  "Garson paneli",
+  "Öneri",
+  "Diğer",
+];
+
+export interface PlatformFeedbackItemApi {
+  id: number;
+  userId: number;
+  userEmail: string | null;
+  userFullName: string | null;
+  title: string;
+  subject: string;
+  description: string;
+  screenshotUrl: string | null;
+  status: PlatformFeedbackStatus;
+  adminNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlatformFeedbackPageApiResponse {
+  content: PlatformFeedbackItemApi[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+export interface PlatformFeedbackCreateBody {
+  title: string;
+  subject: PlatformFeedbackSubject;
+  description: string;
+  screenshotUrl?: string;
+  screenshotKey?: string;
+}
+
+export async function createPlatformFeedbackRequest(
+  payload: PlatformFeedbackCreateBody,
+): Promise<PlatformFeedbackItemApi> {
+  const response = await api.post<PlatformFeedbackItemApi>("/platform-feedback", payload);
+  return response.data;
+}
+
+export async function getMyPlatformFeedbackRequest(
+  params?: { page?: number; size?: number },
+): Promise<PlatformFeedbackPageApiResponse> {
+  const response = await api.get<PlatformFeedbackPageApiResponse>("/platform-feedback/my", {
+    params,
+  });
+  return response.data;
+}
+
+export type AccountingEntryType = "GELIR" | "GIDER" | "BORC";
+export type AccountingSourceType = "MANUAL" | "BILL_SALE" | "BILL_TIP" | "ORDER_SALE";
+
+export interface AccountingEntryApiItem {
+  id: number;
+  entryType: AccountingEntryType;
+  title: string;
+  amount: number | string;
+  currency: string;
+  occurredAt: string;
+  note?: string | null;
+  menuId?: number | null;
+  menuName?: string | null;
+  sourceType: AccountingSourceType;
+  sourceBillId?: number | null;
+  sourceOrderId?: number | null;
+  createdByWaiterId?: number | null;
+  createdAt: string;
+}
+
+export interface AccountingSummaryTotals {
+  totalGelir: number | string;
+  totalGider: number | string;
+  totalBorc: number | string;
+  currency: string;
+}
+
+export interface AccountingEntryPageApiResponse {
+  content: AccountingEntryApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  summary: AccountingSummaryTotals;
+}
+
+export interface AccountingEntryCreateBody {
+  entryType: AccountingEntryType;
+  title: string;
+  amount: number;
+  occurredAt: string;
+  note?: string;
+  menuId?: number;
+}
+
+export async function listAccountingEntriesRequest(params?: {
+  type?: AccountingEntryType | "all";
+  q?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}): Promise<AccountingEntryPageApiResponse> {
+  const response = await api.get<AccountingEntryPageApiResponse>("/accounting/entries", {
+    params,
+  });
+  return response.data;
+}
+
+export async function createAccountingEntryRequest(
+  payload: AccountingEntryCreateBody,
+): Promise<AccountingEntryApiItem> {
+  const response = await api.post<AccountingEntryApiItem>("/accounting/entries", payload);
+  return response.data;
+}
+
+export async function deleteAccountingEntryRequest(entryId: number | string): Promise<void> {
+  await api.delete(`/accounting/entries/${entryId}`);
 }

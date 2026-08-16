@@ -33,15 +33,20 @@ import PaymentHistoryView from "@/views/dashboard/PaymentHistoryView";
 import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
 import PlanChangeView from "@/views/dashboard/PlanChangeView";
 import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
+import TrialStartView from "@/views/dashboard/TrialStartView";
 import FeedbackView from "@/views/dashboard/FeedbackView";
 import ReservationsView from "@/views/dashboard/ReservationsView";
 import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
 import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
 import SmartReportsView from "@/views/dashboard/SmartReportsView";
 import MenuCustomersView from "@/views/dashboard/MenuCustomersView";
+import CampaignsView from "@/views/dashboard/CampaignsView";
+import CampaignCreateView from "@/views/dashboard/CampaignCreateView";
+import CampaignDetailView from "@/views/dashboard/CampaignDetailView";
 import MenuUserDetailView from "@/views/dashboard/MenuUserDetailView";
 import MenuUsersView from "@/views/dashboard/MenuUsersView";
 import WaiterOrdersView from "@/views/dashboard/WaiterOrdersView";
+import AccountingView from "@/views/dashboard/AccountingView";
 
 interface DashboardPageClientProps {
   initialUser?: StoredUser | null;
@@ -170,6 +175,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return <DashboardOverviewView />;
   }
 
+  if (pathname === DASHBOARD_ROUTES.trialStart) {
+    return (
+      <Suspense fallback={null}>
+        <TrialStartView />
+      </Suspense>
+    );
+  }
+
   if (
     pathname === DASHBOARD_ROUTES.analytics ||
     pathname === DASHBOARD_ROUTES.analyticsLegacy
@@ -205,6 +218,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return (
       <Suspense fallback={null}>
         <RestaurantLayoutView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.muhasebe) {
+    return (
+      <Suspense fallback={null}>
+        <AccountingView />
       </Suspense>
     );
   }
@@ -255,6 +276,35 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <MenuCustomersView />
       </Suspense>
     );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.campaigns) {
+    return (
+      <Suspense fallback={null}>
+        <CampaignsView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.campaignsCreate) {
+    return (
+      <Suspense fallback={null}>
+        <CampaignCreateView />
+      </Suspense>
+    );
+  }
+
+  const campaignDetailPrefix = `${DASHBOARD_ROUTES.campaigns}/`;
+  if (pathname.startsWith(campaignDetailPrefix) && pathname !== DASHBOARD_ROUTES.campaignsCreate) {
+    const slug = pathname.slice(campaignDetailPrefix.length).split("/")[0];
+    const id = Number(slug);
+    if (slug && Number.isFinite(id) && id > 0) {
+      return (
+        <Suspense fallback={null}>
+          <CampaignDetailView />
+        </Suspense>
+      );
+    }
   }
 
   const smartReportDetailPrefix = `${DASHBOARD_ROUTES.smartReports}/`;

@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { QrCode, Menu, X, LogOut, LayoutDashboard } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
+import { Menu, X, LogOut, LayoutDashboard } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { StoredUser } from "@/lib/api";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
@@ -19,8 +19,74 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { cn } from "@/lib/utils";
+
 interface NavbarProps {
   initialUser?: StoredUser | null;
+}
+
+const navLinkClassName =
+  "text-sm font-semibold text-neutral-950 transition-opacity hover:opacity-70 dark:text-foreground";
+
+function PanelLoginLink({
+  className,
+  onClick,
+}: {
+  className?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href="/login"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center justify-center whitespace-nowrap rounded-full border border-[#e5e7eb] bg-background px-3.5 py-1.5 text-sm font-semibold text-neutral-950 transition-colors hover:bg-muted/50 sm:px-4 sm:py-2 dark:border-border dark:text-foreground",
+        className,
+      )}
+    >
+      Panele Giriş Yap
+    </Link>
+  );
+}
+
+function UserAvatarMenu({
+  userInitials,
+  onLogout,
+  onNavigate,
+}: {
+  userInitials: string;
+  onLogout: () => void;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="h-9 w-9 rounded-full bg-primary flex items-center justify-center hover:opacity-80 transition-opacity"
+          aria-label="Profil menusu"
+        >
+          <Avatar className="h-9 w-9">
+            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+              {userInitials}
+            </AvatarFallback>
+          </Avatar>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onNavigate("/dashboard/genel-bakis")}>
+          <LayoutDashboard className="h-4 w-4 mr-2" />
+          Dashboard
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onLogout} className="text-destructive focus:text-destructive">
+          <LogOut className="h-4 w-4 mr-2" />
+          Çıkış Yap
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 const Navbar = ({ initialUser = null }: NavbarProps) => {
@@ -58,69 +124,46 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
       <div className="container mx-auto flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 max-w-6xl">
         <Link href="/" className="flex items-center gap-2 min-w-0">
-          <QrCode className="h-5 w-5 sm:h-6 sm:w-6 text-foreground shrink-0" />
-          <span className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
+          <BrandLogo priority />
+          <span className="text-base sm:text-lg font-semibold tracking-tight text-foreground truncate">
             Algory<span className="text-muted-foreground">QR</span>
           </span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
-          <a href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Özellikler
+          <a href="/#why-us" className={navLinkClassName}>
+            Neden biz
           </a>
-          <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <a href="/#pricing" className={navLinkClassName}>
+            Fiyatlandırma
+          </a>
+          <Link href="/contact" className={navLinkClassName}>
             İletişim
           </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-2">
-          <ThemeToggle />
           {user ? (
-            <div className="flex items-center gap-3">
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="h-9 w-9 rounded-full bg-primary flex items-center justify-center hover:opacity-80 transition-opacity"
-                    aria-label="Profil menusu"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/dashboard/genel-bakis")}>
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Çıkış Yap
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <UserAvatarMenu
+              userInitials={userInitials}
+              onLogout={logout}
+              onNavigate={(path) => router.push(path)}
+            />
           ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                  Giriş Yap
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button variant="hero" size="sm">
-                  Ücretsiz Dene
-                </Button>
-              </Link>
-            </>
+            <PanelLoginLink />
           )}
         </div>
 
-        <div className="flex md:hidden items-center gap-1.5 sm:gap-2">
-          <ThemeToggle />
+        <div className="flex md:hidden items-center gap-2 sm:gap-3">
+          {user ? (
+            <UserAvatarMenu
+              userInitials={userInitials}
+              onLogout={logout}
+              onNavigate={(path) => router.push(path)}
+            />
+          ) : (
+            <PanelLoginLink />
+          )}
           <button
             type="button"
             onClick={() => setOpen(!open)}
@@ -135,47 +178,35 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
 
       {open && (
         <div className="md:hidden glass border-t border-border px-4 sm:px-6 pb-4 pt-2 flex flex-col gap-1 max-h-[min(70vh,calc(100dvh-3.5rem))] overflow-y-auto">
-          <a href="/#features" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
-            Özellikler
+          <a href="/#why-us" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
+            Neden biz
           </a>
-          <Link href="/contact" onClick={() => setOpen(false)} className="text-sm text-muted-foreground hover:text-foreground transition-colors py-2.5">
+          <a href="/#pricing" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
+            Fiyatlandırma
+          </a>
+          <Link href="/contact" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
             İletişim
           </Link>
-          <div className="flex flex-col gap-2 pt-2 border-t border-border">
-            {user ? (
-              <>
-                <Link href="/dashboard/genel-bakis" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground min-h-11">
-                    {userFullName}
-                  </Button>
-                </Link>
-                <Button
-                  variant="heroOutline"
-                  size="sm"
-                  className="w-full min-h-11"
-                  onClick={() => {
-                    setOpen(false);
-                    logout();
-                  }}
-                >
-                  Çıkış Yap
+          {user ? (
+            <div className="flex flex-col gap-2 pt-2 border-t border-border">
+              <Link href="/dashboard/genel-bakis" onClick={() => setOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground min-h-11">
+                  {userFullName}
                 </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" onClick={() => setOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full text-muted-foreground min-h-11">
-                    Giriş Yap
-                  </Button>
-                </Link>
-                <Link href="/login" onClick={() => setOpen(false)}>
-                  <Button variant="hero" size="sm" className="w-full min-h-11">
-                    Ücretsiz Dene
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
+              </Link>
+              <Button
+                variant="heroOutline"
+                size="sm"
+                className="w-full min-h-11"
+                onClick={() => {
+                  setOpen(false);
+                  logout();
+                }}
+              >
+                Çıkış Yap
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
     </nav>

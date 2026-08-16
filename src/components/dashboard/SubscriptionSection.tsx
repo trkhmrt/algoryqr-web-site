@@ -32,7 +32,11 @@ import {
 } from "@/lib/package-display";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
+import {
+  invalidateSubscriptionOverview,
+  useSubscriptionOverview,
+} from "@/hooks/use-subscription-overview";
+import { invalidateSubscription } from "@/hooks/use-subscription";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import {
   canCancelAtPeriodEnd,
@@ -44,7 +48,6 @@ import {
   cancelPurchaseAtPeriodEnd,
   cancelPurchaseWithRefund,
   clearPendingPurchaseId,
-  getPurchaseSummary,
   isSubscriptionPastDue,
   paySubscriptionDebt,
   readPendingPurchaseId,
@@ -70,7 +73,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { data, isLoading, isError } = useSubscription();
+  const { data, isLoading, isError } = useSubscriptionOverview();
   const planChangesQuery = useQuery({
     queryKey: ["planChanges"],
     queryFn: listMyPlanChanges,
@@ -91,15 +94,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
 
   const activePurchase = data?.activePurchase;
   const purchaseId = activePurchase?.id;
-  const summaryQuery = useQuery({
-    queryKey: ["purchaseSummary", purchaseId],
-    queryFn: () => getPurchaseSummary(purchaseId!),
-    enabled: purchaseId != null,
-    staleTime: 15_000,
-    refetchInterval: (query) =>
-      isRefundInFlight(query.state.data?.refundStatus) ? 2_500 : false,
-  });
-  const summary = summaryQuery.data;
+  const summary = data?.activePackage ?? null;
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -204,7 +199,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       setCancelError(null);
       await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscriptionOverview(queryClient),
         invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
       ]);
@@ -224,7 +219,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     onSuccess: async () => {
       setCancelError(null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscriptionOverview(queryClient),
         invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
         invalidateAccessProfile(queryClient),
@@ -246,7 +241,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       setCancelError(null);
       await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscriptionOverview(queryClient),
         invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
       ]);
@@ -267,7 +262,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       setCancelError(null);
       await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["purchaseSummary", purchaseId] }),
+        invalidateSubscriptionOverview(queryClient),
         invalidateSubscription(queryClient),
         invalidatePackageUsage(queryClient),
       ]);

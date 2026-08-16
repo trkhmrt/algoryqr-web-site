@@ -64,14 +64,11 @@ const FeaturesSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
-          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">Özellikler</p>
-          <h2
-            className="font-bold text-balance"
-            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
-          >
+          <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">Özellikler</p>
+          <h2 className="sr-heading text-3xl leading-[1.05] sm:text-5xl text-balance">
             QR, menü ve yapay zeka bir arada
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto text-pretty">
+          <p className="section-desc max-w-lg mx-auto text-pretty">
             Oluşturmadan yönetmeye, içerikten analitiğe — işletmeniz için gereken araçlar tek platformda.
           </p>
         </motion.div>
@@ -88,7 +85,7 @@ const FeaturesSection = () => {
               <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-secondary flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-foreground/10 transition-colors">
                 <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-foreground/70" />
               </div>
-              <h3 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2">{feature.title}</h3>
+              <h3 className="text-xl font-bold mb-1.5 sm:mb-2">{feature.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}

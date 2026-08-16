@@ -268,7 +268,16 @@ export default function ReservationsView() {
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      {menuId != null ? (
+      {menuQrs.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          Rezervasyonları görüntülemek için önce bir dijital menü QR kodu oluşturun.
+        </div>
+      ) : menuId == null ? (
+        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Menü bilgisi yükleniyor…
+        </div>
+      ) : (
         <>
           <div className="grid grid-cols-3 gap-2">
             <button
@@ -481,7 +490,7 @@ export default function ReservationsView() {
             </div>
           ) : null}
         </>
-      ) : null}
+      )}
     </div>
   );
 }

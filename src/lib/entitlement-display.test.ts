@@ -6,7 +6,10 @@ import {
   formatEntitlementUsageSummary,
   formatEntitlementUsed,
   formatMenuQuotaLabel,
+  formatQrCreateQuotaLabel,
+  hasQrCreateQuotaRemaining,
   summarizeMenuEntitlements,
+  summarizeQrCreateQuota,
 } from "./entitlement-display";
 
 describe("entitlement-display", () => {
@@ -88,5 +91,27 @@ describe("entitlement-display", () => {
 
     expect(canCreateMenu(summary)).toBe(false);
     expect(formatMenuQuotaLabel(summary)).toBe("Dijital menü hakkınız doldu");
+  });
+
+  it("formats QR create quota labels", () => {
+    const exhausted = summarizeQrCreateQuota({
+      remaining: 0,
+      total: 5,
+      used: 5,
+      unlimited: false,
+      usable: true,
+    });
+    expect(formatQrCreateQuotaLabel(exhausted)).toBe("QR oluşturma hakkınız bitti");
+    expect(hasQrCreateQuotaRemaining(exhausted)).toBe(false);
+
+    const remaining = summarizeQrCreateQuota({
+      remaining: 2,
+      total: 5,
+      used: 3,
+      unlimited: false,
+      usable: true,
+    });
+    expect(formatQrCreateQuotaLabel(remaining)).toBe("2 QR oluşturma hakkınız kaldı");
+    expect(hasQrCreateQuotaRemaining(remaining)).toBe(true);
   });
 });

@@ -7,7 +7,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 
 import {
-  DigitalMenuGate,
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
@@ -313,8 +312,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
   const busy = saving || togglingAvailable || summaryLoading;
 
   return (
-    <DigitalMenuGate accessLoading={accessLoading} canUse={canUseDigitalMenu}>
-      <div className="space-y-3 animate-fade-in">
+    <div className="space-y-3 animate-fade-in">
         <div className="sticky top-0 z-10 -mx-1 border-b border-border/60 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -522,7 +520,6 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                   loading={summaryLoading}
                   loadingSkeleton={smartSummaryAccessLoading}
                   disabled={busy && !summaryLoading}
-                  prominent={!canUseSmartSummary}
                   onActionClick={() => void handleSmartSummary()}
                 />
                 <div className="space-y-1.5">
@@ -563,7 +560,6 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
             </div>
           </div>
         )}
-      </div>
-    </DigitalMenuGate>
+    </div>
   );
 }

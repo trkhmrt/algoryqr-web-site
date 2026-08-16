@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { useEligibleTrialPackages } from "@/hooks/use-commerce";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import type { PlanPackageApiItem } from "@/lib/api";
-import { buildPackageComparisonRows } from "@/lib/package-display";
+import { buildPackageComparisonRows, filterCatalogPackages } from "@/lib/package-display";
 
 function sortedPackages(packages: PlanPackageApiItem[]): PlanPackageApiItem[] {
   return [...packages].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
@@ -17,7 +17,7 @@ export function usePackageCatalog() {
   const eligibleTrials = useEligibleTrialPackages();
 
   const packages = useMemo(
-    () => sortedPackages((packagesQuery.data ?? []).filter((pkg) => pkg.active !== false)),
+    () => sortedPackages(filterCatalogPackages(packagesQuery.data ?? [])),
     [packagesQuery.data],
   );
 

@@ -52,3 +52,22 @@ export {
 export type { VisitKpiId } from "./visits/methods";
 export { buildVisitReportView } from "./visits/view-model";
 export type { VisitReportView } from "./visits/view-model";
+
+export {
+  WAITER_PERFORMANCE_METHODS,
+  activeWaiterCount,
+  assignedOrderCount,
+  isWaiterPerformanceReportEmpty,
+  unassignedOrderCount,
+  waiterPerformanceAverageBasket,
+  waiterPerformanceOrderCount,
+  waiterPerformanceRevenue,
+  waiterPerformanceTotalRevenue,
+} from "./waiter/methods";
+export type { WaiterPerformanceKpiId } from "./waiter/methods";
+export { buildWaiterPerformanceReportView } from "./waiter/view-model";
+export type {
+  WaiterPerformanceChartPoint,
+  WaiterPerformanceReportView,
+  WaiterPerformanceRowView,
+} from "./waiter/view-model";

@@ -1,5 +1,7 @@
+import { ALGORY_MENU_FONT_FACE, ALGORY_MENU_MONO, ALGORY_MENU_SANS } from "@/components/menu-templates/shared/algory-fonts";
+
 export const TECH_GOURMET_STYLES = `
-  @import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800&family=JetBrains+Mono:wght@500&display=swap");
+  ${ALGORY_MENU_FONT_FACE}
 
   .tech-gourmet-menu {
     --tg-bg: #131313;
@@ -18,8 +20,8 @@ export const TECH_GOURMET_STYLES = `
     --tg-outline: #8c928d;
     --tg-outline-variant: #424844;
     --tg-destructive: #ffb4ab;
-    --tg-font-display: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
-    --tg-font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --tg-font-display: ${ALGORY_MENU_SANS};
+    --tg-font-mono: ${ALGORY_MENU_MONO};
 
     background-color: var(--tg-bg);
     color: var(--tg-fg);

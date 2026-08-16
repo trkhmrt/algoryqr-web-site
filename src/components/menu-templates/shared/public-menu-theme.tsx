@@ -9,6 +9,16 @@ import { LUCITE_CATEGORY_MARKS, LUCITE_HERO_IMAGE, LUCITE_PANEL_BG, LUCITE_STYLE
 import { LUXURY_CONTACT_BG, LUXURY_FEEDBACK_BG, LUXURY_HERO_IMAGE, LUXURY_RESERVATION_BG, LUXURY_STYLES } from "../luxury/styles";
 import { RUBRIC_CATEGORY_MARKS, RUBRIC_HERO_IMAGE, RUBRIC_PANEL_BG, RUBRIC_STYLES } from "../rubric/styles";
 import { PETITE_CATEGORY_MARKS, PETITE_HERO_IMAGE, PETITE_PANEL_BG, PETITE_STYLES } from "../petite-patisserie/styles";
+import {
+  CLEVER_DISH_SCRIBE_CATEGORY_MARKS,
+  CLEVER_DISH_SCRIBE_HERO_IMAGE,
+  CLEVER_DISH_SCRIBE_STYLES,
+} from "../clever-dish-scribe/styles";
+import {
+  MODERN_BISTRO_CATEGORY_MARKS,
+  MODERN_BISTRO_HERO_IMAGE,
+  MODERN_BISTRO_STYLES,
+} from "../modern-bistro/styles";
 import { TECH_GOURMET_CATEGORY_MARKS, TECH_GOURMET_STYLES } from "../tech-gourmet/styles";
 
 export type PublicMenuThemeId =
@@ -19,7 +29,9 @@ export type PublicMenuThemeId =
   | "rubric"
   | "bigarade"
   | "elixir"
-  | "tech-gourmet";
+  | "tech-gourmet"
+  | "modern-bistro"
+  | "clever-dish-scribe";
 
 export type PublicMenuThemeLayout = "classic" | "editorial" | "elixir";
 
@@ -158,6 +170,36 @@ const TECH_GOURMET_CHROME: PublicMenuThemeChrome = {
   categoryMarks: TECH_GOURMET_CATEGORY_MARKS,
 };
 
+const MODERN_BISTRO_CHROME: PublicMenuThemeChrome = {
+  id: "modern-bistro",
+  layout: "editorial",
+  rootClassName: "modern-bistro-menu",
+  styles: MODERN_BISTRO_STYLES,
+  footerKicker: "Modern Bistro",
+  defaultSlogan: "Temiz arayüz, hızlı keşif, akıcı sipariş deneyimi.",
+  heroImage: MODERN_BISTRO_HERO_IMAGE,
+  reservationBackgroundUrl: MODERN_BISTRO_HERO_IMAGE,
+  contactBackgroundUrl: MODERN_BISTRO_HERO_IMAGE,
+  feedbackBackgroundUrl: MODERN_BISTRO_HERO_IMAGE,
+  loadingBg: "#fafafa",
+  categoryMarks: MODERN_BISTRO_CATEGORY_MARKS,
+};
+
+const CLEVER_DISH_SCRIBE_CHROME: PublicMenuThemeChrome = {
+  id: "clever-dish-scribe",
+  layout: "editorial",
+  rootClassName: "clever-dish-scribe-menu",
+  styles: CLEVER_DISH_SCRIBE_STYLES,
+  footerKicker: "Clever Dish Scribe",
+  defaultSlogan: "Karanlık arayüz, yeşil vurgular, akıcı mobil keşif.",
+  heroImage: CLEVER_DISH_SCRIBE_HERO_IMAGE,
+  reservationBackgroundUrl: CLEVER_DISH_SCRIBE_HERO_IMAGE,
+  contactBackgroundUrl: CLEVER_DISH_SCRIBE_HERO_IMAGE,
+  feedbackBackgroundUrl: CLEVER_DISH_SCRIBE_HERO_IMAGE,
+  loadingBg: "#0a0a0a",
+  categoryMarks: CLEVER_DISH_SCRIBE_CATEGORY_MARKS,
+};
+
 const CHROME_BY_ID: Record<PublicMenuThemeId, PublicMenuThemeChrome> = {
   luxury: LUXURY_CHROME,
   "petite-patisserie": PETITE_CHROME,
@@ -167,6 +209,8 @@ const CHROME_BY_ID: Record<PublicMenuThemeId, PublicMenuThemeChrome> = {
   bigarade: BIGARADE_CHROME,
   elixir: ELIXIR_CHROME,
   "tech-gourmet": TECH_GOURMET_CHROME,
+  "modern-bistro": MODERN_BISTRO_CHROME,
+  "clever-dish-scribe": CLEVER_DISH_SCRIBE_CHROME,
 };
 
 export function getPublicMenuThemeChrome(themeId: string): PublicMenuThemeChrome {

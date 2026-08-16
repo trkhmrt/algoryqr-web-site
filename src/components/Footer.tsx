@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { QrCode } from "lucide-react";
-
 import PaymentBadges from "@/components/PaymentBadges";
+import { BrandLogo } from "@/components/BrandLogo";
+import { FooterThemeToggle } from "@/components/ThemeToggle";
 import { COMPANY } from "@/lib/company";
 
 const LEGAL_LINKS = [
@@ -19,7 +19,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 gap-8">
           <div className="space-y-3 min-[480px]:col-span-2 md:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-primary" />
+              <BrandLogo />
               <span className="font-semibold">
                 Algory<span className="text-primary">QR</span>
               </span>
@@ -33,7 +33,7 @@ const Footer = () => {
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+            <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
               Yasal
             </p>
             <nav className="flex flex-col gap-2">
@@ -50,7 +50,7 @@ const Footer = () => {
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+            <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
               İletişim
             </p>
             <p className="text-sm font-medium text-foreground">{COMPANY.tradeName}</p>
@@ -60,10 +60,21 @@ const Footer = () => {
             >
               {COMPANY.email}
             </a>
+            <a
+              href={COMPANY.phoneTel}
+              className="text-sm text-primary underline-offset-4 hover:underline"
+            >
+              {COMPANY.phone}
+            </a>
           </div>
         </div>
 
         <PaymentBadges />
+
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-border pt-6 sm:flex-row">
+          <p className="text-xs text-muted-foreground">Görünüm tercihinizi buradan değiştirebilirsiniz.</p>
+          <FooterThemeToggle />
+        </div>
       </div>
     </footer>
   );

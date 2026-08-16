@@ -3,6 +3,12 @@ export { MenuViewportFrame } from "./MenuViewportFrame";
 export { AddToOrderButton } from "./AddToOrderButton";
 export { CartFab } from "./CartFab";
 export { CartSheet } from "./CartSheet";
+export { CampaignCartPreview } from "./CampaignCartPreview";
+export {
+  CampaignProductIdsProvider,
+  useCampaignProductIds,
+  useIsCampaignProduct,
+} from "./campaign-product-context";
 export { CustomerAccountMenu, CustomerAccountTrigger } from "./CustomerAccountMenu";
 export { CustomerAuthDialog } from "./CustomerAuthDialog";
 export { WaiterAuthDialog } from "./WaiterAuthDialog";

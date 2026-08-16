@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidateSubscription } from "@/hooks/use-subscription";
+import { invalidateSubscriptionOverview } from "@/hooks/use-subscription-overview";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 export async function refreshAccessAfterEntitlementChange(queryClient: QueryClient) {
@@ -9,5 +10,6 @@ export async function refreshAccessAfterEntitlementChange(queryClient: QueryClie
   await Promise.all([
     invalidateAccessProfile(queryClient),
     invalidateSubscription(queryClient),
+    invalidateSubscriptionOverview(queryClient),
   ]);
 }

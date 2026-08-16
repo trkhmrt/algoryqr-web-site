@@ -2,6 +2,20 @@ import type { PlanPackageApiItem } from "@/lib/api";
 import type { BillingPeriod } from "@/lib/commerce";
 import { getProductHint, getProductHintByCode } from "@/lib/product-hints";
 
+/** Geçici olarak katalog ve satın alma ekranlarında gizlenen paket kodları. */
+export const CATALOG_HIDDEN_PACKAGE_CODES: ReadonlySet<string> = new Set(["PRO_PACKAGE"]);
+
+export function isPackageVisibleInCatalog(
+  pkg: Pick<PlanPackageApiItem, "code" | "active">,
+): boolean {
+  if (pkg.active === false) return false;
+  return !CATALOG_HIDDEN_PACKAGE_CODES.has(pkg.code);
+}
+
+export function filterCatalogPackages(packages: PlanPackageApiItem[]): PlanPackageApiItem[] {
+  return packages.filter(isPackageVisibleInCatalog);
+}
+
 function money(value: number | string | null | undefined): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;

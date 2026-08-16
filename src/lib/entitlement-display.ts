@@ -102,3 +102,53 @@ export function canCreateMenu(summary: MenuEntitlementSummary | null): boolean {
   }
   return summary.unlimited || summary.remaining > 0;
 }
+
+export type QrCreateQuotaSummary = {
+  remaining: number;
+  total: number;
+  used: number;
+  unlimited: boolean;
+  usable: boolean;
+};
+
+export function summarizeQrCreateQuota(input: {
+  remaining: number;
+  total: number;
+  used: number;
+  unlimited: boolean;
+  usable?: boolean;
+}): QrCreateQuotaSummary {
+  return {
+    remaining: input.remaining,
+    total: input.total,
+    used: input.used,
+    unlimited: input.unlimited,
+    usable: input.usable ?? true,
+  };
+}
+
+export function formatQrCreateQuotaLabel(summary: QrCreateQuotaSummary | null): string | null {
+  if (!summary) {
+    return null;
+  }
+  if (!summary.usable) {
+    return "QR oluşturmak için aktif bir paket gerekli";
+  }
+  if (summary.unlimited) {
+    return "Sınırsız QR oluşturma hakkı";
+  }
+  if (summary.remaining <= 0) {
+    return "QR oluşturma hakkınız bitti";
+  }
+  if (summary.remaining === 1) {
+    return "1 QR oluşturma hakkınız kaldı";
+  }
+  return `${summary.remaining} QR oluşturma hakkınız kaldı`;
+}
+
+export function hasQrCreateQuotaRemaining(summary: QrCreateQuotaSummary | null): boolean {
+  if (!summary?.usable) {
+    return false;
+  }
+  return summary.unlimited || summary.remaining > 0;
+}

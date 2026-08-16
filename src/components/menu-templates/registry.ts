@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 
+import { CleverDishScribeMenuTemplate } from "./clever-dish-scribe";
 import { LuxuryMenuTemplate } from "./luxury";
+import { ModernBistroMenuTemplate } from "./modern-bistro";
 import { TechGourmetMenuTemplate } from "./tech-gourmet";
 import type { MenuTemplateProps } from "./types";
 
@@ -59,6 +61,18 @@ export const MENU_TEMPLATES = [
     name: "Tech.Gourmet",
     previewClassName: "bg-[#131313] text-[#b7cbbf]",
     Component: TechGourmetMenuTemplate,
+  },
+  {
+    id: "modern-bistro",
+    name: "Modern Bistro",
+    previewClassName: "bg-[#fafafa] text-[#111111]",
+    Component: ModernBistroMenuTemplate,
+  },
+  {
+    id: "clever-dish-scribe",
+    name: "Clever Dish Scribe",
+    previewClassName: "bg-[#0a0a0a] text-[#22c55e]",
+    Component: CleverDishScribeMenuTemplate,
   },
 ] as const satisfies readonly MenuTemplateDefinition[];
 

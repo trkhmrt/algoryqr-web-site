@@ -37,11 +37,8 @@ const TestimonialsSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
-          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">Müşteri Yorumları</p>
-          <h2
-            className="font-bold text-balance"
-            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
-          >
+          <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">Müşteri Yorumları</p>
+          <h2 className="heading text-[36px] md:text-[52px] font-extrabold text-balance">
             Kullanıcılarımız ne diyor?
           </h2>
         </motion.div>
@@ -59,7 +56,7 @@ const TestimonialsSection = () => {
             >
               <p className="text-sm text-muted-foreground leading-relaxed text-pretty">&ldquo;{t.quote}&rdquo;</p>
               <div>
-                <p className="text-sm font-semibold">{t.name}</p>
+                <p className="text-[13px] font-medium">{t.name}</p>
                 <p className="text-xs text-muted-foreground">{t.role}</p>
               </div>
             </motion.div>

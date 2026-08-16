@@ -1,6 +1,7 @@
 "use client";
 
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { filterCatalogPackages } from "@/lib/package-display";
 import { hasActivePackageProduct, packageIncludesProduct } from "@/lib/product-access";
 
 const SMART_REPORTING_PRODUCT = "SMART_REPORTING";
@@ -17,7 +18,7 @@ export function useSmartReportingAccess() {
     SMART_REPORTING_PRODUCT,
   );
 
-  const smartReportingPackageNames = catalogPackages
+  const smartReportingPackageNames = filterCatalogPackages(catalogPackages)
     .filter((pkg) => packageIncludesProduct(pkg, SMART_REPORTING_PRODUCT))
     .map((pkg) => pkg.name?.trim())
     .filter((name): name is string => !!name);

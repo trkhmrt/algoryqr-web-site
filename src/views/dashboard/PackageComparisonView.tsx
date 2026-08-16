@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, Sparkles, X } from "lucide-react";
 
 import {
   PackageComparisonCurrentPlanSkeleton,
   PackageComparisonSkeleton,
 } from "@/components/dashboard/PackageComparisonSkeleton";
+import { AnimatedPackagePrice } from "@/components/packages/AnimatedPackagePrice";
 import { Button } from "@/components/ui/button";
 import { FeatureHintByProduct } from "@/components/ui/FeatureHint";
 import { Label } from "@/components/ui/label";
@@ -21,14 +21,9 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   formatDaysUntilExpiry,
   formatPackageDate,
-  formatPackagePrice,
-  formatYearlySavingsBadge,
-  formatYearlySavingsLabel,
   planActionLabel,
-  resolveYearlySavingsPercent,
   purchaseTypeLabel,
   resolvePackagePricing,
-  type PackagePricing,
 } from "@/lib/package-display";
 import { matchesProductCode } from "@/lib/product-access";
 import { cn } from "@/lib/utils";
@@ -92,58 +87,6 @@ function BillingPeriodSwitch({
       >
         Yıllık
       </Label>
-    </div>
-  );
-}
-
-function AnimatedPackagePrice({
-  pricing,
-  currency,
-}: {
-  pricing: PackagePricing;
-  currency: string;
-}) {
-  const amountLabel = formatPackagePrice(pricing.amount, currency);
-  const compareLabel =
-    pricing.compareAmount != null ? formatPackagePrice(pricing.compareAmount, currency) : null;
-
-  return (
-    <div className="mt-4 min-h-[3.25rem] overflow-hidden">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={pricing.period}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
-        >
-          {compareLabel ? (
-            <span className="text-lg text-muted-foreground line-through decoration-muted-foreground/80">
-              {compareLabel}
-              {pricing.compareSuffix ? (
-                <span className="ml-1 text-sm font-normal">{pricing.compareSuffix}</span>
-              ) : null}
-            </span>
-          ) : null}
-          <span className="text-3xl font-bold tracking-tight text-foreground">{amountLabel}</span>
-          {pricing.amount > 0 ? (
-            <span className="text-sm text-muted-foreground">{pricing.suffix}</span>
-          ) : null}
-          {pricing.yearlySavings != null && pricing.yearlySavings > 0 ? (
-            <span
-              className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium leading-none text-emerald-600 dark:text-emerald-400"
-              title={formatYearlySavingsLabel(pricing.yearlySavings, currency)}
-            >
-              {formatYearlySavingsBadge(
-                pricing.yearlySavings,
-                currency,
-                resolveYearlySavingsPercent(pricing),
-              )}
-            </span>
-          ) : null}
-        </motion.div>
-      </AnimatePresence>
     </div>
   );
 }

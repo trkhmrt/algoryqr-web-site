@@ -13,6 +13,9 @@ export type MenuWaiterMember = {
   username: string;
   displayName: string;
   active: boolean;
+  commissionEnabled?: boolean;
+  commissionType?: "PERCENT" | "FIXED" | null;
+  commissionValue?: number | string | null;
   createdAt?: string | null;
 };
 
@@ -50,6 +53,9 @@ export type WaiterMe = {
   username?: string;
   displayName?: string;
   active?: boolean;
+  commissionEnabled?: boolean;
+  commissionType?: "PERCENT" | "FIXED" | null;
+  commissionValue?: number | string | null;
 };
 
 export type WaiterTableSummary = {
@@ -62,6 +68,72 @@ export type WaiterTableSummary = {
   latestPendingStatus?: string | null;
   latestPendingTotal?: number | string | null;
   latestPendingSubmittedAt?: string | null;
+  billStatus?: "EMPTY" | "OPEN" | "CLOSED" | null;
+  openBillId?: number | null;
+  openBillTotal?: number | string | null;
+  openBillItemCount?: number | null;
+};
+
+export type WaiterBillItem = {
+  id: number;
+  productId: number;
+  productName: string;
+  unitPrice?: number | string | null;
+  quantity: number;
+  lineTotal?: number | string | null;
+  note?: string | null;
+  sourceOrderId?: number | null;
+  addedByWaiterId?: number | null;
+  createdAt?: string | null;
+};
+
+export type WaiterBill = {
+  id: number;
+  menuId?: number;
+  tableId: number;
+  tableName?: string | null;
+  status?: "OPEN" | "CLOSED";
+  openedByWaiterId?: number | null;
+  closedByWaiterId?: number | null;
+  openedAt?: string | null;
+  closedAt?: string | null;
+  totalAmount?: number | string | null;
+  currency?: string | null;
+  itemCount?: number;
+  items?: WaiterBillItem[];
+  fixedCommissionAmount?: number | string | null;
+  paymentMethod?: "CASH" | "CARD" | null;
+};
+
+export type WaiterCommissionRecord = {
+  id: number;
+  billId?: number | null;
+  orderId?: number | null;
+  recordType?: "PERCENT_ORDER" | "FIXED_TABLE_CLOSE" | "FIXED_ITEM_ADD";
+  baseAmount?: number | string | null;
+  commissionValueSnapshot?: number | string | null;
+  amount?: number | string | null;
+  currency?: string | null;
+  tableName?: string | null;
+  createdAt?: string | null;
+};
+
+export type WaiterTodayCommissionSummary = {
+  totalAmount?: number | string | null;
+  currency?: string | null;
+  percentOrderTotal?: number | string | null;
+  fixedTableCloseTotal?: number | string | null;
+  fixedItemAddTotal?: number | string | null;
+  recordCount?: number;
+  records?: WaiterCommissionRecord[];
+};
+
+export type WaiterCommissionHistory = {
+  records: WaiterCommissionRecord[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 };
 
 export type WaiterCatalogProduct = {
@@ -73,9 +145,18 @@ export type WaiterCatalogProduct = {
   imageUrl?: string | null;
   available: boolean;
   subCategoryId?: number | null;
+  subCategorySlug?: string | null;
   subCategoryName?: string | null;
   mainCategoryId?: number | null;
   mainCategoryName?: string | null;
+  commissionEligible?: boolean;
+};
+
+export type WaiterCatalogResponse = {
+  products: WaiterCatalogProduct[];
+  commissionEnabled?: boolean;
+  commissionType?: "PERCENT" | "FIXED" | null;
+  commissionValue?: number | string | null;
 };
 
 export type WaiterCreateOrderRequest = {
@@ -149,7 +230,14 @@ export async function createMenuWaiter(
 export async function updateMenuWaiter(
   menuId: number,
   waiterId: number,
-  payload: { displayName?: string; active?: boolean; password?: string },
+  payload: {
+    displayName?: string;
+    active?: boolean;
+    password?: string;
+    commissionEnabled?: boolean;
+    commissionType?: "PERCENT" | "FIXED";
+    commissionValue?: number;
+  },
 ): Promise<MenuWaiterMember> {
   const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
     method: "PATCH",
@@ -347,17 +435,22 @@ export async function getWaiterOrder(orderId: number): Promise<OrderResponse> {
   return data;
 }
 
-export async function listWaiterCatalog(): Promise<WaiterCatalogProduct[]> {
+export async function listWaiterCatalog(): Promise<WaiterCatalogResponse> {
   const response = await fetch("/api/waiter/orders/catalog", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
   });
-  const data = await parseJson<{ products?: WaiterCatalogProduct[]; message?: string }>(response);
+  const data = await parseJson<WaiterCatalogResponse & { message?: string }>(response);
   if (!response.ok) {
     throw new WaiterApiError(response.status, data.message || "Menü alınamadı");
   }
-  return Array.isArray(data.products) ? data.products : [];
+  return {
+    products: Array.isArray(data.products) ? data.products : [],
+    commissionEnabled: data.commissionEnabled,
+    commissionType: data.commissionType,
+    commissionValue: data.commissionValue,
+  };
 }
 
 export async function createWaiterOrder(payload: WaiterCreateOrderRequest): Promise<OrderResponse> {
@@ -387,6 +480,227 @@ export async function updateWaiterOrderNote(
   const data = await parseJson<OrderResponse & { message?: string }>(response);
   if (!response.ok) {
     throw new WaiterApiError(response.status, data.message || "Not kaydedilemedi");
+  }
+  return data;
+}
+
+/* ── Waiter bills ── */
+
+export async function getWaiterOpenBill(tableId: number): Promise<WaiterBill> {
+  const response = await fetch(`/api/waiter/bills/tables/${tableId}/open`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Adisyon alınamadı");
+  }
+  return data;
+}
+
+export async function addWaiterBillItems(
+  billId: number,
+  items: CartItemRequest[],
+): Promise<WaiterBill> {
+  const response = await fetch(`/api/waiter/bills/${billId}/items`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ items }),
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Kalemler eklenemedi");
+  }
+  return data;
+}
+
+export async function updateWaiterBillItemQuantity(
+  billId: number,
+  itemId: number,
+  quantity: number,
+): Promise<WaiterBill> {
+  const response = await fetch(`/api/waiter/bills/${billId}/items/${itemId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ quantity }),
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Kalem güncellenemedi");
+  }
+  return data;
+}
+
+export async function removeWaiterBillItem(billId: number, itemId: number): Promise<WaiterBill> {
+  const response = await fetch(`/api/waiter/bills/${billId}/items/${itemId}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Kalem silinemedi");
+  }
+  return data;
+}
+
+export async function closeWaiterBill(
+  billId: number,
+  payload: {
+    paymentMethod: "CASH" | "CARD";
+    tipReceived?: boolean;
+    tipAmount?: number;
+  },
+): Promise<WaiterBill> {
+  const response = await fetch(`/api/waiter/bills/${billId}/close`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Masa kapatılamadı");
+  }
+  return data;
+}
+
+/* ── Waiter commissions ── */
+
+export async function getWaiterTodayCommission(): Promise<WaiterTodayCommissionSummary> {
+  const response = await fetch("/api/waiter/commissions/today", {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<WaiterTodayCommissionSummary & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Komisyon özeti alınamadı");
+  }
+  return data;
+}
+
+export async function getWaiterCommissionHistory(params?: {
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}): Promise<WaiterCommissionHistory> {
+  const search = new URLSearchParams();
+  if (params?.from) search.set("from", params.from);
+  if (params?.to) search.set("to", params.to);
+  if (params?.page != null) search.set("page", String(params.page));
+  if (params?.size != null) search.set("size", String(params.size));
+  const query = search.toString();
+  const response = await fetch(
+    `/api/waiter/commissions/history${query ? `?${query}` : ""}`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    },
+  );
+  const data = await parseJson<WaiterCommissionHistory & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Komisyon geçmişi alınamadı");
+  }
+  return {
+    records: Array.isArray(data.records) ? data.records : [],
+    page: data.page ?? 0,
+    size: data.size ?? 20,
+    totalElements: data.totalElements ?? 0,
+    totalPages: data.totalPages ?? 0,
+  };
+}
+
+export type WaiterActiveCampaign = {
+  id: number;
+  templateCode: string;
+  name: string;
+  slogan?: string | null;
+  targetProductIds?: number[];
+};
+
+export type WaiterCampaignCustomer = {
+  customerId: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  member: boolean;
+};
+
+export type WaiterManualGrantRequest = {
+  email: string;
+  campaignId: number;
+  action: "ADD_STAMPS" | "GRANT_REWARD" | "LINK_ORDER";
+  quantity?: number;
+  orderId?: number;
+  note: string;
+};
+
+export type WaiterManualGrantResponse = {
+  message: string;
+  currentStamps?: number;
+  requiredStamps?: number;
+  rewardId?: number;
+};
+
+export async function listWaiterActiveCampaigns(
+  menuId: number,
+): Promise<WaiterActiveCampaign[]> {
+  const response = await fetch(
+    `/api/waiter/campaigns/active?menuId=${encodeURIComponent(String(menuId))}`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    },
+  );
+  const data = await parseJson<WaiterActiveCampaign[] & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Kampanyalar alınamadı");
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+export async function lookupWaiterCampaignCustomer(
+  menuId: number,
+  email: string,
+): Promise<WaiterCampaignCustomer> {
+  const response = await fetch(
+    `/api/waiter/campaigns/customers?menuId=${encodeURIComponent(String(menuId))}&email=${encodeURIComponent(email)}`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    },
+  );
+  const data = await parseJson<WaiterCampaignCustomer & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Müşteri bulunamadı");
+  }
+  return data;
+}
+
+export async function grantWaiterCampaign(
+  menuId: number,
+  payload: WaiterManualGrantRequest,
+): Promise<WaiterManualGrantResponse> {
+  const response = await fetch(
+    `/api/waiter/campaigns/grant?menuId=${encodeURIComponent(String(menuId))}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(payload),
+    },
+  );
+  const data = await parseJson<WaiterManualGrantResponse & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Hak tanımlanamadı");
   }
   return data;
 }

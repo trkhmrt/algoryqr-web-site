@@ -4,6 +4,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { formatServesPeopleLabel } from "../serves-people";
+import { useIsCampaignProduct } from "../campaign-product-context";
 
 type DenseMetaChipsProps = {
   product: MenuProductApiItem;
@@ -24,6 +25,7 @@ export function DenseMetaChips({
   maxAllergens = 2,
   maxTags = 2,
 }: DenseMetaChipsProps) {
+  const isCampaignProduct = useIsCampaignProduct(product.productId);
   const servesLabel = formatServesPeopleLabel(
     product.servesPeopleMin,
     product.servesPeopleMax,
@@ -42,6 +44,9 @@ export function DenseMetaChips({
   }
   if (product.chefRecommended) {
     chips.push({ key: "chef", label: "Şef önerisi", variant: "accent" });
+  }
+  if (isCampaignProduct) {
+    chips.push({ key: "campaign", label: "Kampanyalı", variant: "accent" });
   }
   for (const allergen of allergens) {
     chips.push({ key: `allergen-${allergen.id}`, label: allergen.name });

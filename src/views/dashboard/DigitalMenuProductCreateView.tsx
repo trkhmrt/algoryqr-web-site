@@ -7,7 +7,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 
 import {
-  DigitalMenuGate,
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
@@ -260,8 +259,7 @@ export default function DigitalMenuProductCreateView() {
   const busy = saving || summaryLoading;
 
   return (
-    <DigitalMenuGate accessLoading={accessLoading} canUse={canUseDigitalMenu}>
-      <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
         <div className="flex items-start gap-3">
           <Link
             href={backHref}
@@ -506,7 +504,6 @@ export default function DigitalMenuProductCreateView() {
               loading={summaryLoading}
               loadingSkeleton={smartSummaryAccessLoading}
               disabled={busy && !summaryLoading}
-              prominent={!canUseSmartSummary}
               onActionClick={() => void handleSmartSummary()}
             />
             <div className="space-y-1.5">
@@ -528,7 +525,6 @@ export default function DigitalMenuProductCreateView() {
             </Button>
           </div>
         </div>
-      </div>
-    </DigitalMenuGate>
+    </div>
   );
 }

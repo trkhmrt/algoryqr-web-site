@@ -1,9 +1,9 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/FeaturesSection";
+import WhyUsSection from "@/components/WhyUsSection";
 import AnimatedBeam from "@/components/AnimatedBeam";
-import StepsCombined from "@/components/steps/StepsCombined";
 import StatsSection from "@/components/StatsSection";
+import PricingSection from "@/components/PricingSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import FaqSection from "@/components/FaqSection";
 import CTASection from "@/components/CTASection";
@@ -20,10 +20,10 @@ const Index = ({ initialUser = null }: IndexProps) => {
       <Navbar initialUser={initialUser} />
       <main className="w-full">
         <HeroSection />
-        <FeaturesSection />
+        <WhyUsSection />
         <AnimatedBeam />
-        <StepsCombined />
         <StatsSection />
+        <PricingSection initialUser={initialUser} />
         <TestimonialsSection />
         <FaqSection />
         <CTASection />

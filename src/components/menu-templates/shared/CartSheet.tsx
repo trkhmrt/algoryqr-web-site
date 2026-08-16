@@ -13,11 +13,14 @@ import {
 import { formatMenuPrice } from "../types";
 import { useMenuLocaleOptional } from "./menu-locale";
 import { OrderSuccessOverlay } from "./OrderSuccessOverlay";
+import { CampaignCartPreview } from "./CampaignCartPreview";
 import { useOrdering } from "./ordering-context";
 import { usePublicMenuTheme } from "./public-menu-theme";
 
 export function CartSheet() {
   const {
+    identifier,
+    sessionToken,
     cartOpen,
     setCartOpen,
     localItems,
@@ -97,6 +100,14 @@ export function CartSheet() {
             </ul>
           )}
 
+          <CampaignCartPreview
+            identifier={identifier}
+            items={localItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            }))}
+          />
+
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Not</label>
             <textarea
@@ -135,7 +146,12 @@ export function CartSheet() {
       </SheetContent>
     </Sheet>
     {successId != null ? (
-      <OrderSuccessOverlay orderId={successId} onDone={dismissSuccess} />
+      <OrderSuccessOverlay
+        orderId={successId}
+        identifier={identifier}
+        sessionToken={sessionToken}
+        onDone={dismissSuccess}
+      />
     ) : null}
     </>
   );

@@ -16,8 +16,7 @@ export interface PerspectiveMarqueeProps {
   className?: string;
 }
 
-const FONT_FAMILY =
-  "var(--font-geist-sans), Inter, -apple-system, BlinkMacSystemFont, sans-serif";
+const FONT_FAMILY = "var(--font-sans), ui-sans-serif, system-ui, sans-serif";
 
 const DEFAULT_ITEMS = [
   "Vercel",

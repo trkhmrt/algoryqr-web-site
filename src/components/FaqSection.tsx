@@ -24,16 +24,13 @@ const FaqSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
-          <p className="text-xs sm:text-sm font-mono text-muted-foreground uppercase tracking-widest">
+          <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
             SSS
           </p>
-          <h2
-            className="font-bold text-balance"
-            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
-          >
+          <h2 className="sr-heading text-3xl leading-[1.05] sm:text-5xl text-balance">
             Sıkça sorulan sorular
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-lg mx-auto text-pretty">
+          <p className="section-desc max-w-lg mx-auto text-pretty">
             QR, dijital menü ve yapay zeka özellikleriyle ilgili merak edilenler.
           </p>
         </motion.div>

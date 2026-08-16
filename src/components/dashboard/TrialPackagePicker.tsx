@@ -38,7 +38,7 @@ export default function TrialPackagePicker({
             <CardContent className="flex h-full flex-col p-4">
               <h3 className="text-base font-semibold text-foreground">{pkg.name}</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {pkg.validityDays} gün ücretsiz deneme
+                {pkg.trialDays ?? pkg.validityDays} gün ücretsiz deneme
               </p>
               <p className="mt-2 text-lg font-bold text-foreground">
                 {formatPackagePrice(pkg.price, pkg.currency)}
@@ -63,7 +63,7 @@ export default function TrialPackagePicker({
                 disabled={disabled || starting}
                 onClick={() => onStart(pkg.id)}
               >
-                {starting ? "Başlatılıyor…" : `${pkg.validityDays} gün dene`}
+                {starting ? "Başlatılıyor…" : `${pkg.trialDays ?? pkg.validityDays} gün dene`}
               </Button>
             </CardContent>
           </Card>

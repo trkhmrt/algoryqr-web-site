@@ -19,13 +19,10 @@ const CTASection = () => {
           transition={{ duration: 0.6 }}
           className="rounded-2xl border border-border bg-card p-6 sm:p-10 md:p-16 lg:p-20 text-center space-y-4 sm:space-y-6 max-w-3xl mx-auto"
         >
-          <h2
-            className="font-bold text-balance"
-            style={{ fontSize: "clamp(1.75rem, 1.2rem + 2.2vw, 3rem)", lineHeight: 1.15 }}
-          >
+          <h2 className="heading text-[36px] md:text-[56px] font-extrabold leading-[1.05] text-balance">
             QR menünüzü ve yapay zeka araçlarını keşfedin
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto text-pretty">
+          <p className="section-desc max-w-md mx-auto text-pretty">
             Ücretsiz başlayın. Dinamik QR, dijital menü, Akıllı Özet, Asistan ve Raporlama — dakikalar içinde hazır.
           </p>
           <Link href="/register" className="inline-flex w-full sm:w-auto justify-center">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  createQrRequest, deleteMenuRequest, deleteQrRequest, getMenuByQrIdRequest, getStoredUser,
+  createQrRequest, deleteQrRequest, getMyActiveMenusRequest, getStoredUser,
   getUserQrsRequest, QrResponse, StoredUser, updateQrActiveRequest, updateQrNameRequest, updateQrRequest,
 } from "@/lib/api";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
@@ -45,8 +45,7 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage, usePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { hasScope } from "@/lib/auth-user";
-import { useAccessProfile } from "@/hooks/use-access-profile";
+import { useQrCreateAccess } from "@/hooks/use-qr-create-access";
 
 const qrTypes = [
   { value: "link", label: "Link", icon: LinkIcon, desc: "Web sitesi veya URL" },
@@ -90,8 +89,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
   const { data: packageUsage, isLoading: isPackageUsageLoading } = usePackageUsage(mode === "create");
-  const { data: accessProfile } = useAccessProfile();
-  const canCreateQr = hasScope(accessProfile, "QR_CREATE_OWNER");
+  const { canCreateQr, qrQuotaLabel, accessLoading: isQrAccessLoading } = useQrCreateAccess();
   const [isLoading, setIsLoading] = useState(false);
   const [listScope, setListScope] = useState<QrListScope>("ALL");
   const [page, setPage] = useState(0);
@@ -143,7 +141,9 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
         size: pageSize,
         scope: mode === "list" ? listScope : "ALL",
       });
-      const mapped = (response.content ?? []).map(mapUserQrToDashboardItem);
+      const mapped = (response.content ?? [])
+        .map(mapUserQrToDashboardItem)
+        .filter((qr) => !isMenuQrDetails(qr.details));
       setUserQrs(mapped);
       setTotalElements(response.totalElements ?? mapped.length);
       setTotalPages(response.totalPages ?? 0);
@@ -179,34 +179,6 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       notify("danger", message);
     }
   }, [fetchUserQrs, notify, queryClient, router]);
-
-  const resolveMenuId = useCallback((qr: DashboardQrItem): number | null => {
-    if (qr.menuId != null) return qr.menuId;
-    const fromDetails = qr.details.menuId;
-    if (typeof fromDetails === "number") return fromDetails;
-    return null;
-  }, []);
-
-  const handleDeleteMenu = useCallback(async (qr: DashboardQrItem) => {
-    try {
-      let targetMenuId = resolveMenuId(qr);
-      if (targetMenuId == null) {
-        const profile = await getMenuByQrIdRequest(qr.id);
-        targetMenuId = profile.menuId;
-      }
-      await deleteMenuRequest(targetMenuId);
-      setSelectedQR((prev) => (prev?.id === qr.id ? null : prev));
-      await fetchUserQrs();
-      setIsEditing(false);
-      await refreshAccessAfterEntitlementChange(queryClient);
-      await invalidatePackageUsage(queryClient);
-      await invalidateSubscription(queryClient);
-      notify("info", `"${qr.name}" menüsü silindi.`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Menü silinemedi.";
-      notify("danger", message);
-    }
-  }, [fetchUserQrs, notify, queryClient, resolveMenuId]);
 
   const handleCopyQr = useCallback(async (qr: DashboardQrItem) => {
     try {
@@ -399,11 +371,33 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   }, [mode, qrId, userQrs]);
 
   useEffect(() => {
-    if (mode !== "detail" || !selectedQR) return;
-    if (isMenuQrDetails(selectedQR.details)) {
-      router.replace(DASHBOARD_ROUTES.digitalMenuEdit(selectedQR.id));
+    if (mode !== "detail" || !qrId || isLoading) {
+      return;
     }
-  }, [mode, router, selectedQR]);
+    if (userQrs.some((item) => item.id === qrId)) {
+      return;
+    }
+
+    let cancelled = false;
+    void getMyActiveMenusRequest()
+      .then((menus) => {
+        if (cancelled) return;
+        if (menus.some((menu) => menu.qrId === qrId)) {
+          router.replace(DASHBOARD_ROUTES.digitalMenuEdit(qrId));
+          return;
+        }
+        router.replace(DASHBOARD_ROUTES.qrCodes);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          router.replace(DASHBOARD_ROUTES.qrCodes);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, mode, qrId, router, userQrs]);
 
   useEffect(() => {
     if (!selectedQR || !isMenuQrDetails(selectedQR.details)) {
@@ -417,7 +411,12 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
 
   const handleCreateQR = useCallback(async () => {
     if (!canCreateQr) {
-      notify("warning", "QR oluşturmak için uygun bir paket gerekli.");
+      notify(
+        "warning",
+        qrQuotaLabel === "QR oluşturma hakkınız bitti"
+          ? qrQuotaLabel
+          : "QR oluşturmak için uygun bir paket gerekli.",
+      );
       return;
     }
     const trimmedQrName = qrName.trim();
@@ -452,7 +451,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
       const message = error instanceof Error ? error.message : "QR kod oluşturulamadı.";
       notify("danger", message);
     }
-  }, [canCreateQr, fetchUserQrs, notify, qrName, qrTypeData, queryClient, router, selectedQrType]);
+  }, [canCreateQr, fetchUserQrs, notify, qrName, qrQuotaLabel, qrTypeData, queryClient, router, selectedQrType]);
 
   return (
     <>
@@ -463,7 +462,16 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
             <div className="space-y-6 animate-fade-in">
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-foreground">QR Kodlarım</h1>
-                <p className="text-sm text-muted-foreground">{totalElements} QR kod oluşturuldu</p>
+                <p
+                  className={`text-sm ${
+                    qrQuotaLabel === "QR oluşturma hakkınız bitti"
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {totalElements} QR kod oluşturuldu
+                  {!isQrAccessLoading && qrQuotaLabel ? ` · ${qrQuotaLabel}` : null}
+                </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -480,12 +488,25 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                     </Button>
                   ))}
                 </div>
-                <Button variant="hero" size="sm" className="gap-2 self-start sm:self-auto" asChild>
-                  <Link href={DASHBOARD_ROUTES.qrCodesNew}>
+                {canCreateQr ? (
+                  <Button variant="hero" size="sm" className="gap-2 self-start sm:self-auto" asChild>
+                    <Link href={DASHBOARD_ROUTES.qrCodesNew}>
+                      <Plus className="h-4 w-4" />
+                      Yeni QR Kod
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="hero"
+                    size="sm"
+                    className="gap-2 self-start sm:self-auto"
+                    disabled
+                    title={qrQuotaLabel ?? "QR oluşturma hakkınız yok"}
+                  >
                     <Plus className="h-4 w-4" />
                     Yeni QR Kod
-                  </Link>
-                </Button>
+                  </Button>
+                )}
               </div>
 
               <div className="grid gap-4">
@@ -494,10 +515,6 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                     key={qr.id}
                     className="glow-card cursor-pointer transition-colors hover:bg-accent/30"
                     onClick={() => {
-                      if (isMenuQrDetails(qr.details)) {
-                        router.push(DASHBOARD_ROUTES.digitalMenuEdit(qr.id));
-                        return;
-                      }
                       router.push(DASHBOARD_ROUTES.qrCodeDetail(qr.id));
                     }}
                   >
@@ -546,13 +563,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8" onClick={() => void handleShareQr(qr)}><Share2 className="h-3.5 w-3.5" /></Button>
                           <Button
                             variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground sm:h-8 sm:w-8"
-                            onClick={() => {
-                              if (isMenuQrDetails(qr.details)) {
-                                router.push(DASHBOARD_ROUTES.digitalMenuEdit(qr.id));
-                                return;
-                              }
-                              router.push(DASHBOARD_ROUTES.qrCodeDetail(qr.id));
-                            }}
+                            onClick={() => router.push(DASHBOARD_ROUTES.qrCodeDetail(qr.id))}
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
@@ -564,32 +575,15 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  {isMenuQrDetails(qr.details) ? "Menü silinsin mi?" : "QR silinsin mi?"}
-                                </AlertDialogTitle>
+                                <AlertDialogTitle>QR silinsin mi?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  {isMenuQrDetails(qr.details) ? (
-                                    <>
-                                      <span className="font-medium">{qr.name}</span> menüsü ve bağlı QR kodu devre dışı
-                                      bırakılır. Menü kotanız geri açılır. Bu işlem geri alınamaz.
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="font-medium">{qr.name}</span> QR’ını tamamen silersiniz. Bu işlem
-                                      geri alınamaz.
-                                    </>
-                                  )}
+                                  <span className="font-medium">{qr.name}</span> QR’ını tamamen silersiniz. Bu işlem
+                                  geri alınamaz.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    void (isMenuQrDetails(qr.details) ? handleDeleteMenu(qr) : handleDeleteQr(qr))
-                                  }
-                                >
-                                  Sil
-                                </AlertDialogAction>
+                                <AlertDialogAction onClick={() => void handleDeleteQr(qr)}>Sil</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -890,7 +884,11 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                 </button>
                 <div>
                   <h1 className="text-2xl font-semibold tracking-tight text-foreground">Yeni QR Kod Oluştur</h1>
-                  <p className="text-sm text-muted-foreground">İçerik türünü seçin ve detayları doldurun.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {canCreateQr
+                      ? "İçerik türünü seçin ve detayları doldurun."
+                      : (qrQuotaLabel ?? "QR oluşturmak için uygun bir paket gerekli.")}
+                  </p>
                 </div>
               </div>
 
@@ -1039,6 +1037,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                       <Button
                         className="w-full gap-2"
                         onClick={handleCreateQR}
+                        disabled={!canCreateQr}
                       >
                         <Check className="h-4 w-4" />
                         QR Kod Oluştur

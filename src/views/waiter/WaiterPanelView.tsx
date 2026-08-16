@@ -9,6 +9,7 @@ import { formatMenuPrice } from "@/components/menu-templates/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { cn } from "@/lib/utils";
 import type { OrderResponse } from "@/lib/ordering-api";
 import {
   confirmWaiterOrder,
@@ -27,8 +28,50 @@ import {
   type WaiterTableSummary,
 } from "@/lib/waiter-api";
 import WaiterCreateOrderView from "@/views/waiter/WaiterCreateOrderView";
+import WaiterBillDetailView from "@/views/waiter/WaiterBillDetailView";
+import WaiterCommissionPanel from "@/views/waiter/WaiterCommissionPanel";
+import { WaiterCampaignPanel } from "@/views/waiter/WaiterCampaignPanel";
 
-type TabKey = "pending" | "tables" | "today";
+type TabKey = "pending" | "tables" | "today" | "commission" | "campaigns";
+type TableCardTone = "open" | "pending" | "closed";
+
+function getTableCardTone(table: WaiterTableSummary): TableCardTone {
+  if (table.pendingOrderCount > 0) return "pending";
+  if (table.billStatus === "OPEN") return "open";
+  return "closed";
+}
+
+function tableCardToneClasses(tone: TableCardTone): string {
+  switch (tone) {
+    case "open":
+      return "border-chart-green bg-chart-green text-white hover:bg-chart-green/85";
+    case "pending":
+      return "animate-waiter-pending-bounce border-orange-600 bg-orange-500 text-white hover:bg-orange-600";
+    case "closed":
+      return "border-red-600 bg-red-500 text-white hover:bg-red-600";
+  }
+}
+
+function tableCardSubtitle(table: WaiterTableSummary, tone: TableCardTone): string {
+  if (tone === "pending") {
+    return `${table.pendingOrderCount} sipariş onay bekliyor`;
+  }
+  if (tone === "open") {
+    return "Adisyon açık";
+  }
+  return "Kapalı";
+}
+
+function tableCardStatusLabel(tone: TableCardTone): string {
+  switch (tone) {
+    case "open":
+      return "Açık";
+    case "pending":
+      return "Onay bekliyor";
+    case "closed":
+      return "Kapalı";
+  }
+}
 
 function formatWhen(value?: string | null): string {
   if (!value) return "—";
@@ -135,6 +178,8 @@ export default function WaiterPanelView() {
         queryClient.invalidateQueries({ queryKey: ["waiter-orders-tables"] }),
         queryClient.invalidateQueries({ queryKey: ["waiter-table-today"] }),
         queryClient.invalidateQueries({ queryKey: ["waiter-order"] }),
+        queryClient.invalidateQueries({ queryKey: ["waiter-open-bill"] }),
+        queryClient.invalidateQueries({ queryKey: ["waiter-commissions-today"] }),
       ]);
     },
   });
@@ -148,6 +193,8 @@ export default function WaiterPanelView() {
         queryClient.invalidateQueries({ queryKey: ["waiter-orders-tables"] }),
         queryClient.invalidateQueries({ queryKey: ["waiter-table-today"] }),
         queryClient.invalidateQueries({ queryKey: ["waiter-order"] }),
+        queryClient.invalidateQueries({ queryKey: ["waiter-open-bill"] }),
+        queryClient.invalidateQueries({ queryKey: ["waiter-commissions-today"] }),
       ]);
     },
   });
@@ -190,17 +237,27 @@ export default function WaiterPanelView() {
             setCreateOrderOpen(false);
             setCreateOrderTable(null);
           }}
-          onCreated={async () => {
+          onCreated={async (table) => {
             setCreateOrderOpen(false);
             setCreateOrderTable(null);
-            setTab("today");
-            setSelectedTable(null);
+            setTab("tables");
             await Promise.all([
               queryClient.invalidateQueries({ queryKey: ["waiter-orders-pending"] }),
               queryClient.invalidateQueries({ queryKey: ["waiter-orders-today"] }),
               queryClient.invalidateQueries({ queryKey: ["waiter-orders-tables"] }),
               queryClient.invalidateQueries({ queryKey: ["waiter-table-today"] }),
+              queryClient.invalidateQueries({ queryKey: ["waiter-open-bill"] }),
+              queryClient.invalidateQueries({ queryKey: ["waiter-commissions-today"] }),
             ]);
+            if (table) {
+              const tables = await queryClient.fetchQuery({
+                queryKey: ["waiter-orders-tables"],
+                queryFn: listWaiterTables,
+              });
+              setSelectedTable(tables.find((entry) => entry.tableId === table.tableId) ?? table);
+            } else {
+              setSelectedTable(null);
+            }
           }}
         />
       </div>
@@ -222,6 +279,10 @@ export default function WaiterPanelView() {
           }
           onBack={() => setSelectedOrderId(null)}
           onCancel={() => cancelMutation.mutate(selectedOrderId)}
+          onGoToCampaigns={() => {
+            setSelectedOrderId(null);
+            setTab("campaigns");
+          }}
         />
       </div>
     );
@@ -256,12 +317,14 @@ export default function WaiterPanelView() {
         </div>
       </header>
 
-      <nav className="grid grid-cols-3 gap-1 border-b border-border px-2 py-2">
+      <nav className="grid grid-cols-5 gap-1 border-b border-border px-2 py-2">
         {(
           [
             { key: "pending" as const, label: "Bekleyen" },
             { key: "tables" as const, label: "Masalar" },
             { key: "today" as const, label: "Bugün" },
+            { key: "commission" as const, label: "Komisyon" },
+            { key: "campaigns" as const, label: "Kampanyalar" },
           ] as const
         ).map((item) => (
           <button
@@ -342,19 +405,34 @@ export default function WaiterPanelView() {
                   Sipariş
                 </Button>
               </div>
-              {tableOrdersQuery.isLoading ? (
-                <LoadingBlock />
-              ) : (tableOrdersQuery.data ?? []).length === 0 ? (
-                <EmptyBlock text="Bugün bu masada sipariş yok." />
-              ) : (
-                (tableOrdersQuery.data ?? []).map((order) => (
-                  <HistoryOrderCard
-                    key={order.id}
-                    order={order}
-                    onOpenDetail={() => setSelectedOrderId(order.id)}
-                  />
-                ))
-              )}
+              <WaiterBillDetailView
+                table={selectedTable}
+                onAddProducts={() => {
+                  setCreateOrderTable(selectedTable);
+                  setCreateOrderOpen(true);
+                }}
+                onClosed={() => {
+                  void queryClient.invalidateQueries({ queryKey: ["waiter-orders-tables"] });
+                  setSelectedTable(null);
+                }}
+              />
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">Bugünkü siparişler</h3>
+                {tableOrdersQuery.isLoading ? (
+                  <LoadingBlock />
+                ) : (tableOrdersQuery.data ?? []).length === 0 ? (
+                  <EmptyBlock text="Bugün bu masada sipariş yok." />
+                ) : (
+                  (tableOrdersQuery.data ?? []).map((order) => (
+                    <HistoryOrderCard
+                      key={order.id}
+                      order={order}
+                      showCommission
+                      onOpenDetail={() => setSelectedOrderId(order.id)}
+                    />
+                  ))
+                )}
+              </div>
             </div>
           ) : tablesQuery.isLoading ? (
             <LoadingBlock />
@@ -362,28 +440,11 @@ export default function WaiterPanelView() {
             <EmptyBlock text="Masa bulunamadı." />
           ) : (
             (tablesQuery.data ?? []).map((table) => (
-              <button
+              <TableListCard
                 key={table.tableId}
-                type="button"
-                onClick={() => setSelectedTable(table)}
-                className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left shadow-sm transition-colors hover:bg-muted/40"
-              >
-                <div>
-                  <p className="font-medium">
-                    {table.tableName || `Masa ${table.tableNumber ?? table.tableId}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {table.pendingOrderCount > 0
-                      ? `${table.pendingOrderCount} bekleyen`
-                      : "Bekleyen yok"}
-                  </p>
-                </div>
-                {table.latestPendingTotal != null ? (
-                  <p className="text-sm font-semibold">
-                    {formatMenuPrice(table.latestPendingTotal, "TRY")}
-                  </p>
-                ) : null}
-              </button>
+                table={table}
+                onSelect={() => setSelectedTable(table)}
+              />
             ))
           )
         ) : null}
@@ -398,13 +459,57 @@ export default function WaiterPanelView() {
               <HistoryOrderCard
                 key={order.id}
                 order={order}
+                showCommission
                 onOpenDetail={() => setSelectedOrderId(order.id)}
               />
             ))
           )
         ) : null}
+
+        {tab === "commission" ? <WaiterCommissionPanel /> : null}
+        {tab === "campaigns" && me ? <WaiterCampaignPanel menuId={me.menuId} /> : null}
       </main>
     </div>
+  );
+}
+
+function TableListCard({
+  table,
+  onSelect,
+}: {
+  table: WaiterTableSummary;
+  onSelect: () => void;
+}) {
+  const tone = getTableCardTone(table);
+  const amount =
+    tone === "open" && table.openBillTotal != null
+      ? formatMenuPrice(table.openBillTotal, "TRY")
+      : tone === "pending" && table.latestPendingTotal != null
+        ? formatMenuPrice(table.latestPendingTotal, "TRY")
+        : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left shadow-sm transition-colors",
+        tableCardToneClasses(tone),
+      )}
+    >
+      <div className="min-w-0">
+        <p className="truncate font-semibold">
+          {table.tableName || `Masa ${table.tableNumber ?? table.tableId}`}
+        </p>
+        <p className="text-xs text-white/85">{tableCardSubtitle(table, tone)}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        {amount ? <p className="text-sm font-semibold">{amount}</p> : null}
+        <span className="mt-1 inline-block rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+          {tableCardStatusLabel(tone)}
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -454,91 +559,121 @@ function PendingOrderCard({
   onSaveNote: (note: string) => void;
 }) {
   const [note, setNote] = useState(order.waiterNote || "");
+  const [open, setOpen] = useState(false);
+  const items = order.items ?? [];
 
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{order.tableName || "Masa"}</h2>
-          <p className="text-sm text-muted-foreground">
-            #{order.id} · {formatWhen(order.submittedAt || order.createdAt)}
-          </p>
-        </div>
-        <p className="text-base font-semibold">
-          {formatMenuPrice(order.totalAmount ?? undefined, order.currency || "TRY")}
-        </p>
+    <article className="animate-waiter-pending-bounce overflow-hidden rounded-lg border border-orange-600 bg-orange-500 text-white shadow-sm">
+      <div className="flex items-start gap-1 p-4">
+        <button
+          type="button"
+          className="min-w-0 flex-1 text-left"
+          onClick={() => setOpen((value) => !value)}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold">{order.tableName || "Masa"}</h2>
+              <p className="text-sm text-white/85">
+                #{order.id} · {formatWhen(order.submittedAt || order.createdAt)}
+              </p>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-white/90">
+                Onay bekliyor
+              </p>
+            </div>
+            <p className="shrink-0 text-base font-semibold">
+              {formatMenuPrice(order.totalAmount ?? undefined, order.currency || "TRY")}
+            </p>
+          </div>
+        </button>
+        <button
+          type="button"
+          className="mt-0.5 rounded-md p-1 text-white/85 hover:bg-white/15 hover:text-white"
+          aria-expanded={open}
+          aria-label={open ? "Siparişi gizle" : "Siparişi göster"}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
       </div>
 
-      <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
-        {(order.items ?? []).map((item) => (
-          <li key={`${order.id}-${item.id ?? item.productId}`} className="text-sm">
-            <span className="font-medium">{item.quantity}×</span>{" "}
-            {item.productName || `#${item.productId}`}
-            {item.note ? (
-              <span className="block text-xs text-muted-foreground">Not: {item.note}</span>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+      {open ? (
+        <div className="border-t border-white/20 px-4 pb-4">
+          <ul className="space-y-1.5 pt-3">
+            {items.map((item) => (
+              <li key={`${order.id}-${item.id ?? item.productId}`} className="text-sm">
+                <span className="font-medium">{item.quantity}×</span>{" "}
+                {item.productName || `#${item.productId}`}
+                {item.note ? (
+                  <span className="block text-xs text-white/80">Not: {item.note}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
 
-      {order.note ? (
-        <p className="mt-2 rounded-md bg-muted/50 px-2 py-1.5 text-sm text-muted-foreground">
-          Sipariş notu: {order.note}
-        </p>
+          {order.note ? (
+            <p className="mt-2 rounded-md bg-white/15 px-2 py-1.5 text-sm text-white/90">
+              Sipariş notu: {order.note}
+            </p>
+          ) : null}
+
+          <div className="mt-3 space-y-2">
+            <label className="text-xs font-medium text-white/85" htmlFor={`note-${order.id}`}>
+              Garson notu
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id={`note-${order.id}`}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Not ekle…"
+                className="border-white/25 bg-white/15 text-white placeholder:text-white/60"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                className="border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                onClick={() => onSaveNote(note)}
+              >
+                Kaydet
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              size="lg"
+              className="h-12 border-white/20 bg-white text-base text-orange-600 hover:bg-white/90"
+              disabled={busy}
+              onClick={() => onConfirm(note)}
+            >
+              Onayla
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="h-12 border-white/30 bg-transparent text-base text-white hover:bg-white/15 hover:text-white"
+              disabled={busy}
+              onClick={() => onReject(note)}
+            >
+              Reddet
+            </Button>
+          </div>
+        </div>
       ) : null}
-
-      <div className="mt-3 space-y-2">
-        <label className="text-xs font-medium text-muted-foreground" htmlFor={`note-${order.id}`}>
-          Garson notu
-        </label>
-        <div className="flex gap-2">
-          <Input
-            id={`note-${order.id}`}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Not ekle…"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => onSaveNote(note)}
-          >
-            Kaydet
-          </Button>
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          size="lg"
-          className="h-12 text-base"
-          disabled={busy}
-          onClick={() => onConfirm(note)}
-        >
-          Onayla
-        </Button>
-        <Button
-          type="button"
-          size="lg"
-          variant="outline"
-          className="h-12 text-base"
-          disabled={busy}
-          onClick={() => onReject(note)}
-        >
-          Reddet
-        </Button>
-      </div>
     </article>
   );
 }
 
 function HistoryOrderCard({
   order,
+  showCommission,
   onOpenDetail,
 }: {
   order: OrderResponse;
+  showCommission?: boolean;
   onOpenDetail: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -558,6 +693,11 @@ function HistoryOrderCard({
                 {statusLabel(order.status)}
                 {order.waiterName ? ` · ${order.waiterName}` : ""}
               </p>
+              {showCommission && order.commissionAmount != null ? (
+                <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  Komisyon: {formatMenuPrice(order.commissionAmount, order.currency || "TRY")}
+                </p>
+              ) : null}
             </div>
             <p className="shrink-0 text-sm font-semibold">
               {formatMenuPrice(order.totalAmount ?? undefined, order.currency || "TRY")}
@@ -608,12 +748,14 @@ function WaiterOrderDetail({
   errorMessage,
   onBack,
   onCancel,
+  onGoToCampaigns,
 }: {
   orderId: number;
   busy: boolean;
   errorMessage?: string | null;
   onBack: () => void;
   onCancel: () => void;
+  onGoToCampaigns?: () => void;
 }) {
   const detailQuery = useQuery({
     queryKey: ["waiter-order", orderId],
@@ -663,7 +805,41 @@ function WaiterOrderDetail({
               ) : null}
               {order.note ? <DetailRow label="Müşteri notu" value={order.note} /> : null}
               {order.waiterNote ? <DetailRow label="Garson notu" value={order.waiterNote} /> : null}
+              {order.commissionAmount != null ? (
+                <DetailRow
+                  label="Komisyon"
+                  value={formatMenuPrice(order.commissionAmount, order.currency || "TRY")}
+                />
+              ) : null}
             </section>
+
+            {order.campaignSummary &&
+            (order.campaignSummary.guestOrder ||
+              (order.campaignSummary.campaignProductCount ?? 0) > 0 ||
+              order.campaignSummary.hint) ? (
+              <section className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+                <h2 className="font-medium text-amber-900 dark:text-amber-100">Kampanya</h2>
+                {order.campaignSummary.guestOrder ? (
+                  <p className="text-muted-foreground">
+                    Kayıtlı müşteri yok · Ödül bekliyor olabilir.
+                  </p>
+                ) : null}
+                {(order.campaignSummary.campaignProductCount ?? 0) > 0 ? (
+                  <p>
+                    Kampanyalı ürün: {order.campaignSummary.campaignProductCount} adet
+                  </p>
+                ) : null}
+                {order.campaignSummary.hint ? (
+                  <p className="text-xs text-muted-foreground">{order.campaignSummary.hint}</p>
+                ) : null}
+                {onGoToCampaigns ? (
+                  <Button type="button" variant="outline" size="sm" onClick={onGoToCampaigns}>
+                    Kampanya sekmesine git
+                  </Button>
+                ) : null}
+              </section>
+            ) : null}
+
             <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="mb-2 text-sm font-medium">Ürünler</h2>
               <ul className="space-y-2">

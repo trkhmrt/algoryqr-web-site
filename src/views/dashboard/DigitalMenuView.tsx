@@ -27,7 +27,7 @@ import {
   formatMenuQuotaLabel,
   summarizeMenuEntitlements,
 } from "@/lib/entitlement-display";
-import { formatPackageDate } from "@/lib/package-display";
+import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
 const FEATURES = [
@@ -54,11 +54,11 @@ export default function DigitalMenuView() {
   const status = trial.data?.status ?? "NOT_STARTED";
   const expiredTrial = status === "TRIAL_EXPIRED";
   const needsRenewal = expiredTrial;
-  const menuPackage = packages.data?.find((pkg) =>
+  const menuPackage = filterCatalogPackages(packages.data ?? []).find((pkg) =>
     pkg.items?.some((item) => item.productCode === "QR_MENU"),
   );
   const packageId = trial.data?.packageId ?? menuPackage?.id ?? null;
-  const eligiblePackages = (eligibleTrials.data ?? []) as PlanPackageApiItem[];
+  const eligiblePackages = filterCatalogPackages((eligibleTrials.data ?? []) as PlanPackageApiItem[]);
 
   const startTrial = async (selectedPackageId: number) => {
     setStartingPackageId(selectedPackageId);

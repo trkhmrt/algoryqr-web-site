@@ -11,10 +11,7 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
-import {
-  useWaiterPanelAccess,
-  WaiterPanelGate,
-} from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -147,25 +144,6 @@ export default function MenuUsersView() {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!canUseWaiterPanel) {
-    return (
-      <WaiterPanelGate accessLoading={false} canUse={false}>
-        {null}
-      </WaiterPanelGate>
-    );
-  }
-
-  if (!canUseDigitalMenu) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" asChild>
-          <Link href={DASHBOARD_ROUTES.digitalMenu}>Dijital Menüye Dön</Link>
-        </Button>
-        <p className="text-sm text-muted-foreground">Bu özellik için PRO paket gerekir.</p>
       </div>
     );
   }

@@ -1,0 +1,172 @@
+import { ALGORY_MENU_FONT_FACE, ALGORY_MENU_SANS } from "@/components/menu-templates/shared/algory-fonts";
+
+export const CLEVER_DISH_SCRIBE_STYLES = `
+  ${ALGORY_MENU_FONT_FACE}
+
+  .clever-dish-scribe-menu {
+    --cds-bg: #0a0a0a;
+    --cds-surface: #141414;
+    --cds-surface-elevated: #1a1a1a;
+    --cds-fg: #ffffff;
+    --cds-muted: #9ca3af;
+    --cds-border: #262626;
+    --cds-primary: #ffffff;
+    --cds-primary-fg: #0a0a0a;
+    --cds-accent: #22c55e;
+    --cds-accent-soft: rgba(34, 197, 94, 0.12);
+    --cds-destructive: #ef4444;
+    --cds-font: ${ALGORY_MENU_SANS};
+    --cds-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.65);
+    --cds-glow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+    background-color: var(--cds-bg);
+    color: var(--cds-fg);
+    font-family: var(--cds-font);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .clever-dish-scribe-menu .cds-bg { background-color: var(--cds-bg); }
+  .clever-dish-scribe-menu .cds-surface { background-color: var(--cds-surface); }
+  .clever-dish-scribe-menu .cds-fg { color: var(--cds-fg); }
+  .clever-dish-scribe-menu .cds-muted { color: var(--cds-muted); }
+  .clever-dish-scribe-menu .cds-border { border-color: var(--cds-border); }
+  .clever-dish-scribe-menu .cds-accent { color: var(--cds-accent); }
+
+  .clever-dish-scribe-menu .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .clever-dish-scribe-menu .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .clever-dish-scribe-menu .cds-hscroll {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+  .clever-dish-scribe-menu .cds-hscroll > * {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  @keyframes cds-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes cds-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes cds-badge-pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes cds-add-pulse {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.88); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes cds-image-in {
+    from {
+      opacity: 0;
+      transform: scale(1.04);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .clever-dish-scribe-menu .cds-enter {
+    animation: cds-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .clever-dish-scribe-menu .cds-enter-delay-1 { animation-delay: 0.06s; }
+  .clever-dish-scribe-menu .cds-enter-delay-2 { animation-delay: 0.12s; }
+  .clever-dish-scribe-menu .cds-enter-delay-3 { animation-delay: 0.18s; }
+  .clever-dish-scribe-menu .cds-enter-delay-4 { animation-delay: 0.24s; }
+
+  .clever-dish-scribe-menu .cds-cart-enter {
+    animation: cds-slide-up 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .clever-dish-scribe-menu .cds-badge-pop {
+    animation: cds-badge-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .clever-dish-scribe-menu .cds-add-tap:active {
+    animation: cds-add-pulse 0.28s ease-out;
+  }
+
+  .clever-dish-scribe-menu .cds-card-image {
+    animation: cds-image-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .clever-dish-scribe-menu .cds-pill {
+    transition: color 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, transform 0.18s ease;
+  }
+  .clever-dish-scribe-menu .cds-pill:active {
+    transform: scale(0.97);
+  }
+
+  .clever-dish-scribe-menu .cds-card {
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+  .clever-dish-scribe-menu .cds-card:active {
+    transform: scale(0.985);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .clever-dish-scribe-menu .cds-enter,
+    .clever-dish-scribe-menu .cds-cart-enter,
+    .clever-dish-scribe-menu .cds-badge-pop,
+    .clever-dish-scribe-menu .cds-add-tap:active,
+    .clever-dish-scribe-menu .cds-card-image {
+      animation: none !important;
+    }
+    .clever-dish-scribe-menu .cds-pill,
+    .clever-dish-scribe-menu .cds-card {
+      transition: none;
+    }
+  }
+`;
+
+export const CLEVER_DISH_SCRIBE_HERO_IMAGE = "/menu-templates/clever-dish-scribe/hero.svg";
+
+export const CLEVER_DISH_SCRIBE_CATEGORY_MARKS = [
+  "🔥",
+  "☕",
+  "🍔",
+  "🍟",
+  "🥤",
+  "🍰",
+  "🥗",
+  "🍕",
+  "🌮",
+] as const;
+
+export function cleverDishScribeCategoryMark(index: number) {
+  return CLEVER_DISH_SCRIBE_CATEGORY_MARKS[index % CLEVER_DISH_SCRIBE_CATEGORY_MARKS.length];
+}

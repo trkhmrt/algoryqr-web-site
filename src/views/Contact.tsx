@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Send } from "lucide-react";
+import { Mail, Phone, Send } from "lucide-react";
 
 import LegalPageShell from "@/components/LegalPageShell";
 import { Button } from "@/components/ui/button";
@@ -80,16 +80,25 @@ const Contact = () => {
           <p className="text-xs font-mono uppercase tracking-widest text-primary">Şirket</p>
           <h2 className="text-xl font-semibold text-foreground">{COMPANY.tradeName}</h2>
           <p className="text-sm text-muted-foreground">
-            {COMPANY.productName} ürünü için destek ve satış sorularınızı e-posta ile
-            iletebilirsiniz.
+            {COMPANY.productName} ürünü için destek ve satış sorularınızı e-posta veya telefon
+            ile iletebilirsiniz.
           </p>
-          <a
-            href={COMPANY.emailMailto}
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
-          >
-            <Mail className="h-4 w-4" />
-            {COMPANY.email}
-          </a>
+          <div className="space-y-2">
+            <a
+              href={COMPANY.emailMailto}
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              <Mail className="h-4 w-4" />
+              {COMPANY.email}
+            </a>
+            <a
+              href={COMPANY.phoneTel}
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              <Phone className="h-4 w-4" />
+              {COMPANY.phone}
+            </a>
+          </div>
         </div>
 
         <div className="glass glow-card rounded-2xl border border-border/60 p-6 md:col-span-3">

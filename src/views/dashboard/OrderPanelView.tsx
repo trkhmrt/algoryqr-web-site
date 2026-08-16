@@ -5,10 +5,6 @@ import Link from "next/link";
 import { BarChart3, Bell, Check, ChevronRight, Copy, ExternalLink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  useWaiterPanelAccess,
-  WaiterPanelGate,
-} from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
@@ -16,7 +12,7 @@ const HUB_ITEMS = [
   {
     key: "reports",
     title: "Sipariş Raporları",
-    description: "Ciro, satış ve onaylanan siparişler",
+    description: "Personel performansı ve onaylanan siparişler",
     icon: BarChart3,
     href: DASHBOARD_ROUTES.orderPanelReports,
   },
@@ -31,7 +27,6 @@ const HUB_ITEMS = [
 
 export default function OrderPanelView() {
   const { notify } = useDashboardBanners();
-  const { accessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
   const [linkCopied, setLinkCopied] = useState(false);
 
   const copyPanelLink = async () => {
@@ -50,7 +45,6 @@ export default function OrderPanelView() {
   };
 
   return (
-    <WaiterPanelGate accessLoading={accessLoading} canUse={canUseWaiterPanel}>
     <div className="mx-auto w-full max-w-md space-y-4 animate-fade-in">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sipariş Paneli</h1>
@@ -103,6 +97,5 @@ export default function OrderPanelView() {
         })}
       </div>
     </div>
-    </WaiterPanelGate>
   );
 }

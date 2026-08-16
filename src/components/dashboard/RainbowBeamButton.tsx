@@ -16,7 +16,7 @@ export function RainbowBeamButton({
   disabled,
   loading,
   label = "Akıllı Özet",
-  prominent = false,
+  prominent = true,
   onClick,
 }: RainbowBeamButtonProps) {
   return (

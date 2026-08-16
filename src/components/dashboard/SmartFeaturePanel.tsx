@@ -59,7 +59,7 @@ export function SmartFeaturePanel({
   actionLabel,
   loading,
   disabled,
-  prominent,
+  prominent = true,
   onActionClick,
   secondaryAction,
   loadingSkeleton,

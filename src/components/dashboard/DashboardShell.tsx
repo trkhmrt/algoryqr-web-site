@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
+import { BrandLogo } from "@/components/BrandLogo";
 import {
   QrCode,
   LogOut,
@@ -22,11 +23,24 @@ import {
   PanelLeftClose,
   TrendingUp,
   CalendarDays,
+  Calculator,
+  Megaphone,
 } from "lucide-react";
 
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
-import ThemeToggle from "@/components/ThemeToggle";
+import TrialReminderDialog from "@/components/dashboard/TrialReminderDialog";
+import TrialReminderHeaderBadge from "@/components/dashboard/TrialReminderHeaderBadge";
+import { ReportIssueFloatingButton } from "@/components/dashboard/ReportIssueFloatingButton";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DashboardBannersProvider,
@@ -39,7 +53,7 @@ import {
   DASHBOARD_ROUTES,
   isDashboardNavActive,
 } from "@/lib/dashboard-routes";
-import { navItemHasScope } from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { hasScope } from "@/lib/auth-user";
 import type { StoredUser } from "@/lib/api";
 import { getStoredUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -50,8 +64,10 @@ const NAV_ICONS = {
   reservations: CalendarDays,
   orderPanel: MonitorSmartphone,
   reports: TrendingUp,
+  accounting: Calculator,
   menuUsers: Users,
   menuCustomers: UsersRound,
+  campaigns: Megaphone,
   qrCodes: QrCode,
   account: User,
 } as const;
@@ -100,10 +116,10 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   const { data: accessProfile } = useAccessProfile();
   const visibleNavItems = useMemo(
     () =>
-      DASHBOARD_NAV_ITEMS.filter((item) =>
-        navItemHasScope(item.requiredScope, accessProfile?.scopes ?? []),
+      DASHBOARD_NAV_ITEMS.filter(
+        (item) => !item.requiredScope || hasScope(accessProfile, item.requiredScope),
       ),
-    [accessProfile?.scopes],
+    [accessProfile],
   );
 
   useEffect(() => {
@@ -182,6 +198,8 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   return (
     <DashboardBannersProvider onBanner={addBanner}>
       {bannerPortal}
+      <TrialReminderDialog />
+      <ReportIssueFloatingButton />
       <div className="flex h-svh overflow-hidden bg-background">
         <aside
           className={cn(
@@ -196,7 +214,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
                   href="/"
                   className={cn(SIDEBAR_ITEM, "text-foreground hover:bg-muted hover:text-foreground")}
                 >
-                  <QrCode className="size-4 shrink-0" />
+                  <BrandLogo size="sm" />
                   <span className={cn(sidebarLabelClass(collapsed), "text-base font-bold")}>
                     Algory<span className="text-muted-foreground">QR</span>
                   </span>
@@ -277,12 +295,37 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
         <main className="relative min-h-0 flex-1 overflow-y-auto">
           <header className="flex items-center justify-between border-b border-border bg-card/50 px-4 py-3 lg:hidden">
             <Link href="/" className="flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-foreground" />
+              <BrandLogo size="md" />
               <span className="text-base font-bold">
                 Algory<span className="text-muted-foreground">QR</span>
               </span>
             </Link>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <TrialReminderHeaderBadge compact />
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-80"
+                    aria-label="Profil menusu"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel>{userFullName}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push(DASHBOARD_ROUTES.account)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Hesabım
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </header>
 
           <div className="overflow-x-auto border-b border-border lg:hidden">
@@ -308,19 +351,35 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
           </div>
 
           <div className="hidden items-center justify-end gap-3 border-b border-border bg-card/50 px-8 py-3 lg:flex">
-            <ThemeToggle />
-            <div className="h-5 w-px bg-border" />
+            <TrialReminderHeaderBadge />
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="text-sm font-medium leading-none text-foreground">{userFullName}</p>
                 {user?.email && <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>}
               </div>
-              <Link
-                href={DASHBOARD_ROUTES.account}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-80"
-              >
-                <span className="text-xs font-semibold text-primary-foreground">{userInitials}</span>
-              </Link>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-80"
+                    aria-label="Profil menusu"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel>{userFullName}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push(DASHBOARD_ROUTES.account)}>
+                    <User className="mr-2 h-4 w-4" />
+                    Hesabım
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

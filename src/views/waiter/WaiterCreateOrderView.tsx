@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Minus, Plus, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Search } from "lucide-react";
 
 import { formatMenuPrice } from "@/components/menu-templates/types";
+import { QuantityStepper } from "@/components/waiter/quantity-stepper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +27,12 @@ type CartLine = {
   note: string;
 };
 
+function commissionValueNumber(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function productPrice(product: WaiterCatalogProduct): number {
   const raw = product.price;
   if (typeof raw === "number") return raw;
@@ -34,6 +41,19 @@ function productPrice(product: WaiterCatalogProduct): number {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+function commissionHint(
+  product: WaiterCatalogProduct,
+  commissionEnabled?: boolean,
+  commissionType?: "PERCENT" | "FIXED" | null,
+  commissionValue?: number | string | null,
+): string | null {
+  if (!commissionEnabled || commissionType !== "FIXED") return null;
+  const amount = commissionValueNumber(commissionValue);
+  if (amount == null || amount <= 0) return null;
+  if (product.commissionEligible === false) return "Komisyonsuz";
+  return `+${formatMenuPrice(amount, product.currency || "TRY")} komisyon`;
 }
 
 function tableLabel(table: WaiterTableSummary): string {
@@ -47,7 +67,7 @@ export default function WaiterCreateOrderView({
 }: {
   initialTable?: WaiterTableSummary | null;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (table?: WaiterTableSummary | null) => void;
 }) {
   const [selectedTable, setSelectedTable] = useState<WaiterTableSummary | null>(initialTable ?? null);
   const [query, setQuery] = useState("");
@@ -69,10 +89,11 @@ export default function WaiterCreateOrderView({
 
   const createMutation = useMutation({
     mutationFn: createWaiterOrder,
-    onSuccess: () => onCreated(),
+    onSuccess: () => onCreated(selectedTable),
   });
 
-  const products = catalogQuery.data ?? [];
+  const catalog = catalogQuery.data;
+  const products = catalog?.products ?? [];
   const categories = useMemo(() => {
     const names = new Set<string>();
     for (const product of products) {
@@ -248,6 +269,12 @@ export default function WaiterCreateOrderView({
               <ul className="space-y-2">
                 {filteredProducts.map((product) => {
                   const quantity = cart[product.productId]?.quantity ?? 0;
+                  const hint = commissionHint(
+                    product,
+                    catalog?.commissionEnabled,
+                    catalog?.commissionType,
+                    catalog?.commissionValue,
+                  );
                   return (
                     <li
                       key={product.productId}
@@ -262,28 +289,18 @@ export default function WaiterCreateOrderView({
                             {formatMenuPrice(product.price ?? undefined, product.currency || "TRY")}
                             {!product.available ? " · Kapalı" : ""}
                           </p>
+                          {hint ? (
+                            <p className="text-[11px] text-muted-foreground/90">{hint}</p>
+                          ) : null}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={!product.available || quantity === 0}
-                            onClick={() => setQuantity(product, quantity - 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-md border border-border disabled:opacity-40"
-                            aria-label="Azalt"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <span className="w-6 text-center text-sm font-semibold">{quantity}</span>
-                          <button
-                            type="button"
-                            disabled={!product.available}
-                            onClick={() => setQuantity(product, quantity + 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-md border border-border disabled:opacity-40"
-                            aria-label="Ekle"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
+                        <QuantityStepper
+                          value={quantity}
+                          min={quantity > 0 ? 1 : 0}
+                          disabled={!product.available}
+                          showDelete={quantity > 0}
+                          onChange={(next) => setQuantity(product, next)}
+                          onRemove={() => setQuantity(product, 0)}
+                        />
                       </div>
                     </li>
                   );

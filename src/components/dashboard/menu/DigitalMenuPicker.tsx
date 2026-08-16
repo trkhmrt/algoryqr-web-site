@@ -9,7 +9,7 @@ import type { DashboardQrItem } from "@/components/dashboard/qr/qr-mappers";
 import { isMenuQrDetails, mapUserQrToDashboardItem } from "@/components/dashboard/qr/qr-mappers";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
-import { useAccessProfile } from "@/hooks/use-access-profile";
+import { useDigitalMenuAccess } from "@/hooks/use-digital-menu-access";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
 import {
   ApiError,
@@ -18,7 +18,6 @@ import {
   type ActiveMenuSummaryApiItem,
   type MenuProfileApiItem,
 } from "@/lib/api";
-import { hasProduct, hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 const STORAGE_KEY = "algory_selected_menu_qr_id";
@@ -54,16 +53,13 @@ function mapActiveMenuToDashboardItem(item: ActiveMenuSummaryApiItem): Dashboard
   };
 }
 
-export function useDigitalMenuAccess() {
-  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
-  const canUseDigitalMenu =
-    hasScope(accessProfile, "QR_MENU_OWNER") || hasProduct(accessProfile, "QR_MENU");
+export { useDigitalMenuAccess };
 
-  return {
-    accessLoading,
-    canUseDigitalMenu,
-    hadExpiredAccess: false,
-  };
+async function loadAllMenuQrs(): Promise<DashboardQrItem[]> {
+  const qrs = await getUserQrsRequest("me", { includeImage: false, page: 0, size: 50 });
+  return qrs.content
+    .filter((qr) => isMenuQrDetails(qr.details ?? {}))
+    .map(mapUserQrToDashboardItem);
 }
 
 export function useDigitalMenuOptions(enabled = true) {
@@ -72,15 +68,16 @@ export function useDigitalMenuOptions(enabled = true) {
     queryFn: async (): Promise<DashboardQrItem[]> => {
       try {
         const items = await getMyActiveMenusRequest();
-        return items.map(mapActiveMenuToDashboardItem);
+        if (items.length > 0) {
+          return items.map(mapActiveMenuToDashboardItem);
+        }
+        // Aktif menü yoksa (pasif/eski menüler dahil) tüm menü QR'larını listele.
+        return loadAllMenuQrs();
       } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 404) {
           throw error;
         }
-        const qrs = await getUserQrsRequest("me", { includeImage: false, page: 0, size: 50 });
-        return qrs.content
-          .filter((qr) => isMenuQrDetails(qr.details ?? {}))
-          .map(mapUserQrToDashboardItem);
+        return loadAllMenuQrs();
       }
     },
     enabled,
@@ -211,36 +208,4 @@ export function DigitalMenuPicker({
       />
     </div>
   );
-}
-
-export function DigitalMenuGate({
-  accessLoading,
-  canUse,
-  children,
-}: {
-  accessLoading: boolean;
-  canUse: boolean;
-  children: ReactNode;
-}) {
-  if (accessLoading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
-  if (!canUse) {
-    return (
-      <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">Bu bölüm için Dijital Menü PRO gerekir.</p>
-        <Link
-          href={DASHBOARD_ROUTES.digitalMenu}
-          className="inline-flex text-sm font-medium text-foreground underline-offset-2 hover:underline"
-        >
-          Dijital Menüye dön
-        </Link>
-      </div>
-    );
-  }
-  return <>{children}</>;
 }

@@ -1,5 +1,7 @@
+import { ALGORY_MENU_FONT_FACE, ALGORY_MENU_SANS } from "@/components/menu-templates/shared/algory-fonts";
+
 export const PETITE_STYLES = `
-  @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Nunito:wght@400;500;600;700&display=swap");
+  ${ALGORY_MENU_FONT_FACE}
 
   .petite-menu {
     --lx-bg: #F9F6EE;
@@ -19,15 +21,15 @@ export const PETITE_STYLES = `
     --lx-gradient-gold: linear-gradient(135deg, #4E7B6C, #C8B1E0);
     background-color: var(--lx-bg);
     color: var(--lx-fg);
-    font-family: Nunito, ui-sans-serif, system-ui, sans-serif;
+    font-family: ${ALGORY_MENU_SANS};
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
   .petite-menu .font-display {
-    font-family: "Cormorant Garamond", ui-serif, Georgia, serif;
-    letter-spacing: -0.01em;
-    font-style: italic;
+    font-family: ${ALGORY_MENU_SANS};
+    letter-spacing: -0.035em;
+    font-weight: 700;
   }
 
   .petite-menu .text-gradient-gold {

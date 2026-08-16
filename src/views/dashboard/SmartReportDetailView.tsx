@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 
+import { useRequireScope } from "@/components/auth/RequireScope";
 import { Button } from "@/components/ui/button";
-import { useSmartReportingAccess } from "@/hooks/use-smart-reporting-access";
 import { useToast } from "@/hooks/use-toast";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
@@ -58,27 +56,21 @@ function statusLabel(status?: string | null): string {
 }
 
 export default function SmartReportDetailView({ jobId }: Props) {
-  const router = useRouter();
-  const { accessLoading, canUseSmartReporting } = useSmartReportingAccess();
+  const { allowed, isLoading: accessLoading } = useRequireScope("SMART_REPORTING_OWNER");
   const { toast } = useToast();
   const [pdfLoading, setPdfLoading] = useState(false);
-
-  useEffect(() => {
-    if (accessLoading || canUseSmartReporting) return;
-    router.replace(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
-  }, [accessLoading, canUseSmartReporting, router]);
 
   const detailQuery = useQuery({
     queryKey: ["smart-reports", "detail", jobId],
     queryFn: () => getSmartReportJobRequest(jobId),
-    enabled: canUseSmartReporting,
+    enabled: allowed,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return isSmartReportPending(status) ? SMART_REPORT_POLL_INTERVAL_MS : false;
     },
   });
 
-  if (accessLoading || !canUseSmartReporting) {
+  if (accessLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />

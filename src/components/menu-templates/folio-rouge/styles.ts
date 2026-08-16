@@ -1,5 +1,7 @@
+import { ALGORY_MENU_FONT_FACE, ALGORY_MENU_SANS } from "@/components/menu-templates/shared/algory-fonts";
+
 export const FOLIO_STYLES = `
-  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap");
+  ${ALGORY_MENU_FONT_FACE}
 
   .folio-menu {
     --lx-bg: #E3E1DD;
@@ -17,15 +19,15 @@ export const FOLIO_STYLES = `
     --lx-gradient-gold: #B21833;
     background-color: var(--lx-bg);
     color: var(--lx-fg);
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: ${ALGORY_MENU_SANS};
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
   .folio-menu .font-display {
-    font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
-    font-style: normal;
-    letter-spacing: -0.04em;
+    font-family: ${ALGORY_MENU_SANS};
+    font-weight: 700;
+    letter-spacing: -0.035em;
   }
 
   .folio-menu .text-gradient-gold {

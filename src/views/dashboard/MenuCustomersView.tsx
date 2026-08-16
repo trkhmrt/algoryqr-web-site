@@ -6,10 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Search } from "lucide-react";
 
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
-import {
-  useWaiterPanelAccess,
-  WaiterPanelGate,
-} from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,14 +161,6 @@ export default function MenuCustomersView() {
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
       </div>
-    );
-  }
-
-  if (!canUseWaiterPanel) {
-    return (
-      <WaiterPanelGate accessLoading={false} canUse={false}>
-        {null}
-      </WaiterPanelGate>
     );
   }
 

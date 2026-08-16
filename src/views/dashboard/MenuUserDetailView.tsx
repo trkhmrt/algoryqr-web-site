@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
@@ -11,17 +11,23 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
-import {
-  useWaiterPanelAccess,
-  WaiterPanelGate,
-} from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
-  deleteMenuWaiter,
   listMenuUsers,
   WaiterApiError,
   updateMenuWaiter,
@@ -45,13 +51,16 @@ function formatJoinedAt(value?: string | null): string {
 }
 
 export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const qrFromQuery = Number(searchParams.get("qr"));
   const initialQrId = Number.isFinite(qrFromQuery) && qrFromQuery > 0 ? qrFromQuery : null;
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
   const [password, setPassword] = useState("");
+  const [commissionEnabled, setCommissionEnabled] = useState(false);
+  const [commissionType, setCommissionType] = useState<"PERCENT" | "FIXED">("PERCENT");
+  const [commissionValue, setCommissionValue] = useState("");
+  const [accountAction, setAccountAction] = useState<"deactivate" | "activate" | null>(null);
 
   const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
   const { accessLoading: menuAccessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
@@ -74,32 +83,43 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
     [usersQuery.data?.waiters, waiterId],
   );
 
+  useEffect(() => {
+    if (!member) return;
+    setCommissionEnabled(Boolean(member.commissionEnabled));
+    setCommissionType(member.commissionType === "FIXED" ? "FIXED" : "PERCENT");
+    const raw = member.commissionValue;
+    if (raw == null || raw === "") {
+      setCommissionValue("");
+      return;
+    }
+    setCommissionValue(String(raw));
+  }, [member]);
+
   const backHref = selection?.qr.id
     ? DASHBOARD_ROUTES.menuUsersForQr(selection.qr.id)
     : DASHBOARD_ROUTES.menuUsers;
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { password?: string; active?: boolean }) =>
-      updateMenuWaiter(menuId!, waiterId, payload),
+    mutationFn: (payload: {
+      password?: string;
+      active?: boolean;
+      commissionEnabled?: boolean;
+      commissionType?: "PERCENT" | "FIXED";
+      commissionValue?: number;
+    }) => updateMenuWaiter(menuId!, waiterId, payload),
     onSuccess: async (_data, vars) => {
       if (vars.password) setPassword("");
       await queryClient.invalidateQueries({ queryKey: ["menu-users", menuId] });
-      notify("info", "Kullanıcı güncellendi.");
+      if (vars.active === true) {
+        notify("info", "Kullanıcı aktifleştirildi.");
+      } else if (vars.active === false) {
+        notify("info", "Kullanıcı pasifleştirildi.");
+      } else {
+        notify("info", "Kullanıcı güncellendi.");
+      }
     },
     onError: (err) => {
       notify("danger", err instanceof WaiterApiError ? err.message : "Güncelleme başarısız.");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteMenuWaiter(menuId!, waiterId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["menu-users", menuId] });
-      notify("info", "Kullanıcı pasifleştirildi.");
-      router.push(backHref);
-    },
-    onError: (err) => {
-      notify("danger", err instanceof WaiterApiError ? err.message : "İşlem başarısız.");
     },
   });
 
@@ -111,26 +131,7 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
     );
   }
 
-  if (!canUseWaiterPanel) {
-    return (
-      <WaiterPanelGate accessLoading={false} canUse={false}>
-        {null}
-      </WaiterPanelGate>
-    );
-  }
-
-  if (!canUseDigitalMenu) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" asChild>
-          <Link href={DASHBOARD_ROUTES.digitalMenu}>Dijital Menüye Dön</Link>
-        </Button>
-        <p className="text-sm text-muted-foreground">Bu özellik için PRO paket gerekir.</p>
-      </div>
-    );
-  }
-
-  const busy = updateMutation.isPending || deleteMutation.isPending;
+  const busy = updateMutation.isPending;
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-5 animate-fade-in pb-8">
@@ -219,35 +220,182 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
             </Button>
           </section>
 
+          <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold">Komisyon</h2>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={commissionEnabled}
+                onChange={(e) => setCommissionEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              Komisyon ile çalışır
+            </label>
+            {commissionEnabled ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      commissionType === "PERCENT"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground"
+                    }`}
+                    onClick={() => setCommissionType("PERCENT")}
+                  >
+                    Yüzde (%)
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      commissionType === "FIXED"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground"
+                    }`}
+                    onClick={() => setCommissionType("FIXED")}
+                  >
+                    Sabit tutar (TL)
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="commission-value">
+                    {commissionType === "PERCENT" ? "Yüzde değeri" : "Sabit tutar"}
+                  </Label>
+                  <Input
+                    id="commission-value"
+                    type="number"
+                    min={0}
+                    max={commissionType === "PERCENT" ? 100 : undefined}
+                    step={commissionType === "PERCENT" ? "0.1" : "0.01"}
+                    value={commissionValue}
+                    onChange={(e) => setCommissionValue(e.target.value)}
+                    placeholder={commissionType === "PERCENT" ? "örn. 5" : "örn. 50"}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {commissionType === "PERCENT"
+                      ? "Her onaylanan sipariş toplamı üzerinden hesaplanır."
+                      : "Komisyon muaf ürünler hariç, adisyona eklenen her ürün adedi için uygulanır."}
+                  </p>
+                </div>
+              </>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                if (commissionEnabled) {
+                  const parsed = Number.parseFloat(commissionValue);
+                  if (!Number.isFinite(parsed) || parsed < 0) {
+                    notify("danger", "Geçerli bir komisyon değeri girin.");
+                    return;
+                  }
+                  if (commissionType === "PERCENT" && parsed > 100) {
+                    notify("danger", "Yüzde komisyon 100'den büyük olamaz.");
+                    return;
+                  }
+                  updateMutation.mutate({
+                    commissionEnabled: true,
+                    commissionType,
+                    commissionValue: parsed,
+                  });
+                  return;
+                }
+                updateMutation.mutate({ commissionEnabled: false });
+              }}
+            >
+              Komisyon ayarını kaydet
+            </Button>
+          </section>
+
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-sm font-semibold">Hesap</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pasifleştirilen garson giriş yapamaz.
+              {member.active
+                ? "Pasifleştirilen garson giriş yapamaz."
+                : "Aktifleştirilen garson tekrar giriş yapabilir."}
             </p>
-            <Button
-              type="button"
-              variant="destructive"
-              className="mt-3"
-              disabled={busy || !member.active}
-              onClick={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  !window.confirm(`${member.displayName} pasifleştirilsin mi?`)
-                ) {
-                  return;
-                }
-                deleteMutation.mutate();
-              }}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Pasifleştir"
-              )}
-            </Button>
+            {member.active ? (
+              <Button
+                type="button"
+                variant="destructive"
+                className="mt-3"
+                disabled={busy}
+                onClick={() => setAccountAction("deactivate")}
+              >
+                {updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Pasifleştir"
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                className="mt-3"
+                disabled={busy}
+                onClick={() => setAccountAction("activate")}
+              >
+                {updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Aktifleştir"
+                )}
+              </Button>
+            )}
           </section>
         </div>
       )}
+
+      <AlertDialog
+        open={accountAction != null}
+        onOpenChange={(open) => {
+          if (!open && !updateMutation.isPending) {
+            setAccountAction(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {accountAction === "activate" ? "Garson aktifleştirilsin mi?" : "Garson pasifleştirilsin mi?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {accountAction === "activate" ? (
+                <>
+                  <span className="font-medium text-foreground">{member?.displayName}</span> tekrar
+                  giriş yapabilecek.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">{member?.displayName}</span> giriş
+                  yapamayacak.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateMutation.isPending}>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={updateMutation.isPending}
+              className={accountAction === "deactivate" ? "bg-destructive hover:bg-destructive/90" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!accountAction) return;
+                updateMutation.mutate(
+                  { active: accountAction === "activate" },
+                  {
+                    onSuccess: () => setAccountAction(null),
+                  },
+                );
+              }}
+            >
+              {updateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {accountAction === "activate" ? "Aktifleştir" : "Pasifleştir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

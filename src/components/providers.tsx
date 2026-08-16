@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { SiteVisitTracker } from "@/components/SiteVisitTracker";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export default function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
+          <SiteVisitTracker />
           {children}
           <Toaster />
           <Sonner />

@@ -68,6 +68,13 @@ export function buildMetadata({
     alternates: {
       canonical: url,
     },
+    icons: {
+      icon: [
+        { url: "/brand/favicon-16.png?v=15", sizes: "16x16", type: "image/png" },
+        { url: "/brand/favicon-32.png?v=15", sizes: "32x32", type: "image/png" },
+      ],
+      apple: "/brand/apple-touch-icon.png?v=15",
+    },
     openGraph: {
       type: "website",
       locale: "tr_TR",
@@ -113,11 +120,12 @@ export function organizationJsonLd() {
     name: COMPANY.tradeName,
     url: SITE_URL,
     email: COMPANY.email,
+    telephone: COMPANY.phoneTel.replace("tel:", ""),
     brand: {
       "@type": "Brand",
       name: SITE_NAME,
     },
-    logo: absoluteUrl("/og-image.png"),
+    logo: absoluteUrl("/brand/algory-logo.png"),
   };
 }
 

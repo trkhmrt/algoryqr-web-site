@@ -18,6 +18,10 @@ import {
   clearCustomerOAuthReturnCookie,
   setCustomerAuthCookies,
 } from "@/lib/server/customer-auth-cookies";
+import {
+  clearMerchantReturnUrlCookie,
+  readMerchantReturnUrl,
+} from "@/lib/server/merchant-auth-cookies";
 import { fetchCurrentSessionRefreshExpiresAt } from "@/lib/server/session-expiry";
 import {
   type GoogleAuthErrorCode,
@@ -173,16 +177,7 @@ export async function GET(req: NextRequest) {
     }
 
     const merchantIntent = parseGoogleAuthIntent(intent) ?? "login";
-
-    if (merchantIntent === "register") {
-      const registerUrl = new URL("/register", getAppOrigin(req));
-      registerUrl.searchParams.set("registered", "1");
-      const response = NextResponse.redirect(registerUrl, 303);
-      response.headers.set("Cache-Control", "no-store");
-      response.headers.set("Referrer-Policy", "no-referrer");
-      response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
-      return response;
-    }
+    const merchantReturnUrl = readMerchantReturnUrl(req);
 
     const accessTokenExpiresAt =
       readPositiveNumber(data.accessTokenExpiresAt) ??
@@ -197,6 +192,28 @@ export async function GET(req: NextRequest) {
       readPositiveNumber(data.userId) ??
       getUserIdFromAccessToken(accessToken) ??
       undefined;
+
+    if (merchantReturnUrl) {
+      const response = NextResponse.redirect(new URL(merchantReturnUrl, getAppOrigin(req)), 303);
+      response.headers.set("Cache-Control", "no-store");
+      response.headers.set("Referrer-Policy", "no-referrer");
+      response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
+      clearMerchantReturnUrlCookie(response);
+      setAuthCookies(response, accessToken, refreshToken, userId);
+      setTokenExpiryCookies(response, accessTokenExpiresAt, refreshTokenExpiresAt);
+      return response;
+    }
+
+    if (merchantIntent === "register") {
+      const registerUrl = new URL("/register", getAppOrigin(req));
+      registerUrl.searchParams.set("registered", "1");
+      const response = NextResponse.redirect(registerUrl, 303);
+      response.headers.set("Cache-Control", "no-store");
+      response.headers.set("Referrer-Policy", "no-referrer");
+      response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
+      return response;
+    }
+
     const response = NextResponse.redirect(
       new URL("/dashboard", getAppOrigin(req)),
       303,

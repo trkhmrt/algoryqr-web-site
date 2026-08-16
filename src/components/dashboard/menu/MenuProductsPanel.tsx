@@ -4,11 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Plus, Trash2, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { deleteMenuProductRequest, flattenMenuCategories } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
@@ -28,6 +38,32 @@ type MenuProductsPanelProps = {
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 
+function ProductListThumbnail({
+  name,
+  imageUrl,
+}: {
+  name: string;
+  imageUrl?: string | null;
+}) {
+  return (
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted/40 sm:h-16 sm:w-16">
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={name}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <ImageIcon className="h-5 w-5 text-muted-foreground/60" aria-hidden />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MenuProductsPanel({
   menuId,
   qrId,
@@ -42,6 +78,10 @@ export default function MenuProductsPanel({
   );
   const [filterName, setFilterName] = useState("");
   const [debouncedFilterName, setDebouncedFilterName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ productId: number; name: string } | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -103,33 +143,42 @@ export default function MenuProductsPanel({
 
   const refreshProducts = () => invalidateMenuProducts(queryClient, resolvedMenuId, qrId);
 
-  const handleDelete = async (productId: number) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteMenuProductRequest(productId);
+      await deleteMenuProductRequest(deleteTarget.productId);
       notify("info", "Ürün silindi.");
+      setDeleteTarget(null);
       await refreshProducts();
     } catch (error) {
       notify("danger", error instanceof Error ? error.message : "Ürün silinemedi.");
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <div className="flex min-w-[180px] max-w-xs flex-1 items-center gap-2">
-            <Label className="shrink-0 text-xs text-muted-foreground">Ürün ara</Label>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="grid w-full gap-3 sm:flex sm:min-w-0 sm:flex-1 sm:flex-wrap sm:items-end sm:gap-2">
+          <div className="flex w-full flex-col gap-1.5 sm:min-w-[180px] sm:max-w-xs sm:flex-1 sm:flex-row sm:items-center sm:gap-2">
+            <Label className="shrink-0 text-xs text-muted-foreground sm:whitespace-nowrap">
+              Ürün ara
+            </Label>
             <Input
-              className="h-9"
+              className="h-9 w-full"
               value={filterName}
               onChange={(event) => setFilterName(event.target.value)}
               placeholder="Ürün adına göre ara..."
             />
           </div>
-          <div className="flex min-w-[220px] max-w-sm flex-1 items-center gap-2">
-            <Label className="shrink-0 text-xs text-muted-foreground">Kategori filtresi</Label>
+          <div className="flex w-full flex-col gap-1.5 sm:min-w-[220px] sm:max-w-sm sm:flex-1 sm:flex-row sm:items-center sm:gap-2">
+            <Label className="shrink-0 text-xs text-muted-foreground sm:whitespace-nowrap">
+              Kategori filtresi
+            </Label>
             <SearchableSelect
-              className="h-9"
+              className="h-9 w-full"
               value={filterCategoryId === "all" ? "all" : String(filterCategoryId)}
               onValueChange={(next) => {
                 setFilterCategoryId(next === "all" ? "all" : Number(next));
@@ -142,7 +191,7 @@ export default function MenuProductsPanel({
         </div>
         <Button
           size="sm"
-          className="gap-1.5"
+          className="w-full shrink-0 gap-1.5 sm:w-auto"
           onClick={() =>
             router.push(
               DASHBOARD_ROUTES.digitalMenuProductCreateFor(
@@ -166,9 +215,10 @@ export default function MenuProductsPanel({
           {products.map((product) => (
             <div
               key={product.productId}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2"
+              className="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5"
             >
-              <div className="min-w-0">
+              <ProductListThumbnail name={product.name} imageUrl={product.imageUrl} />
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{product.name}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {[
@@ -196,7 +246,9 @@ export default function MenuProductsPanel({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-destructive"
-                  onClick={() => void handleDelete(product.productId)}
+                  onClick={() =>
+                    setDeleteTarget({ productId: product.productId, name: product.name })
+                  }
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -237,6 +289,38 @@ export default function MenuProductsPanel({
           </div>
         </div>
       ) : null}
+
+      <AlertDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ürün silinsin mi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium">{deleteTarget?.name ?? "Bu ürün"}</span> menüden
+              kaldırılacak. Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDelete();
+              }}
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

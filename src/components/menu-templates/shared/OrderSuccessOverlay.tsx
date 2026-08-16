@@ -1,25 +1,91 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
+
+import { getOrder } from "@/lib/ordering-api";
+import { produceCampaignReward, type ProduceRewardResponse } from "@/lib/public-campaign-api";
 
 import { usePublicMenuTheme } from "./public-menu-theme";
 
 type OrderSuccessOverlayProps = {
   orderId: number;
+  identifier: string;
+  sessionToken: string | null;
   onDone: () => void;
 };
 
-export function OrderSuccessOverlay({ orderId, onDone }: OrderSuccessOverlayProps) {
+function buildQrImageUrl(url: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+}
+
+export function OrderSuccessOverlay({
+  orderId,
+  identifier,
+  sessionToken,
+  onDone,
+}: OrderSuccessOverlayProps) {
   const theme = usePublicMenuTheme();
+  const [status, setStatus] = useState<string>("SUBMITTED");
+  const [campaignHint, setCampaignHint] = useState<string | null>(null);
+  const [rewardEligible, setRewardEligible] = useState(false);
+  const [producing, setProducing] = useState(false);
+  const [produceError, setProduceError] = useState<string | null>(null);
+  const [produceResult, setProduceResult] = useState<ProduceRewardResponse | null>(null);
 
   useEffect(() => {
-    const timeout = window.setTimeout(onDone, 3200);
-    return () => window.clearTimeout(timeout);
-  }, [onDone]);
+    if (!sessionToken) return;
+    let cancelled = false;
+    let attempts = 0;
+
+    async function poll() {
+      if (cancelled || attempts > 120 || !sessionToken) return;
+      attempts += 1;
+      try {
+        const order = await getOrder(identifier, sessionToken, orderId);
+        if (cancelled) return;
+        setStatus(order.status);
+        const summary = order.campaignSummary;
+        if (summary?.hint) setCampaignHint(summary.hint);
+        if (summary?.rewardEligible) setRewardEligible(true);
+        if (order.status !== "CONFIRMED" && order.status !== "REJECTED" && order.status !== "CANCELLED") {
+          window.setTimeout(() => void poll(), 3000);
+        }
+      } catch {
+        if (!cancelled && attempts < 120) {
+          window.setTimeout(() => void poll(), 4000);
+        }
+      }
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [identifier, orderId, sessionToken]);
+
+  const handleProduce = useCallback(async () => {
+    setProducing(true);
+    setProduceError(null);
+    try {
+      const result = await produceCampaignReward(identifier, orderId);
+      setProduceResult(result);
+    } catch (err) {
+      setProduceError(err instanceof Error ? err.message : "Ödül üretilemedi.");
+    } finally {
+      setProducing(false);
+    }
+  }, [identifier, orderId]);
 
   if (typeof document === "undefined") return null;
+
+  const claimUrl =
+    produceResult?.claimUrl ??
+    (produceResult?.claimToken
+      ? `${typeof window !== "undefined" ? window.location.origin : ""}/reward/claim?c=${encodeURIComponent(produceResult.claimToken)}`
+      : null);
 
   return createPortal(
     <motion.div
@@ -38,31 +104,14 @@ export function OrderSuccessOverlay({ orderId, onDone }: OrderSuccessOverlayProp
         onClick={(event) => event.stopPropagation()}
       >
         <style>{theme.styles}</style>
-        {[0, 1, 2, 3, 4, 5].map((index) => (
-          <motion.span
-            key={index}
-            className="pointer-events-none absolute h-1.5 w-1.5 rounded-full"
-            style={{
-              background: "var(--lx-gold-soft, var(--lx-gold))",
-              left: `${18 + (index % 3) * 32}%`,
-              top: index < 3 ? "12%" : "78%",
-            }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: [0, 1, 0], scale: [0.4, 1.2, 0.2], y: [0, -12, -22] }}
-            transition={{ delay: 0.35 + index * 0.08, duration: 1.1, ease: "easeOut" }}
-          />
-        ))}
 
         <motion.div
-          className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-gold"
-          style={{
-            boxShadow: "0 0 0 8px color-mix(in srgb, var(--lx-gold) 22%, transparent)",
-          }}
-          initial={{ scale: 0, rotate: -20 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.08 }}
+          className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-gold"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 14 }}
         >
-          <svg viewBox="0 0 52 52" className="h-12 w-12" aria-hidden>
+          <svg viewBox="0 0 52 52" className="h-10 w-10" aria-hidden>
             <motion.path
               d="M14 27.5 L22.5 36 L38 16"
               fill="none"
@@ -72,37 +121,80 @@ export function OrderSuccessOverlay({ orderId, onDone }: OrderSuccessOverlayProp
               strokeLinejoin="round"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 0.55, delay: 0.35, ease: "easeOut" }}
+              transition={{ duration: 0.55, delay: 0.15 }}
             />
           </svg>
         </motion.div>
 
-        <motion.p
-          className="mt-6 font-display text-2xl font-semibold text-gradient-gold"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-        >
+        <p className="mt-5 font-display text-2xl font-semibold text-gradient-gold">
           Siparişiniz alındı
-        </motion.p>
-        <motion.p
-          className="mt-2 text-sm lx-muted"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          #{orderId} · Garson onayı bekleniyor
-        </motion.p>
-        <motion.button
+        </p>
+        <p className="mt-2 text-sm lx-muted">#{orderId}</p>
+
+        {status === "SUBMITTED" ? (
+          <p className="mt-3 flex items-center justify-center gap-2 text-sm lx-muted">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Garson onayı bekleniyor…
+          </p>
+        ) : null}
+
+        {status === "CONFIRMED" ? (
+          <p className="mt-3 text-sm text-emerald-600">Sipariş onaylandı.</p>
+        ) : null}
+
+        {campaignHint ? (
+          <p className="mt-3 text-xs lx-muted">{campaignHint}</p>
+        ) : null}
+
+        {status === "CONFIRMED" && rewardEligible && !produceResult ? (
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              disabled={producing}
+              onClick={() => void handleProduce()}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-gradient-gold px-5 text-sm font-semibold text-[var(--lx-primary-fg)] disabled:opacity-60"
+            >
+              {producing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Ödül Üret
+            </button>
+            {produceError ? <p className="text-xs text-red-500">{produceError}</p> : null}
+          </div>
+        ) : null}
+
+        {produceResult ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm lx-muted">
+              {produceResult.message ??
+                (produceResult.autoAssigned
+                  ? "Ödül hesabınıza eklendi."
+                  : "QR okutarak giriş yapın, hak tanımlansın.")}
+            </p>
+            {!produceResult.autoAssigned && claimUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={buildQrImageUrl(claimUrl)}
+                  alt="Claim QR"
+                  className="mx-auto rounded-lg border border-[var(--lx-border)]"
+                />
+                <a
+                  href={claimUrl}
+                  className="block truncate text-xs text-[var(--lx-gold)] underline"
+                >
+                  {claimUrl}
+                </a>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        <button
           type="button"
           onClick={onDone}
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-full bg-gradient-gold px-5 text-sm font-semibold text-[var(--lx-primary-fg)]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9 }}
+          className="mt-6 inline-flex h-10 items-center justify-center rounded-full border border-[var(--lx-border)] px-5 text-sm font-medium lx-fg"
         >
           Tamam
-        </motion.button>
+        </button>
       </motion.div>
     </motion.div>,
     document.body,

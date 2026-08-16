@@ -38,7 +38,8 @@ export default function RefundPolicyView() {
       <h2>İletişim</h2>
       <p>
         İade talepleri ve sorularınız için:{" "}
-        <Link href={COMPANY.emailMailto}>{COMPANY.email}</Link>
+        <Link href={COMPANY.emailMailto}>{COMPANY.email}</Link>,{" "}
+        <Link href={COMPANY.phoneTel}>{COMPANY.phone}</Link>
         <br />
         Ticaret unvanı: {COMPANY.tradeName}
       </p>

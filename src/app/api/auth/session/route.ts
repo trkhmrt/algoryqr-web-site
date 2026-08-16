@@ -110,7 +110,12 @@ export async function GET() {
     if (upstream.status >= 200 && upstream.status < 300 && upstream.data) {
       return NextResponse.json(mergeLiveProfile(tokenProfile, upstream.data));
     }
-  } catch {
+
+    console.warn("[auth/session] access-profile upstream returned non-success", {
+      status: upstream.status,
+    });
+  } catch (error) {
+    console.warn("[auth/session] access-profile upstream failed; falling back to token claims", error);
   }
 
   return NextResponse.json(tokenProfile);

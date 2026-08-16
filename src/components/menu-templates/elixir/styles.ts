@@ -1,5 +1,7 @@
+import { ALGORY_MENU_FONT_FACE, ALGORY_MENU_SANS } from "@/components/menu-templates/shared/algory-fonts";
+
 export const ELIXIR_STYLES = `
-  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Raleway:wght@200;300;400;500;600&display=swap");
+  ${ALGORY_MENU_FONT_FACE}
 
   .elixir-menu {
     --lx-bg: #10102e;
@@ -24,15 +26,15 @@ export const ELIXIR_STYLES = `
       radial-gradient(circle at bottom left, rgba(230, 230, 250, 0.1) 0%, transparent 50%);
     background-attachment: fixed;
     color: var(--lx-fg);
-    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    font-family: ${ALGORY_MENU_SANS};
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
   .elixir-menu .font-display {
-    font-family: Raleway, ui-sans-serif, system-ui, sans-serif;
-    font-weight: 300;
-    letter-spacing: 0.01em;
+    font-family: ${ALGORY_MENU_SANS};
+    font-weight: 700;
+    letter-spacing: -0.035em;
   }
 
   .elixir-menu .text-gradient-gold {

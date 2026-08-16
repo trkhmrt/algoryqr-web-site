@@ -19,6 +19,7 @@ import {
   diffPackages,
   formatPackageDate,
   formatPackagePrice,
+  isPackageVisibleInCatalog,
   packageFeatures,
 } from "@/lib/package-display";
 import {
@@ -93,6 +94,7 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
 
   const fromCatalog = packagesQuery.data?.find((pkg) => pkg.id === preview?.fromPackage.id);
   const toCatalog = packagesQuery.data?.find((pkg) => pkg.id === preview?.toPackage.id);
+  const targetHidden = !!toCatalog && !isPackageVisibleInCatalog(toCatalog);
   const diff =
     fromCatalog && toCatalog
       ? diffPackages(fromCatalog, toCatalog)
@@ -194,6 +196,13 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
         <p className="text-sm text-destructive">
           {(previewQuery.error as ApiError)?.message ?? "Önizleme yüklenemedi"}
         </p>
+      ) : targetHidden ? (
+        <div className="space-y-4">
+          <p className="text-sm text-destructive">Bu paket şu an satışta değil.</p>
+          <Button asChild variant="outline">
+            <Link href={DASHBOARD_ROUTES.accountPackages}>Paketlere dön</Link>
+          </Button>
+        </div>
       ) : preview ? (
         <>
           {preview.hasScheduledChange && (

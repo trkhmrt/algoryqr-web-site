@@ -40,12 +40,20 @@ export type OrderResponse = {
   waiterId?: number | null;
   waiterName?: string | null;
   waiterNote?: string | null;
+  billId?: number | null;
+  commissionAmount?: number | string | null;
   items?: OrderItemResponse[];
   submittedAt?: string | null;
   confirmedAt?: string | null;
   rejectedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  campaignSummary?: {
+    campaignProductCount?: number;
+    guestOrder?: boolean;
+    rewardEligible?: boolean;
+    hint?: string | null;
+  } | null;
 };
 
 export type CartItemRequest = {

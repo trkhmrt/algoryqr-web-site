@@ -1,18 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { QrCode } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/lib/auth-service";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { ApiError } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
 import { getGoogleAuthErrorMessage } from "@/lib/google-auth-error";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import {
+  buildGoogleAuthStartUrl,
+  buildRegisterTrialUrl,
+  resolveSafeReturnUrl,
+} from "@/lib/trial-flow";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -23,19 +28,34 @@ const Login = () => {
   const [twoFactorHintEmail, setTwoFactorHintEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
+  const returnPath = useMemo(
+    () => resolveSafeReturnUrl(searchParams.get("returnUrl")),
+    [searchParams],
+  );
+  const googleAuthHref = buildGoogleAuthStartUrl("login", returnPath);
+  const registerHref = returnPath?.includes("/deneme/baslat")
+    ? buildRegisterTrialUrl("ultimate")
+    : "/register";
+
+  const redirectAfterAuth = () => {
+    router.push(returnPath ?? "/dashboard");
+    router.refresh();
+  };
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get("error");
+    const error = searchParams.get("error");
     const message = getGoogleAuthErrorMessage(error);
     if (!message) return;
     const show = window.setTimeout(() => {
       toast({ title: "Google ile giriş başarısız", description: message, variant: "destructive" });
-      router.replace("/login");
+      const next = returnPath ? `/login?returnUrl=${encodeURIComponent(returnPath)}` : "/login";
+      router.replace(next);
     }, 0);
     return () => window.clearTimeout(show);
-  }, [router, toast]);
+  }, [returnPath, router, searchParams, toast]);
 
   const cancelTwoFactor = async () => {
     await getSiteSameOriginAxios().post("/auth/logout", {}).catch(() => undefined);
@@ -62,7 +82,7 @@ const Login = () => {
       }
       queryClient.removeQueries({ queryKey: MY_PROFILE_QUERY_KEY });
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
-      router.push("/dashboard");
+      redirectAfterAuth();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Giriş yapılırken bir hata oluştu";
       toast({ title: "Hata", description: message, variant: "destructive" });
@@ -86,7 +106,7 @@ const Login = () => {
       setTotpCode("");
       setTwoFactorHintEmail(null);
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
-      router.push("/dashboard");
+      redirectAfterAuth();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "2FA doğrulanamadı";
       toast({ title: "Hata", description: message, variant: "destructive" });
@@ -97,10 +117,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative">
-
       <div className="relative z-10 w-full max-w-md px-4">
         <Link href="/" className="flex items-center justify-center gap-2 mb-10">
-          <QrCode className="h-8 w-8 text-primary" />
+          <BrandLogo size="lg" />
           <span className="text-2xl font-bold">
             Algory<span className="text-primary">QR</span>
           </span>
@@ -143,7 +162,7 @@ const Login = () => {
           ) : (
             <>
               <Button variant="outline" size="lg" className="w-full" asChild>
-                <a href="/api/auth/google/start?intent=login">
+                <a href={googleAuthHref}>
                   <GoogleIcon className="h-5 w-5" />
                   Google ile giriş yap
                 </a>
@@ -177,7 +196,7 @@ const Login = () => {
           {!awaiting2FA && (
             <p className="text-center text-xs text-muted-foreground">
               Hesabınız yok mu?{" "}
-              <Link href="/register" className="text-primary hover:underline font-medium">
+              <Link href={registerHref} className="text-primary hover:underline font-medium">
                 Kayıt Ol
               </Link>
             </p>

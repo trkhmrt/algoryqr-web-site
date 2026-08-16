@@ -19,6 +19,8 @@ export default function DistanceSalesView() {
         <br />
         E-posta: <Link href={COMPANY.emailMailto}>{COMPANY.email}</Link>
         <br />
+        Telefon: <Link href={COMPANY.phoneTel}>{COMPANY.phone}</Link>
+        <br />
         Alıcı: Satın alma sırasında sisteme kaydedilen hesap ve fatura bilgileri esas alınır.
       </p>
       <h2>2. Konu</h2>

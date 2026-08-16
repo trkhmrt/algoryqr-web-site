@@ -12,7 +12,8 @@ export default function PrivacyView() {
         Bu gizlilik politikası, <strong>{COMPANY.tradeName}</strong> tarafından işletilen{" "}
         <strong>{COMPANY.productName}</strong> platformunda işlenen kişisel verilere ilişkindir.
         Veri sorumlusu: {COMPANY.tradeName}. İletişim:{" "}
-        <Link href={COMPANY.emailMailto}>{COMPANY.email}</Link>.
+        <Link href={COMPANY.emailMailto}>{COMPANY.email}</Link>,{" "}
+        <Link href={COMPANY.phoneTel}>{COMPANY.phone}</Link>.
       </p>
       <h2>Toplanan veriler</h2>
       <ul>

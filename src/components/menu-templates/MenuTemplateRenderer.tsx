@@ -13,6 +13,7 @@ import {
   MenuCategoryFeed,
   MenuEntryGate,
   MenuExperienceProvider,
+  CampaignProductIdsProvider,
   MenuLocaleProvider,
   MenuProductFeed,
   MenuProductNavigatorProvider,
@@ -147,6 +148,7 @@ function MenuShell({
   const body = !entered ? (
     <MenuEntryGate
       menu={menu}
+      identifier={qrIdentifier}
       onContinueAsGuest={markEntered}
       onAuthenticated={markEntered}
     />
@@ -169,6 +171,7 @@ function MenuShell({
         <MenuProductNavigatorProvider>
           <Suspense fallback={null}>
             <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
+              <CampaignProductIdsProvider identifier={qrIdentifier}>
               <MenuExperienceProvider>
                 <CustomerAccountMenu menuId={menu.menuId}>
                   <MenuTemplateBody
@@ -185,6 +188,7 @@ function MenuShell({
                   />
                 </CustomerAccountMenu>
               </MenuExperienceProvider>
+              </CampaignProductIdsProvider>
             </OrderingProvider>
           </Suspense>
         </MenuProductNavigatorProvider>

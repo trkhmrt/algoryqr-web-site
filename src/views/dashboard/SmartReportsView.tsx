@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, FileText, Loader2, RefreshCw } from "lucide-react";
 
+import { useRequireScope } from "@/components/auth/RequireScope";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { useSmartReportingAccess } from "@/hooks/use-smart-reporting-access";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getSmartReportQuotaRequest,
@@ -109,23 +108,17 @@ function QuotaCountdownCard({
 }
 
 export default function SmartReportsView() {
-  const router = useRouter();
-  const { accessLoading, canUseSmartReporting } = useSmartReportingAccess();
+  const { allowed, isLoading: accessLoading } = useRequireScope("SMART_REPORTING_OWNER");
   const listQuery = useQuery({
     queryKey: ["smart-reports", "list", "completed"],
     queryFn: () => listSmartReportsRequest({ page: 0, size: 50, status: "completed" }),
-    enabled: canUseSmartReporting,
+    enabled: allowed,
   });
   const quotaQuery = useQuery({
     queryKey: ["smart-reports", "quota"],
     queryFn: getSmartReportQuotaRequest,
-    enabled: canUseSmartReporting,
+    enabled: allowed,
   });
-
-  useEffect(() => {
-    if (accessLoading || canUseSmartReporting) return;
-    router.replace(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
-  }, [accessLoading, canUseSmartReporting, router]);
 
   if (accessLoading) {
     return (
@@ -143,14 +136,6 @@ export default function SmartReportsView() {
           <Skeleton className="h-12 w-full rounded-lg" />
           <Skeleton className="h-12 w-full rounded-lg" />
         </div>
-      </div>
-    );
-  }
-
-  if (!canUseSmartReporting) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     );
   }

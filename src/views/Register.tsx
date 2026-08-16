@@ -1,20 +1,34 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToastAction } from "@/components/ui/toast";
-import { QrCode } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/lib/auth-service";
 import { ApiError } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { MY_PROFILE_QUERY_KEY } from "@/hooks/use-my-profile";
 import { getGoogleAuthErrorMessage } from "@/lib/google-auth-error";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import {
+  buildGoogleAuthStartUrl,
+  buildLoginTrialReturnUrl,
+  buildTrialStartUrl,
+  isTrialRegisterIntent,
+  persistTrialIntent,
+  readTrialPackageFromSearch,
+} from "@/lib/trial-flow";
 
 const Register = () => {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
@@ -25,15 +39,29 @@ const Register = () => {
     passwordConfirm: "",
   });
 
+  const trialPackage = useMemo(
+    () => readTrialPackageFromSearch(searchParams),
+    [searchParams],
+  );
+  const isTrialFlow = isTrialRegisterIntent(searchParams.get("intent"));
+  const trialStartPath = buildTrialStartUrl(trialPackage);
+  const googleAuthHref = buildGoogleAuthStartUrl("register", trialStartPath);
+  const loginHref = isTrialFlow ? buildLoginTrialReturnUrl(trialPackage) : "/login";
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const registered = params.get("registered") === "1";
-    const error = params.get("error");
+    if (isTrialFlow) {
+      persistTrialIntent(trialPackage);
+    }
+  }, [isTrialFlow, trialPackage]);
+
+  useEffect(() => {
+    const registered = searchParams.get("registered") === "1";
+    const error = searchParams.get("error");
     const message = getGoogleAuthErrorMessage(error);
     if (!registered && !message) return;
 
     const loginAction = (
-      <ToastAction altText="Giriş yap" onClick={() => router.push("/login")}>
+      <ToastAction altText="Giriş yap" onClick={() => router.push(loginHref)}>
         Giriş yap
       </ToastAction>
     );
@@ -56,14 +84,21 @@ const Register = () => {
           action: isEmailTaken ? loginAction : undefined,
         });
       }
-      router.replace("/register");
+      router.replace(isTrialFlow ? `/register?intent=trial&package=${trialPackage}` : "/register");
     }, 0);
 
     return () => window.clearTimeout(show);
-  }, [router, toast]);
+  }, [isTrialFlow, loginHref, router, searchParams, toast, trialPackage]);
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const completeTrialRegistration = async (email: string, password: string) => {
+    await authService.login({ email, password });
+    queryClient.removeQueries({ queryKey: MY_PROFILE_QUERY_KEY });
+    router.push(trialStartPath);
+    router.refresh();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +120,12 @@ const Register = () => {
         password: form.password,
         passwordConfirm: form.passwordConfirm,
       });
+
+      if (isTrialFlow) {
+        await completeTrialRegistration(form.email, form.password);
+        return;
+      }
+
       toast({
         title: "Kayıt başarılı",
         description: "Başarılı bir şekilde kayıt oldunuz.",
@@ -103,7 +144,7 @@ const Register = () => {
           variant: "destructive",
           duration: 10000,
           action: (
-            <ToastAction altText="Giriş yap" onClick={() => router.push("/login")}>
+            <ToastAction altText="Giriş yap" onClick={() => router.push(loginHref)}>
               Giriş yap
             </ToastAction>
           ),
@@ -119,11 +160,9 @@ const Register = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative">
-      
-
       <div className="relative z-10 w-full max-w-md px-4">
         <Link href="/" className="flex items-center justify-center gap-2 mb-10">
-          <QrCode className="h-8 w-8 text-primary" />
+          <BrandLogo size="lg" />
           <span className="text-2xl font-bold">
             Algory<span className="text-primary">QR</span>
           </span>
@@ -131,12 +170,16 @@ const Register = () => {
 
         <div className="glass rounded-2xl p-8 space-y-6 glow-card">
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold">Kayıt Ol</h1>
-            <p className="text-sm text-muted-foreground">Ücretsiz hesabınızı oluşturun</p>
+            <h1 className="text-2xl font-bold">{isTrialFlow ? "Ultimate denemesi için kayıt ol" : "Kayıt Ol"}</h1>
+            <p className="text-sm text-muted-foreground">
+              {isTrialFlow
+                ? "30 gün ücretsiz denemeye başlamak için hesap oluşturun"
+                : "Ücretsiz hesabınızı oluşturun"}
+            </p>
           </div>
 
           <Button variant="outline" size="lg" className="w-full" asChild>
-            <a href="/api/auth/google/start?intent=register">
+            <a href={googleAuthHref}>
               <GoogleIcon className="h-5 w-5" />
               Google ile kayıt ol
             </a>
@@ -185,13 +228,13 @@ const Register = () => {
               />
             </div>
             <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
-              {loading ? "Kayıt yapılıyor..." : "Kayıt Ol"}
+              {loading ? "Kayıt yapılıyor..." : isTrialFlow ? "Kayıt ol ve denemeye geç" : "Kayıt Ol"}
             </Button>
           </form>
 
           <p className="text-center text-xs text-muted-foreground">
             Zaten hesabınız var mı?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href={loginHref} className="text-primary hover:underline font-medium">
               Giriş Yap
             </Link>
           </p>

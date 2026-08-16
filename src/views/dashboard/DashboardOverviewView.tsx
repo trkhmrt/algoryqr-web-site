@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BellRing,
+  Calculator,
   ChefHat,
   CreditCard,
   History,
@@ -14,14 +15,12 @@ import {
   Package,
   Shield,
   Sparkles,
-  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
-
 import bgProducts from "@/assets/bg-products.jpg";
-import bgRevenue from "@/assets/bg-revenue.jpg";
-import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
-import { useSmartReportingAccess } from "@/hooks/use-smart-reporting-access";
+import { RequireScope } from "@/components/auth/RequireScope";
+import { ReportIssueCard } from "@/components/dashboard/ReportIssueCard";
+import type { ProductScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 type OverviewTile = {
@@ -30,18 +29,15 @@ type OverviewTile = {
   icon: LucideIcon;
   span?: boolean;
   image?: string;
-  waiterPanelOnly?: boolean;
-  smartReportingOnly?: boolean;
+  requiredScope?: ProductScope;
 };
 
 const TILES: OverviewTile[] = [
   {
-    title: "Ciro",
-    href: DASHBOARD_ROUTES.orderPanelReports,
-    icon: TrendingUp,
+    title: "Muhasebe",
+    href: DASHBOARD_ROUTES.muhasebe,
+    icon: Calculator,
     span: true,
-    image: bgRevenue.src,
-    waiterPanelOnly: true,
   },
   {
     title: "Açık oturumlar",
@@ -58,6 +54,7 @@ const TILES: OverviewTile[] = [
     href: DASHBOARD_ROUTES.feedback,
     icon: MessageSquare,
     span: true,
+    requiredScope: "QR_MENU_OWNER",
   },
   {
     title: "Güvenlik",
@@ -69,13 +66,14 @@ const TILES: OverviewTile[] = [
     href: DASHBOARD_ROUTES.digitalMenuProducts,
     icon: ChefHat,
     image: bgProducts.src,
+    requiredScope: "QR_MENU_OWNER",
   },
   {
     title: "Bekleyen siparişler",
     href: DASHBOARD_ROUTES.waiter,
     icon: BellRing,
     span: true,
-    waiterPanelOnly: true,
+    requiredScope: "WAITER_PANEL_OWNER",
   },
   {
     title: "Ödeme geçmişi",
@@ -92,13 +90,13 @@ const TILES: OverviewTile[] = [
     href: DASHBOARD_ROUTES.smartReports,
     icon: Sparkles,
     span: true,
-    smartReportingOnly: true,
+    requiredScope: "SMART_REPORTING_OWNER",
   },
   {
     title: "Restoran düzeni",
     href: DASHBOARD_ROUTES.restaurantLayout,
     icon: LayoutGrid,
-    waiterPanelOnly: true,
+    requiredScope: "WAITER_PANEL_OWNER",
   },
   {
     title: "Fatura adresleri",
@@ -169,25 +167,6 @@ function Tile({
 
 export default function DashboardOverviewView() {
   const router = useRouter();
-  const { accessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
-  const {
-    accessLoading: smartReportAccessLoading,
-    canUseSmartReporting,
-  } = useSmartReportingAccess();
-  const visibleTiles = TILES.filter(
-    (tile) => !tile.waiterPanelOnly || (!accessLoading && canUseWaiterPanel),
-  );
-
-  function handleTileNavigate(href: string, smartReportingOnly?: boolean) {
-    if (smartReportingOnly) {
-      if (smartReportAccessLoading) return;
-      if (!canUseSmartReporting) {
-        router.push(DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING"));
-        return;
-      }
-    }
-    router.push(href);
-  }
 
   return (
     <div className="animate-fade-in">
@@ -199,17 +178,12 @@ export default function DashboardOverviewView() {
       </header>
 
       <section aria-label="Kısayollar" className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        {visibleTiles.map((tile) => (
-          <Tile
-            key={tile.href}
-            {...tile}
-            onNavigate={
-              tile.smartReportingOnly
-                ? (href) => handleTileNavigate(href, true)
-                : undefined
-            }
-          />
+        {TILES.map((tile) => (
+          <RequireScope key={tile.href} scope={tile.requiredScope}>
+            <Tile {...tile} onNavigate={(href) => router.push(href)} />
+          </RequireScope>
         ))}
+        <ReportIssueCard />
       </section>
     </div>
   );
