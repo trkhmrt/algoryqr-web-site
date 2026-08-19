@@ -80,6 +80,10 @@ export type WaiterBillItem = {
   productName: string;
   unitPrice?: number | string | null;
   quantity: number;
+  paidQuantity?: number;
+  unpaidQuantity?: number;
+  paidAmount?: number | string | null;
+  unpaidAmount?: number | string | null;
   lineTotal?: number | string | null;
   note?: string | null;
   sourceOrderId?: number | null;
@@ -98,6 +102,8 @@ export type WaiterBill = {
   openedAt?: string | null;
   closedAt?: string | null;
   totalAmount?: number | string | null;
+  paidTotal?: number | string | null;
+  remainingTotal?: number | string | null;
   currency?: string | null;
   itemCount?: number;
   items?: WaiterBillItem[];
@@ -176,6 +182,63 @@ async function parseJson<T>(response: Response): Promise<T> {
   }
 }
 
+let waiterRefreshPromise: Promise<boolean> | null = null;
+
+const WAITER_PUBLIC_AUTH_PATHS = [
+  "/api/waiter/auth/login",
+  "/api/waiter/auth/logout",
+  "/api/waiter/auth/refresh",
+] as const;
+
+function isWaiterPublicAuthPath(url: string): boolean {
+  return WAITER_PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+}
+
+export async function refreshWaiterSession(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (!waiterRefreshPromise) {
+    waiterRefreshPromise = (async () => {
+      try {
+        const response = await fetch("/api/waiter/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (response.status === 401) {
+          await fetch("/api/waiter/auth/logout", {
+            method: "POST",
+            credentials: "same-origin",
+          }).catch(() => undefined);
+          window.location.assign("/waiter/login");
+          return false;
+        }
+        return response.ok;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      waiterRefreshPromise = null;
+    });
+  }
+  return waiterRefreshPromise;
+}
+
+async function waiterFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = typeof input === "string" ? input : input.toString();
+  const response = await fetch(input, { credentials: "same-origin", ...init });
+  if (
+    typeof window !== "undefined" &&
+    response.status === 401 &&
+    !isWaiterPublicAuthPath(url)
+  ) {
+    const refreshed = await refreshWaiterSession();
+    if (refreshed) {
+      return fetch(input, { credentials: "same-origin", ...init });
+    }
+  }
+  return response;
+}
+
 export class WaiterApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -195,7 +258,7 @@ function messageFromUnknown(data: unknown, fallback: string): string {
 /* ── Merchant: waiters & customers ── */
 
 export async function listMenuUsers(menuId: number): Promise<MenuUsersResponse> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
+  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -214,7 +277,7 @@ export async function createMenuWaiter(
   menuId: number,
   payload: { username: string; password: string; displayName: string },
 ): Promise<MenuWaiterMember> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
+  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -239,7 +302,7 @@ export async function updateMenuWaiter(
     commissionValue?: number;
   },
 ): Promise<MenuWaiterMember> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
+  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -253,7 +316,7 @@ export async function updateMenuWaiter(
 }
 
 export async function deleteMenuWaiter(menuId: number, waiterId: number): Promise<void> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
+  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
     method: "DELETE",
     credentials: "same-origin",
   });
@@ -264,7 +327,7 @@ export async function deleteMenuWaiter(menuId: number, waiterId: number): Promis
 }
 
 export async function listMenuCustomers(menuId: number): Promise<MenuCustomerItem[]> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/customers`, {
+  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/customers`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -277,7 +340,7 @@ export async function listMenuCustomers(menuId: number): Promise<MenuCustomerIte
 }
 
 export async function listBusinessCustomers(): Promise<MenuCustomerItem[]> {
-  const response = await fetch("/api/waiter-panel/customers/my", {
+  const response = await waiterFetch("/api/waiter-panel/customers/my", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -316,7 +379,7 @@ export async function waiterLogout(): Promise<void> {
 }
 
 export async function waiterMe(): Promise<WaiterMe | null> {
-  const response = await fetch("/api/waiter/auth/me", {
+  const response = await waiterFetch("/api/waiter/auth/me", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -332,7 +395,7 @@ export async function waiterMe(): Promise<WaiterMe | null> {
 /* ── Waiter orders ── */
 
 export async function listWaiterPendingOrders(): Promise<OrderResponse[]> {
-  const response = await fetch("/api/waiter/orders/pending", {
+  const response = await waiterFetch("/api/waiter/orders/pending", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -345,7 +408,7 @@ export async function listWaiterPendingOrders(): Promise<OrderResponse[]> {
 }
 
 export async function listWaiterTodayOrders(): Promise<OrderResponse[]> {
-  const response = await fetch("/api/waiter/orders/today", {
+  const response = await waiterFetch("/api/waiter/orders/today", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -358,7 +421,7 @@ export async function listWaiterTodayOrders(): Promise<OrderResponse[]> {
 }
 
 export async function listWaiterTables(): Promise<WaiterTableSummary[]> {
-  const response = await fetch("/api/waiter/orders/tables", {
+  const response = await waiterFetch("/api/waiter/orders/tables", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -371,7 +434,7 @@ export async function listWaiterTables(): Promise<WaiterTableSummary[]> {
 }
 
 export async function listWaiterTableTodayOrders(tableId: number): Promise<OrderResponse[]> {
-  const response = await fetch(`/api/waiter/orders/tables/${tableId}/today`, {
+  const response = await waiterFetch(`/api/waiter/orders/tables/${tableId}/today`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -384,7 +447,7 @@ export async function listWaiterTableTodayOrders(tableId: number): Promise<Order
 }
 
 export async function confirmWaiterOrder(orderId: number): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter/orders/${orderId}/confirm`, {
+  const response = await waiterFetch(`/api/waiter/orders/${orderId}/confirm`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -397,7 +460,7 @@ export async function confirmWaiterOrder(orderId: number): Promise<OrderResponse
 }
 
 export async function rejectWaiterOrder(orderId: number): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter/orders/${orderId}/reject`, {
+  const response = await waiterFetch(`/api/waiter/orders/${orderId}/reject`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -410,7 +473,7 @@ export async function rejectWaiterOrder(orderId: number): Promise<OrderResponse>
 }
 
 export async function cancelWaiterOrder(orderId: number): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter/orders/${orderId}/cancel`, {
+  const response = await waiterFetch(`/api/waiter/orders/${orderId}/cancel`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -423,7 +486,7 @@ export async function cancelWaiterOrder(orderId: number): Promise<OrderResponse>
 }
 
 export async function getWaiterOrder(orderId: number): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter/orders/${orderId}`, {
+  const response = await waiterFetch(`/api/waiter/orders/${orderId}`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -436,7 +499,7 @@ export async function getWaiterOrder(orderId: number): Promise<OrderResponse> {
 }
 
 export async function listWaiterCatalog(): Promise<WaiterCatalogResponse> {
-  const response = await fetch("/api/waiter/orders/catalog", {
+  const response = await waiterFetch("/api/waiter/orders/catalog", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -454,7 +517,7 @@ export async function listWaiterCatalog(): Promise<WaiterCatalogResponse> {
 }
 
 export async function createWaiterOrder(payload: WaiterCreateOrderRequest): Promise<OrderResponse> {
-  const response = await fetch("/api/waiter/orders", {
+  const response = await waiterFetch("/api/waiter/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -471,7 +534,7 @@ export async function updateWaiterOrderNote(
   orderId: number,
   note: string,
 ): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter/orders/${orderId}/note`, {
+  const response = await waiterFetch(`/api/waiter/orders/${orderId}/note`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -487,7 +550,7 @@ export async function updateWaiterOrderNote(
 /* ── Waiter bills ── */
 
 export async function getWaiterOpenBill(tableId: number): Promise<WaiterBill> {
-  const response = await fetch(`/api/waiter/bills/tables/${tableId}/open`, {
+  const response = await waiterFetch(`/api/waiter/bills/tables/${tableId}/open`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -503,7 +566,7 @@ export async function addWaiterBillItems(
   billId: number,
   items: CartItemRequest[],
 ): Promise<WaiterBill> {
-  const response = await fetch(`/api/waiter/bills/${billId}/items`, {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/items`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -521,7 +584,7 @@ export async function updateWaiterBillItemQuantity(
   itemId: number,
   quantity: number,
 ): Promise<WaiterBill> {
-  const response = await fetch(`/api/waiter/bills/${billId}/items/${itemId}`, {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/items/${itemId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -535,7 +598,7 @@ export async function updateWaiterBillItemQuantity(
 }
 
 export async function removeWaiterBillItem(billId: number, itemId: number): Promise<WaiterBill> {
-  const response = await fetch(`/api/waiter/bills/${billId}/items/${itemId}`, {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/items/${itemId}`, {
     method: "DELETE",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -543,6 +606,27 @@ export async function removeWaiterBillItem(billId: number, itemId: number): Prom
   const data = await parseJson<WaiterBill & { message?: string }>(response);
   if (!response.ok) {
     throw new WaiterApiError(response.status, data.message || "Kalem silinemedi");
+  }
+  return data;
+}
+
+export async function payWaiterBillItems(
+  billId: number,
+  payload: {
+    paymentMethod: "CASH" | "CARD";
+    items: { itemId: number; quantityToPay: number }[];
+    tipReceived?: boolean;
+    tipAmount?: number;
+  },
+): Promise<WaiterBill> {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/pay-items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Ödeme alınamadı");
   }
   return data;
 }
@@ -555,7 +639,7 @@ export async function closeWaiterBill(
     tipAmount?: number;
   },
 ): Promise<WaiterBill> {
-  const response = await fetch(`/api/waiter/bills/${billId}/close`, {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/close`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -571,7 +655,7 @@ export async function closeWaiterBill(
 /* ── Waiter commissions ── */
 
 export async function getWaiterTodayCommission(): Promise<WaiterTodayCommissionSummary> {
-  const response = await fetch("/api/waiter/commissions/today", {
+  const response = await waiterFetch("/api/waiter/commissions/today", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -595,7 +679,7 @@ export async function getWaiterCommissionHistory(params?: {
   if (params?.page != null) search.set("page", String(params.page));
   if (params?.size != null) search.set("size", String(params.size));
   const query = search.toString();
-  const response = await fetch(
+  const response = await waiterFetch(
     `/api/waiter/commissions/history${query ? `?${query}` : ""}`,
     {
       method: "GET",
@@ -651,7 +735,7 @@ export type WaiterManualGrantResponse = {
 export async function listWaiterActiveCampaigns(
   menuId: number,
 ): Promise<WaiterActiveCampaign[]> {
-  const response = await fetch(
+  const response = await waiterFetch(
     `/api/waiter/campaigns/active?menuId=${encodeURIComponent(String(menuId))}`,
     {
       method: "GET",
@@ -670,7 +754,7 @@ export async function lookupWaiterCampaignCustomer(
   menuId: number,
   email: string,
 ): Promise<WaiterCampaignCustomer> {
-  const response = await fetch(
+  const response = await waiterFetch(
     `/api/waiter/campaigns/customers?menuId=${encodeURIComponent(String(menuId))}&email=${encodeURIComponent(email)}`,
     {
       method: "GET",
@@ -689,7 +773,7 @@ export async function grantWaiterCampaign(
   menuId: number,
   payload: WaiterManualGrantRequest,
 ): Promise<WaiterManualGrantResponse> {
-  const response = await fetch(
+  const response = await waiterFetch(
     `/api/waiter/campaigns/grant?menuId=${encodeURIComponent(String(menuId))}`,
     {
       method: "POST",

@@ -4,10 +4,13 @@ import { motion } from "framer-motion";
 import {
   ArrowDown,
   Banknote,
+  CreditCard,
+  Coins,
   PackageX,
   Receipt,
   ShoppingBag,
   Trophy,
+  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -72,6 +75,9 @@ export default function AnalyticsRevenuePanel({
 }) {
   const view = buildRevenueReportView(report);
   const { currency, empty, daily, products, productsByQuantityAsc, categories, spotlight, hourly } = view;
+  const breakdown = report.paymentBreakdown;
+  const personnel = report.personnel ?? [];
+  const breakdownCurrency = breakdown?.currency || currency;
   const kpis = view.kpis.map((m) => ({
     ...m,
     icon: KPI_ICONS[m.id],
@@ -82,7 +88,7 @@ export default function AnalyticsRevenuePanel({
   if (empty) {
     return (
       <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-        Seçilen dönemde onaylanmış satış yok. Garson veya müşteri siparişleri onaylandıkça ciro burada görünür.
+        Seçilen dönemde tahsilat kaydı yok. Adisyon ödemeleri alındıkça ciro burada görünür.
       </div>
     );
   }
@@ -108,6 +114,86 @@ export default function AnalyticsRevenuePanel({
           </motion.div>
         ))}
       </div>
+
+      {breakdown ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {[
+            { label: "Nakit", value: breakdown.cashRevenue, icon: Banknote, color: COLORS.green },
+            { label: "Kart", value: breakdown.cardRevenue, icon: CreditCard, color: COLORS.indigo },
+            { label: "Bahşiş", value: breakdown.tipRevenue, icon: Coins, color: COLORS.orange },
+            { label: "Brüt ciro", value: breakdown.grossRevenue, icon: Wallet, color: COLORS.teal },
+            {
+              label: "Sabit gider (düşüldü)",
+              value: breakdown.fixedExpenseTotal,
+              icon: Receipt,
+              color: COLORS.red,
+            },
+            { label: "Net ciro", value: breakdown.netRevenue, icon: Trophy, color: COLORS.violet },
+          ].map((item, i) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="glow-card rounded-lg border bg-card p-4 shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
+              </div>
+              <p className="mt-2 text-base font-semibold tabular-nums">
+                {formatMenuPrice(item.value ?? 0, breakdownCurrency)}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      ) : null}
+
+      {personnel.length > 0 ? (
+        <div className="glow-card overflow-hidden rounded-lg border bg-card">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium text-foreground">Personel cirosu</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Personel</th>
+                  <th className="px-4 py-2 font-medium">Toplam</th>
+                  <th className="px-4 py-2 font-medium">Nakit</th>
+                  <th className="px-4 py-2 font-medium">Kart</th>
+                  <th className="px-4 py-2 font-medium">Bahşiş</th>
+                </tr>
+              </thead>
+              <tbody>
+                {personnel.map((row) => (
+                  <tr key={row.waiterId ?? row.displayName} className="border-b border-border last:border-0">
+                    <td className="px-4 py-2 font-medium text-foreground">
+                      {row.displayName}
+                      {row.active === false ? (
+                        <span className="ml-2 text-xs text-muted-foreground">(pasif)</span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-2 tabular-nums">
+                      {formatMenuPrice(row.revenue ?? 0, breakdownCurrency)}
+                    </td>
+                    <td className="px-4 py-2 tabular-nums text-muted-foreground">
+                      {formatMenuPrice(row.cashRevenue ?? 0, breakdownCurrency)}
+                    </td>
+                    <td className="px-4 py-2 tabular-nums text-muted-foreground">
+                      {formatMenuPrice(row.cardRevenue ?? 0, breakdownCurrency)}
+                    </td>
+                    <td className="px-4 py-2 tabular-nums text-muted-foreground">
+                      {formatMenuPrice(row.tipRevenue ?? 0, breakdownCurrency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SpotlightProductCard

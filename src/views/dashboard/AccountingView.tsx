@@ -24,11 +24,15 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   ApiError,
   createAccountingEntryRequest,
+  createMenuFixedExpenseRequest,
   deleteAccountingEntryRequest,
+  deleteMenuFixedExpenseRequest,
   listAccountingEntriesRequest,
+  listMenuFixedExpensesRequest,
   type AccountingEntryApiItem,
   type AccountingEntryType,
   type AccountingSourceType,
+  type MenuFixedExpenseItem,
 } from "@/lib/api";
 
 type TypeFilter = AccountingEntryType | "all";
@@ -126,6 +130,49 @@ export default function AccountingView() {
   const [occurredAt, setOccurredAt] = useState(toLocalInputValue());
   const [note, setNote] = useState("");
   const [formMenuId, setFormMenuId] = useState<number | null>(null);
+  const [fixedExpenseQrId, setFixedExpenseQrId] = useState<number | null>(null);
+  const fixedExpenseMenuId =
+    fixedExpenseQrId != null
+      ? menuQrs.find((item) => item.id === fixedExpenseQrId)?.menuId ?? null
+      : null;
+  const [fixedExpenseTitle, setFixedExpenseTitle] = useState("");
+  const [fixedExpenseAmount, setFixedExpenseAmount] = useState("");
+
+  const fixedExpenseQuery = useQuery({
+    queryKey: ["menu-fixed-expenses", fixedExpenseMenuId],
+    queryFn: () => listMenuFixedExpensesRequest(fixedExpenseMenuId as number),
+    enabled: fixedExpenseMenuId != null,
+  });
+
+  const createFixedExpenseMutation = useMutation({
+    mutationFn: (payload: { menuId: number; title: string; dailyAmount: number }) =>
+      createMenuFixedExpenseRequest(payload.menuId, {
+        title: payload.title,
+        dailyAmount: payload.dailyAmount,
+        active: true,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["menu-fixed-expenses"] });
+      setFixedExpenseTitle("");
+      setFixedExpenseAmount("");
+      notify("info", "Sabit gider eklendi.");
+    },
+    onError: (err) => {
+      notify("danger", err instanceof ApiError ? err.message : "Sabit gider eklenemedi.");
+    },
+  });
+
+  const deleteFixedExpenseMutation = useMutation({
+    mutationFn: (payload: { menuId: number; expenseId: number }) =>
+      deleteMenuFixedExpenseRequest(payload.menuId, payload.expenseId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["menu-fixed-expenses"] });
+      notify("info", "Sabit gider silindi.");
+    },
+    onError: (err) => {
+      notify("danger", err instanceof ApiError ? err.message : "Sabit gider silinemedi.");
+    },
+  });
 
   const listQuery = useQuery({
     queryKey: ["accounting-entries", typeFilter, q, from, to, page],
@@ -246,6 +293,105 @@ export default function AccountingView() {
           </Card>
         ))}
       </div>
+
+      <Card className="border-border/60">
+        <CardContent className="space-y-4 p-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Sabit giderler</h2>
+            <p className="text-xs text-muted-foreground">
+              Günlük sabit giderler ciro raporunda otomatik düşülür.
+            </p>
+          </div>
+          <DigitalMenuPicker
+            menuQrs={menuQrs}
+            selectedQrId={fixedExpenseQrId}
+            onSelectQrId={setFixedExpenseQrId}
+          />
+          {fixedExpenseMenuId != null ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
+                <input
+                  type="text"
+                  placeholder="Gider adı (ör. Kira, Personel)"
+                  className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={fixedExpenseTitle}
+                  onChange={(e) => setFixedExpenseTitle(e.target.value)}
+                />
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Günlük tutar"
+                  className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={fixedExpenseAmount}
+                  onChange={(e) => setFixedExpenseAmount(e.target.value)}
+                />
+                <Button
+                  disabled={createFixedExpenseMutation.isPending}
+                  onClick={() => {
+                    const parsed = Number(fixedExpenseAmount.replace(",", "."));
+                    if (!fixedExpenseTitle.trim()) {
+                      notify("danger", "Başlık zorunludur.");
+                      return;
+                    }
+                    if (!Number.isFinite(parsed) || parsed < 0.01) {
+                      notify("danger", "Geçerli günlük tutar girin.");
+                      return;
+                    }
+                    createFixedExpenseMutation.mutate({
+                      menuId: fixedExpenseMenuId,
+                      title: fixedExpenseTitle.trim(),
+                      dailyAmount: parsed,
+                    });
+                  }}
+                >
+                  Ekle
+                </Button>
+              </div>
+              {fixedExpenseQuery.isLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <ul className="divide-y divide-border rounded-md border border-border">
+                  {(fixedExpenseQuery.data ?? []).length === 0 ? (
+                    <li className="px-4 py-3 text-sm text-muted-foreground">Sabit gider yok.</li>
+                  ) : (
+                    (fixedExpenseQuery.data ?? []).map((item: MenuFixedExpenseItem) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Günlük {formatAmount(item.dailyAmount ?? 0)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive"
+                          disabled={deleteFixedExpenseMutation.isPending}
+                          onClick={() =>
+                            deleteFixedExpenseMutation.mutate({
+                              menuId: fixedExpenseMenuId,
+                              expenseId: item.id,
+                            })
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card className="border-border/60">
         <CardContent className="space-y-4 p-4">

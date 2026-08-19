@@ -3,7 +3,51 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { API_BASE_URL } from "@/lib/config";
-import { readWaiterAccessTokenFromCookies } from "@/lib/server/waiter-auth-cookies";
+import {
+  clearWaiterAuthCookies,
+  readWaiterAccessTokenFromCookies,
+  readWaiterRefreshTokenFromCookies,
+  setWaiterAuthCookies,
+} from "@/lib/server/waiter-auth-cookies";
+
+type RefreshedWaiterTokens = {
+  accessToken: string;
+  refreshToken?: string;
+  waiterId?: number;
+};
+
+async function tryRefreshWaiterTokens(): Promise<RefreshedWaiterTokens | null> {
+  const cookieStore = await cookies();
+  const refreshToken = readWaiterRefreshTokenFromCookies(cookieStore);
+  if (!refreshToken) return null;
+
+  const upstream = await axios.post<Record<string, unknown>>(
+    `${API_BASE_URL}/waiter/auth/refresh`,
+    { refreshToken },
+    {
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      validateStatus: () => true,
+      timeout: 20_000,
+    },
+  );
+
+  const data = (typeof upstream.data === "object" && upstream.data != null
+    ? upstream.data
+    : {}) as { accessToken?: string; refreshToken?: string; waiterId?: number };
+
+  if (upstream.status < 200 || upstream.status >= 300) {
+    return null;
+  }
+  if (typeof data.accessToken !== "string" || !data.accessToken) {
+    return null;
+  }
+
+  return {
+    accessToken: data.accessToken,
+    refreshToken: typeof data.refreshToken === "string" ? data.refreshToken : undefined,
+    waiterId: typeof data.waiterId === "number" ? data.waiterId : undefined,
+  };
+}
 
 export async function proxyWaiterAuthenticatedRequest(
   request: Request,
@@ -34,25 +78,55 @@ export async function proxyWaiterAuthenticatedRequest(
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");
 
-    const upstream = await axios.request({
-      url: `${API_BASE_URL}${upstreamPath}${query}`,
-      method,
-      data,
-      headers: {
-        Accept: "application/json",
-        ...(text ? { "Content-Type": "application/json" } : {}),
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
-        ...(!forwardedFor && realIp ? { "X-Forwarded-For": realIp } : {}),
-      },
-      validateStatus: () => true,
-      timeout: 20_000,
-    });
+    const doRequest = (token: string | null) =>
+      axios.request({
+        url: `${API_BASE_URL}${upstreamPath}${query}`,
+        method,
+        data,
+        headers: {
+          Accept: "application/json",
+          ...(text ? { "Content-Type": "application/json" } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(forwardedFor ? { "X-Forwarded-For": forwardedFor } : {}),
+          ...(!forwardedFor && realIp ? { "X-Forwarded-For": realIp } : {}),
+        },
+        validateStatus: () => true,
+        timeout: 20_000,
+      });
 
-    if (upstream.status === 204 || upstream.data == null || upstream.data === "") {
-      return new NextResponse(null, { status: upstream.status });
+    let upstream = await doRequest(accessToken);
+    let refreshedTokens: RefreshedWaiterTokens | null = null;
+
+    if (upstream.status === 401 && requireAuth) {
+      refreshedTokens = await tryRefreshWaiterTokens();
+      if (refreshedTokens) {
+        upstream = await doRequest(refreshedTokens.accessToken);
+      }
     }
-    return NextResponse.json(upstream.data, { status: upstream.status });
+
+    if (upstream.status === 401 && requireAuth) {
+      const response = NextResponse.json(upstream.data ?? { message: "Oturum gerekli" }, {
+        status: 401,
+      });
+      clearWaiterAuthCookies(response);
+      return response;
+    }
+
+    const response =
+      upstream.status === 204 || upstream.data == null || upstream.data === ""
+        ? new NextResponse(null, { status: upstream.status })
+        : NextResponse.json(upstream.data, { status: upstream.status });
+
+    if (refreshedTokens) {
+      setWaiterAuthCookies(
+        response as NextResponse,
+        refreshedTokens.accessToken,
+        refreshedTokens.refreshToken,
+        refreshedTokens.waiterId,
+      );
+    }
+
+    return response;
   } catch (error) {
     if (error instanceof AxiosError) {
       if (error.code === "ECONNABORTED") {

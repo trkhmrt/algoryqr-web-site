@@ -1233,6 +1233,72 @@ export interface MenuRevenueReportResponse {
     count?: number;
     products?: { productId: number; name: string }[];
   } | null;
+  paymentBreakdown?: MenuRevenuePaymentBreakdown | null;
+  personnel?: MenuRevenuePersonnelRow[];
+}
+
+export interface MenuRevenuePaymentBreakdown {
+  cashRevenue?: number | string | null;
+  cardRevenue?: number | string | null;
+  tipRevenue?: number | string | null;
+  grossRevenue?: number | string | null;
+  fixedExpenseTotal?: number | string | null;
+  netRevenue?: number | string | null;
+  currency?: string | null;
+}
+
+export interface MenuRevenuePersonnelRow {
+  waiterId?: number | null;
+  displayName: string;
+  revenue?: number | string | null;
+  cashRevenue?: number | string | null;
+  cardRevenue?: number | string | null;
+  tipRevenue?: number | string | null;
+  active?: boolean;
+}
+
+export interface MenuFixedExpenseItem {
+  id: number;
+  menuId: number;
+  title: string;
+  dailyAmount?: number | string | null;
+  active: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export async function listMenuFixedExpensesRequest(
+  menuId: number | string,
+): Promise<MenuFixedExpenseItem[]> {
+  const response = await api.get<MenuFixedExpenseItem[]>(`/menus/${menuId}/fixed-expenses`);
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function createMenuFixedExpenseRequest(
+  menuId: number | string,
+  payload: { title: string; dailyAmount: number; active?: boolean },
+): Promise<MenuFixedExpenseItem> {
+  const response = await api.post<MenuFixedExpenseItem>(`/menus/${menuId}/fixed-expenses`, payload);
+  return response.data;
+}
+
+export async function updateMenuFixedExpenseRequest(
+  menuId: number | string,
+  expenseId: number | string,
+  payload: { title?: string; dailyAmount?: number; active?: boolean },
+): Promise<MenuFixedExpenseItem> {
+  const response = await api.put<MenuFixedExpenseItem>(
+    `/menus/${menuId}/fixed-expenses/${expenseId}`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function deleteMenuFixedExpenseRequest(
+  menuId: number | string,
+  expenseId: number | string,
+): Promise<void> {
+  await api.delete(`/menus/${menuId}/fixed-expenses/${expenseId}`);
 }
 
 export async function getMenuRevenueReportRequest(

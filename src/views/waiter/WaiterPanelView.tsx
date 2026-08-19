@@ -31,6 +31,7 @@ import WaiterCreateOrderView from "@/views/waiter/WaiterCreateOrderView";
 import WaiterBillDetailView from "@/views/waiter/WaiterBillDetailView";
 import WaiterCommissionPanel from "@/views/waiter/WaiterCommissionPanel";
 import { WaiterCampaignPanel } from "@/views/waiter/WaiterCampaignPanel";
+import { useWaiterTokenRefresh } from "@/hooks/use-waiter-token-refresh";
 
 type TabKey = "pending" | "tables" | "today" | "commission" | "campaigns";
 type TableCardTone = "open" | "pending" | "closed";
@@ -109,6 +110,8 @@ export default function WaiterPanelView() {
   const [createOrderTable, setCreateOrderTable] = useState<WaiterTableSummary | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [me, setMe] = useState<WaiterMe | null | undefined>(undefined);
+
+  useWaiterTokenRefresh();
 
   useEffect(() => {
     let cancelled = false;
