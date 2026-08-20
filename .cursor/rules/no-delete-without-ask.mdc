@@ -1,0 +1,26 @@
+---
+description: Never delete or drop code without explicit user approval
+alwaysApply: true
+---
+
+# Kod silme yasağı
+
+Kullanıcıya **sormadan** ve **açıklama yapmadan** asla kod silme.
+
+## Yasak
+
+- Dosya silmek
+- Fonksiyon / component / route / tip kaldırmak
+- Rebase, reset, cherry-pick sırasında lokal commit’lerdeki kodu düşürmek
+- “Temizlik”, “refactor”, “unused” gerekçesiyle sessiz silme
+- Eski implementasyonu yeniyle değiştirirken eskiyi sormadan atmak
+
+## Zorunlu
+
+1. Silinecek / kaybolacak her parçayı önce kullanıcıya listele
+2. Neden silinmesi gerektiğini kısaca söyle
+3. Kullanıcı açıkça onaylamadan silme, revert etme, hard reset ile düşürme
+
+## İstisna yok
+
+Kullanıcı “sil”, “kaldır”, “bunları at” demeden kod kaybı oluşturma.

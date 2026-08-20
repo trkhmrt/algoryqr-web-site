@@ -16,26 +16,18 @@ const VALUE_HIGHLIGHTS = [
   {
     title: "7/24 menüde aktif",
     text: "Dijital menünüz yayında olduğu sürece Akıllı Şef misafirlerinize eşlik eder; ek kurulum gerekmez.",
-    img: "/images/akilli-sef-24-7-card.png",
-    alt: "Akıllı Şef 7/24 dijital menüde aktif — telefon, saat ve bulut illüstrasyonu",
   },
   {
     title: "Her dilde sohbet",
     text: "Misafir hangi dilde yazarsa Akıllı Şef aynı dilde yanıt verir. Dil listesi veya sınırlama yoktur.",
-    img: "/images/akilli-sef-multilingual-card.png",
-    alt: "Her dilde sohbet — Akıllı Şef çok dilli yanıt illüstrasyonu",
   },
   {
     title: "Doğal dilde soru-cevap",
     text: "Sohbet akışında soru sorar; menünüzden tercih, alerjen ve bütçeye göre kişiselleştirilmiş öneriler alır.",
-    img: "/images/akilli-sef-screenshot.png",
-    alt: "Akıllı Şef sohbet arayüzü",
   },
   {
     title: "Görsel ürün kartları",
-    text: "Önerilen ürünler fotoğraf, isim ve fiyatla kart olarak listelenir; tek dokunuşla sepete gider.",
-    img: "/images/akilli-sef-phone-mockup.png",
-    alt: "Ürün öneri kartları ekranı",
+    text: "Önerilen ürünler fotoğraf, isim ve fiyatla kart olarak listelenir; tek dokunuşla siparişe gider.",
   },
 ];
 
@@ -44,29 +36,21 @@ const STEPS = [
     step: "01",
     title: "Menüyü açar",
     text: "Misafir QR kodu okutur; dijital menünüz saniyeler içinde telefonunda açılır.",
-    img: "/images/feature-build.png",
-    alt: "Dijital menü oluşturma illüstrasyonu",
   },
   {
     step: "02",
     title: "Soru sorar",
     text: "Misafir hangi dilde yazarsa yazsın soru sorar; Akıllı Şef aynı dilde yanıt verir — ek dil ayarı gerekmez.",
-    img: "/images/akilli-sef-screenshot.png",
-    alt: "Akıllı Şef sohbet arayüzü",
   },
   {
     step: "03",
     title: "Öneri alır",
     text: "Akıllı Şef menünüzü analiz eder; tercih, alerjen ve fiyat bilgisine göre yanıt üretir.",
-    img: "/images/akilli-sef-phone-mockup.png",
-    alt: "Ürün önerisi ekranı",
   },
   {
     step: "04",
     title: "Siparişe gider",
     text: "Önerilen ürünler görsel kartlarla listelenir; misafir tek dokunuşla sepete ekler.",
-    img: "/images/akilli-sef-bg.png",
-    alt: "Telefonda menü deneyimi",
   },
 ];
 
@@ -74,32 +58,18 @@ const WHY_CHEF: FeatureCarouselItem[] = [
   {
     title: "Sepet dönüşümü",
     text: "Metin yanıtının yanında görsel kartlar sunarak siparişe geçişi kolaylaştırır; misafir tek dokunuşla sepete ekler.",
-    img: "/images/akilli-sef-phone-mockup.png",
-    alt: "Ürün öneri kartları ekranı",
-  },
-  {
-    title: "Her dilde sohbet",
-    text: "Misafir hangi dilde yazarsa Akıllı Şef aynı dilde yanıt verir; turist ve yabancı misafirler için dil bariyeri kalkar.",
-    img: "/images/akilli-sef-multilingual-card.png",
-    alt: "Her dilde sohbet — Akıllı Şef çok dilli yanıt illüstrasyonu",
   },
   {
     title: "Artan satışlar",
     text: "Kişiselleştirilmiş önerilerle ortalama sepet tutarı ve ek satış fırsatları artar; kararsız misafir hızla doğru ürüne ulaşır.",
-    img: "/images/akilli-sef-screenshot.png",
-    alt: "Akıllı Şef öneri ve sipariş akışı",
   },
   {
     title: "Kurulum gerektirmez",
     text: "Dijital menünüz yayında olduğu sürece Akıllı Şef misafirlerinizle birlikte hazır; ek uygulama veya entegrasyon gerekmez.",
-    img: "/images/feature-cloud.png",
-    alt: "Bulut altyapısı illüstrasyonu",
   },
   {
     title: "Her işletme tipine uyum sağlar",
     text: "Restoran, kafe, pastane ve bistro… Menü yapınıza göre öneri sunar; her işletme modelinde aynı akıcı deneyim.",
-    img: "/images/feature-build.png",
-    alt: "Dijital menü ve işletme uyumu illüstrasyonu",
   },
 ];
 
@@ -128,7 +98,6 @@ export default function AkilliSefView() {
       <Navbar />
 
       <main className="w-full pt-[max(5.5rem,12vw)]">
-        {/* Hero */}
         <section className="pb-[clamp(2.5rem,6vw,4rem)]">
           <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
             <Reveal className="mx-auto max-w-3xl text-center">
@@ -154,30 +123,50 @@ export default function AkilliSefView() {
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <a href="#nasil-calisir" className="w-full min-[420px]:w-auto">
-                  <Button variant="heroOutline" size="lg" className="w-full min-h-11 min-[420px]:w-auto">
-                    Nasıl çalışır?
-                  </Button>
-                </a>
               </div>
             </Reveal>
           </div>
         </section>
 
-        {/* Value highlights carousel */}
-        <section className="border-y border-border bg-muted/20 py-[clamp(2rem,5vw,3.5rem)]">
-          <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <section className="relative border-y border-border bg-white py-[clamp(2rem,5vw,3.5rem)]">
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[380px] bg-[radial-gradient(ellipse_at_50%_100%,hsl(var(--chart-violet)/0.14),hsl(var(--chart-indigo)/0.08)_42%,transparent_68%)]"
+            aria-hidden
+          />
+          <div className="container relative mx-auto w-full max-w-6xl px-4 sm:px-6">
             <Reveal className="mb-8 max-w-2xl sm:mb-10">
-              <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">Öne çıkanlar</p>
-              <h2 className="heading mt-3 text-2xl font-extrabold sm:text-3xl">
+              <h2 className="heading text-2xl font-extrabold sm:text-3xl">
                 Akıllı Şef neler sunar?
               </h2>
             </Reveal>
-            <FeatureCarousel items={VALUE_HIGHLIGHTS} />
+
+            <div className="flex flex-col gap-8 sm:gap-10">
+              <Reveal className="relative mx-auto w-full max-w-[min(100%,16rem)] sm:max-w-[20rem] md:max-w-[22rem]">
+                <div
+                  className="pointer-events-none absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,hsl(var(--chart-violet)/0.22),hsl(var(--chart-indigo)/0.1)_45%,transparent_70%)] blur-2xl"
+                  aria-hidden
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/akilli-sef-hero.png"
+                  alt="Akıllı Şef — dijital menü asistanı"
+                  loading="eager"
+                  decoding="async"
+                  width={1024}
+                  height={1024}
+                  className="relative mx-auto h-auto w-full max-w-full"
+                />
+              </Reveal>
+
+              <FeatureCarousel
+                items={VALUE_HIGHLIGHTS}
+                orientation="responsive"
+                className="sm:mx-auto sm:h-[min(28rem,55vh)] sm:w-full sm:max-w-xl"
+              />
+            </div>
           </div>
         </section>
 
-        {/* How it works */}
         <section id="nasil-calisir" className="py-[clamp(3.5rem,8vw,6rem)]">
           <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
             <Reveal className="mb-10 max-w-2xl sm:mb-14">
@@ -195,7 +184,6 @@ export default function AkilliSefView() {
           </div>
         </section>
 
-        {/* Benefits */}
         <section className="border-t border-border bg-muted/15 py-[clamp(3.5rem,8vw,6rem)]">
           <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
             <Reveal className="mb-10 max-w-2xl sm:mb-14">
@@ -209,7 +197,6 @@ export default function AkilliSefView() {
           </div>
         </section>
 
-        {/* FAQ */}
         <section className="border-t border-border py-[clamp(3rem,7vw,5rem)]">
           <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
             <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
@@ -239,7 +226,6 @@ export default function AkilliSefView() {
           </div>
         </section>
 
-        {/* CTA */}
         <section className="pb-[clamp(3rem,7vw,6rem)]">
           <div className="container mx-auto w-full max-w-6xl px-4 sm:px-6">
             <Reveal>
