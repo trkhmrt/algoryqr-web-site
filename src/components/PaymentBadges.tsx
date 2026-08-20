@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const BADGES = [
-  { src: "/payment-logos/iyzico.svg", alt: "iyzico ile Öde", width: 108, height: 36 },
+  { src: "/payment-logos/paytr.svg", alt: "PayTR", width: 108, height: 36 },
   { src: "/payment-logos/visa.svg", alt: "Visa", width: 72, height: 24 },
   { src: "/payment-logos/mastercard.svg", alt: "Mastercard", width: 56, height: 36 },
 ] as const;

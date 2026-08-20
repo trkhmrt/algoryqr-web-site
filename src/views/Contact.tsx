@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Phone, Send } from "lucide-react";
+import { Mail, MapPin, Phone, Send } from "lucide-react";
 
 import LegalPageShell from "@/components/LegalPageShell";
 import { Button } from "@/components/ui/button";
@@ -83,20 +83,24 @@ const Contact = () => {
             {COMPANY.productName} ürünü için destek ve satış sorularınızı e-posta veya telefon
             ile iletebilirsiniz.
           </p>
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 text-sm">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span className="text-foreground">{COMPANY.address}</span>
+            </div>
             <a
               href={COMPANY.emailMailto}
-              className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              className="flex items-center gap-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
-              <Mail className="h-4 w-4" />
-              {COMPANY.email}
+              <Mail className="h-4 w-4 shrink-0" />
+              <span className="break-all">{COMPANY.email}</span>
             </a>
             <a
               href={COMPANY.phoneTel}
-              className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              className="flex items-center gap-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
-              <Phone className="h-4 w-4" />
-              {COMPANY.phone}
+              <Phone className="h-4 w-4 shrink-0" />
+              <span>{COMPANY.phone}</span>
             </a>
           </div>
         </div>

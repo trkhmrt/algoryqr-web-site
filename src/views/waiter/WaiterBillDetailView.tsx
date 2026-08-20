@@ -14,6 +14,7 @@ import { billCardClass, billSoftBgClass, paymentMethodLabel } from "@/components
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -27,10 +28,12 @@ import {
   payWaiterBillItems,
   payWaiterBillShare,
   removeWaiterBillItem,
+  reverseWaiterBillPayment,
   updateWaiterBillItemQuantity,
   WaiterApiError,
   type WaiterBill,
   type WaiterBillItem,
+  type WaiterBillPayment,
   type WaiterTableSummary,
 } from "@/lib/waiter-api";
 
@@ -70,6 +73,7 @@ export default function WaiterBillDetailView({
   const queryClient = useQueryClient();
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [payItemTarget, setPayItemTarget] = useState<WaiterBillItem | null>(null);
+  const [reversePaymentTarget, setReversePaymentTarget] = useState<WaiterBillPayment | null>(null);
   const [closeSuccess, setCloseSuccess] = useState<CloseSuccessSummary | null>(null);
   const hasOpenBill = table.billStatus === "OPEN" && table.openBillId != null;
 
@@ -149,6 +153,15 @@ export default function WaiterBillDetailView({
     },
   });
 
+  const reversePaymentMutation = useMutation({
+    mutationFn: (payload: { billId: number; paymentId: number }) =>
+      reverseWaiterBillPayment(payload.billId, payload.paymentId),
+    onSuccess: async () => {
+      await invalidateBillQueries(queryClient, table.tableId);
+      setReversePaymentTarget(null);
+    },
+  });
+
   function handleBillClosed(bill: WaiterBill, paymentMethod?: "CASH" | "CARD") {
     setCloseSuccess({
       total: formatMenuPrice(bill.totalAmount ?? undefined, bill.currency || "TRY"),
@@ -162,7 +175,8 @@ export default function WaiterBillDetailView({
     itemMutation.isPending ||
     closeMutation.isPending ||
     payItemsMutation.isPending ||
-    payShareMutation.isPending;
+    payShareMutation.isPending ||
+    reversePaymentMutation.isPending;
 
   if (!hasOpenBill) {
     return (
@@ -243,6 +257,14 @@ export default function WaiterBillDetailView({
           </p>
         ) : null}
 
+        {reversePaymentMutation.isError ? (
+          <p className="text-sm text-red-600">
+            {reversePaymentMutation.error instanceof WaiterApiError
+              ? reversePaymentMutation.error.message
+              : "Ödeme geri alınamadı."}
+          </p>
+        ) : null}
+
         <ul className="space-y-2 border-t border-zinc-100 pt-3">
           {items.length === 0 ? (
             <li className="text-sm text-zinc-500">Henüz kalem yok.</li>
@@ -275,7 +297,17 @@ export default function WaiterBillDetailView({
           )}
         </ul>
 
-        <BillPaymentsList payments={payments} currency={currency} />
+        <BillPaymentsList
+          payments={payments}
+          currency={currency}
+          busy={busy}
+          reversingPaymentId={
+            reversePaymentMutation.isPending
+              ? reversePaymentMutation.variables?.paymentId
+              : null
+          }
+          onReverse={(payment) => setReversePaymentTarget(payment)}
+        />
 
         <div className="grid grid-cols-2 gap-2 border-t border-zinc-100 pt-3">
           <Button
@@ -343,6 +375,56 @@ export default function WaiterBillDetailView({
           }
         />
       ) : null}
+
+      <AlertDialog
+        open={reversePaymentTarget != null}
+        onOpenChange={(open) => {
+          if (!open && !reversePaymentMutation.isPending) {
+            setReversePaymentTarget(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="border-zinc-200 bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-900">Ödemeyi geri al</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-1 text-sm text-zinc-500">
+                <p>
+                  {reversePaymentTarget?.itemSummary ?? "Bu ödeme"} kaydı silinecek ve tutar
+                  kalan bakiyeye eklenecek.
+                </p>
+                <p>
+                  Tutar:{" "}
+                  <span className="font-semibold text-zinc-900">
+                    {formatMenuPrice(reversePaymentTarget?.amount ?? undefined, currency)}
+                  </span>
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reversePaymentMutation.isPending}>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-zinc-900 text-white hover:bg-zinc-800"
+              disabled={reversePaymentMutation.isPending || !bill || !reversePaymentTarget}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!bill || !reversePaymentTarget) return;
+                reversePaymentMutation.mutate({
+                  billId: bill.id,
+                  paymentId: reversePaymentTarget.id,
+                });
+              }}
+            >
+              {reversePaymentMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Geri al"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={closeSuccess != null}
