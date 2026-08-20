@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ComponentType } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 
 import { MediaPlaceholder } from "@/components/site/MediaPlaceholder";
 import { Button } from "@/components/ui/button";
@@ -20,40 +20,82 @@ export type FeatureCarouselItem = {
   };
 };
 
+type CarouselOrientation = "horizontal" | "vertical";
+
 type FeatureCarouselProps = {
   items: FeatureCarouselItem[];
   className?: string;
-  /** Otomatik kaydırma aralığı (ms). Varsayılan: 4500 */
   autoplayMs?: number;
+  orientation?: CarouselOrientation | "responsive";
 };
 
 const SCROLL_END_THRESHOLD = 12;
 const DEFAULT_AUTOPLAY_MS = 4500;
+const SM_MIN_WIDTH = 640;
+
+function useResolvedOrientation(orientation: CarouselOrientation | "responsive"): CarouselOrientation {
+  const [resolved, setResolved] = useState<CarouselOrientation>(() =>
+    orientation === "responsive" ? "horizontal" : orientation,
+  );
+
+  useEffect(() => {
+    if (orientation !== "responsive") {
+      setResolved(orientation);
+      return;
+    }
+
+    const media = window.matchMedia(`(min-width: ${SM_MIN_WIDTH}px)`);
+    const sync = () => setResolved(media.matches ? "vertical" : "horizontal");
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, [orientation]);
+
+  return resolved;
+}
 
 export function FeatureCarousel({
   items,
   className,
   autoplayMs = DEFAULT_AUTOPLAY_MS,
+  orientation = "horizontal",
 }: FeatureCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const hoveredRef = useRef(false);
   const pauseUntilRef = useRef(0);
+  const axis = useResolvedOrientation(orientation);
+  const isVertical = axis === "vertical";
 
   const getScrollStep = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) return 0;
     const card = el.querySelector<HTMLElement>("[data-carousel-card]");
     const gap = 16;
-    return card ? card.offsetWidth + gap : el.clientWidth * 0.85;
-  }, []);
+    if (!card) {
+      return isVertical ? el.clientHeight * 0.85 : el.clientWidth * 0.85;
+    }
+    return isVertical ? card.offsetHeight + gap : card.offsetWidth + gap;
+  }, [isVertical]);
 
-  const isAtEnd = useCallback((el: HTMLDivElement) => {
-    return el.scrollLeft + el.clientWidth >= el.scrollWidth - SCROLL_END_THRESHOLD;
-  }, []);
+  const isAtEnd = useCallback(
+    (el: HTMLDivElement) => {
+      if (isVertical) {
+        return el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_END_THRESHOLD;
+      }
+      return el.scrollLeft + el.clientWidth >= el.scrollWidth - SCROLL_END_THRESHOLD;
+    },
+    [isVertical],
+  );
 
-  const canScroll = useCallback((el: HTMLDivElement) => {
-    return el.scrollWidth > el.clientWidth + SCROLL_END_THRESHOLD;
-  }, []);
+  const canScroll = useCallback(
+    (el: HTMLDivElement) => {
+      if (isVertical) {
+        return el.scrollHeight > el.clientHeight + SCROLL_END_THRESHOLD;
+      }
+      return el.scrollWidth > el.clientWidth + SCROLL_END_THRESHOLD;
+    },
+    [isVertical],
+  );
 
   const pauseAutoplay = useCallback(
     (durationMs = autoplayMs * 2) => {
@@ -73,28 +115,37 @@ export function FeatureCarousel({
       if (!el || !canScroll(el)) return;
 
       if (isAtEnd(el)) {
-        el.scrollTo({ left: 0, behavior });
+        el.scrollTo(isVertical ? { top: 0, behavior } : { left: 0, behavior });
         return;
       }
 
-      el.scrollBy({ left: getScrollStep(), behavior });
+      el.scrollBy(isVertical ? { top: getScrollStep(), behavior } : { left: getScrollStep(), behavior });
     },
-    [canScroll, getScrollStep, isAtEnd],
+    [canScroll, getScrollStep, isAtEnd, isVertical],
   );
 
   const scroll = useCallback(
-    (direction: "left" | "right") => {
+    (direction: "prev" | "next") => {
       const el = scrollerRef.current;
       if (!el) return;
 
       pauseAutoplay();
 
-      if (direction === "right") {
+      if (direction === "next") {
         scrollNext();
         return;
       }
 
       const amount = getScrollStep();
+      if (isVertical) {
+        if (el.scrollTop <= SCROLL_END_THRESHOLD) {
+          el.scrollTo({ top: el.scrollHeight - el.clientHeight, behavior: "smooth" });
+          return;
+        }
+        el.scrollBy({ top: -amount, behavior: "smooth" });
+        return;
+      }
+
       if (el.scrollLeft <= SCROLL_END_THRESHOLD) {
         el.scrollTo({ left: el.scrollWidth - el.clientWidth, behavior: "smooth" });
         return;
@@ -102,7 +153,7 @@ export function FeatureCarousel({
 
       el.scrollBy({ left: -amount, behavior: "smooth" });
     },
-    [getScrollStep, pauseAutoplay, scrollNext],
+    [getScrollStep, isVertical, pauseAutoplay, scrollNext],
   );
 
   useEffect(() => {
@@ -116,9 +167,15 @@ export function FeatureCarousel({
     return () => window.clearInterval(id);
   }, [autoplayMs, isAutoplayPaused, items.length, scrollNext]);
 
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, left: 0 });
+  }, [axis]);
+
   return (
     <div
-      className={cn("relative", className)}
+      className={cn("relative", isVertical && "flex h-full min-h-0 flex-col", className)}
       onMouseEnter={() => {
         hoveredRef.current = true;
       }}
@@ -126,46 +183,67 @@ export function FeatureCarousel({
         hoveredRef.current = false;
       }}
     >
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="absolute left-0 top-1/2 z-10 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-border bg-background shadow-sm sm:flex"
-        onClick={() => scroll("left")}
-        aria-label="Önceki"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
+      {isVertical ? (
+        <div className="mb-3 flex items-center justify-end gap-2">
+          <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => scroll("prev")} aria-label="Önceki">
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => scroll("next")} aria-label="Sonraki">
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="absolute left-0 top-1/2 z-10 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-border bg-background shadow-sm sm:flex"
+            onClick={() => scroll("prev")}
+            aria-label="Önceki"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="absolute right-0 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 translate-x-1/2 rounded-full border-border bg-background shadow-sm sm:flex"
-        onClick={() => scroll("right")}
-        aria-label="Sonraki"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="absolute right-0 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 translate-x-1/2 rounded-full border-border bg-background shadow-sm sm:flex"
+            onClick={() => scroll("next")}
+            aria-label="Sonraki"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
 
-      <div className="flex items-center justify-end gap-2 sm:hidden">
-        <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => scroll("left")} aria-label="Önceki">
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => scroll("right")} aria-label="Sonraki">
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
+          <div className="flex items-center justify-end gap-2 sm:hidden">
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => scroll("prev")} aria-label="Önceki">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => scroll("next")} aria-label="Sonraki">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </>
+      )}
 
       <div
         ref={scrollerRef}
-        className="mt-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scroll-smooth [scrollbar-width:none] sm:mt-0 sm:px-6 [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          isVertical
+            ? "flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-4 overflow-y-auto overflow-x-hidden pr-1"
+            : "mt-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 sm:mt-0 sm:px-6",
+        )}
       >
         {items.map((item, index) => (
           <article
             key={item.step ?? `${item.title}-${index}`}
             data-carousel-card
-            className="group flex w-[min(88vw,340px)] shrink-0 snap-start flex-col rounded-3xl border border-border bg-card/50 p-8 transition-colors hover:border-foreground/15 sm:w-[360px] sm:p-10"
+            className={cn(
+              "group flex shrink-0 snap-start flex-col rounded-3xl border border-border bg-card/50 p-8 transition-colors hover:border-foreground/15 sm:p-10",
+              isVertical ? "w-full" : "w-[min(88vw,340px)] sm:w-[360px]",
+            )}
           >
             {item.step ? (
               <span className="font-mono text-xs tracking-widest text-primary">{item.step}</span>
