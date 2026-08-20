@@ -59,6 +59,7 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
   const [password, setPassword] = useState("");
   const [commissionEnabled, setCommissionEnabled] = useState(false);
   const [commissionType, setCommissionType] = useState<"PERCENT" | "FIXED">("PERCENT");
+  const [commissionScope, setCommissionScope] = useState<"PER_ITEM" | "BILL_TOTAL">("PER_ITEM");
   const [commissionValue, setCommissionValue] = useState("");
   const [accountAction, setAccountAction] = useState<"deactivate" | "activate" | null>(null);
 
@@ -87,6 +88,7 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
     if (!member) return;
     setCommissionEnabled(Boolean(member.commissionEnabled));
     setCommissionType(member.commissionType === "FIXED" ? "FIXED" : "PERCENT");
+    setCommissionScope(member.commissionScope === "BILL_TOTAL" ? "BILL_TOTAL" : "PER_ITEM");
     const raw = member.commissionValue;
     if (raw == null || raw === "") {
       setCommissionValue("");
@@ -105,6 +107,7 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
       active?: boolean;
       commissionEnabled?: boolean;
       commissionType?: "PERCENT" | "FIXED";
+      commissionScope?: "PER_ITEM" | "BILL_TOTAL";
       commissionValue?: number;
     }) => updateMenuWaiter(menuId!, waiterId, payload),
     onSuccess: async (_data, vars) => {
@@ -237,6 +240,30 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
                   <button
                     type="button"
                     className={`rounded-md border px-3 py-2 text-sm ${
+                      commissionScope === "PER_ITEM"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground"
+                    }`}
+                    onClick={() => setCommissionScope("PER_ITEM")}
+                  >
+                    Ürün başına
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      commissionScope === "BILL_TOTAL"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border text-muted-foreground"
+                    }`}
+                    onClick={() => setCommissionScope("BILL_TOTAL")}
+                  >
+                    Hesap toplamı
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-sm ${
                       commissionType === "PERCENT"
                         ? "border-foreground bg-foreground text-background"
                         : "border-border text-muted-foreground"
@@ -297,6 +324,7 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
                   updateMutation.mutate({
                     commissionEnabled: true,
                     commissionType,
+                    commissionScope,
                     commissionValue: parsed,
                   });
                   return;

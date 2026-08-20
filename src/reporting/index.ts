@@ -68,6 +68,7 @@ export {
   waiterPerformanceSoldItemCount,
   waiterPerformanceTotalCommission,
   waiterPerformanceTotalRevenue,
+  waiterPerformanceTotalTip,
 } from "./waiter/methods";
 export type { WaiterPerformanceKpiId } from "./waiter/methods";
 export {

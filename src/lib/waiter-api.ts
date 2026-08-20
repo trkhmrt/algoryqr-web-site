@@ -15,6 +15,7 @@ export type MenuWaiterMember = {
   active: boolean;
   commissionEnabled?: boolean;
   commissionType?: "PERCENT" | "FIXED" | null;
+  commissionScope?: "PER_ITEM" | "BILL_TOTAL" | null;
   commissionValue?: number | string | null;
   createdAt?: string | null;
 };
@@ -325,6 +326,7 @@ export async function updateMenuWaiter(
     password?: string;
     commissionEnabled?: boolean;
     commissionType?: "PERCENT" | "FIXED";
+    commissionScope?: "PER_ITEM" | "BILL_TOTAL";
     commissionValue?: number;
   },
 ): Promise<MenuWaiterMember> {

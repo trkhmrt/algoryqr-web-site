@@ -12,39 +12,39 @@ export const REVENUE_METHODS: { [K in RevenueKpiId]: ReportingMethodDef<K> } = {
     id: "totalRevenue",
     label: "Toplam ciro",
     method: "totalRevenue",
-    formula: "Σ order.totalAmount",
-    filter: "status = CONFIRMED ve confirmedAt ∈ [from, to]",
+    formula: "Σ bill.totalAmount",
+    filter: "status = CLOSED ve closedAt ∈ [from, to]",
     unit: "money",
   },
   confirmedOrderCount: {
     id: "confirmedOrderCount",
-    label: "Sipariş",
+    label: "Adisyon",
     method: "confirmedOrderCount",
-    formula: "COUNT(order)",
-    filter: "status = CONFIRMED ve confirmedAt ∈ [from, to]",
+    formula: "COUNT(bill)",
+    filter: "status = CLOSED ve closedAt ∈ [from, to]",
     unit: "count",
   },
   soldItemCount: {
     id: "soldItemCount",
     label: "Satılan ürün",
     method: "soldItemCount",
-    formula: "Σ item.quantity",
-    filter: "Onaylı sipariş kalemleri",
+    formula: "Σ billItem.quantity",
+    filter: "Kapalı adisyon kalemleri",
     unit: "count",
   },
   averageBasket: {
     id: "averageBasket",
     label: "Ort. sepet",
     method: "averageBasket",
-    formula: "totalRevenue / confirmedOrderCount",
-    filter: "Sipariş yoksa 0; 2 ondalık HALF_UP",
+    formula: "totalRevenue / closedBillCount",
+    filter: "Adisyon yoksa 0; 2 ondalık HALF_UP",
     unit: "money",
   },
 };
 
 /**
  * Toplam ciro.
- * Kaynak: onaylı siparişlerin `totalAmount` toplamı.
+ * Kaynak: kapalı adisyonların `totalAmount` toplamı (bahşiş hariç).
  */
 export function totalRevenue(value?: number | string | null): number {
   return toAmount(value);

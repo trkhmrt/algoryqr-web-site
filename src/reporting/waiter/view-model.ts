@@ -17,6 +17,7 @@ import {
   waiterPerformanceSoldItemCount,
   waiterPerformanceTotalCommission,
   waiterPerformanceTotalRevenue,
+  waiterPerformanceTotalTip,
   type WaiterPerformanceKpiId,
 } from "./methods";
 
@@ -27,6 +28,7 @@ export type WaiterPerformanceRowView = {
   orderCount: number;
   itemCount: number;
   revenue: number;
+  tipAmount: number;
   commissionAmount: number;
   billsClosedCount: number;
   avgOrderValue: number;
@@ -106,6 +108,7 @@ export function buildWaiterPerformanceReportView(
   const active = activeWaiterCount(report.kpis.activeWaiterCount);
   const soldItems = waiterPerformanceSoldItemCount(report.kpis.itemCount);
   const totalCommission = waiterPerformanceTotalCommission(report.kpis.totalCommission);
+  const totalTip = waiterPerformanceTotalTip(report.kpis.totalTip);
   const billsClosed = waiterPerformanceBillsClosedCount(report.kpis.billsClosedCount);
   const totalOrders = assigned + unassigned;
 
@@ -120,6 +123,7 @@ export function buildWaiterPerformanceReportView(
       orderCount,
       itemCount,
       revenue: rowRevenue,
+      tipAmount: waiterPerformanceTotalTip(row.tipAmount),
       commissionAmount: waiterPerformanceCommission(row.commissionAmount),
       billsClosedCount: row.billsClosedCount ?? 0,
       avgOrderValue: waiterPerformanceAverageBasket(rowRevenue, orderCount),
@@ -165,6 +169,7 @@ export function buildWaiterPerformanceReportView(
       kpi("soldItemCount", soldItems),
       kpi("assignedOrderCount", assigned),
       kpi("totalCommission", totalCommission),
+      kpi("totalTip", totalTip),
       kpi("billsClosedCount", billsClosed),
       kpi("activeWaiterCount", active),
       kpi("unassignedOrderCount", unassigned),
@@ -203,6 +208,7 @@ export function filterWaiterPerformanceReportView(
       kpi("soldItemCount", row.itemCount),
       kpi("assignedOrderCount", assigned),
       kpi("totalCommission", row.commissionAmount),
+      kpi("totalTip", row.tipAmount),
       kpi("billsClosedCount", row.billsClosedCount),
       kpi("activeWaiterCount", row.unassigned ? 0 : row.active ? 1 : 0),
       kpi("unassignedOrderCount", unassigned),
