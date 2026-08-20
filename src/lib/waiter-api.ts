@@ -91,6 +91,30 @@ export type WaiterBillItem = {
   createdAt?: string | null;
 };
 
+export type WaiterBillPayment = {
+  id: number;
+  amount?: number | string | null;
+  paymentMethod?: "CASH" | "CARD" | null;
+  paidAt?: string | null;
+  splitShareNumber?: number | null;
+  splitPersonCount?: number | null;
+  tip?: boolean;
+  itemSummary?: string | null;
+  billItemId?: number | null;
+};
+
+export type WaiterSplitShare = {
+  shareNumber: number;
+  amount?: number | string | null;
+  paid?: boolean;
+};
+
+export type WaiterSplitPreview = {
+  personCount: number;
+  remainingTotal?: number | string | null;
+  shares?: WaiterSplitShare[];
+};
+
 export type WaiterBill = {
   id: number;
   menuId?: number;
@@ -107,6 +131,8 @@ export type WaiterBill = {
   currency?: string | null;
   itemCount?: number;
   items?: WaiterBillItem[];
+  payments?: WaiterBillPayment[];
+  splitPersonCount?: number | null;
   fixedCommissionAmount?: number | string | null;
   paymentMethod?: "CASH" | "CARD" | null;
 };
@@ -622,11 +648,54 @@ export async function payWaiterBillItems(
   const response = await waiterFetch(`/api/waiter/bills/${billId}/pay-items`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify(payload),
   });
   const data = await parseJson<WaiterBill & { message?: string }>(response);
   if (!response.ok) {
     throw new WaiterApiError(response.status, data.message || "Ödeme alınamadı");
+  }
+  return data;
+}
+
+export async function getWaiterBillSplitPreview(
+  billId: number,
+  personCount: number,
+): Promise<WaiterSplitPreview> {
+  const response = await waiterFetch(
+    `/api/waiter/bills/${billId}/split-preview?personCount=${personCount}`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    },
+  );
+  const data = await parseJson<WaiterSplitPreview & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Bölme önizlemesi alınamadı");
+  }
+  return data;
+}
+
+export async function payWaiterBillShare(
+  billId: number,
+  payload: {
+    personCount: number;
+    shareNumber: number;
+    paymentMethod: "CASH" | "CARD";
+    tipReceived?: boolean;
+    tipAmount?: number;
+  },
+): Promise<WaiterBill> {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/pay-share`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Pay ödemesi alınamadı");
   }
   return data;
 }
