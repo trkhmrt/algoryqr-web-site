@@ -576,11 +576,15 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
                 if (next === "revenue" && !canUseRevenue) {
                   return;
                 }
+                if (next === "personnel" && !canUseRevenue) {
+                  return;
+                }
                 setReportView(next as ReportView);
               }}
               items={[
                 { value: "visits", label: "Ürün & Ziyaret" },
                 ...(canUseRevenue ? [{ value: "revenue" as const, label: "Ciro" }] : []),
+                ...(canUseRevenue ? [{ value: "personnel" as const, label: "Personel" }] : []),
               ]}
             />
           )}

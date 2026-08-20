@@ -1318,18 +1318,33 @@ export interface MenuWaiterPerformanceKpis {
   assignedOrderCount?: number;
   unassignedOrderCount?: number;
   totalRevenue?: number | string | null;
+  itemCount?: number;
+  totalCommission?: number | string | null;
+  billsClosedCount?: number;
   currency?: string | null;
+}
+
+export interface MenuWaiterPerformanceProductRow {
+  productId: number;
+  name: string;
+  quantity: number;
+  revenue?: number | string | null;
 }
 
 export interface MenuWaiterPerformanceRow {
   waiterId?: number | null;
   displayName: string;
   orderCount?: number;
+  itemCount?: number;
   revenue?: number | string | null;
+  commissionAmount?: number | string | null;
+  billsClosedCount?: number;
   avgOrderValue?: number | string | null;
   revenueSharePercent?: number;
   orderSharePercent?: number;
+  itemSharePercent?: number;
   active?: boolean;
+  topProducts?: MenuWaiterPerformanceProductRow[];
 }
 
 export interface MenuWaiterPerformanceReportResponse {
@@ -1339,6 +1354,9 @@ export interface MenuWaiterPerformanceReportResponse {
   to: string;
   kpis: MenuWaiterPerformanceKpis;
   waiters: MenuWaiterPerformanceRow[];
+  daily?: { date: string; revenue?: number | string | null; orderCount?: number }[];
+  hourly?: { hour: number; revenue?: number | string | null; orderCount?: number }[];
+  products?: MenuWaiterPerformanceProductRow[];
 }
 
 export async function getMenuWaiterPerformanceReportRequest(

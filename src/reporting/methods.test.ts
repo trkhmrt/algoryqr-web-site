@@ -9,7 +9,8 @@ import {
   isVisitReportEmpty,
 } from "./visits/methods";
 import { buildVisitReportView } from "./visits/view-model";
-import type { MenuAnalyticsReportResponse, MenuRevenueReportResponse } from "@/lib/api";
+import type { MenuAnalyticsReportResponse, MenuRevenueReportResponse, MenuWaiterPerformanceReportResponse } from "@/lib/api";
+import { buildWaiterPerformanceReportView, filterWaiterPerformanceReportView } from "./waiter/view-model";
 
 describe("revenue methods", () => {
   it("averageBasket_dividesRevenueByOrders", () => {
@@ -156,5 +157,112 @@ describe("view models", () => {
     expect(view.hourly[0]).toEqual({ hour: "09", views: 4 });
     expect(view.devices[0].pct).toBe(70);
     expect(view.funnel[1].method).toBe("categoryViewCount");
+  });
+
+  it("buildWaiterPerformanceReportView_mapsDetailedPersonnelMetrics", () => {
+    const report: MenuWaiterPerformanceReportResponse = {
+      menuId: 1,
+      from: "2026-08-01",
+      to: "2026-08-13",
+      kpis: {
+        activeWaiterCount: 2,
+        assignedOrderCount: 2,
+        unassignedOrderCount: 1,
+        totalRevenue: 260,
+        itemCount: 4,
+        totalCommission: 24,
+        billsClosedCount: 1,
+        currency: "TRY",
+      },
+      waiters: [
+        {
+          waiterId: 101,
+          displayName: "Ali",
+          orderCount: 1,
+          itemCount: 2,
+          revenue: 150,
+          commissionAmount: 15,
+          billsClosedCount: 1,
+          revenueSharePercent: 57.7,
+          orderSharePercent: 33.3,
+          itemSharePercent: 50,
+          active: true,
+          topProducts: [{ productId: 11, name: "Cay", quantity: 2, revenue: 150 }],
+        },
+      ],
+      daily: [{ date: "2026-08-13", revenue: 260, orderCount: 3 }],
+      hourly: [{ hour: 14, revenue: 260, orderCount: 3 }],
+      products: [{ productId: 11, name: "Cay", quantity: 4, revenue: 260 }],
+    };
+
+    const view = buildWaiterPerformanceReportView(report);
+    expect(view.kpis.find((row) => row.id === "soldItemCount")?.value).toBe(4);
+    expect(view.kpis.find((row) => row.id === "totalCommission")?.value).toBe(24);
+    expect(view.rows[0].itemCount).toBe(2);
+    expect(view.rows[0].topProducts[0].name).toBe("Cay");
+    expect(view.products).toHaveLength(1);
+    expect(view.daily).toHaveLength(1);
+    expect(view.hourly).toHaveLength(1);
+  });
+
+  it("filterWaiterPerformanceReportView_whenWaiterSelected_thenScopesMetrics", () => {
+    const report: MenuWaiterPerformanceReportResponse = {
+      menuId: 1,
+      from: "2026-08-01",
+      to: "2026-08-13",
+      kpis: {
+        activeWaiterCount: 2,
+        assignedOrderCount: 2,
+        unassignedOrderCount: 0,
+        totalRevenue: 260,
+        itemCount: 4,
+        totalCommission: 24,
+        billsClosedCount: 1,
+        currency: "TRY",
+      },
+      waiters: [
+        {
+          waiterId: 101,
+          displayName: "Ali",
+          orderCount: 1,
+          itemCount: 2,
+          revenue: 150,
+          commissionAmount: 15,
+          billsClosedCount: 1,
+          revenueSharePercent: 57.7,
+          orderSharePercent: 50,
+          itemSharePercent: 50,
+          active: true,
+          topProducts: [{ productId: 11, name: "Cay", quantity: 2, revenue: 150 }],
+        },
+        {
+          waiterId: 102,
+          displayName: "Ayse",
+          orderCount: 1,
+          itemCount: 2,
+          revenue: 110,
+          commissionAmount: 9,
+          billsClosedCount: 0,
+          revenueSharePercent: 42.3,
+          orderSharePercent: 50,
+          itemSharePercent: 50,
+          active: true,
+          topProducts: [{ productId: 12, name: "Ayran", quantity: 2, revenue: 110 }],
+        },
+      ],
+      daily: [{ date: "2026-08-13", revenue: 260, orderCount: 2 }],
+      hourly: [{ hour: 14, revenue: 260, orderCount: 2 }],
+      products: [{ productId: 11, name: "Cay", quantity: 4, revenue: 260 }],
+    };
+
+    const view = buildWaiterPerformanceReportView(report);
+    const filtered = filterWaiterPerformanceReportView(view, "101");
+    expect(filtered.rows).toHaveLength(1);
+    expect(filtered.rows[0].displayName).toBe("Ali");
+    expect(filtered.kpis.find((row) => row.id === "totalRevenue")?.value).toBe(150);
+    expect(filtered.kpis.find((row) => row.id === "soldItemCount")?.value).toBe(2);
+    expect(filtered.products[0].name).toBe("Cay");
+    expect(filtered.daily).toHaveLength(0);
+    expect(filtered.hourly).toHaveLength(0);
   });
 });

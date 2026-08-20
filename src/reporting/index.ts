@@ -60,14 +60,26 @@ export {
   isWaiterPerformanceReportEmpty,
   unassignedOrderCount,
   waiterPerformanceAverageBasket,
+  waiterPerformanceBillsClosedCount,
+  waiterPerformanceCommission,
+  waiterPerformanceItemCount,
   waiterPerformanceOrderCount,
   waiterPerformanceRevenue,
+  waiterPerformanceSoldItemCount,
+  waiterPerformanceTotalCommission,
   waiterPerformanceTotalRevenue,
 } from "./waiter/methods";
 export type { WaiterPerformanceKpiId } from "./waiter/methods";
-export { buildWaiterPerformanceReportView } from "./waiter/view-model";
+export {
+  WAITER_FILTER_ALL,
+  buildWaiterPerformanceReportView,
+  filterWaiterPerformanceReportView,
+} from "./waiter/view-model";
 export type {
+  WaiterDailyChartPoint,
+  WaiterHourlyChartPoint,
   WaiterPerformanceChartPoint,
   WaiterPerformanceReportView,
   WaiterPerformanceRowView,
+  WaiterProductRowView,
 } from "./waiter/view-model";

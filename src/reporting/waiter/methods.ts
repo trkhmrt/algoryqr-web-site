@@ -5,7 +5,10 @@ export type WaiterPerformanceKpiId =
   | "activeWaiterCount"
   | "assignedOrderCount"
   | "unassignedOrderCount"
-  | "totalRevenue";
+  | "totalRevenue"
+  | "soldItemCount"
+  | "totalCommission"
+  | "billsClosedCount";
 
 export const WAITER_PERFORMANCE_METHODS: {
   [K in WaiterPerformanceKpiId]: ReportingMethodDef<K>;
@@ -42,6 +45,30 @@ export const WAITER_PERFORMANCE_METHODS: {
     filter: "Onaylı siparişler",
     unit: "money",
   },
+  soldItemCount: {
+    id: "soldItemCount",
+    label: "Satılan ürün",
+    method: "soldItemCount",
+    formula: "Σ orderItem.quantity",
+    filter: "Onaylı sipariş kalemleri",
+    unit: "count",
+  },
+  totalCommission: {
+    id: "totalCommission",
+    label: "Toplam komisyon",
+    method: "totalCommission",
+    formula: "Σ order.commissionAmount",
+    filter: "Onaylı siparişler",
+    unit: "money",
+  },
+  billsClosedCount: {
+    id: "billsClosedCount",
+    label: "Kapanan adisyon",
+    method: "billsClosedCount",
+    formula: "COUNT(bill.status = CLOSED)",
+    filter: "Seçilen dönemde kapanan adisyonlar",
+    unit: "count",
+  },
 };
 
 export function activeWaiterCount(value?: number | null): number {
@@ -60,11 +87,31 @@ export function waiterPerformanceTotalRevenue(value?: number | string | null): n
   return toAmount(value);
 }
 
+export function waiterPerformanceSoldItemCount(value?: number | null): number {
+  return value ?? 0;
+}
+
+export function waiterPerformanceTotalCommission(value?: number | string | null): number {
+  return toAmount(value);
+}
+
+export function waiterPerformanceBillsClosedCount(value?: number | null): number {
+  return value ?? 0;
+}
+
 export function waiterPerformanceOrderCount(value?: number | null): number {
   return value ?? 0;
 }
 
+export function waiterPerformanceItemCount(value?: number | null): number {
+  return value ?? 0;
+}
+
 export function waiterPerformanceRevenue(value?: number | string | null): number {
+  return toAmount(value);
+}
+
+export function waiterPerformanceCommission(value?: number | string | null): number {
   return toAmount(value);
 }
 
