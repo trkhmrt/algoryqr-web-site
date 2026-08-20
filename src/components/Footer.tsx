@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Mail, MapPin, Phone } from "lucide-react";
 import PaymentBadges from "@/components/PaymentBadges";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FooterThemeToggle } from "@/components/ThemeToggle";
@@ -54,18 +55,26 @@ const Footer = () => {
               İletişim
             </p>
             <p className="text-sm font-medium text-foreground">{COMPANY.tradeName}</p>
-            <a
-              href={COMPANY.emailMailto}
-              className="text-sm text-primary underline-offset-4 hover:underline break-all"
-            >
-              {COMPANY.email}
-            </a>
-            <a
-              href={COMPANY.phoneTel}
-              className="text-sm text-primary underline-offset-4 hover:underline"
-            >
-              {COMPANY.phone}
-            </a>
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>{COMPANY.address}</span>
+              </div>
+              <a
+                href={COMPANY.emailMailto}
+                className="flex items-center gap-2.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Mail className="h-4 w-4 shrink-0 text-primary" />
+                <span className="break-all">{COMPANY.email}</span>
+              </a>
+              <a
+                href={COMPANY.phoneTel}
+                className="flex items-center gap-2.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Phone className="h-4 w-4 shrink-0 text-primary" />
+                <span>{COMPANY.phone}</span>
+              </a>
+            </div>
           </div>
         </div>
 
