@@ -658,6 +658,22 @@ export async function payWaiterBillItems(
   return data;
 }
 
+export async function reverseWaiterBillPayment(
+  billId: number,
+  paymentId: number,
+): Promise<WaiterBill> {
+  const response = await waiterFetch(`/api/waiter/bills/${billId}/payments/${paymentId}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<WaiterBill & { message?: string }>(response);
+  if (!response.ok) {
+    throw new WaiterApiError(response.status, data.message || "Ödeme geri alınamadı");
+  }
+  return data;
+}
+
 export async function getWaiterBillSplitPreview(
   billId: number,
   personCount: number,
