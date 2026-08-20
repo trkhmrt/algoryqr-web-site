@@ -1320,6 +1320,7 @@ export interface MenuWaiterPerformanceKpis {
   totalRevenue?: number | string | null;
   itemCount?: number;
   totalCommission?: number | string | null;
+  totalTip?: number | string | null;
   billsClosedCount?: number;
   currency?: string | null;
 }
@@ -1337,6 +1338,7 @@ export interface MenuWaiterPerformanceRow {
   orderCount?: number;
   itemCount?: number;
   revenue?: number | string | null;
+  tipAmount?: number | string | null;
   commissionAmount?: number | string | null;
   billsClosedCount?: number;
   avgOrderValue?: number | string | null;

@@ -59,6 +59,7 @@ const KPI_ICONS: Record<WaiterPerformanceKpiId, LucideIcon> = {
   totalRevenue: Banknote,
   soldItemCount: ShoppingBag,
   totalCommission: Coins,
+  totalTip: Coins,
   billsClosedCount: Receipt,
 };
 
@@ -69,6 +70,7 @@ const KPI_COLORS: Record<WaiterPerformanceKpiId, string> = {
   totalRevenue: COLORS.green,
   soldItemCount: COLORS.violet,
   totalCommission: COLORS.orange,
+  totalTip: COLORS.teal,
   billsClosedCount: COLORS.indigo,
 };
 
@@ -346,6 +348,7 @@ export default function AnalyticsWaiterPerformancePanel({
                     <th className="px-4 py-3 font-medium">Sipariş</th>
                     <th className="px-4 py-3 font-medium">Ürün adedi</th>
                     <th className="px-4 py-3 font-medium">Ciro</th>
+                    <th className="px-4 py-3 font-medium">Bahşiş</th>
                     <th className="px-4 py-3 font-medium">Komisyon</th>
                     <th className="px-4 py-3 font-medium">Adisyon</th>
                     <th className="px-4 py-3 font-medium">Ort. sepet</th>
@@ -385,6 +388,9 @@ export default function AnalyticsWaiterPerformancePanel({
                           <td className="px-4 py-3 text-foreground">{row.itemCount.toLocaleString("tr-TR")}</td>
                           <td className="px-4 py-3 text-foreground">{formatMenuPrice(row.revenue, currency)}</td>
                           <td className="px-4 py-3 text-foreground">
+                            {formatMenuPrice(row.tipAmount, currency)}
+                          </td>
+                          <td className="px-4 py-3 text-foreground">
                             {formatMenuPrice(row.commissionAmount, currency)}
                           </td>
                           <td className="px-4 py-3 text-foreground">
@@ -402,7 +408,7 @@ export default function AnalyticsWaiterPerformancePanel({
                         </tr>
                         {expanded && row.topProducts.length > 0 ? (
                           <tr className="border-b border-border/70 bg-muted/10">
-                            <td colSpan={9} className="px-6 py-4">
+                            <td colSpan={10} className="px-6 py-4">
                               <p className="mb-2 text-xs font-medium text-muted-foreground">En çok sattığı ürünler</p>
                               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                 {row.topProducts.map((product) => (

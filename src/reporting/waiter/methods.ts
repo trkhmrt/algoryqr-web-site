@@ -8,6 +8,7 @@ export type WaiterPerformanceKpiId =
   | "totalRevenue"
   | "soldItemCount"
   | "totalCommission"
+  | "totalTip"
   | "billsClosedCount";
 
 export const WAITER_PERFORMANCE_METHODS: {
@@ -23,42 +24,50 @@ export const WAITER_PERFORMANCE_METHODS: {
   },
   assignedOrderCount: {
     id: "assignedOrderCount",
-    label: "Atanan sipariş",
+    label: "Atanan adisyon",
     method: "assignedOrderCount",
-    formula: "COUNT(order.waiterId != null)",
-    filter: "Onaylı siparişler",
+    formula: "COUNT(bill.closedByWaiterId != null)",
+    filter: "Kapalı adisyonlar",
     unit: "count",
   },
   unassignedOrderCount: {
     id: "unassignedOrderCount",
-    label: "Atanmamış sipariş",
+    label: "Atanmamış adisyon",
     method: "unassignedOrderCount",
-    formula: "COUNT(order.waiterId = null)",
-    filter: "Onaylı siparişler",
+    formula: "COUNT(bill.closedByWaiterId = null)",
+    filter: "Kapalı adisyonlar",
     unit: "count",
   },
   totalRevenue: {
     id: "totalRevenue",
     label: "Toplam ciro",
     method: "totalRevenue",
-    formula: "Σ order.totalAmount",
-    filter: "Onaylı siparişler",
+    formula: "Σ bill.totalAmount",
+    filter: "Kapalı adisyonlar (kapatan garson)",
     unit: "money",
   },
   soldItemCount: {
     id: "soldItemCount",
     label: "Satılan ürün",
     method: "soldItemCount",
-    formula: "Σ orderItem.quantity",
-    filter: "Onaylı sipariş kalemleri",
+    formula: "Σ billItem.quantity",
+    filter: "Kapalı adisyon kalemleri",
     unit: "count",
   },
   totalCommission: {
     id: "totalCommission",
     label: "Toplam komisyon",
     method: "totalCommission",
-    formula: "Σ order.commissionAmount",
-    filter: "Onaylı siparişler",
+    formula: "Σ bill.commissionAmount",
+    filter: "Kapalı adisyonlar",
+    unit: "money",
+  },
+  totalTip: {
+    id: "totalTip",
+    label: "Toplam bahşiş",
+    method: "totalTip",
+    formula: "Σ bill.tipAmount",
+    filter: "Kapalı adisyonlar",
     unit: "money",
   },
   billsClosedCount: {
@@ -92,6 +101,10 @@ export function waiterPerformanceSoldItemCount(value?: number | null): number {
 }
 
 export function waiterPerformanceTotalCommission(value?: number | string | null): number {
+  return toAmount(value);
+}
+
+export function waiterPerformanceTotalTip(value?: number | string | null): number {
   return toAmount(value);
 }
 

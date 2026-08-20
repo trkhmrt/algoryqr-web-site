@@ -171,6 +171,7 @@ describe("view models", () => {
         totalRevenue: 260,
         itemCount: 4,
         totalCommission: 24,
+        totalTip: 10,
         billsClosedCount: 1,
         currency: "TRY",
       },
@@ -181,6 +182,7 @@ describe("view models", () => {
           orderCount: 1,
           itemCount: 2,
           revenue: 150,
+          tipAmount: 10,
           commissionAmount: 15,
           billsClosedCount: 1,
           revenueSharePercent: 57.7,
@@ -198,7 +200,9 @@ describe("view models", () => {
     const view = buildWaiterPerformanceReportView(report);
     expect(view.kpis.find((row) => row.id === "soldItemCount")?.value).toBe(4);
     expect(view.kpis.find((row) => row.id === "totalCommission")?.value).toBe(24);
+    expect(view.kpis.find((row) => row.id === "totalTip")?.value).toBe(10);
     expect(view.rows[0].itemCount).toBe(2);
+    expect(view.rows[0].tipAmount).toBe(10);
     expect(view.rows[0].topProducts[0].name).toBe("Cay");
     expect(view.products).toHaveLength(1);
     expect(view.daily).toHaveLength(1);
