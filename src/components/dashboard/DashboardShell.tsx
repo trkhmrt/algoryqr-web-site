@@ -85,6 +85,15 @@ const SIDEBAR_COLLAPSED_KEY = "algory-dashboard-sidebar-collapsed";
 const SIDEBAR_ITEM =
   "flex h-10 w-full items-center justify-start gap-3 overflow-hidden rounded-lg px-2.5 text-sm font-medium transition-colors";
 
+function mobileNavItemClass(active: boolean) {
+  return cn(
+    "flex-1 whitespace-nowrap rounded-lg border bg-white px-3 py-2.5 text-center text-xs font-medium transition-colors sm:text-sm dark:bg-card",
+    active
+      ? "border-transparent bg-muted text-foreground"
+      : "border-border/70 text-muted-foreground hover:text-foreground",
+  );
+}
+
 function sidebarItemClass(active: boolean) {
   return cn(
     SIDEBAR_ITEM,
@@ -328,25 +337,21 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             </div>
           </header>
 
-          <div className="overflow-x-auto border-b border-border lg:hidden">
-            <div className="flex min-w-full">
+          <div className="overflow-x-auto border-b border-border [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:hidden">
+            <div className="flex min-w-full gap-1.5 py-2 pl-2 pr-2">
               {visibleNavItems.map((item) => {
                 const active = isDashboardNavActive(pathname, item.href);
                 return (
                   <Link
                     key={item.key}
                     href={item.href}
-                    className={cn(
-                      "flex-1 whitespace-nowrap border-b-2 px-3 py-3 text-center text-xs font-medium transition-colors sm:text-sm",
-                      active
-                        ? "border-primary text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground",
-                    )}
+                    className={mobileNavItemClass(active)}
                   >
                     {item.mobileLabel}
                   </Link>
                 );
               })}
+              <span aria-hidden className="w-2 shrink-0" />
             </div>
           </div>
 
