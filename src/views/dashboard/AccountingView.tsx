@@ -12,6 +12,7 @@ import {
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,6 @@ import {
   listMenuFixedExpensesRequest,
   type AccountingEntryApiItem,
   type AccountingEntryType,
-  type AccountingSourceType,
   type MenuFixedExpenseItem,
 } from "@/lib/api";
 
@@ -92,21 +92,6 @@ function entryTypeClass(type: AccountingEntryType): string {
       return "bg-amber-500/15 text-amber-700";
     default:
       return "bg-muted text-muted-foreground";
-  }
-}
-
-function sourceTypeLabel(source: AccountingSourceType): string {
-  switch (source) {
-    case "MANUAL":
-      return "Manuel";
-    case "BILL_SALE":
-      return "Adisyon satışı";
-    case "BILL_TIP":
-      return "Bahşiş";
-    case "ORDER_SALE":
-      return "Sipariş cirosu";
-    default:
-      return source;
   }
 }
 
@@ -414,30 +399,15 @@ export default function AccountingView() {
                 searchPlaceholder="Tür ara..."
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Başlangıç</label>
-              <input
-                type="date"
-                className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={from}
-                onChange={(e) => {
-                  setFrom(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Bitiş</label>
-              <input
-                type="date"
-                className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
+            <DateRangeFilter
+              className="min-w-0"
+              value={{ from, to }}
+              onChange={(next) => {
+                setFrom(next.from);
+                setTo(next.to);
+                setPage(0);
+              }}
+            />
             <div className="min-w-[200px] flex-1 space-y-1.5">
               <label className="text-xs text-muted-foreground">Ara</label>
               <input
@@ -471,7 +441,6 @@ export default function AccountingView() {
                     <th className="px-4 py-3 font-medium">Başlık</th>
                     <th className="px-4 py-3 font-medium">Tutar</th>
                     <th className="px-4 py-3 font-medium">Menü</th>
-                    <th className="px-4 py-3 font-medium">Kaynak</th>
                     <th className="px-4 py-3 font-medium" />
                   </tr>
                 </thead>
@@ -630,7 +599,6 @@ function AccountingRow({
       </td>
       <td className="px-4 py-3 font-medium">{formatAmount(item.amount, item.currency)}</td>
       <td className="px-4 py-3 text-muted-foreground">{item.menuName ?? "—"}</td>
-      <td className="px-4 py-3 text-muted-foreground">{sourceTypeLabel(item.sourceType)}</td>
       <td className="px-4 py-3 text-right">
         {onDelete ? (
           <Button

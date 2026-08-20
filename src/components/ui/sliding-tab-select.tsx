@@ -15,7 +15,7 @@ export type SlidingTabItem = {
 };
 
 export type SlidingTabSelectSize = "sm" | "md" | "lg";
-export type SlidingTabSelectVariant = "pill" | "line";
+export type SlidingTabSelectVariant = "pill" | "line" | "nav" | "soft";
 
 const SIZE_STYLES: Record<
   SlidingTabSelectSize,
@@ -28,19 +28,35 @@ const SIZE_STYLES: Record<
 
 const VARIANT_STYLES: Record<
   SlidingTabSelectVariant,
-  { track: string; item: string; activeText: string; indicator: string }
+  { track: string; item: string; activeText: string; inactiveText: string; indicator: string }
 > = {
   pill: {
     track: "inline-flex rounded-lg border border-border bg-card",
     item: "rounded-md",
     activeText: "text-primary-foreground",
+    inactiveText: "text-muted-foreground hover:text-foreground",
     indicator: "absolute inset-0 rounded-md bg-primary",
   },
   line: {
     track: "flex w-full gap-0 rounded-none border-0 border-b border-border bg-transparent p-0",
     item: "rounded-none px-4",
     activeText: "text-foreground",
+    inactiveText: "text-muted-foreground hover:text-foreground",
     indicator: "absolute inset-x-0 bottom-0 h-0.5 bg-foreground",
+  },
+  nav: {
+    track: "flex w-full gap-1.5 border-0 bg-transparent p-0",
+    item: "flex-1 rounded-lg border bg-white px-3 py-2.5 text-center text-xs sm:text-sm dark:bg-card",
+    activeText: "border-transparent text-foreground",
+    inactiveText: "border-border/70 text-muted-foreground hover:text-foreground",
+    indicator: "absolute inset-0 rounded-lg bg-muted",
+  },
+  soft: {
+    track: "inline-flex flex-wrap gap-1 rounded-2xl border border-border/60 bg-muted/30 p-1",
+    item: "rounded-xl px-3 py-1.5 text-xs",
+    activeText: "text-foreground",
+    inactiveText: "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+    indicator: "absolute inset-0 rounded-xl bg-background shadow-sm ring-1 ring-border/70",
   },
 };
 
@@ -76,10 +92,10 @@ export function SlidingTabSelect({
       {items.map((item) => {
         const active = item.value === value;
         const sharedClassName = cn(
-          "relative isolate inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-colors",
-          sizes.item,
+          "relative isolate inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-all duration-200",
+          variant !== "nav" && variant !== "soft" && sizes.item,
           look.item,
-          active ? look.activeText : "text-muted-foreground hover:text-foreground",
+          active ? look.activeText : look.inactiveText,
           item.disabled && "pointer-events-none opacity-50",
         );
         const content = (

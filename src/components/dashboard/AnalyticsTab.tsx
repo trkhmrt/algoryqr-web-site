@@ -551,8 +551,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         <div className="space-y-3">
           {isOrders ? (
             <SlidingTabSelect
-              variant="line"
-              size="md"
+              variant="nav"
               ariaLabel="Sipariş rapor türü"
               value={reportView}
               onValueChange={(next) => {
@@ -568,8 +567,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
             />
           ) : (
             <SlidingTabSelect
-              variant="line"
-              size="md"
+              variant="nav"
               ariaLabel="Rapor türü"
               value={reportView}
               onValueChange={(next) => {
@@ -605,14 +603,14 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
             />
             <div className="flex justify-end">
               <SlidingTabSelect
-                size="sm"
+                variant="soft"
                 ariaLabel="Rapor dönemi"
                 value={period}
                 onValueChange={(next) => setPeriod(next as AnalyticsPeriod)}
                 items={[
                   { value: "1d", label: "Bugün" },
-                  { value: "7d", label: "7 Gün" },
-                  { value: "30d", label: "30 Gün" },
+                  { value: "7d", label: "7 gün" },
+                  { value: "30d", label: "30 gün" },
                 ]}
               />
             </div>
