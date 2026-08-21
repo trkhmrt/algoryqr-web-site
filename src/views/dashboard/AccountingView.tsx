@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, Loader2, Trash2 } from "lucide-react";
 
 import {
   DigitalMenuPicker,
@@ -28,6 +28,7 @@ import {
   createMenuFixedExpenseRequest,
   deleteAccountingEntryRequest,
   deleteMenuFixedExpenseRequest,
+  getAccountingEntryDetailRequest,
   listAccountingEntriesRequest,
   listMenuFixedExpensesRequest,
   type AccountingEntryApiItem,
@@ -107,6 +108,7 @@ export default function AccountingView() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(0);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<AccountingEntryType>("GELIR");
@@ -436,6 +438,7 @@ export default function AccountingView() {
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
                   <tr>
+                    <th className="px-4 py-3 font-medium w-8" />
                     <th className="px-4 py-3 font-medium">Tarih</th>
                     <th className="px-4 py-3 font-medium">Tür</th>
                     <th className="px-4 py-3 font-medium">Başlık</th>
@@ -449,6 +452,10 @@ export default function AccountingView() {
                     <AccountingRow
                       key={item.id}
                       item={item}
+                      expanded={expandedId === item.id}
+                      onToggle={() =>
+                        setExpandedId((current) => (current === item.id ? null : item.id))
+                      }
                       onDelete={
                         item.sourceType === "MANUAL"
                           ? () => deleteMutation.mutate(item.id)
@@ -574,44 +581,128 @@ export default function AccountingView() {
 
 function AccountingRow({
   item,
+  expanded,
+  onToggle,
   onDelete,
   deleting,
 }: {
   item: AccountingEntryApiItem;
+  expanded: boolean;
+  onToggle: () => void;
   onDelete?: () => void;
   deleting: boolean;
 }) {
+  const canExpand =
+    item.sourceType === "BILL_SALE" ||
+    item.sourceBillId != null ||
+    item.sourceOrderId != null;
+
+  const detailQuery = useQuery({
+    queryKey: ["accounting-entry-detail", item.id],
+    queryFn: () => getAccountingEntryDetailRequest(item.id),
+    enabled: expanded && canExpand,
+  });
+
   return (
-    <tr className="border-b border-border/60 last:border-0">
-      <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.occurredAt)}</td>
-      <td className="px-4 py-3">
-        <span
-          className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
-        >
-          {entryTypeLabel(item.entryType)}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <div>
-          <p className="font-medium text-foreground">{item.title}</p>
-          {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
-        </div>
-      </td>
-      <td className="px-4 py-3 font-medium">{formatAmount(item.amount, item.currency)}</td>
-      <td className="px-4 py-3 text-muted-foreground">{item.menuName ?? "—"}</td>
-      <td className="px-4 py-3 text-right">
-        {onDelete ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={deleting}
-            onClick={onDelete}
-            aria-label="Kaydı sil"
+    <Fragment>
+      <tr
+        className={`border-b border-border/60 last:border-0 ${canExpand ? "cursor-pointer hover:bg-muted/30" : ""}`}
+        onClick={canExpand ? onToggle : undefined}
+      >
+        <td className="px-4 py-3">
+          {canExpand ? (
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+            />
+          ) : null}
+        </td>
+        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.occurredAt)}</td>
+        <td className="px-4 py-3">
+          <span
+            className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
           >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        ) : null}
-      </td>
-    </tr>
+            {entryTypeLabel(item.entryType)}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          <div>
+            <p className="font-medium text-foreground">{item.title}</p>
+            {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
+            {item.sourceOrderId != null ? (
+              <p className="text-xs text-muted-foreground">Sipariş #{item.sourceOrderId}</p>
+            ) : null}
+          </div>
+        </td>
+        <td className="px-4 py-3 font-medium">{formatAmount(item.amount, item.currency)}</td>
+        <td className="px-4 py-3 text-muted-foreground">{item.menuName ?? "—"}</td>
+        <td className="px-4 py-3 text-right">
+          {onDelete ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={deleting}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              aria-label="Kaydı sil"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </td>
+      </tr>
+      {expanded ? (
+        <tr className="border-b border-border/60 bg-muted/10">
+          <td colSpan={7} className="px-4 py-4">
+            {detailQuery.isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Detay yükleniyor…
+              </div>
+            ) : detailQuery.isError ? (
+              <p className="text-sm text-destructive">Detay yüklenemedi.</p>
+            ) : (detailQuery.data?.items.length ?? 0) === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Bu kayıt için sipariş/adisyon kalemi yok.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {detailQuery.data?.sourceOrderId != null ? (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Sipariş #{detailQuery.data.sourceOrderId} detayı
+                  </p>
+                ) : detailQuery.data?.sourceBillId != null ? (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Adisyon #{detailQuery.data.sourceBillId} kalemleri
+                  </p>
+                ) : null}
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {detailQuery.data?.items.map((line) => (
+                    <div
+                      key={line.id}
+                      className="rounded-xl border border-border/50 bg-white px-2.5 py-1.5 shadow-sm transition-colors dark:border-border/60 dark:bg-muted/60"
+                    >
+                      <p className="text-sm font-medium">{line.productName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {line.quantity} × {formatAmount(line.unitPrice, detailQuery.data?.currency)}
+                      </p>
+                      <p className="text-sm font-medium">
+                        {formatAmount(line.lineTotal, detailQuery.data?.currency)}
+                      </p>
+                      {line.sourceOrderId != null && detailQuery.data?.sourceOrderId == null ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Sipariş #{line.sourceOrderId}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </td>
+        </tr>
+      ) : null}
+    </Fragment>
   );
 }
