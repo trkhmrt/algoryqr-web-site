@@ -1662,3 +1662,33 @@ export async function createAccountingEntryRequest(
 export async function deleteAccountingEntryRequest(entryId: number | string): Promise<void> {
   await api.delete(`/accounting/entries/${entryId}`);
 }
+
+export interface AccountingEntryDetailLineItem {
+  id: number;
+  productName: string;
+  unitPrice: number | string;
+  quantity: number;
+  lineTotal: number | string;
+  note?: string | null;
+  sourceOrderId?: number | null;
+}
+
+export interface AccountingEntryDetailApiResponse {
+  entryId: number;
+  sourceType: AccountingSourceType;
+  sourceBillId?: number | null;
+  sourceOrderId?: number | null;
+  title: string;
+  amount: number | string;
+  currency: string;
+  items: AccountingEntryDetailLineItem[];
+}
+
+export async function getAccountingEntryDetailRequest(
+  entryId: number | string,
+): Promise<AccountingEntryDetailApiResponse> {
+  const response = await api.get<AccountingEntryDetailApiResponse>(
+    `/accounting/entries/${entryId}/detail`,
+  );
+  return response.data;
+}
