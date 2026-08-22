@@ -8,9 +8,6 @@ import { ArrowLeft, Check, CreditCard, Loader2, Lock, ShieldCheck } from "lucide
 
 import BillingAddressForm from "@/components/dashboard/commerce/BillingAddressForm";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { invalidateBillingAddresses, invalidatePaymentMethods, useBillingAddresses, usePaymentMethods } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
@@ -43,6 +40,7 @@ import {
   storePendingPurchaseId,
   type PurchaseInitiateResponse,
 } from "@/lib/purchase-fulfillment";
+import { cn } from "@/lib/utils";
 
 interface PackagePurchaseViewProps {
   packageId: number;
@@ -67,7 +65,6 @@ export default function PackagePurchaseView({
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("MONTHLY");
   const [billingAddressId, setBillingAddressId] = useState<number | null>(null);
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
-  const [recurringConsent, setRecurringConsent] = useState(false);
   const [creatingAddress, setCreatingAddress] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentOverlay, setPaymentOverlay] = useState<PaymentOverlay | null>(null);
@@ -172,7 +169,7 @@ export default function PackagePurchaseView({
       billingPeriod,
       billingAddressId,
       paymentMethodId,
-      recurringConsent,
+      recurringConsent: false,
     });
     if (!checkout.success) {
       onNotify("warning", checkout.error.issues[0]?.message ?? "Ödeme seçimlerini kontrol edin.");
@@ -192,7 +189,7 @@ export default function PackagePurchaseView({
         billingAddressId,
         paymentMethodId: paymentMethodId != null ? Number(paymentMethodId) : undefined,
         identityNumber: resolveIdentityNumber(selectedAddress?.tckn, selectedAddress?.vkn),
-        recurringConsent,
+        recurringConsent: false,
       };
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", payload);
       if (!Number.isSafeInteger(response.data.purchaseId) || response.data.purchaseId <= 0) {
@@ -227,7 +224,18 @@ export default function PackagePurchaseView({
   };
 
   if (paymentOverlay) {
-    const title = paymentOverlay.kind === "url" ? "Güvenli Ödeme (iyzico)" : "3D Secure doğrulama";
+    const isPaytr =
+      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
+    const isIyzico =
+      paymentOverlay.kind === "html"
+      || (paymentOverlay.kind === "url" && /iyzipay|iyzico/i.test(paymentOverlay.content));
+    const title = isPaytr
+      ? "Güvenli Ödeme (PayTR)"
+      : isIyzico
+        ? "Güvenli Ödeme (iyzico)"
+        : paymentOverlay.kind === "url"
+          ? "Güvenli Ödeme"
+          : "3D Secure doğrulama";
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
         <div className="flex items-center justify-between border-b p-3">
@@ -266,9 +274,9 @@ export default function PackagePurchaseView({
   })();
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in rounded-2xl border border-[#e5e7eb] bg-[#fafafa] p-4 sm:p-6 dark:border-border dark:bg-muted/20">
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" asChild>
+        <Button variant="outline" size="icon" asChild className="border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
           <Link href={returnHref}><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div>
@@ -278,167 +286,172 @@ export default function PackagePurchaseView({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr] lg:items-start">
-        <Card className="glow-card border-primary/20">
-          <CardContent className="space-y-5 p-6">
-            <div>
-              <p className="text-xs uppercase text-muted-foreground">Paket</p>
-              <h2 className="mt-1 text-xl font-semibold">{pkg.name}</h2>
-              <div className="mt-1 min-h-[2.75rem]">
-                <div className="flex flex-wrap items-baseline gap-2">
-                  {compareLabel ? (
-                    <span className="text-lg text-muted-foreground line-through">{compareLabel}</span>
-                  ) : null}
-                  <p className="text-2xl font-bold">
-                    {priceLabel}
-                    <span className="ml-1 text-sm font-normal text-muted-foreground">{pricing.suffix}</span>
-                  </p>
-                  {pricing.yearlySavings != null && pricing.yearlySavings > 0 ? (
-                    <span
-                      className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium leading-none text-emerald-600 dark:text-emerald-400"
-                      title={formatYearlySavingsLabel(pricing.yearlySavings, pkg.currency)}
-                    >
-                      {formatYearlySavingsBadge(
-                        pricing.yearlySavings,
-                        pkg.currency,
-                        resolveYearlySavingsPercent(pricing),
-                      )}
-                    </span>
-                  ) : null}
-                </div>
+        <div className="space-y-5 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+          <div>
+            <p className="text-xs uppercase text-muted-foreground">Paket</p>
+            <h2 className="mt-1 text-xl font-semibold">{pkg.name}</h2>
+            <div className="mt-1 min-h-[2.75rem]">
+              <div className="flex flex-wrap items-baseline gap-2">
+                {compareLabel ? (
+                  <span className="text-lg text-muted-foreground line-through">{compareLabel}</span>
+                ) : null}
+                <p className="text-2xl font-bold">
+                  {priceLabel}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">{pricing.suffix}</span>
+                </p>
+                {pricing.yearlySavings != null && pricing.yearlySavings > 0 ? (
+                  <span
+                    className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium leading-none text-emerald-600 dark:text-emerald-400"
+                    title={formatYearlySavingsLabel(pricing.yearlySavings, pkg.currency)}
+                  >
+                    {formatYearlySavingsBadge(
+                      pricing.yearlySavings,
+                      pkg.currency,
+                      resolveYearlySavingsPercent(pricing),
+                    )}
+                  </span>
+                ) : null}
               </div>
             </div>
-            <ul className="space-y-2 border-t pt-4">
-              {packageFeatures(pkg).map((feature) => (
-                <li key={feature} className="flex gap-2 text-sm text-muted-foreground">
-                  <Check className="mt-0.5 h-4 w-4 text-primary" />{feature}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+          </div>
+          <ul className="space-y-2 border-t border-[#e5e7eb] pt-4 dark:border-border">
+            {packageFeatures(pkg).map((feature) => (
+              <li key={feature} className="flex gap-2 text-sm text-muted-foreground">
+                <Check className="mt-0.5 h-4 w-4 text-primary" />{feature}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <div className="space-y-5">
-          <Card className="glow-card">
-            <CardContent className="space-y-4 p-6">
-              <h2 className="font-medium">Faturalama periyodu</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${billingPeriod === "MONTHLY" ? "border-primary bg-primary/5" : "border-border"}`}>
-                  <input
-                    type="radio"
-                    name="billingPeriod"
-                    checked={billingPeriod === "MONTHLY"}
-                    onChange={() => setBillingPeriod("MONTHLY")}
-                  />
-                  <span className="text-sm">Aylık</span>
-                </label>
-                <label className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${billingPeriod === "YEARLY" ? "border-primary bg-primary/5" : "border-border"}`}>
-                  <input
-                    type="radio"
-                    name="billingPeriod"
-                    checked={billingPeriod === "YEARLY"}
-                    onChange={() => setBillingPeriod("YEARLY")}
-                  />
-                  <span className="text-sm">Yıllık</span>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+            <h2 className="font-medium">Faturalama periyodu</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-xl border p-3",
+                  billingPeriod === "MONTHLY"
+                    ? "border-primary bg-primary/5"
+                    : "border-[#e5e7eb] bg-[#fafafa] dark:border-border dark:bg-background",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="billingPeriod"
+                  checked={billingPeriod === "MONTHLY"}
+                  onChange={() => setBillingPeriod("MONTHLY")}
+                />
+                <span className="text-sm">Aylık</span>
+              </label>
+              <label
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-xl border p-3",
+                  billingPeriod === "YEARLY"
+                    ? "border-primary bg-primary/5"
+                    : "border-[#e5e7eb] bg-[#fafafa] dark:border-border dark:bg-background",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="billingPeriod"
+                  checked={billingPeriod === "YEARLY"}
+                  onChange={() => setBillingPeriod("YEARLY")}
+                />
+                <span className="text-sm">Yıllık</span>
+              </label>
+            </div>
+          </div>
 
-          <Card className="glow-card">
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="font-medium">Fatura adresi</h2>
-                <Button variant="ghost" size="sm" onClick={() => setCreatingAddress((value) => !value)}>Yeni adres</Button>
-              </div>
-              {creatingAddress ? (
-                <BillingAddressForm onSubmit={createAddress} />
-              ) : addresses.isLoading ? (
-                <div className="h-10 animate-pulse rounded-md bg-muted" />
-              ) : addresses.isError ? (
-                <p className="text-sm text-destructive">
-                  {addresses.error instanceof ApiError
-                    ? addresses.error.message
-                    : "Fatura adresleri yüklenemedi."}
+          <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium">Fatura adresi</h2>
+              <Button variant="ghost" size="sm" onClick={() => setCreatingAddress((value) => !value)}>Yeni adres</Button>
+            </div>
+            {creatingAddress ? (
+              <BillingAddressForm onSubmit={createAddress} />
+            ) : addresses.isLoading ? (
+              <div className="h-10 animate-pulse rounded-md bg-muted" />
+            ) : addresses.isError ? (
+              <p className="text-sm text-destructive">
+                {addresses.error instanceof ApiError
+                  ? addresses.error.message
+                  : "Fatura adresleri yüklenemedi."}
+              </p>
+            ) : addresses.data?.length ? (
+              <SearchableSelect
+                value={billingAddressId ? String(billingAddressId) : ""}
+                onValueChange={(value) => setBillingAddressId(Number(value))}
+                options={addresses.data.map((address) => ({
+                  value: String(address.id),
+                  label: `${displayBillingName(address)} · ${address.city}${address.defaultAddress ? " · Aktif" : ""}`,
+                }))}
+                placeholder="Fatura adresi seçin"
+                searchPlaceholder="Adres ara..."
+                emptyText="Adres bulunamadı."
+              />
+            ) : (
+              <Button variant="outline" onClick={() => setCreatingAddress(true)}>Fatura adresi oluştur</Button>
+            )}
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              <h2 className="font-medium">Kart bilgileri</h2>
+            </div>
+
+            {methods.data?.length ? (
+              <SearchableSelect
+                value={paymentMethodId == null ? "new" : paymentMethodId}
+                onValueChange={(value) => setPaymentMethodId(value === "new" ? null : value)}
+                options={[
+                  ...methods.data.map((method) => ({
+                    value: method.id,
+                    label: `${method.cardAlias || method.brand || "Kart"} · •••• ${method.lastFour}`,
+                  })),
+                  { value: "new", label: "Yeni kart kullan" },
+                ]}
+                placeholder="Kart seçin"
+                searchPlaceholder="Kart ara..."
+              />
+            ) : null}
+
+            {paymentMethodId == null && (
+              <div className="flex items-start gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <p>
+                  Kart bilgileriniz bizim sunucularımıza hiç ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna
+                  bastığınızda iyzico&apos;nun güvenli ödeme sayfasına yönlendirilirsiniz; kartınız sonraki
+                  ödemeler için orada saklanır.
                 </p>
-              ) : addresses.data?.length ? (
-                <SearchableSelect
-                  value={billingAddressId ? String(billingAddressId) : ""}
-                  onValueChange={(value) => setBillingAddressId(Number(value))}
-                  options={addresses.data.map((address) => ({
-                    value: String(address.id),
-                    label: `${displayBillingName(address)} · ${address.city}${address.defaultAddress ? " · Aktif" : ""}`,
-                  }))}
-                  placeholder="Fatura adresi seçin"
-                  searchPlaceholder="Adres ara..."
-                  emptyText="Adres bulunamadı."
-                />
-              ) : (
-                <Button variant="outline" onClick={() => setCreatingAddress(true)}>Fatura adresi oluştur</Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glow-card">
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <h2 className="font-medium">Kart bilgileri</h2>
               </div>
+            )}
 
-              {methods.data?.length ? (
-                <SearchableSelect
-                  value={paymentMethodId == null ? "new" : paymentMethodId}
-                  onValueChange={(value) => setPaymentMethodId(value === "new" ? null : value)}
-                  options={[
-                    ...methods.data.map((method) => ({
-                      value: method.id,
-                      label: `${method.cardAlias || method.brand || "Kart"} · •••• ${method.lastFour}`,
-                    })),
-                    { value: "new", label: "Yeni kart kullan" },
-                  ]}
-                  placeholder="Kart seçin"
-                  searchPlaceholder="Kart ara..."
-                />
-              ) : null}
+            <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
+              <p>
+                Bu ödeme: bugün · Dönem bitişi:{" "}
+                <span className="font-medium text-foreground">{nextDueLabel}</span>
+              </p>
+              <p className="mt-1">
+                {billingPeriod === "YEARLY" ? "Yıllık" : "Aylık"} tutar: {priceLabel}. Otomatik yenileme
+                açık değildir; isterseniz abonelik ayarlarından sonradan aktif edebilirsiniz.
+              </p>
+              <Link
+                href={DASHBOARD_ROUTES.accountSubscription}
+                className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+              >
+                Abonelik ayarlarına git
+              </Link>
+            </div>
 
-              {paymentMethodId == null && (
-                <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background p-3 text-xs text-muted-foreground">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <p>
-                    Kart bilgileriniz bizim sunucularımıza hiç ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna
-                    bastığınızda iyzico&apos;nun güvenli ödeme sayfasına yönlendirilirsiniz; kartınız sonraki
-                    ödemeler için orada saklanır.
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div className="rounded-lg border border-border/70 bg-background p-3 text-xs text-muted-foreground">
-                  <p>
-                    İlk ödeme: bugün · Sonraki ödeme:{" "}
-                    <span className="font-medium text-foreground">{nextDueLabel}</span>
-                  </p>
-                  <p className="mt-1">
-                    {billingPeriod === "YEARLY" ? "Yıllık" : "Aylık"} tutar: {priceLabel}. Sonraki dönemlerde kayıtlı kartınızdan otomatik tahsil edilir.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <Checkbox id="recurring-consent" checked={recurringConsent} onCheckedChange={(checked) => setRecurringConsent(checked === true)} />
-                  <Label htmlFor="recurring-consent" className="text-xs font-normal leading-relaxed">
-                    Seçtiğim kayıtlı karttan paket dönemlerinde düzenli tahsilat yapılmasını açıkça kabul ediyorum.
-                  </Label>
-                </div>
-              </div>
-
-              <Button className="w-full gap-2" variant="hero" disabled={isPaying || purchaseId != null} onClick={() => void pay()}>
-                {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-                {isPaying ? "Ödeme işleniyor…" : `Ödemeyi Tamamla · ${priceLabel}`}
-              </Button>
-              {purchaseId && fulfillment.summary.data?.status === "PENDING" && (
-                <p className="text-center text-xs text-muted-foreground">Ödeme sonucu doğrulanıyor…</p>
-              )}
-            </CardContent>
-          </Card>
+            <Button className="w-full gap-2" variant="hero" disabled={isPaying || purchaseId != null} onClick={() => void pay()}>
+              {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+              {isPaying ? "Ödeme işleniyor…" : `Ödemeyi Tamamla · ${priceLabel}`}
+            </Button>
+            {purchaseId && fulfillment.summary.data?.status === "PENDING" && (
+              <p className="text-center text-xs text-muted-foreground">Ödeme sonucu doğrulanıyor…</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

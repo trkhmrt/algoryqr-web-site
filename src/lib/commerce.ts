@@ -151,11 +151,7 @@ export const checkoutSchema = z.object({
   billingPeriod: z.enum(["MONTHLY", "YEARLY"]),
   billingAddressId: z.number().int().positive("Fatura adresi seçin"),
   paymentMethodId: z.string().nullable(),
-  recurringConsent: z.boolean(),
-}).superRefine((value, context) => {
-  if (!value.recurringConsent) {
-    context.addIssue({ code: "custom", path: ["recurringConsent"], message: "Düzenli ödeme onayı zorunludur" });
-  }
+  recurringConsent: z.boolean().default(false),
 });
 
 export function formatCardNumber(value: string): string {

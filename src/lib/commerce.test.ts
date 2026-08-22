@@ -138,7 +138,7 @@ describe("commerce schemas and logic", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires recurring consent for subscriptions", () => {
+  it("allows checkout without recurring consent", () => {
     const result = checkoutSchema.safeParse({
       billingPeriod: "MONTHLY",
       billingAddressId: 1,
@@ -146,7 +146,10 @@ describe("commerce schemas and logic", () => {
       recurringConsent: false,
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.recurringConsent).toBe(false);
+    }
   });
 
   it("formats cards and extracts BIN", () => {
