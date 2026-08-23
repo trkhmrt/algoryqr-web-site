@@ -61,6 +61,9 @@ export const DASHBOARD_ROUTES = {
   restaurantLayout: "/dashboard/dijital-menu/restaurant-layout",
   restaurantLayoutForQr: (qrId: number | string) =>
     `/dashboard/dijital-menu/restaurant-layout?qr=${qrId}`,
+  trendyolGo: "/dashboard/trendyol-go",
+  trendyolGoProducts: "/dashboard/trendyol-go/urunler",
+  trendyolGoOrders: "/dashboard/trendyol-go/siparisler",
   orderPanel: "/dashboard/siparis-paneli",
   orderPanelReports: "/dashboard/siparis-paneli/raporlar",
   orderPanelReportsForQr: (qrId: number | string) =>
@@ -129,6 +132,7 @@ export type DashboardNavKey =
   | "overview"
   | "digitalMenu"
   | "reservations"
+  | "trendyolGo"
   | "orderPanel"
   | "reports"
   | "accounting"
@@ -160,6 +164,13 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     label: "Rezervasyonlar",
     mobileLabel: "Rezervasyon",
     href: DASHBOARD_ROUTES.reservations,
+    requiredScope: "QR_MENU_OWNER",
+  },
+  {
+    key: "trendyolGo",
+    label: "Trendyol Go",
+    mobileLabel: "TGO",
+    href: DASHBOARD_ROUTES.trendyolGo,
     requiredScope: "QR_MENU_OWNER",
   },
   {
@@ -220,6 +231,9 @@ export function isDashboardNavActive(pathname: string, href: string): boolean {
   if (href === DASHBOARD_ROUTES.reservations) {
     return isReservationsSectionActive(pathname);
   }
+  if (href === DASHBOARD_ROUTES.trendyolGo) {
+    return isTrendyolGoSectionActive(pathname);
+  }
   if (href === DASHBOARD_ROUTES.orderPanel) {
     return isOrderPanelSectionActive(pathname);
   }
@@ -261,6 +275,13 @@ export function isReservationsSectionActive(pathname: string): boolean {
   return (
     pathname === DASHBOARD_ROUTES.reservations ||
     pathname.startsWith(`${DASHBOARD_ROUTES.reservations}/`)
+  );
+}
+
+export function isTrendyolGoSectionActive(pathname: string): boolean {
+  return (
+    pathname === DASHBOARD_ROUTES.trendyolGo ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.trendyolGo}/`)
   );
 }
 

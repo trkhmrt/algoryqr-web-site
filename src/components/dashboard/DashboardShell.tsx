@@ -25,6 +25,7 @@ import {
   CalendarDays,
   Calculator,
   Megaphone,
+  UtensilsCrossed,
 } from "lucide-react";
 
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
@@ -62,6 +63,7 @@ const NAV_ICONS = {
   overview: BarChart3,
   digitalMenu: DigitalMenuIcon,
   reservations: CalendarDays,
+  trendyolGo: UtensilsCrossed,
   orderPanel: MonitorSmartphone,
   reports: TrendingUp,
   accounting: Calculator,

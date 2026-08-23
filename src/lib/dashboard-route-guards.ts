@@ -4,6 +4,7 @@ import {
   isDigitalMenuSectionActive,
   isOrderPanelSectionActive,
   isReportsSectionActive,
+  isTrendyolGoSectionActive,
 } from "@/lib/dashboard-routes";
 
 function pathMatches(pathname: string, route: string): boolean {
@@ -25,7 +26,7 @@ export function resolveRequiredScope(pathname: string): ProductScope | null {
     return "SMART_REPORTING_OWNER";
   }
 
-  if (pathMatches(pathname, DASHBOARD_ROUTES.campaigns)) {
+  if (pathMatches(pathname, DASHBOARD_ROUTES.campaigns) || isTrendyolGoSectionActive(pathname)) {
     return "QR_MENU_OWNER";
   }
 
@@ -53,4 +54,7 @@ export const ROUTE_SCOPES: Partial<Record<string, ProductScope>> = {
   [DASHBOARD_ROUTES.smartReports]: "SMART_REPORTING_OWNER",
   [DASHBOARD_ROUTES.qrCodes]: "QR_CREATE_OWNER",
   [DASHBOARD_ROUTES.digitalMenu]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.trendyolGo]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.trendyolGoProducts]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.trendyolGoOrders]: "QR_MENU_OWNER",
 };
