@@ -142,7 +142,6 @@ describe("commerce schemas and logic", () => {
     const result = checkoutSchema.safeParse({
       billingPeriod: "MONTHLY",
       billingAddressId: 1,
-      paymentMethodId: "2",
       recurringConsent: false,
     });
 

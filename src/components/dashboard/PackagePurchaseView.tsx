@@ -10,7 +10,7 @@ import BillingAddressForm from "@/components/dashboard/commerce/BillingAddressFo
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
-import { invalidateBillingAddresses, invalidatePaymentMethods, useBillingAddresses, usePaymentMethods } from "@/hooks/use-commerce";
+import { invalidateBillingAddresses, useBillingAddresses } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { useActivePackages } from "@/hooks/use-subscription";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
@@ -64,10 +64,8 @@ export default function PackagePurchaseView({
   const queryClient = useQueryClient();
   const packages = useActivePackages();
   const addresses = useBillingAddresses();
-  const methods = usePaymentMethods();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("MONTHLY");
   const [billingAddressId, setBillingAddressId] = useState<number | null>(null);
-  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
   const [creatingAddress, setCreatingAddress] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentOverlay, setPaymentOverlay] = useState<PaymentOverlay | null>(null);
@@ -75,7 +73,6 @@ export default function PackagePurchaseView({
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
   const finalizedPurchaseId = useRef<number | null>(null);
   const addressInitialized = useRef(false);
-  const methodInitialized = useRef(false);
   const fulfillment = usePurchaseFulfillment(purchaseId, pollStartedAt);
   const rawPkg = packages.data?.find((item) => item.id === packageId);
   const pkg = rawPkg && isPackageVisibleInCatalog(rawPkg) ? rawPkg : undefined;
@@ -98,19 +95,9 @@ export default function PackagePurchaseView({
     }
   }, [addresses.error, addresses.isError, onNotify]);
 
-  useEffect(() => {
-    if (!methodInitialized.current && methods.data?.length) {
-      methodInitialized.current = true;
-      setPaymentMethodId(methods.data[0].id);
-    }
-  }, [methods.data]);
-
   const finalizeSuccess = useCallback(async () => {
     await refreshAccessAfterEntitlementChange(queryClient);
-    await Promise.all([
-      invalidatePackageUsage(queryClient),
-      invalidatePaymentMethods(queryClient),
-    ]);
+    await invalidatePackageUsage(queryClient);
     onNotify("info", "Ödeme tamamlandı ve paketiniz aktif edildi.");
     router.push(returnHref);
   }, [onNotify, queryClient, returnHref, router]);
@@ -181,7 +168,6 @@ export default function PackagePurchaseView({
     const checkout = checkoutSchema.safeParse({
       billingPeriod,
       billingAddressId,
-      paymentMethodId,
       recurringConsent: false,
     });
     if (!checkout.success) {
@@ -189,18 +175,16 @@ export default function PackagePurchaseView({
       return;
     }
 
-    const usingNewCard = paymentMethodId == null;
     const selectedAddress = addresses.data?.find((item) => item.id === billingAddressId);
 
     setIsPaying(true);
     try {
       const payload: Record<string, unknown> = {
         packageId,
-        paymentMode: usingNewCard ? "CHECKOUT_FORM" : "THREE_DS",
+        paymentMode: "CHECKOUT_FORM",
         paymentStyle: "SUBSCRIPTION",
         billingPeriod,
         billingAddressId,
-        paymentMethodId: paymentMethodId != null ? Number(paymentMethodId) : undefined,
         identityNumber: resolveIdentityNumber(selectedAddress?.tckn, selectedAddress?.vkn),
         recurringConsent: false,
       };
@@ -211,23 +195,15 @@ export default function PackagePurchaseView({
       storePendingPurchaseId(response.data.purchaseId);
       setPurchaseId(response.data.purchaseId);
       setPollStartedAt(Date.now());
-      if (usingNewCard) {
-        if (response.data.paymentPageUrl) {
-          setPaymentOverlay({ kind: "url", content: response.data.paymentPageUrl });
-        } else if (response.data.checkoutFormContent) {
-          setPaymentOverlay({
-            kind: "html",
-            content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.data.checkoutFormContent}`,
-          });
-        } else {
-          throw new Error("Güvenli ödeme sayfası alınamadı.");
-        }
+      if (response.data.paymentPageUrl) {
+        setPaymentOverlay({ kind: "url", content: response.data.paymentPageUrl });
+      } else if (response.data.checkoutFormContent) {
+        setPaymentOverlay({
+          kind: "html",
+          content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.data.checkoutFormContent}`,
+        });
       } else {
-        const html = response.data.paymentHtml ?? response.data.htmlContent ?? null;
-        if (!html) {
-          throw new Error("3D Secure sayfası alınamadı.");
-        }
-        setPaymentOverlay({ kind: "html", content: html });
+        throw new Error("Güvenli ödeme sayfası alınamadı.");
       }
     } catch (error) {
       onNotify("danger", error instanceof ApiError ? error.message : "Ödeme işlemi tamamlanamadı.");
@@ -239,16 +215,7 @@ export default function PackagePurchaseView({
   if (paymentOverlay) {
     const isPaytr =
       paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
-    const isIyzico =
-      paymentOverlay.kind === "html"
-      || (paymentOverlay.kind === "url" && /iyzipay|iyzico/i.test(paymentOverlay.content));
-    const title = isPaytr
-      ? "Güvenli Ödeme (PayTR)"
-      : isIyzico
-        ? "Güvenli Ödeme (iyzico)"
-        : paymentOverlay.kind === "url"
-          ? "Güvenli Ödeme"
-          : "3D Secure doğrulama";
+    const title = isPaytr ? "Güvenli Ödeme (PayTR)" : "Güvenli Ödeme";
     return (
       <PaymentCheckoutOverlay
         overlay={paymentOverlay}
@@ -396,35 +363,18 @@ export default function PackagePurchaseView({
           <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
             <div className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              <h2 className="font-medium">Kart bilgileri</h2>
+              <h2 className="font-medium">Ödeme</h2>
             </div>
 
-            {methods.data?.length ? (
-              <SearchableSelect
-                value={paymentMethodId == null ? "new" : paymentMethodId}
-                onValueChange={(value) => setPaymentMethodId(value === "new" ? null : value)}
-                options={[
-                  ...methods.data.map((method) => ({
-                    value: method.id,
-                    label: `${method.cardAlias || method.brand || "Kart"} · •••• ${method.lastFour}`,
-                  })),
-                  { value: "new", label: "Yeni kart kullan" },
-                ]}
-                placeholder="Kart seçin"
-                searchPlaceholder="Kart ara..."
-              />
-            ) : null}
-
-            {paymentMethodId == null && (
-              <div className="flex items-start gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <p>
-                  Kart bilgileriniz bizim sunucularımıza hiç ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna
-                  bastığınızda PayTR güvenli ödeme sayfası açılır; kart bilgileriniz yalnızca PayTR tarafında
-                  işlenir.
-                </p>
-              </div>
-            )}
+            <div className="flex items-start gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <p>
+                Kart bilgileriniz bizim sunucularımıza ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna bastığınızda
+                PayTR güvenli ödeme sayfası açılır; kart bilgilerinizi yalnızca orada girersiniz. Kart kaydetmek
+                isterseniz bunu PayTR ekranından yapabilirsiniz — AlgoryQR tarafında checkout sırasında kart
+                saklanmaz.
+              </p>
+            </div>
 
             <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
               <p>
