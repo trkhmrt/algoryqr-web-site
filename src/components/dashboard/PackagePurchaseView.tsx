@@ -45,6 +45,7 @@ import {
 import PaymentCheckoutOverlay, {
   type PaymentCheckoutOverlayContent,
 } from "@/components/dashboard/PaymentCheckoutOverlay";
+import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import { cn } from "@/lib/utils";
 
 interface PackagePurchaseViewProps {
@@ -200,7 +201,7 @@ export default function PackagePurchaseView({
       } else if (response.data.checkoutFormContent) {
         setPaymentOverlay({
           kind: "html",
-          content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.data.checkoutFormContent}`,
+          content: paytrCheckoutHtml(response.data.checkoutFormContent),
         });
       } else {
         throw new Error("Güvenli ödeme sayfası alınamadı.");
@@ -213,9 +214,9 @@ export default function PackagePurchaseView({
   };
 
   if (paymentOverlay) {
-    const isPaytr =
-      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
-    const title = isPaytr ? "Güvenli Ödeme (PayTR)" : "Güvenli Ödeme";
+    const title = isPaytrCheckout(paymentOverlay)
+      ? "Güvenli Ödeme (PayTR)"
+      : "Güvenli Ödeme";
     return (
       <PaymentCheckoutOverlay
         overlay={paymentOverlay}

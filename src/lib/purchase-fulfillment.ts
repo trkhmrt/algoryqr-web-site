@@ -27,9 +27,10 @@ export interface PurchaseInitiateResponse {
 
 export function getPaymentModes(pkg: PlanPackageApiItem): PaymentMode[] {
   const modes = pkg.allowedPaymentModes?.filter(
-    (mode): mode is "DIRECT" | "THREE_DS" => mode === "DIRECT" || mode === "THREE_DS",
+    (mode): mode is PaymentMode =>
+      mode === "CHECKOUT_FORM" || mode === "DIRECT" || mode === "THREE_DS",
   );
-  return modes?.length ? modes : ["THREE_DS"];
+  return modes?.length ? modes : ["CHECKOUT_FORM"];
 }
 
 export function getInstallmentOptions(pkg: PlanPackageApiItem): InstallmentOptionApiItem[] {

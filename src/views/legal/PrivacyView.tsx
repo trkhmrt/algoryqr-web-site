@@ -26,8 +26,8 @@ export default function PrivacyView() {
       <h2>Ödeme ve kart verileri</h2>
       <p>
         Kart numarası ve CVV gibi hassas ödeme verileri sunucularımızda saklanmaz. Ödemeler{" "}
-        <strong>iyzico</strong> altyapısı üzerinden gerçekleştirilir; kart saklama kullanıldığında
-        yalnızca iyzico token’ı tutulabilir.
+        <strong>PayTR</strong> altyapısı üzerinden gerçekleştirilir; kart saklama kullanıldığında
+        yalnızca PayTR token’ı tutulabilir.
       </p>
       <h2>İşleme amaçları</h2>
       <ul>

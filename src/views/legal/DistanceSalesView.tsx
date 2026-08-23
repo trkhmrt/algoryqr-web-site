@@ -36,7 +36,7 @@ export default function DistanceSalesView() {
       </p>
       <h2>4. Bedel ve ödeme</h2>
       <p>
-        Güncel paket bedelleri satın alma ekranında gösterilir. Ödeme, iyzico ödeme altyapısı
+        Güncel paket bedelleri satın alma ekranında gösterilir. Ödeme, PayTR ödeme altyapısı
         üzerinden kredi / banka kartı ile alınır. Aboneliklerde yenileme koşulları paket
         bilgilendirmesinde belirtilir.
       </p>

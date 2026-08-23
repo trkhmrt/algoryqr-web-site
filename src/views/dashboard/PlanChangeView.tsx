@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check } from "lucide-react";
 
+import PaymentCheckoutOverlay, {
+  type PaymentCheckoutOverlayContent,
+} from "@/components/dashboard/PaymentCheckoutOverlay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { usePaymentMethods } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
+import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import { ApiError } from "@/lib/api/errors";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -22,6 +26,7 @@ import {
   isPackageVisibleInCatalog,
   packageFeatures,
 } from "@/lib/package-display";
+import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import {
   directionLabel,
   previewPlanChange,
@@ -30,6 +35,11 @@ import {
   type PlanChangePreview,
   type PlanChangeTiming,
 } from "@/lib/plan-change";
+import {
+  abandonPendingPaymentAttempt,
+  clearPendingPurchaseId,
+  storePendingPurchaseId,
+} from "@/lib/purchase-fulfillment";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
 function optionMoneySummary(
@@ -68,6 +78,11 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
   const [timing, setTiming] = useState<PlanChangeTiming>("IMMEDIATE");
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [warningAck, setWarningAck] = useState(false);
+  const [paymentOverlay, setPaymentOverlay] = useState<PaymentCheckoutOverlayContent | null>(null);
+  const [purchaseId, setPurchaseId] = useState<number | null>(null);
+  const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
+  const finalizedPurchaseId = useRef<number | null>(null);
+  const fulfillment = usePurchaseFulfillment(purchaseId, pollStartedAt);
 
   const previewQuery = useQuery({
     queryKey: ["planChangePreview", toPackageId],
@@ -83,14 +98,50 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
   }, [methods.data, paymentMethodId]);
 
   const preview = previewQuery.data as PlanChangePreview | undefined;
+
+  useEffect(() => {
+    if (!preview?.options.length) return;
+    if (!preview.options.some((option) => option.timing === timing)) {
+      setTiming(preview.options[0].timing);
+    }
+  }, [preview, timing]);
+
   const selectedOption = useMemo(
     () => preview?.options.find((o) => o.timing === timing),
     [preview, timing],
   );
   const chargeNow = toAmountNumber(selectedOption?.chargeNow);
   const refundNow = toAmountNumber(selectedOption?.refundNow);
-  const requiresCard =
-    timing === "NEXT_PERIOD" || (timing === "IMMEDIATE" && chargeNow > 0);
+  const requiresCard = timing === "NEXT_PERIOD";
+
+  const finalizePaidChange = useCallback(async () => {
+    await refreshAccessAfterEntitlementChange(queryClient);
+    await Promise.all([
+      invalidatePackageUsage(queryClient),
+      queryClient.invalidateQueries({ queryKey: ["planChanges"] }),
+    ]);
+    onNotify("info", "Paket geçiş ödemesi tamamlandı. Yeni haklarınız tanımlandı.");
+    router.push(DASHBOARD_ROUTES.accountSubscription);
+  }, [onNotify, queryClient, router]);
+
+  useEffect(() => {
+    const summary = fulfillment.summary.data;
+    if (!summary || finalizedPurchaseId.current === summary.purchaseId) return;
+    if (summary.status === "ACTIVE") {
+      finalizedPurchaseId.current = summary.purchaseId;
+      clearPendingPurchaseId();
+      setPaymentOverlay(null);
+      void finalizePaidChange();
+    }
+    if (summary.status === "FAILED" || summary.status === "CANCELLED") {
+      finalizedPurchaseId.current = summary.purchaseId;
+      clearPendingPurchaseId();
+      setPaymentOverlay(null);
+      setPurchaseId(null);
+      setPollStartedAt(null);
+      onNotify("danger", "Paket geçiş ödemesi tamamlanamadı. Lütfen tekrar deneyin.");
+    }
+  }, [finalizePaidChange, fulfillment.summary.data, onNotify]);
 
   const fromCatalog = packagesQuery.data?.find((pkg) => pkg.id === preview?.fromPackage.id);
   const toCatalog = packagesQuery.data?.find((pkg) => pkg.id === preview?.toPackage.id);
@@ -113,6 +164,27 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
       });
     },
     onSuccess: async (result) => {
+      if (result.status === "PENDING_PAYMENT") {
+        const pendingPurchaseId = result.resultingPurchaseId ?? null;
+        if (pendingPurchaseId && Number.isSafeInteger(pendingPurchaseId) && pendingPurchaseId > 0) {
+          storePendingPurchaseId(pendingPurchaseId);
+          setPurchaseId(pendingPurchaseId);
+          setPollStartedAt(Date.now());
+        }
+        if (result.paymentPageUrl) {
+          setPaymentOverlay({ kind: "url", content: result.paymentPageUrl });
+          return;
+        }
+        if (result.checkoutFormContent) {
+          setPaymentOverlay({
+            kind: "html",
+            content: paytrCheckoutHtml(result.checkoutFormContent),
+          });
+          return;
+        }
+        onNotify("danger", "Güvenli ödeme sayfası alınamadı.");
+        return;
+      }
       await refreshAccessAfterEntitlementChange(queryClient);
       await Promise.all([
         invalidatePackageUsage(queryClient),
@@ -157,6 +229,28 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
     !preview.hasScheduledChange &&
     !mutation.isPending &&
     (!requiresCard || !!paymentMethodId);
+
+  const cancelPaymentOverlay = () => {
+    setPaymentOverlay(null);
+    setPurchaseId(null);
+    setPollStartedAt(null);
+    finalizedPurchaseId.current = null;
+    void abandonPendingPaymentAttempt({ cancelIfPending: true });
+  };
+
+  if (paymentOverlay) {
+    const title = isPaytrCheckout(paymentOverlay)
+      ? "Paket geçişi (PayTR)"
+      : "Paket geçişi ödemesi";
+    return (
+      <PaymentCheckoutOverlay
+        overlay={paymentOverlay}
+        purchaseId={purchaseId}
+        title={title}
+        onClose={cancelPaymentOverlay}
+      />
+    );
+  }
 
   if (!validTarget) {
     return (
@@ -330,17 +424,9 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
                 <Label>Kayıtlı kart{requiresCard ? "" : " (opsiyonel)"}</Label>
                 {(methods.data?.length ?? 0) === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    Kayıtlı kart yok.{" "}
-                    {requiresCard ? (
-                      <Link
-                        href={DASHBOARD_ROUTES.accountPaymentMethods}
-                        className="underline underline-offset-4"
-                      >
-                        Kart ekleyin
-                      </Link>
-                    ) : (
-                      "Bu geçişte kart gerekmez."
-                    )}
+                    {requiresCard
+                      ? "Dönem sonu geçişi için kayıtlı kart gerekir. Kart, önceki bir PayTR ödemesinde kaydedilmiş olmalıdır."
+                      : "Hemen geçişte fark ödemesi PayTR güvenli ödeme ekranında alınır; kayıtlı kart zorunlu değildir."}
                   </p>
                 ) : (
                   <SearchableSelect
