@@ -1,6 +1,6 @@
 import type { UserEntitlementApiItem } from "@/lib/api";
 
-const QUANTITY_ENTITLEMENT_CODES = new Set(["QR_CREATE", "QR_MENU"]);
+const QUANTITY_ENTITLEMENT_CODES = new Set(["QR_CREATE", "QR_MENU", "QR_BRANCH"]);
 
 type EntitlementUsageFields = Pick<
   UserEntitlementApiItem,

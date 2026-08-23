@@ -38,6 +38,7 @@ function normalizeProductCode(value: string): ProductCode | null {
   const known = [
     "QR_CREATE",
     "QR_MENU",
+    "QR_BRANCH",
     "MENU_PRODUCT",
     "WAITER_PANEL",
     "SMART_ASSISTANT",
@@ -58,6 +59,7 @@ function normalizeProductScope(value: string): ProductScope | null {
   const known = [
     "QR_CREATE_OWNER",
     "QR_MENU_OWNER",
+    "QR_BRANCH_OWNER",
     "MENU_PRODUCT_OWNER",
     "WAITER_PANEL_OWNER",
     "SMART_ASSISTANT_OWNER",

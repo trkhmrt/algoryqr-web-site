@@ -8,3 +8,11 @@ export class ApiError extends Error {
     this.data = data;
   }
 }
+
+export function getApiErrorCode(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.data == null || typeof error.data !== "object") {
+    return null;
+  }
+  const code = (error.data as { code?: unknown }).code;
+  return typeof code === "string" && code.trim() ? code : null;
+}

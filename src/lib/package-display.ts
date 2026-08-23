@@ -152,6 +152,7 @@ export function packageFeatures(pkg: PlanPackageApiItem): string[] {
   }
 
   const qrItem = findPackageItem(pkg, "QR_CREATE");
+  const branchItem = findPackageItem(pkg, "QR_BRANCH");
   const menuItem = findPackageItem(pkg, "QR_MENU");
   const features: string[] = [];
   if (qrItem) {
@@ -159,14 +160,11 @@ export function packageFeatures(pkg: PlanPackageApiItem): string[] {
       qrItem.unlimited ? "Sınırsız QR oluşturma" : `${qrItem.quantity} QR oluşturma hakkı`,
     );
   }
+  if (branchItem) {
+    features.push(branchItem.unlimited ? "Sınırsız şube" : `${branchItem.quantity} ücretsiz şube`);
+  }
   if (menuItem) {
-    if (menuItem.unlimited) {
-      features.push("Sınırsız dijital menü");
-    } else if (menuItem.quantity > 1) {
-      features.push(`${menuItem.quantity} dijital menü`);
-    } else {
-      features.push("Dijital menü");
-    }
+    features.push("Şube başına 1 ücretsiz menü");
   } else {
     features.push("Dijital menü yok");
   }
@@ -247,6 +245,7 @@ export type ComparisonRow = {
 
 const PRODUCT_ORDER = [
   "QR_CREATE",
+  "QR_BRANCH",
   "QR_MENU",
   "MENU_PRODUCT",
   "SMART_REPORTING",
@@ -261,6 +260,7 @@ const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
   SMART_REPORTING: ["SMART_REPORTING", "QR_ANALYTICS"],
   SMART_SUMMARY: ["SMART_SUMMARY"],
   QR_CREATE: ["QR_CREATE"],
+  QR_BRANCH: ["QR_BRANCH"],
   QR_MENU: ["QR_MENU"],
   MENU_PRODUCT: ["MENU_PRODUCT"],
   CUSTOM_DESIGN: ["CUSTOM_DESIGN"],
@@ -275,6 +275,8 @@ function productDisplayName(code: string): string {
   switch (code) {
     case "QR_CREATE":
       return "QR oluşturma";
+    case "QR_BRANCH":
+      return "Şube";
     case "QR_MENU":
       return "Dijital menü";
     case "SMART_ASSISTANT":
@@ -295,7 +297,7 @@ function productDisplayName(code: string): string {
 }
 
 function isQuantityProduct(code: string): boolean {
-  return code === "QR_CREATE" || code === "QR_MENU" || code === "MENU_PRODUCT";
+  return code === "QR_CREATE" || code === "QR_BRANCH" || code === "QR_MENU" || code === "MENU_PRODUCT";
 }
 
 function findPackageItem(pkg: PlanPackageApiItem, productCode: string) {

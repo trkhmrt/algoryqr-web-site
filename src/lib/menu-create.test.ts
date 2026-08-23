@@ -31,4 +31,17 @@ describe("buildMenuCreateDetails", () => {
 
     expect(details.sourceMenuId).toBe(42);
   });
+
+  it("includes branchId when creating for a branch", () => {
+    const details = buildMenuCreateDetails(
+      {
+        businessName: "Kafe İstanbul",
+        themeId: "luxury",
+      },
+      [],
+      { branchId: 9 },
+    );
+
+    expect(details.branchId).toBe(9);
+  });
 });

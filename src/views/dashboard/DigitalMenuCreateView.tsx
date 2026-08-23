@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Copy, Loader2 } from "lucide-react";
 
@@ -13,37 +13,59 @@ import {
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { MenuDetails, createInitialMenuData, type MenuData } from "@/components/dashboard/qr-create/MenuDetails";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { invalidateBranches, useBranches } from "@/hooks/use-branches";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
-import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
+import { invalidateSubscription } from "@/hooks/use-subscription";
 import { invalidateUserQrs } from "@/hooks/use-user-qrs";
-import { ApiError, createQrRequest, getMenuByQrIdRequest, getStoredUser } from "@/lib/api";
-import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { ApiError, createQrRequest, getApiErrorCode, getMenuByQrIdRequest, getStoredUser } from "@/lib/api";
 import {
-  canCreateMenu,
-  formatMenuQuotaLabel,
-  summarizeMenuEntitlements,
-} from "@/lib/entitlement-display";
+  canCreateMenuOnBranch,
+  formatBranchMenuQuota,
+} from "@/lib/branch";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { buildMenuCreateDetails } from "@/lib/menu-create";
 import type { MenuThemeId } from "@/components/menu-templates/registry";
 
 export default function DigitalMenuCreateView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const subscription = useSubscription(canUseDigitalMenu);
-  const menuQuota = summarizeMenuEntitlements(subscription.data?.entitlements ?? []);
-  const menuQuotaLabel = formatMenuQuotaLabel(menuQuota);
-  const canCreateNewMenu = canCreateMenu(menuQuota);
+  const branchesQuery = useBranches(canUseDigitalMenu);
+  const branchId = Number(searchParams.get("branch"));
+  const selectedBranch = useMemo(
+    () => branchesQuery.data?.content.find((item) => item.id === branchId) ?? null,
+    [branchId, branchesQuery.data?.content],
+  );
+  const extraMenuQuotaLabel = formatBranchMenuQuota(branchesQuery.data?.menuQuota);
+  const canCreateNewMenu = selectedBranch
+    ? canCreateMenuOnBranch(selectedBranch, branchesQuery.data?.menuQuota)
+    : false;
   const { menuQrs, loading: menusLoading } = useDigitalMenuOptions(canUseDigitalMenu);
   const [menu, setMenu] = useState<MenuData>(createInitialMenuData());
   const [copyFromExisting, setCopyFromExisting] = useState(false);
   const [sourceQrId, setSourceQrId] = useState<number | null>(null);
   const [prefillLoading, setPrefillLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!Number.isSafeInteger(branchId) || branchId <= 0) {
+      router.replace(DASHBOARD_ROUTES.digitalMenu);
+    }
+  }, [branchId, router]);
+
+  useEffect(() => {
+    if (!selectedBranch || copyFromExisting) return;
+    setMenu((current) => ({
+      ...current,
+      phone: current.phone || selectedBranch.phone || "",
+      email: current.email || selectedBranch.email || "",
+      address: current.address || selectedBranch.address || "",
+    }));
+  }, [copyFromExisting, selectedBranch]);
 
   useEffect(() => {
     if (!copyFromExisting) {
@@ -108,8 +130,13 @@ export default function DigitalMenuCreateView() {
       notify("warning", "Menü QR oluşturmak için PRO paket gerekli.");
       return;
     }
+    if (!Number.isSafeInteger(branchId) || branchId <= 0 || selectedBranch == null) {
+      notify("warning", "Menü oluşturmak için bir şube seçin.");
+      router.push(DASHBOARD_ROUTES.digitalMenu);
+      return;
+    }
     if (!canCreateNewMenu) {
-      notify("warning", "Dijital menü hakkınız doldu. Yeni menü için mevcut bir menüyü silin veya paketinizi yükseltin.");
+      router.push(DASHBOARD_ROUTES.catalogProductCheckout("QR_MENU"));
       return;
     }
     if (!menu.businessName.trim()) {
@@ -143,11 +170,12 @@ export default function DigitalMenuCreateView() {
             chefAvatarKey: menu.chefAvatarKey.trim() || undefined,
           },
           [],
-          { sourceMenuId },
+          { sourceMenuId, branchId },
         ),
       });
       await invalidatePackageUsage(queryClient);
       await invalidateSubscription(queryClient);
+      await invalidateBranches(queryClient);
       const storedUser = getStoredUser();
       await Promise.all([
         invalidateUserQrs(queryClient, storedUser?.id != null ? String(storedUser.id) : "me"),
@@ -165,6 +193,10 @@ export default function DigitalMenuCreateView() {
         router.push(DASHBOARD_ROUTES.digitalMenu);
       }
     } catch (error) {
+      if (getApiErrorCode(error) === "EXTRA_MENU_REQUIRED") {
+        router.push(DASHBOARD_ROUTES.catalogProductCheckout("QR_MENU"));
+        return;
+      }
       notify("danger", error instanceof ApiError ? error.message : "Menü QR oluşturulamadı.");
     } finally {
       setSaving(false);
@@ -190,6 +222,25 @@ export default function DigitalMenuCreateView() {
     );
   }
 
+  if (branchesQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!selectedBranch) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <Button variant="outline" onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}>
+          Şubelere dön
+        </Button>
+        <p className="text-sm text-muted-foreground">Menü oluşturmak için geçerli bir şube seçin.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
@@ -203,10 +254,12 @@ export default function DigitalMenuCreateView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü QR Oluştur</h1>
           <p className="text-sm text-muted-foreground">
-            İşletme bilgilerini girin. İsterseniz mevcut bir menünün ürünlerini yeni menüye kopyalayabilirsiniz.
+            {selectedBranch
+              ? `${selectedBranch.name} şubesi için işletme bilgilerini girin.`
+              : "İşletme bilgilerini girin. İsterseniz mevcut bir menünün ürünlerini yeni menüye kopyalayabilirsiniz."}
           </p>
-          {menuQuotaLabel ? (
-            <p className="mt-1 text-xs text-muted-foreground">{menuQuotaLabel}</p>
+          {extraMenuQuotaLabel ? (
+            <p className="mt-1 text-xs text-muted-foreground">{extraMenuQuotaLabel}</p>
           ) : null}
         </div>
       </div>
