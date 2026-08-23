@@ -18,4 +18,17 @@ describe("buildMenuCreateDetails", () => {
     expect(details.products).toHaveLength(1);
     expect(details.products[0]?.name).toBe("Espresso");
   });
+
+  it("includes sourceMenuId when copying from an existing menu", () => {
+    const details = buildMenuCreateDetails(
+      {
+        businessName: "Yeni Şube",
+        themeId: "luxury",
+      },
+      [],
+      { sourceMenuId: 42 },
+    );
+
+    expect(details.sourceMenuId).toBe(42);
+  });
 });

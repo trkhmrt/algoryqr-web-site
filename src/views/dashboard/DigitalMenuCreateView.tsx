@@ -1,18 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Copy, Loader2 } from "lucide-react";
 
-import { invalidateMyActiveMenus, useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
+import {
+  DigitalMenuPicker,
+  invalidateMyActiveMenus,
+  useDigitalMenuAccess,
+  useDigitalMenuOptions,
+} from "@/components/dashboard/menu/DigitalMenuPicker";
 import { MenuDetails, createInitialMenuData, type MenuData } from "@/components/dashboard/qr-create/MenuDetails";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription, useSubscription } from "@/hooks/use-subscription";
 import { invalidateUserQrs } from "@/hooks/use-user-qrs";
-import { ApiError, createQrRequest, getStoredUser } from "@/lib/api";
+import { ApiError, createQrRequest, getMenuByQrIdRequest, getStoredUser } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   canCreateMenu,
@@ -20,6 +27,7 @@ import {
   summarizeMenuEntitlements,
 } from "@/lib/entitlement-display";
 import { buildMenuCreateDetails } from "@/lib/menu-create";
+import type { MenuThemeId } from "@/components/menu-templates/registry";
 
 export default function DigitalMenuCreateView() {
   const router = useRouter();
@@ -30,8 +38,70 @@ export default function DigitalMenuCreateView() {
   const menuQuota = summarizeMenuEntitlements(subscription.data?.entitlements ?? []);
   const menuQuotaLabel = formatMenuQuotaLabel(menuQuota);
   const canCreateNewMenu = canCreateMenu(menuQuota);
+  const { menuQrs, loading: menusLoading } = useDigitalMenuOptions(canUseDigitalMenu);
   const [menu, setMenu] = useState<MenuData>(createInitialMenuData());
+  const [copyFromExisting, setCopyFromExisting] = useState(false);
+  const [sourceQrId, setSourceQrId] = useState<number | null>(null);
+  const [prefillLoading, setPrefillLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!copyFromExisting) {
+      setSourceQrId(null);
+      return;
+    }
+    if (sourceQrId != null || menusLoading || menuQrs.length === 0) {
+      return;
+    }
+    setSourceQrId(menuQrs[0]?.id ?? null);
+  }, [copyFromExisting, menuQrs, menusLoading, sourceQrId]);
+
+  useEffect(() => {
+    if (!copyFromExisting || sourceQrId == null) {
+      return;
+    }
+
+    let cancelled = false;
+    setPrefillLoading(true);
+    void (async () => {
+      try {
+        const profile = await getMenuByQrIdRequest(sourceQrId);
+        if (cancelled) return;
+        setMenu({
+          businessName: profile.businessName?.trim() ?? "",
+          slogan: profile.slogan?.trim() ?? "",
+          phone: profile.phone?.trim() ?? "",
+          email: profile.email?.trim() ?? "",
+          address: profile.address?.trim() ?? "",
+          themeId: (profile.themeId as MenuThemeId) || createInitialMenuData().themeId,
+          chefName: profile.chefName?.trim() ?? "",
+          chefAvatarKey: profile.chefAvatarKey?.trim() || "default",
+          logoUrl: "",
+        });
+      } catch (error) {
+        if (!cancelled) {
+          notify("warning", error instanceof ApiError ? error.message : "Kaynak menü bilgileri yüklenemedi.");
+        }
+      } finally {
+        if (!cancelled) {
+          setPrefillLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [copyFromExisting, notify, sourceQrId]);
+
+  const resolveSourceMenuId = (): number | undefined => {
+    if (!copyFromExisting || sourceQrId == null) {
+      return undefined;
+    }
+    const selected = menuQrs.find((item) => item.id === sourceQrId);
+    const detailsMenuId = selected?.details?.menuId;
+    return selected?.menuId ?? (typeof detailsMenuId === "number" ? detailsMenuId : undefined);
+  };
 
   const submit = async () => {
     if (!canUseDigitalMenu) {
@@ -44,6 +114,15 @@ export default function DigitalMenuCreateView() {
     }
     if (!menu.businessName.trim()) {
       notify("warning", "Firma adı zorunlu.");
+      return;
+    }
+    if (copyFromExisting && sourceQrId == null) {
+      notify("warning", "Kopyalamak için bir kaynak menü seçin.");
+      return;
+    }
+    const sourceMenuId = resolveSourceMenuId();
+    if (copyFromExisting && sourceMenuId == null) {
+      notify("warning", "Kaynak menü bulunamadı.");
       return;
     }
 
@@ -64,6 +143,7 @@ export default function DigitalMenuCreateView() {
             chefAvatarKey: menu.chefAvatarKey.trim() || undefined,
           },
           [],
+          { sourceMenuId },
         ),
       });
       await invalidatePackageUsage(queryClient);
@@ -73,7 +153,12 @@ export default function DigitalMenuCreateView() {
         invalidateUserQrs(queryClient, storedUser?.id != null ? String(storedUser.id) : "me"),
         invalidateMyActiveMenus(queryClient),
       ]);
-      notify("info", "Dijital menü QR kodunuz oluşturuldu.");
+      notify(
+        "info",
+        copyFromExisting
+          ? "Dijital menünüz kaynak menüden kopyalanarak oluşturuldu."
+          : "Dijital menü QR kodunuz oluşturuldu.",
+      );
       if (response.qrId != null) {
         router.push(DASHBOARD_ROUTES.digitalMenuEdit(response.qrId));
       } else {
@@ -118,13 +203,61 @@ export default function DigitalMenuCreateView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü QR Oluştur</h1>
           <p className="text-sm text-muted-foreground">
-            İşletme bilgilerini girin. Ürün ve kategorileri menü oluşturulduktan sonra ekleyebilirsiniz.
+            İşletme bilgilerini girin. İsterseniz mevcut bir menünün ürünlerini yeni menüye kopyalayabilirsiniz.
           </p>
           {menuQuotaLabel ? (
             <p className="mt-1 text-xs text-muted-foreground">{menuQuotaLabel}</p>
           ) : null}
         </div>
       </div>
+
+      {menuQrs.length > 0 ? (
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Copy className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-medium text-foreground">Mevcut menüden kopyala</h2>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Aktif menülerinizden birini seçerek ürün ve kategori içeriğini yeni menüye aktarın.
+              </p>
+            </div>
+            <Switch
+              checked={copyFromExisting}
+              onCheckedChange={(checked) => {
+                setCopyFromExisting(checked);
+                if (!checked) {
+                  setMenu(createInitialMenuData());
+                }
+              }}
+              disabled={menusLoading || saving}
+              aria-label="Mevcut menüden kopyala"
+            />
+          </div>
+
+          {copyFromExisting ? (
+            <div className="space-y-3 border-t border-border pt-4">
+              <DigitalMenuPicker
+                menuQrs={menuQrs}
+                selectedQrId={sourceQrId}
+                onSelectQrId={setSourceQrId}
+                disabled={menusLoading || prefillLoading || saving}
+              />
+              {prefillLoading ? (
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Kaynak menü bilgileri yükleniyor...
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  İşletme bilgileri kaynak menüden doldurulur; düzenleyebilirsiniz. Ürünler oluşturma sırasında kopyalanır.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="rounded-lg border border-border bg-card p-6 space-y-5">
         <h2 className="text-sm font-medium text-foreground">İşletme Bilgileri</h2>
@@ -135,7 +268,7 @@ export default function DigitalMenuCreateView() {
         <Button type="button" variant="outline" onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}>
           Vazgeç
         </Button>
-        <Button type="button" variant="hero" disabled={saving || !canCreateNewMenu} onClick={() => void submit()}>
+        <Button type="button" variant="hero" disabled={saving || prefillLoading || !canCreateNewMenu} onClick={() => void submit()}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Menü QR Oluştur"}
         </Button>
       </div>
