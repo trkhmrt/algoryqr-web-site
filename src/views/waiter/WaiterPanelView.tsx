@@ -470,7 +470,7 @@ export default function WaiterPanelView() {
         ) : null}
 
         {tab === "commission" ? <WaiterCommissionPanel /> : null}
-        {tab === "campaigns" && me ? <WaiterCampaignPanel menuId={me.menuId} /> : null}
+        {tab === "campaigns" && me ? <WaiterCampaignPanel /> : null}
       </main>
     </div>
   );
@@ -504,6 +504,9 @@ function TableListCard({
         <p className="truncate font-semibold">
           {table.tableName || `Masa ${table.tableNumber ?? table.tableId}`}
         </p>
+        {table.menuName ? (
+          <p className="truncate text-[11px] text-white/80">{table.menuName}</p>
+        ) : null}
         <p className="text-xs text-white/85">{tableCardSubtitle(table, tone)}</p>
       </div>
       <div className="shrink-0 text-right">

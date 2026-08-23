@@ -9,7 +9,9 @@ import {
   normalizeSmartReportResult,
   readStoredSmartReportJob,
   resolveSmartReportProcessId,
+  smartReportScopeKey,
   smartReportStorageKey,
+  smartReportTitle,
   toSmartReportUiStatus,
   writeStoredSmartReportJob,
 } from "./smart-report";
@@ -100,23 +102,30 @@ describe("smart-report helpers", () => {
     });
   });
 
-  it("persists and restores job by menu and date range", () => {
-    const key = smartReportStorageKey(1, "2026-07-01", "2026-08-01");
-    expect(key).toBe("smart-report:1:2026-07-01:2026-08-01");
+  it("persists and restores job by scope and date range", () => {
+    expect(smartReportScopeKey(3, null)).toBe("branch:3");
+    expect(smartReportScopeKey(3, 9)).toBe("menu:9");
+    const key = smartReportStorageKey("menu:1", "2026-07-01", "2026-08-01");
+    expect(key).toBe("smart-report:menu:1:2026-07-01:2026-08-01");
 
-    writeStoredSmartReportJob(1, "2026-07-01", "2026-08-01", {
+    writeStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01", {
       jobId: "281f830b-ec6c-4fa6-b6e1-04d8c66f1549",
       status: "queued",
       savedAt: 1,
     });
 
-    expect(readStoredSmartReportJob(1, "2026-07-01", "2026-08-01")).toEqual({
+    expect(readStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01")).toEqual({
       jobId: "281f830b-ec6c-4fa6-b6e1-04d8c66f1549",
       status: "queued",
       savedAt: 1,
     });
 
-    clearStoredSmartReportJob(1, "2026-07-01", "2026-08-01");
-    expect(readStoredSmartReportJob(1, "2026-07-01", "2026-08-01")).toBeNull();
+    clearStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01");
+    expect(readStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01")).toBeNull();
+  });
+
+  it("prefers branchName over menuName for titles", () => {
+    expect(smartReportTitle({ branchName: "Kadikoy", menuName: "Aksam" })).toBe("Kadikoy");
+    expect(smartReportTitle({ branchName: null, menuName: "Aksam" })).toBe("Aksam");
   });
 });

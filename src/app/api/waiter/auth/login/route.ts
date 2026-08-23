@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       accessToken?: string;
       refreshToken?: string;
       waiterId?: number;
-      menuId?: number;
+      branchId?: number;
       displayName?: string;
     };
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         accessToken,
         refreshToken,
         waiterId,
-        menuId: data.menuId,
+        branchId: data.branchId,
         displayName: data.displayName,
       },
       { status: 200 },

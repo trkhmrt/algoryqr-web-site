@@ -33,7 +33,7 @@ import {
 } from "recharts";
 
 import { RequireScope } from "@/components/auth/RequireScope";
-import { DigitalMenuPicker, useDigitalMenuSelection } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { BranchReportPicker, useBranchReportSelection } from "@/components/dashboard/BranchReportPicker";
 import AnalyticsRevenuePanel from "@/components/dashboard/AnalyticsRevenuePanel";
 import AnalyticsWaiterPerformancePanel from "@/components/dashboard/AnalyticsWaiterPerformancePanel";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
@@ -57,9 +57,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useMenuAnalyticsReport } from "@/hooks/use-menu-analytics-report";
-import { useMenuRevenueReport } from "@/hooks/use-menu-revenue-report";
-import { useMenuWaiterPerformanceReport } from "@/hooks/use-menu-waiter-performance-report";
+import { useBranchAnalyticsReport } from "@/hooks/use-branch-analytics-report";
+import { useBranchRevenueReport } from "@/hooks/use-branch-revenue-report";
+import { useBranchWaiterPerformanceReport } from "@/hooks/use-branch-waiter-performance-report";
 import { useSmartReportJob } from "@/hooks/use-smart-report-job";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import { useToast } from "@/hooks/use-toast";
@@ -164,6 +164,10 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOrders = variant === "orders";
+  const initialBranchId = useMemo(() => {
+    const raw = Number(searchParams.get("branch"));
+    return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
+  }, [searchParams]);
   const initialQrId = useMemo(() => {
     const raw = Number(searchParams.get("qr"));
     return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
@@ -182,29 +186,41 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   const canUseWaiterPanel = hasScope(accessProfile, "WAITER_PANEL_OWNER");
   const accessLoading = isOrders ? accessProfileLoading : false;
   const canUseRevenue = canUseSmartReporting || canUseWaiterPanel;
-  const { menuQrs, selection, loading: selectionLoading, selectQrId } = useDigitalMenuSelection(initialQrId);
+  const {
+    branches,
+    selection,
+    branchId,
+    qrId,
+    menuId,
+    loading: selectionLoading,
+    empty: noBranches,
+    select,
+  } = useBranchReportSelection(initialBranchId, initialQrId);
   const range = useMemo(() => reportingPeriodRange(period), [period]);
-  const menuId = selection?.menu.menuId ?? null;
-  const reportQuery = useMenuAnalyticsReport(
+  const reportQuery = useBranchAnalyticsReport(
+    branchId,
     menuId,
     range.from,
     range.to,
-    menuId != null && !isOrders,
+    branchId != null && !isOrders,
   );
-  const revenueQuery = useMenuRevenueReport(
+  const revenueQuery = useBranchRevenueReport(
+    branchId,
     menuId,
     range.from,
     range.to,
-    canUseRevenue && menuId != null && activeReportView === "revenue",
+    canUseRevenue && branchId != null && activeReportView === "revenue",
   );
-  const personnelQuery = useMenuWaiterPerformanceReport(
+  const personnelQuery = useBranchWaiterPerformanceReport(
+    branchId,
     menuId,
     range.from,
     range.to,
-    canUseRevenue && menuId != null && activeReportView === "personnel",
+    canUseRevenue && branchId != null && activeReportView === "personnel",
   );
   const report = reportQuery.data;
   const smartReport = useSmartReportJob({
+    branchId,
     menuId,
     from: range.from,
     to: range.to,
@@ -218,11 +234,9 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   const quotaExhausted = isSmartReportQuotaExhausted(quota);
   const backHref = isOrders
     ? DASHBOARD_ROUTES.orderPanel
-    : selection?.qr.id != null
-      ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
-      : initialQrId != null
-        ? DASHBOARD_ROUTES.digitalMenuEdit(initialQrId)
-        : DASHBOARD_ROUTES.digitalMenu;
+    : selection?.menu?.qrId != null
+      ? DASHBOARD_ROUTES.digitalMenuEdit(selection.menu.qrId)
+      : DASHBOARD_ROUTES.digitalMenu;
   const result = normalizeSmartReportResult(smartReport.job);
   const failed = smartReport.isFailed;
   const wasGeneratingRef = useRef(false);
@@ -267,10 +281,10 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       });
       return;
     }
-    if (menuId == null) {
+    if (branchId == null) {
       toast({
-        title: "Menü seçin",
-        description: "Akıllı rapor için önce bir menü QR seçin.",
+        title: "Şube seçin",
+        description: "Akıllı rapor için önce bir şube seçin.",
         variant: "destructive",
       });
       return;
@@ -287,10 +301,11 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   }
 
   async function startSmartReport() {
-    if (menuId == null) return;
+    if (branchId == null) return;
     setConfirmOpen(false);
     try {
       const body = {
+        branchId,
         menuId,
         from: range.from,
         to: range.to,
@@ -330,7 +345,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       await downloadSmartReportPdf({
         title: result.title || "Akilli Rapor",
         markdown,
-        fileName: `akilli-rapor-${menuId ?? "menu"}-${range.from}-${range.to}.pdf`,
+        fileName: `akilli-rapor-${branchId ?? "sube"}-${range.from}-${range.to}.pdf`,
       });
     } catch {
       toast({
@@ -376,7 +391,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         : visitLoading;
   const empty = !visitLoading && visit.empty;
   const canGenerate =
-    menuId != null &&
+    branchId != null &&
     !visitLoading &&
     !reportQuery.isError &&
     !!report &&
@@ -535,16 +550,16 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         </>
       ) : null}
 
-      {menuQrs.length === 0 ? (
+      {noBranches ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           {isOrders
-            ? "Sipariş raporları için önce bir menü QR oluşturun. "
-            : "Raporlar için önce bir menü QR oluşturun. "}
+            ? "Sipariş raporları için önce bir şube oluşturun. "
+            : "Raporlar için önce bir şube oluşturun. "}
           <Link
-            href={DASHBOARD_ROUTES.digitalMenuCreate}
+            href={DASHBOARD_ROUTES.branchCreate}
             className="font-medium text-foreground underline-offset-2 hover:underline"
           >
-            Menü oluştur
+            Şube oluştur
           </Link>
         </div>
       ) : (
@@ -587,16 +602,16 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
             />
           )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <DigitalMenuPicker
-              compact
-              menuQrs={menuQrs}
-              selectedQrId={selection?.qr.id ?? initialQrId}
-              onSelectQrId={(qrId) => {
-                void selectQrId(qrId);
+            <BranchReportPicker
+              branches={branches}
+              selectedBranchId={branchId}
+              selectedQrId={qrId}
+              onSelect={(nextBranchId, nextQrId) => {
+                select(nextBranchId, nextQrId);
                 router.replace(
                   isOrders
-                    ? DASHBOARD_ROUTES.orderPanelReportsForQr(qrId)
-                    : DASHBOARD_ROUTES.digitalMenuAnalytics(qrId),
+                    ? DASHBOARD_ROUTES.orderPanelReportsForBranch(nextBranchId, nextQrId)
+                    : DASHBOARD_ROUTES.digitalMenuAnalyticsForBranch(nextBranchId, nextQrId),
                   { scroll: false },
                 );
               }}
@@ -608,6 +623,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
                 value={period}
                 onValueChange={(next) => setPeriod(next as AnalyticsPeriod)}
                 items={[
+                  { value: "yesterday", label: "Dün" },
                   { value: "1d", label: "Bugün" },
                   { value: "7d", label: "7 gün" },
                   { value: "30d", label: "30 gün" },
@@ -618,19 +634,19 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         </div>
       )}
 
-      {menuId != null && loading ? (
+      {branchId != null && loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : null}
 
-      {activeReportView === "visits" && menuId != null && reportQuery.isError ? (
+      {activeReportView === "visits" && branchId != null && reportQuery.isError ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Rapor yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
 
-      {activeReportView === "revenue" && menuId != null && !canUseRevenue ? (
+      {activeReportView === "revenue" && branchId != null && !canUseRevenue ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Ciro raporları Pro veya Ultimate paket ile kullanılabilir.{" "}
           <Link
@@ -642,17 +658,17 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         </div>
       ) : null}
 
-      {activeReportView === "revenue" && menuId != null && canUseRevenue && revenueQuery.isError ? (
+      {activeReportView === "revenue" && branchId != null && canUseRevenue && revenueQuery.isError ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Ciro raporu yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
 
-      {activeReportView === "revenue" && menuId != null && canUseRevenue && !revenueLoading && !revenueQuery.isError && revenueQuery.data ? (
+      {activeReportView === "revenue" && branchId != null && canUseRevenue && !revenueLoading && !revenueQuery.isError && revenueQuery.data ? (
         <AnalyticsRevenuePanel report={revenueQuery.data} tooltipStyle={tooltipStyle} />
       ) : null}
 
-      {activeReportView === "personnel" && menuId != null && !canUseRevenue ? (
+      {activeReportView === "personnel" && branchId != null && !canUseRevenue ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Personel raporları Pro veya Ultimate paket ile kullanılabilir.{" "}
           <Link
@@ -664,17 +680,17 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
         </div>
       ) : null}
 
-      {activeReportView === "personnel" && menuId != null && canUseRevenue && personnelQuery.isError ? (
+      {activeReportView === "personnel" && branchId != null && canUseRevenue && personnelQuery.isError ? (
         <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
           Personel raporu yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
 
-      {activeReportView === "personnel" && menuId != null && canUseRevenue && !personnelLoading && !personnelQuery.isError && personnelQuery.data ? (
+      {activeReportView === "personnel" && branchId != null && canUseRevenue && !personnelLoading && !personnelQuery.isError && personnelQuery.data ? (
         <AnalyticsWaiterPerformancePanel report={personnelQuery.data} tooltipStyle={tooltipStyle} />
       ) : null}
 
-      {activeReportView === "visits" && menuId != null && !visitLoading && !reportQuery.isError ? (
+      {activeReportView === "visits" && branchId != null && !visitLoading && !reportQuery.isError ? (
         <>
           {empty ? (
             <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">

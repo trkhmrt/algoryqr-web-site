@@ -15,6 +15,7 @@ import {
   isSmartReportPending,
   normalizeSmartReportResult,
   SMART_REPORT_POLL_INTERVAL_MS,
+  smartReportTitle,
   type SmartReportDetailResponse,
 } from "@/lib/smart-report";
 import {
@@ -91,9 +92,9 @@ export default function SmartReportDetailView({ jobId }: Props) {
     setPdfLoading(true);
     try {
       await downloadSmartReportPdf({
-        title: result.title || detail?.menuName || "Akilli Rapor",
+        title: result.title || (detail ? smartReportTitle(detail) : "Akilli Rapor"),
         markdown,
-        fileName: `akilli-rapor-${detail?.menuId ?? "menu"}-${detail?.from ?? ""}-${detail?.to ?? ""}.pdf`,
+        fileName: `akilli-rapor-${detail?.branchId ?? detail?.menuId ?? "rapor"}-${detail?.from ?? ""}-${detail?.to ?? ""}.pdf`,
       });
     } catch {
       toast({
@@ -117,11 +118,11 @@ export default function SmartReportDetailView({ jobId }: Props) {
         </Link>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
-            {result?.title || detail?.menuName || "Akilli rapor"}
+            {result?.title || (detail ? smartReportTitle(detail) : "Akilli rapor")}
           </h1>
           <p className="text-sm text-muted-foreground">
             {detail
-              ? `${detail.menuName} · ${detail.from} – ${detail.to}`
+              ? `${smartReportTitle(detail)} · ${detail.from} – ${detail.to}`
               : "Rapor detayi"}
           </p>
         </div>

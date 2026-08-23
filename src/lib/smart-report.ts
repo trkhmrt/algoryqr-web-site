@@ -43,8 +43,10 @@ export type SmartReportJobResponse = {
 };
 
 export type SmartReportDetailResponse = SmartReportJobResponse & {
-  menuId: number;
-  menuName: string;
+  menuId?: number | null;
+  menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
   from: string;
   to: string;
   locale?: string | null;
@@ -54,8 +56,10 @@ export type SmartReportDetailResponse = SmartReportJobResponse & {
 export type SmartReportListItem = {
   jobId: string;
   processId?: string;
-  menuId: number;
-  menuName: string;
+  menuId?: number | null;
+  menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
   from: string;
   to: string;
   locale?: string | null;
@@ -90,8 +94,23 @@ export type StoredSmartReportJob = {
 export const SMART_REPORT_POLL_INTERVAL_MS = 5 * 60_000;
 export const SMART_REPORT_QUOTA_ZONE = "Europe/Istanbul";
 
-export function smartReportStorageKey(menuId: number, from: string, to: string): string {
-  return `smart-report:${menuId}:${from}:${to}`;
+export function smartReportScopeKey(
+  branchId: number | null,
+  menuId: number | null,
+): string | null {
+  if (menuId != null) return `menu:${menuId}`;
+  if (branchId != null) return `branch:${branchId}`;
+  return null;
+}
+
+export function smartReportStorageKey(scope: string, from: string, to: string): string {
+  return `smart-report:${scope}:${from}:${to}`;
+}
+
+export function smartReportTitle(
+  item: Pick<SmartReportListItem, "branchName" | "menuName">,
+): string {
+  return item.branchName?.trim() || item.menuName?.trim() || "Akilli rapor";
 }
 
 export function resolveSmartReportProcessId(
@@ -239,14 +258,14 @@ function getLocalStorage(): Storage | null {
 }
 
 export function readStoredSmartReportJob(
-  menuId: number,
+  scope: string,
   from: string,
   to: string,
 ): StoredSmartReportJob | null {
   const storage = getLocalStorage();
   if (!storage) return null;
   try {
-    const raw = storage.getItem(smartReportStorageKey(menuId, from, to));
+    const raw = storage.getItem(smartReportStorageKey(scope, from, to));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredSmartReportJob;
     if (!parsed?.jobId || typeof parsed.jobId !== "string") return null;
@@ -257,7 +276,7 @@ export function readStoredSmartReportJob(
 }
 
 export function writeStoredSmartReportJob(
-  menuId: number,
+  scope: string,
   from: string,
   to: string,
   value: StoredSmartReportJob,
@@ -266,7 +285,7 @@ export function writeStoredSmartReportJob(
   if (!storage) return;
   try {
     storage.setItem(
-      smartReportStorageKey(menuId, from, to),
+      smartReportStorageKey(scope, from, to),
       JSON.stringify(value),
     );
   } catch {
@@ -274,24 +293,39 @@ export function writeStoredSmartReportJob(
 }
 
 export function clearStoredSmartReportJob(
-  menuId: number,
+  scope: string,
   from: string,
   to: string,
 ): void {
   const storage = getLocalStorage();
   if (!storage) return;
   try {
-    storage.removeItem(smartReportStorageKey(menuId, from, to));
+    storage.removeItem(smartReportStorageKey(scope, from, to));
   } catch {
   }
 }
 
 export async function createSmartReportRequest(body: {
-  menuId: number;
+  branchId?: number | null;
+  menuId?: number | null;
   from: string;
   to: string;
   locale?: string;
 }): Promise<SmartReportAccepted> {
+  if (body.branchId != null) {
+    const response = await api.post<SmartReportAccepted>(
+      `/analytics/branch/${body.branchId}/smart-reports`,
+      {
+        from: body.from,
+        to: body.to,
+        locale: body.locale ?? "tr",
+      },
+      {
+        params: body.menuId != null ? { menuId: body.menuId } : undefined,
+      },
+    );
+    return response.data;
+  }
   const response = await api.post<SmartReportAccepted>("/smart-reports", body);
   return response.data;
 }

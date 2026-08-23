@@ -19,7 +19,7 @@ export const WAITER_PERFORMANCE_METHODS: {
     label: "Aktif personel",
     method: "activeWaiterCount",
     formula: "COUNT(waiter.active = true)",
-    filter: "Menüdeki aktif garson kayıtları",
+    filter: "Şubedeki aktif garson kayıtları",
     unit: "count",
   },
   assignedOrderCount: {

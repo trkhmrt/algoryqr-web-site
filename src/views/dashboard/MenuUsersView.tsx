@@ -6,11 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Loader2, Plus, Search, UserRound } from "lucide-react";
 
-import {
-  DigitalMenuPicker,
-  useDigitalMenuAccess,
-  useDigitalMenuSelection,
-} from "@/components/dashboard/menu/DigitalMenuPicker";
+import { BranchPicker, useBranchSelection } from "@/components/dashboard/BranchPicker";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,20 +68,17 @@ function StatusTag({ active }: { active: boolean }) {
 export default function MenuUsersView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const qrFromQuery = Number(searchParams.get("qr"));
-  const initialQrId = Number.isFinite(qrFromQuery) && qrFromQuery > 0 ? qrFromQuery : null;
+  const branchFromQuery = Number(searchParams.get("branch"));
+  const initialBranchId =
+    Number.isFinite(branchFromQuery) && branchFromQuery > 0 ? branchFromQuery : null;
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
 
-  const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
-  const { accessLoading: menuAccessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const accessLoading = waiterAccessLoading || menuAccessLoading;
-  const { menuQrs, selection, loading, error, selectQrId } = useDigitalMenuSelection(
-    initialQrId,
-    canUseWaiterPanel && canUseDigitalMenu && !accessLoading,
+  const { accessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
+  const { branches, branchId, loading, error, select } = useBranchSelection(
+    initialBranchId,
+    canUseWaiterPanel && !accessLoading,
   );
-
-  const menuId = selection?.menu.menuId ?? null;
 
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -94,14 +87,14 @@ export default function MenuUsersView() {
   const [displayName, setDisplayName] = useState("");
 
   const usersQuery = useQuery({
-    queryKey: ["menu-users", menuId],
-    enabled: menuId != null,
-    queryFn: () => listMenuUsers(menuId!),
+    queryKey: ["menu-users", branchId],
+    enabled: branchId != null,
+    queryFn: () => listMenuUsers(branchId!),
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
-      createMenuWaiter(menuId!, {
+      createMenuWaiter(branchId!, {
         username: username.trim(),
         password,
         displayName: displayName.trim(),
@@ -111,7 +104,7 @@ export default function MenuUsersView() {
       setPassword("");
       setDisplayName("");
       setCreateOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["menu-users", menuId] });
+      await queryClient.invalidateQueries({ queryKey: ["menu-users", branchId] });
       notify("info", "Kullanıcı eklendi.");
     },
     onError: (err) => {
@@ -159,7 +152,7 @@ export default function MenuUsersView() {
           type="button"
           size="sm"
           className="shrink-0 gap-1.5"
-          disabled={!menuId}
+          disabled={!branchId}
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" />
@@ -167,17 +160,22 @@ export default function MenuUsersView() {
         </Button>
       </div>
 
-      <DigitalMenuPicker
-        menuQrs={menuQrs}
-        selectedQrId={selection?.qr.id ?? null}
-        onSelectQrId={(qrId) => {
-          void selectQrId(qrId);
+      <BranchPicker
+        branches={branches}
+        selectedBranchId={branchId}
+        onSelect={(id) => {
+          select(id);
+          router.replace(DASHBOARD_ROUTES.menuUsersForBranch(id));
         }}
       />
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : "Şubeler alınamadı."}
+        </p>
+      ) : null}
 
-      {!menuId ? (
-        <p className="text-sm text-muted-foreground">Menü seçin.</p>
+      {!branchId ? (
+        <p className="text-sm text-muted-foreground">Şube seçin.</p>
       ) : usersQuery.isLoading ? (
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -238,7 +236,7 @@ export default function MenuUsersView() {
                     {filteredWaiters.map((member) => {
                       const href = DASHBOARD_ROUTES.menuUserDetail(
                         member.id,
-                        selection?.qr.id,
+                        branchId,
                       );
                       return (
                         <TableRow
@@ -290,7 +288,7 @@ export default function MenuUsersView() {
             className="space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!menuId || createMutation.isPending) return;
+              if (!branchId || createMutation.isPending) return;
               createMutation.mutate();
             }}
           >
