@@ -39,6 +39,9 @@ import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
 import TrialStartView from "@/views/dashboard/TrialStartView";
 import FeedbackView from "@/views/dashboard/FeedbackView";
 import ReservationsView from "@/views/dashboard/ReservationsView";
+import TrendyolGoHubView from "@/views/dashboard/TrendyolGoHubView";
+import TrendyolGoOrdersView from "@/views/dashboard/TrendyolGoOrdersView";
+import TrendyolGoProductsView from "@/views/dashboard/TrendyolGoProductsView";
 import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
 import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
 import SmartReportsView from "@/views/dashboard/SmartReportsView";
@@ -231,6 +234,18 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <ReservationsView />
       </Suspense>
     );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.trendyolGo) {
+    return <TrendyolGoHubView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.trendyolGoProducts) {
+    return <TrendyolGoProductsView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.trendyolGoOrders) {
+    return <TrendyolGoOrdersView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.restaurantLayout) {
