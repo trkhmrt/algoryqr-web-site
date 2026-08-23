@@ -17,9 +17,14 @@ export type MenuCreateProduct = {
   category?: string;
 };
 
+export type MenuCreateOptions = {
+  sourceMenuId?: number;
+};
+
 export function buildMenuCreateDetails(
   menu: MenuCreateProfile,
   products: MenuCreateProduct[] = [],
+  options: MenuCreateOptions = {},
 ) {
   return {
     businessName: menu.businessName,
@@ -31,5 +36,6 @@ export function buildMenuCreateDetails(
     chefName: menu.chefName,
     chefAvatarKey: menu.chefAvatarKey,
     products,
+    ...(options.sourceMenuId != null ? { sourceMenuId: options.sourceMenuId } : {}),
   };
 }
