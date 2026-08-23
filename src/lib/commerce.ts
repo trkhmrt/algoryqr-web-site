@@ -150,7 +150,6 @@ export type SavedCardForm = z.infer<typeof savedCardSchema>;
 export const checkoutSchema = z.object({
   billingPeriod: z.enum(["MONTHLY", "YEARLY"]),
   billingAddressId: z.number().int().positive("Fatura adresi seçin"),
-  paymentMethodId: z.string().nullable(),
   recurringConsent: z.boolean().default(false),
 });
 
