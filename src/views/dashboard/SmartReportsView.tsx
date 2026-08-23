@@ -14,6 +14,7 @@ import {
   isSmartReportQuotaExhausted,
   listSmartReportsRequest,
   resolveSmartReportProcessId,
+  smartReportTitle,
   type SmartReportQuota,
 } from "@/lib/smart-report";
 
@@ -200,7 +201,7 @@ export default function SmartReportsView() {
                 className="flex items-center justify-between gap-3 bg-card px-3 py-2.5 transition-colors hover:bg-muted/50"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{item.menuName}</p>
+                  <p className="truncate text-sm font-medium text-foreground">{smartReportTitle(item)}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.completedAt ?? item.createdAt)}
                   </p>

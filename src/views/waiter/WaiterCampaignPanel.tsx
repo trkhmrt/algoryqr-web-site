@@ -14,12 +14,7 @@ import {
   type WaiterActiveCampaign,
 } from "@/lib/waiter-api";
 
-type WaiterCampaignPanelProps = {
-  menuId: number;
-  onGoToGrant?: () => void;
-};
-
-export function WaiterCampaignPanel({ menuId }: WaiterCampaignPanelProps) {
+export function WaiterCampaignPanel() {
   const [email, setEmail] = useState("");
   const [campaignId, setCampaignId] = useState<number | "">("");
   const [quantity, setQuantity] = useState("1");
@@ -28,14 +23,18 @@ export function WaiterCampaignPanel({ menuId }: WaiterCampaignPanelProps) {
   const [action, setAction] = useState<"ADD_STAMPS" | "GRANT_REWARD" | "LINK_ORDER">("ADD_STAMPS");
 
   const campaignsQuery = useQuery({
-    queryKey: ["waiter-campaigns-active", menuId],
-    queryFn: () => listWaiterActiveCampaigns(menuId),
+    queryKey: ["waiter-campaigns-active"],
+    queryFn: () => listWaiterActiveCampaigns(),
   });
 
+  const selectedCampaign =
+    campaignsQuery.data?.find((item) => item.id === campaignId) ?? null;
+  const grantMenuId = selectedCampaign?.menuId ?? null;
+
   const lookupQuery = useQuery({
-    queryKey: ["waiter-campaign-customer", menuId, email],
-    enabled: email.includes("@"),
-    queryFn: () => lookupWaiterCampaignCustomer(menuId, email),
+    queryKey: ["waiter-campaign-customer", grantMenuId, email],
+    enabled: grantMenuId != null && email.includes("@"),
+    queryFn: () => lookupWaiterCampaignCustomer(grantMenuId!, email),
     retry: false,
   });
 
@@ -48,7 +47,7 @@ export function WaiterCampaignPanel({ menuId }: WaiterCampaignPanelProps) {
 
   const grantMutation = useMutation({
     mutationFn: () =>
-      grantWaiterCampaign(menuId, {
+      grantWaiterCampaign(grantMenuId!, {
         email: email.trim(),
         campaignId: Number(campaignId),
         action,
@@ -73,7 +72,7 @@ export function WaiterCampaignPanel({ menuId }: WaiterCampaignPanelProps) {
             Yükleniyor…
           </div>
         ) : campaigns.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Bu menüde aktif kampanya yok.</p>
+          <p className="text-sm text-muted-foreground">Bu şubede aktif kampanya yok.</p>
         ) : (
           <ul className="space-y-2">
             {campaigns.map((campaign: WaiterActiveCampaign) => (
@@ -192,7 +191,13 @@ export function WaiterCampaignPanel({ menuId }: WaiterCampaignPanelProps) {
 
         <Button
           className="w-full"
-          disabled={grantMutation.isPending || !email.trim() || !note.trim() || campaignId === ""}
+          disabled={
+            grantMutation.isPending ||
+            !email.trim() ||
+            !note.trim() ||
+            campaignId === "" ||
+            grantMenuId == null
+          }
           onClick={() => grantMutation.mutate()}
         >
           {grantMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Hak Tanımla"}

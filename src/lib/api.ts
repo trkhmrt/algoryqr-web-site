@@ -449,6 +449,7 @@ export interface MenuQrBriefApiItem {
 export interface MenuProfileApiItem {
   menuId: number;
   qrId: number;
+  branchId?: number | null;
   userId: number;
   themeId: string;
   businessName: string;
@@ -666,6 +667,7 @@ export async function getMenuByQrIdRequest(qrId: number | string): Promise<MenuP
 export interface ActiveMenuSummaryApiItem {
   menuId: number;
   qrId: number;
+  branchId?: number | null;
   businessName?: string | null;
   themeId?: string | null;
   publicUrl?: string | null;
@@ -1163,8 +1165,10 @@ export interface MenuAnalyticsReportKpis {
 }
 
 export interface MenuAnalyticsReportResponse {
-  menuId: number;
-  menuName: string;
+  menuId?: number | null;
+  menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
   from: string;
   to: string;
   kpis: MenuAnalyticsReportKpis;
@@ -1210,8 +1214,10 @@ export interface MenuRevenueProductRow {
 }
 
 export interface MenuRevenueReportResponse {
-  menuId: number;
+  menuId?: number | null;
   menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
   from: string;
   to: string;
   kpis: MenuRevenueKpis;
@@ -1350,8 +1356,10 @@ export interface MenuWaiterPerformanceRow {
 }
 
 export interface MenuWaiterPerformanceReportResponse {
-  menuId: number;
+  menuId?: number | null;
   menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
   from: string;
   to: string;
   kpis: MenuWaiterPerformanceKpis;
@@ -1369,6 +1377,53 @@ export async function getMenuWaiterPerformanceReportRequest(
   const response = await api.get<MenuWaiterPerformanceReportResponse>(
     `/analytics/menu/${menuId}/waiter-performance`,
     { params: { from, to } },
+  );
+  return response.data;
+}
+
+function branchReportParams(from: string, to: string, menuId?: number | null) {
+  return {
+    from,
+    to,
+    ...(menuId != null ? { menuId } : {}),
+  };
+}
+
+export async function getBranchAnalyticsReportRequest(
+  branchId: number | string,
+  from: string,
+  to: string,
+  menuId?: number | null,
+): Promise<MenuAnalyticsReportResponse> {
+  const response = await api.get<MenuAnalyticsReportResponse>(
+    `/analytics/branch/${branchId}/report`,
+    { params: branchReportParams(from, to, menuId) },
+  );
+  return response.data;
+}
+
+export async function getBranchRevenueReportRequest(
+  branchId: number | string,
+  from: string,
+  to: string,
+  menuId?: number | null,
+): Promise<MenuRevenueReportResponse> {
+  const response = await api.get<MenuRevenueReportResponse>(
+    `/analytics/branch/${branchId}/revenue`,
+    { params: branchReportParams(from, to, menuId) },
+  );
+  return response.data;
+}
+
+export async function getBranchWaiterPerformanceReportRequest(
+  branchId: number | string,
+  from: string,
+  to: string,
+  menuId?: number | null,
+): Promise<MenuWaiterPerformanceReportResponse> {
+  const response = await api.get<MenuWaiterPerformanceReportResponse>(
+    `/analytics/branch/${branchId}/waiter-performance`,
+    { params: branchReportParams(from, to, menuId) },
   );
   return response.data;
 }
