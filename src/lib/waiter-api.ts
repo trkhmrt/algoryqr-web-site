@@ -9,7 +9,7 @@ export type MenuOwnerSummary = {
 
 export type MenuWaiterMember = {
   id: number;
-  menuId: number;
+  branchId: number;
   username: string;
   displayName: string;
   active: boolean;
@@ -42,14 +42,14 @@ export type WaiterAuthResult = {
   accessToken?: string;
   refreshToken?: string;
   waiterId?: number;
-  menuId?: number;
+  branchId?: number;
   displayName?: string;
   message?: string;
 };
 
 export type WaiterMe = {
   waiterId: number;
-  menuId: number;
+  branchId: number;
   ownerUserId?: number;
   username?: string;
   displayName?: string;
@@ -61,6 +61,8 @@ export type WaiterMe = {
 
 export type WaiterTableSummary = {
   tableId: number;
+  menuId?: number | null;
+  menuName?: string | null;
   tableName?: string | null;
   tableNumber?: number | null;
   active: boolean;
@@ -284,8 +286,8 @@ function messageFromUnknown(data: unknown, fallback: string): string {
 
 /* ── Merchant: waiters & customers ── */
 
-export async function listMenuUsers(menuId: number): Promise<MenuUsersResponse> {
-  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
+export async function listMenuUsers(branchId: number): Promise<MenuUsersResponse> {
+  const response = await waiterFetch(`/api/waiter-panel/branch/${branchId}/waiters`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -301,10 +303,10 @@ export async function listMenuUsers(menuId: number): Promise<MenuUsersResponse> 
 }
 
 export async function createMenuWaiter(
-  menuId: number,
+  branchId: number,
   payload: { username: string; password: string; displayName: string },
 ): Promise<MenuWaiterMember> {
-  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters`, {
+  const response = await waiterFetch(`/api/waiter-panel/branch/${branchId}/waiters`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -318,7 +320,7 @@ export async function createMenuWaiter(
 }
 
 export async function updateMenuWaiter(
-  menuId: number,
+  branchId: number,
   waiterId: number,
   payload: {
     displayName?: string;
@@ -330,7 +332,7 @@ export async function updateMenuWaiter(
     commissionValue?: number;
   },
 ): Promise<MenuWaiterMember> {
-  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
+  const response = await waiterFetch(`/api/waiter-panel/branch/${branchId}/waiters/${waiterId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "same-origin",
@@ -343,8 +345,8 @@ export async function updateMenuWaiter(
   return data;
 }
 
-export async function deleteMenuWaiter(menuId: number, waiterId: number): Promise<void> {
-  const response = await waiterFetch(`/api/waiter-panel/menu/${menuId}/waiters/${waiterId}`, {
+export async function deleteMenuWaiter(branchId: number, waiterId: number): Promise<void> {
+  const response = await waiterFetch(`/api/waiter-panel/branch/${branchId}/waiters/${waiterId}`, {
     method: "DELETE",
     credentials: "same-origin",
   });
@@ -526,8 +528,8 @@ export async function getWaiterOrder(orderId: number): Promise<OrderResponse> {
   return data;
 }
 
-export async function listWaiterCatalog(): Promise<WaiterCatalogResponse> {
-  const response = await waiterFetch("/api/waiter/orders/catalog", {
+export async function listWaiterCatalog(tableId: number): Promise<WaiterCatalogResponse> {
+  const response = await waiterFetch(`/api/waiter/orders/catalog?tableId=${encodeURIComponent(String(tableId))}`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
@@ -789,6 +791,7 @@ export async function getWaiterCommissionHistory(params?: {
 
 export type WaiterActiveCampaign = {
   id: number;
+  menuId?: number | null;
   templateCode: string;
   name: string;
   slogan?: string | null;
@@ -819,11 +822,9 @@ export type WaiterManualGrantResponse = {
   rewardId?: number;
 };
 
-export async function listWaiterActiveCampaigns(
-  menuId: number,
-): Promise<WaiterActiveCampaign[]> {
+export async function listWaiterActiveCampaigns(): Promise<WaiterActiveCampaign[]> {
   const response = await waiterFetch(
-    `/api/waiter/campaigns/active?menuId=${encodeURIComponent(String(menuId))}`,
+    `/api/waiter/campaigns/active`,
     {
       method: "GET",
       headers: { Accept: "application/json" },

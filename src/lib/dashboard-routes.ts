@@ -40,6 +40,15 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/dijital-menu/kategoriler?qr=${qrId}`,
   digitalMenuAnalytics: (qrId: number | string) =>
     `/dashboard/dijital-menu/analitik?qr=${qrId}`,
+  digitalMenuAnalyticsForBranch: (
+    branchId: number | string,
+    qrId?: number | string | null,
+  ) => {
+    const params = new URLSearchParams();
+    params.set("branch", String(branchId));
+    if (qrId != null && qrId !== "") params.set("qr", String(qrId));
+    return `/dashboard/dijital-menu/analitik?${params.toString()}`;
+  },
   smartReports: "/dashboard/dijital-menu/akilli-raporlar",
   smartReportDetail: (jobId: string) =>
     `/dashboard/dijital-menu/akilli-raporlar/${jobId}`,
@@ -59,16 +68,25 @@ export const DASHBOARD_ROUTES = {
   orderPanelReports: "/dashboard/siparis-paneli/raporlar",
   orderPanelReportsForQr: (qrId: number | string) =>
     `/dashboard/siparis-paneli/raporlar?qr=${qrId}`,
+  orderPanelReportsForBranch: (
+    branchId: number | string,
+    qrId?: number | string | null,
+  ) => {
+    const params = new URLSearchParams();
+    params.set("branch", String(branchId));
+    if (qrId != null && qrId !== "") params.set("qr", String(qrId));
+    return `/dashboard/siparis-paneli/raporlar?${params.toString()}`;
+  },
   muhasebe: "/dashboard/muhasebe",
   waiter: "/dashboard/garson",
   waiterForQr: (qrId: number | string) =>
     `/dashboard/garson?qr=${qrId}`,
   menuUsers: "/dashboard/kullanicilar",
-  menuUsersForQr: (qrId: number | string) =>
-    `/dashboard/kullanicilar?qr=${qrId}`,
-  menuUserDetail: (waiterId: number | string, qrId?: number | string | null) =>
-    qrId != null && qrId !== ""
-      ? `/dashboard/kullanicilar/${waiterId}?qr=${qrId}`
+  menuUsersForBranch: (branchId: number | string) =>
+    `/dashboard/kullanicilar?branch=${branchId}`,
+  menuUserDetail: (waiterId: number | string, branchId?: number | string | null) =>
+    branchId != null && branchId !== ""
+      ? `/dashboard/kullanicilar/${waiterId}?branch=${branchId}`
       : `/dashboard/kullanicilar/${waiterId}`,
   menuCustomers: "/dashboard/musteriler",
   menuCustomersForQr: (qrId: number | string) =>

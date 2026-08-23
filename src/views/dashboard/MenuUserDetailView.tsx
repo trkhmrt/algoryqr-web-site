@@ -6,11 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
-import {
-  DigitalMenuPicker,
-  useDigitalMenuAccess,
-  useDigitalMenuSelection,
-} from "@/components/dashboard/menu/DigitalMenuPicker";
+import { BranchPicker, useBranchSelection } from "@/components/dashboard/BranchPicker";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,8 +48,9 @@ function formatJoinedAt(value?: string | null): string {
 
 export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps) {
   const searchParams = useSearchParams();
-  const qrFromQuery = Number(searchParams.get("qr"));
-  const initialQrId = Number.isFinite(qrFromQuery) && qrFromQuery > 0 ? qrFromQuery : null;
+  const branchFromQuery = Number(searchParams.get("branch"));
+  const initialBranchId =
+    Number.isFinite(branchFromQuery) && branchFromQuery > 0 ? branchFromQuery : null;
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
   const [password, setPassword] = useState("");
@@ -63,20 +60,16 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
   const [commissionValue, setCommissionValue] = useState("");
   const [accountAction, setAccountAction] = useState<"deactivate" | "activate" | null>(null);
 
-  const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
-  const { accessLoading: menuAccessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const accessLoading = waiterAccessLoading || menuAccessLoading;
-  const { menuQrs, selection, loading, error, selectQrId } = useDigitalMenuSelection(
-    initialQrId,
-    canUseWaiterPanel && canUseDigitalMenu && !accessLoading,
+  const { accessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
+  const { branches, branchId, loading, error, select } = useBranchSelection(
+    initialBranchId,
+    canUseWaiterPanel && !accessLoading,
   );
 
-  const menuId = selection?.menu.menuId ?? null;
-
   const usersQuery = useQuery({
-    queryKey: ["menu-users", menuId],
-    enabled: menuId != null,
-    queryFn: () => listMenuUsers(menuId!),
+    queryKey: ["menu-users", branchId],
+    enabled: branchId != null,
+    queryFn: () => listMenuUsers(branchId!),
   });
 
   const member = useMemo(
@@ -97,9 +90,10 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
     setCommissionValue(String(raw));
   }, [member]);
 
-  const backHref = selection?.qr.id
-    ? DASHBOARD_ROUTES.menuUsersForQr(selection.qr.id)
-    : DASHBOARD_ROUTES.menuUsers;
+  const backHref =
+    branchId != null
+      ? DASHBOARD_ROUTES.menuUsersForBranch(branchId)
+      : DASHBOARD_ROUTES.menuUsers;
 
   const updateMutation = useMutation({
     mutationFn: (payload: {
@@ -109,10 +103,10 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
       commissionType?: "PERCENT" | "FIXED";
       commissionScope?: "PER_ITEM" | "BILL_TOTAL";
       commissionValue?: number;
-    }) => updateMenuWaiter(menuId!, waiterId, payload),
+    }) => updateMenuWaiter(branchId!, waiterId, payload),
     onSuccess: async (_data, vars) => {
       if (vars.password) setPassword("");
-      await queryClient.invalidateQueries({ queryKey: ["menu-users", menuId] });
+      await queryClient.invalidateQueries({ queryKey: ["menu-users", branchId] });
       if (vars.active === true) {
         notify("info", "Kullanıcı aktifleştirildi.");
       } else if (vars.active === false) {
@@ -153,17 +147,19 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
         </div>
       </div>
 
-      <DigitalMenuPicker
-        menuQrs={menuQrs}
-        selectedQrId={selection?.qr.id ?? null}
-        onSelectQrId={(qrId) => {
-          void selectQrId(qrId);
-        }}
+      <BranchPicker
+        branches={branches}
+        selectedBranchId={branchId}
+        onSelect={select}
       />
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : "Şubeler alınamadı."}
+        </p>
+      ) : null}
 
-      {!menuId ? (
-        <p className="text-sm text-muted-foreground">Menü seçin.</p>
+      {!branchId ? (
+        <p className="text-sm text-muted-foreground">Şube seçin.</p>
       ) : usersQuery.isLoading ? (
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />

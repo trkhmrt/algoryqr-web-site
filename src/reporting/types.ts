@@ -20,4 +20,4 @@ export type ReportingKpiCard<Id extends ReportingMethodId = ReportingMethodId> =
   display: string;
 };
 
-export type AnalyticsPeriod = "1d" | "7d" | "30d";
+export type AnalyticsPeriod = "yesterday" | "1d" | "7d" | "30d";

@@ -12,6 +12,7 @@ import {
   normalizeSmartReportResult,
   readStoredSmartReportJob,
   resolveSmartReportProcessId,
+  smartReportScopeKey,
   toSmartReportUiStatus,
   writeStoredSmartReportJob,
   type SmartReportAccepted,
@@ -20,34 +21,44 @@ import {
 } from "@/lib/smart-report";
 
 type SmartReportScope = {
+  branchId: number | null;
   menuId: number | null;
   from: string;
   to: string;
 };
 
+type SmartReportStartBody = {
+  branchId?: number | null;
+  menuId?: number | null;
+  from: string;
+  to: string;
+  locale?: string;
+};
+
 export function useSmartReportJob(scope: SmartReportScope) {
-  const { menuId, from, to } = scope;
+  const { branchId, menuId, from, to } = scope;
+  const storageScope = smartReportScopeKey(branchId, menuId);
   const [jobId, setJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (menuId == null) {
+    if (storageScope == null) {
       setJobId(null);
       return;
     }
-    const stored = readStoredSmartReportJob(menuId, from, to);
+    const stored = readStoredSmartReportJob(storageScope, from, to);
     setJobId(stored?.jobId ?? null);
-  }, [menuId, from, to]);
+  }, [storageScope, from, to]);
 
   const persist = useCallback(
     (nextJobId: string, status: SmartReportJobResponse["status"]) => {
-      if (menuId == null) return;
-      writeStoredSmartReportJob(menuId, from, to, {
+      if (storageScope == null) return;
+      writeStoredSmartReportJob(storageScope, from, to, {
         jobId: nextJobId,
         status,
         savedAt: Date.now(),
       });
     },
-    [menuId, from, to],
+    [storageScope, from, to],
   );
 
   const createMutation = useMutation({
@@ -79,9 +90,9 @@ export function useSmartReportJob(scope: SmartReportScope) {
   const job: SmartReportJobResponse | undefined = jobQuery.data;
 
   useEffect(() => {
-    if (jobId == null || job == null || menuId == null) return;
+    if (jobId == null || job == null || storageScope == null) return;
     persist(jobId, job.status);
-  }, [job, jobId, menuId, persist]);
+  }, [job, jobId, storageScope, persist]);
 
   const uiStatus: SmartReportUiStatus =
     createMutation.isPending
@@ -97,31 +108,21 @@ export function useSmartReportJob(scope: SmartReportScope) {
   const isFailed =
     job?.status === "failed" || createMutation.isError;
 
-  async function start(body: {
-    menuId: number;
-    from: string;
-    to: string;
-    locale?: string;
-  }) {
+  async function start(body: SmartReportStartBody) {
     if (isGenerating) return null;
     if (isReady) return jobId;
     return createMutation.mutateAsync(body);
   }
 
   function clearJob() {
-    if (menuId != null) {
-      clearStoredSmartReportJob(menuId, from, to);
+    if (storageScope != null) {
+      clearStoredSmartReportJob(storageScope, from, to);
     }
     setJobId(null);
     createMutation.reset();
   }
 
-  async function retry(body: {
-    menuId: number;
-    from: string;
-    to: string;
-    locale?: string;
-  }) {
+  async function retry(body: SmartReportStartBody) {
     clearJob();
     return createMutation.mutateAsync(body);
   }

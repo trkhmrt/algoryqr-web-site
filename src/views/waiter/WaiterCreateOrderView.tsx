@@ -83,8 +83,9 @@ export default function WaiterCreateOrderView({
   });
 
   const catalogQuery = useQuery({
-    queryKey: ["waiter-order-catalog"],
-    queryFn: listWaiterCatalog,
+    queryKey: ["waiter-order-catalog", selectedTable?.tableId],
+    enabled: selectedTable != null,
+    queryFn: () => listWaiterCatalog(selectedTable!.tableId),
   });
 
   const createMutation = useMutation({
