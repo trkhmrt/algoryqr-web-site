@@ -206,6 +206,23 @@ export async function paySubscriptionDebt(purchaseId: number): Promise<PurchaseI
   return response.data;
 }
 
+export async function abandonPendingPaymentAttempt(options?: { cancelIfPending?: boolean }) {
+  const purchaseId = readPendingPurchaseId();
+  clearPendingPurchaseId();
+  if (!options?.cancelIfPending || purchaseId == null) {
+    return purchaseId;
+  }
+  try {
+    const summary = await getPurchaseSummary(purchaseId);
+    if (summary.status === "PENDING") {
+      await cancelPurchase(purchaseId);
+    }
+  } catch {
+    /* already failed/cancelled */
+  }
+  return purchaseId;
+}
+
 export async function getPurchaseInstallments(
   purchaseId: number,
 ): Promise<InstallmentScheduleApiItem[]> {

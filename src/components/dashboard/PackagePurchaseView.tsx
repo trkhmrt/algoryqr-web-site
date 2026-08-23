@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
 
 import BillingAddressForm from "@/components/dashboard/commerce/BillingAddressForm";
+import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { invalidateBillingAddresses, invalidatePaymentMethods, useBillingAddresses, usePaymentMethods } from "@/hooks/use-commerce";
@@ -36,10 +37,14 @@ import {
   resolveYearlySavingsPercent,
 } from "@/lib/package-display";
 import {
+  abandonPendingPaymentAttempt,
   clearPendingPurchaseId,
   storePendingPurchaseId,
   type PurchaseInitiateResponse,
 } from "@/lib/purchase-fulfillment";
+import PaymentCheckoutOverlay, {
+  type PaymentCheckoutOverlayContent,
+} from "@/components/dashboard/PaymentCheckoutOverlay";
 import { cn } from "@/lib/utils";
 
 interface PackagePurchaseViewProps {
@@ -48,9 +53,7 @@ interface PackagePurchaseViewProps {
   returnHref?: string;
 }
 
-type PaymentOverlay =
-  | { kind: "url"; content: string }
-  | { kind: "html"; content: string };
+type PaymentOverlay = PaymentCheckoutOverlayContent;
 
 export default function PackagePurchaseView({
   packageId,
@@ -125,9 +128,19 @@ export default function PackagePurchaseView({
       finalizedPurchaseId.current = summary.purchaseId;
       clearPendingPurchaseId();
       setPaymentOverlay(null);
+      setPurchaseId(null);
+      setPollStartedAt(null);
       onNotify("danger", "Ödeme tamamlanamadı. Lütfen kart bilgilerinizi kontrol edip tekrar deneyin.");
     }
   }, [finalizeSuccess, fulfillment.summary.data, onNotify]);
+
+  const cancelPaymentOverlay = () => {
+    setPaymentOverlay(null);
+    setPurchaseId(null);
+    setPollStartedAt(null);
+    finalizedPurchaseId.current = null;
+    void abandonPendingPaymentAttempt({ cancelIfPending: true });
+  };
 
   const createAddress = async (values: BillingAddressFormValues) => {
     try {
@@ -237,27 +250,12 @@ export default function PackagePurchaseView({
           ? "Güvenli Ödeme"
           : "3D Secure doğrulama";
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
-        <div className="flex items-center justify-between border-b p-3">
-          <p className="text-sm font-medium">{title}</p>
-          <Button variant="outline" onClick={() => setPaymentOverlay(null)}>İptal</Button>
-        </div>
-        {paymentOverlay.kind === "url" ? (
-          <iframe
-            title={title}
-            src={paymentOverlay.content}
-            className="w-full flex-1 border-0 bg-white"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-          />
-        ) : (
-          <iframe
-            title={title}
-            srcDoc={paymentOverlay.content}
-            className="w-full flex-1 border-0 bg-white"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-          />
-        )}
-      </div>
+      <PaymentCheckoutOverlay
+        overlay={paymentOverlay}
+        purchaseId={purchaseId}
+        title={title}
+        onClose={cancelPaymentOverlay}
+      />
     );
   }
 
@@ -279,6 +277,7 @@ export default function PackagePurchaseView({
         <Button variant="outline" size="icon" asChild className="border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
           <Link href={returnHref}><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
+        <BrandLogo size="sm" />
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Güvenli Ödeme</h1>
           <p className="text-sm text-muted-foreground">Gerçek kart ve fatura bilgilerinizle işlemi tamamlayın.</p>
@@ -421,8 +420,8 @@ export default function PackagePurchaseView({
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <p>
                   Kart bilgileriniz bizim sunucularımıza hiç ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna
-                  bastığınızda iyzico&apos;nun güvenli ödeme sayfasına yönlendirilirsiniz; kartınız sonraki
-                  ödemeler için orada saklanır.
+                  bastığınızda PayTR güvenli ödeme sayfası açılır; kart bilgileriniz yalnızca PayTR tarafında
+                  işlenir.
                 </p>
               </div>
             )}
@@ -444,7 +443,12 @@ export default function PackagePurchaseView({
               </Link>
             </div>
 
-            <Button className="w-full gap-2" variant="hero" disabled={isPaying || purchaseId != null} onClick={() => void pay()}>
+            <Button
+              className="w-full gap-2"
+              variant="hero"
+              disabled={isPaying || (purchaseId != null && fulfillment.summary.data?.status === "PENDING")}
+              onClick={() => void pay()}
+            >
               {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
               {isPaying ? "Ödeme işleniyor…" : `Ödemeyi Tamamla · ${priceLabel}`}
             </Button>

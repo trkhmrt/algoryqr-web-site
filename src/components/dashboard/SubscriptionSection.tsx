@@ -39,6 +39,7 @@ import {
 import { invalidateSubscription } from "@/hooks/use-subscription";
 import { usePurchaseFulfillment } from "@/hooks/use-purchase-fulfillment";
 import {
+  abandonPendingPaymentAttempt,
   canCancelAtPeriodEnd,
   canCancelPurchase,
   canCancelWithRefund,
@@ -55,6 +56,9 @@ import {
   storePendingPurchaseId,
   type PurchaseInitiateResponse,
 } from "@/lib/purchase-fulfillment";
+import PaymentCheckoutOverlay, {
+  type PaymentCheckoutOverlayContent,
+} from "@/components/dashboard/PaymentCheckoutOverlay";
 import {
   cancelPlanChange,
   directionLabel,
@@ -82,10 +86,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const [pendingPurchaseId, setPendingPurchaseId] = useState<number | null>(null);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [paymentOverlay, setPaymentOverlay] = useState<{
-    kind: "url" | "html";
-    content: string;
-  } | null>(null);
+  const [paymentOverlay, setPaymentOverlay] = useState<PaymentCheckoutOverlayContent | null>(null);
   const handledPurchaseId = useRef<number | null>(null);
   const fulfillment = usePurchaseFulfillment(
     pendingPurchaseId,
@@ -111,6 +112,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       return () => window.clearTimeout(startPolling);
     }
     if (payment === "failed") {
+      void abandonPendingPaymentAttempt({ cancelIfPending: true });
       onNotify("danger", "Ödeme başarısız oldu. Lütfen tekrar deneyin.");
       router.replace(DASHBOARD_ROUTES.accountSubscription);
     } else if (payment === "success") {
@@ -139,7 +141,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     }
     if (fulfillmentSummary.status === "FAILED" || fulfillmentSummary.status === "CANCELLED") {
       handledPurchaseId.current = fulfillmentSummary.purchaseId;
-      clearPendingPurchaseId();
+      void abandonPendingPaymentAttempt({ cancelIfPending: true });
+      setPaymentOverlay(null);
       onNotify("danger", "Ödeme tamamlanamadı. Lütfen tekrar deneyin.");
       router.replace(DASHBOARD_ROUTES.accountSubscription);
     }
@@ -311,32 +314,19 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   });
 
   if (paymentOverlay) {
-    const title =
-      paymentOverlay.kind === "url" ? "Borç ödemesi (iyzico)" : "Borç ödemesi";
+    const isPaytr =
+      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
+    const title = isPaytr ? "Borç ödemesi (PayTR)" : "Borç ödemesi";
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
-        <div className="flex items-center justify-between border-b p-3">
-          <p className="text-sm font-medium">{title}</p>
-          <Button variant="outline" onClick={() => setPaymentOverlay(null)}>
-            İptal
-          </Button>
-        </div>
-        {paymentOverlay.kind === "url" ? (
-          <iframe
-            title={title}
-            src={paymentOverlay.content}
-            className="w-full flex-1 border-0 bg-white"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-          />
-        ) : (
-          <iframe
-            title={title}
-            srcDoc={paymentOverlay.content}
-            className="w-full flex-1 border-0 bg-white"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-          />
-        )}
-      </div>
+      <PaymentCheckoutOverlay
+        overlay={paymentOverlay}
+        purchaseId={pendingPurchaseId}
+        title={title}
+        onClose={() => {
+          setPaymentOverlay(null);
+          void abandonPendingPaymentAttempt({ cancelIfPending: true });
+        }}
+      />
     );
   }
 

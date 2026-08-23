@@ -33,6 +33,7 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatEntitlementRemaining, formatEntitlementUsed } from "@/lib/entitlement-display";
 import { formatDaysUntilExpiry, formatPackageDate, formatPackagePrice } from "@/lib/package-display";
 import {
+  abandonPendingPaymentAttempt,
   canCancelPurchase,
   canCancelAtPeriodEnd,
   canCancelWithRefund,
@@ -48,6 +49,9 @@ import {
   storePendingPurchaseId,
   type PurchaseInitiateResponse,
 } from "@/lib/purchase-fulfillment";
+import PaymentCheckoutOverlay, {
+  type PaymentCheckoutOverlayContent,
+} from "@/components/dashboard/PaymentCheckoutOverlay";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
@@ -62,10 +66,7 @@ type PurchaseDetailViewProps = {
 export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewProps) {
   const queryClient = useQueryClient();
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [paymentOverlay, setPaymentOverlay] = useState<{
-    kind: "url" | "html";
-    content: string;
-  } | null>(null);
+  const [paymentOverlay, setPaymentOverlay] = useState<PaymentCheckoutOverlayContent | null>(null);
   const { data, isLoading, isError } = useQuery({
     queryKey: ["purchaseSummary", purchaseId],
     queryFn: () => getPurchaseSummary(purchaseId),
@@ -194,32 +195,19 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
   const pastDue = data ? isSubscriptionPastDue(data) : false;
 
   if (paymentOverlay) {
-    const title =
-      paymentOverlay.kind === "url" ? "Borç ödemesi (iyzico)" : "Borç ödemesi";
+    const isPaytr =
+      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
+    const title = isPaytr ? "Borç ödemesi (PayTR)" : "Borç ödemesi";
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
-        <div className="flex items-center justify-between border-b p-3">
-          <p className="text-sm font-medium">{title}</p>
-          <Button variant="outline" onClick={() => setPaymentOverlay(null)}>
-            İptal
-          </Button>
-        </div>
-        {paymentOverlay.kind === "url" ? (
-          <iframe
-            title={title}
-            src={paymentOverlay.content}
-            className="w-full flex-1 border-0 bg-white"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-          />
-        ) : (
-          <iframe
-            title={title}
-            srcDoc={paymentOverlay.content}
-            className="w-full flex-1 border-0 bg-white"
-            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation"
-          />
-        )}
-      </div>
+      <PaymentCheckoutOverlay
+        overlay={paymentOverlay}
+        purchaseId={purchaseId}
+        title={title}
+        onClose={() => {
+          setPaymentOverlay(null);
+          void abandonPendingPaymentAttempt({ cancelIfPending: true });
+        }}
+      />
     );
   }
 
