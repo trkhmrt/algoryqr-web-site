@@ -18,6 +18,7 @@ export type PackageCode =
 export type ProductCode =
   | "QR_CREATE"
   | "QR_MENU"
+  | "QR_BRANCH"
   | "MENU_PRODUCT"
   | "WAITER_PANEL"
   | "SMART_ASSISTANT"
@@ -30,6 +31,7 @@ export type ProductCode =
 export type ProductScope =
   | "QR_CREATE_OWNER"
   | "QR_MENU_OWNER"
+  | "QR_BRANCH_OWNER"
   | "MENU_PRODUCT_OWNER"
   | "WAITER_PANEL_OWNER"
   | "SMART_ASSISTANT_OWNER"
@@ -51,6 +53,7 @@ export interface AccessProfile {
 const KNOWN_PRODUCT_CODES = new Set<string>([
   "QR_CREATE",
   "QR_MENU",
+  "QR_BRANCH",
   "MENU_PRODUCT",
   "WAITER_PANEL",
   "SMART_ASSISTANT",
@@ -64,6 +67,7 @@ const KNOWN_PRODUCT_CODES = new Set<string>([
 const KNOWN_PRODUCT_SCOPES = new Set<string>([
   "QR_CREATE_OWNER",
   "QR_MENU_OWNER",
+  "QR_BRANCH_OWNER",
   "MENU_PRODUCT_OWNER",
   "WAITER_PANEL_OWNER",
   "SMART_ASSISTANT_OWNER",

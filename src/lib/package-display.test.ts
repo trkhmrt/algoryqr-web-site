@@ -71,6 +71,7 @@ describe("buildPackageComparisonRows", () => {
     const productIds = rows.filter((r) => r.id.startsWith("product:")).map((r) => r.id);
     expect(productIds).toEqual([
       "product:QR_CREATE",
+      "product:QR_BRANCH",
       "product:QR_MENU",
       "product:MENU_PRODUCT",
       "product:SMART_REPORTING",
@@ -122,6 +123,7 @@ describe("buildPackageComparisonRows", () => {
     const rows = buildPackageComparisonRows(packages);
     expect(rows.filter((r) => r.id.startsWith("product:")).map((r) => r.id)).toEqual([
       "product:QR_CREATE",
+      "product:QR_BRANCH",
       "product:QR_MENU",
       "product:MENU_PRODUCT",
       "product:SMART_REPORTING",

@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
 import { PackageComparisonPageSkeleton } from "@/components/dashboard/PackageComparisonSkeleton";
 import PackagePurchaseView from "@/components/dashboard/PackagePurchaseView";
+import ProductPurchaseView from "@/components/dashboard/ProductPurchaseView";
 import SettingsTab from "@/components/dashboard/SettingsTab";
 import SubscriptionSection from "@/components/dashboard/SubscriptionSection";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
@@ -18,6 +19,8 @@ import DashboardQrCodesView from "@/views/dashboard/DashboardQrCodesView";
 import AccountSessionsView from "@/views/dashboard/AccountSessionsView";
 import AccountSessionsDetailView from "@/views/dashboard/AccountSessionsDetailView";
 import BillingAddressesView from "@/views/dashboard/BillingAddressesView";
+import BranchCreateView from "@/views/dashboard/BranchCreateView";
+import BranchSettingsView from "@/views/dashboard/BranchSettingsView";
 import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
 import OrderPanelView from "@/views/dashboard/OrderPanelView";
 import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
@@ -136,6 +139,22 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
       return { mode: "main" as const };
     }
     return null;
+  }, [pathname]);
+
+  const catalogProductCheckout = useMemo(() => {
+    const prefix = `${DASHBOARD_ROUTES.digitalMenu}/urun-satin-al/`;
+    if (!pathname.startsWith(prefix)) return null;
+    const code = decodeURIComponent(pathname.slice(prefix.length).split("/")[0] ?? "");
+    return code === "QR_BRANCH" || code === "QR_MENU" ? code : null;
+  }, [pathname]);
+
+  const branchSettingsId = useMemo(() => {
+    const prefix = `${DASHBOARD_ROUTES.digitalMenu}/subeler/`;
+    if (!pathname.startsWith(prefix)) return null;
+    const [idSlug, settingsSlug] = pathname.slice(prefix.length).split("/");
+    if (settingsSlug !== "ayarlar") return null;
+    const branchId = Number(idSlug);
+    return Number.isSafeInteger(branchId) && branchId > 0 ? branchId : null;
   }, [pathname]);
 
   const digitalMenuCheckout = useMemo(() => {
@@ -315,6 +334,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     }
   }
 
+  if (catalogProductCheckout) {
+    return <ProductPurchaseView productCode={catalogProductCheckout} onNotify={notify} />;
+  }
+
   if (digitalMenuCheckout) {
     return (
       <PackagePurchaseView
@@ -325,8 +348,20 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     );
   }
 
+  if (pathname === DASHBOARD_ROUTES.branchCreate) {
+    return <BranchCreateView />;
+  }
+
+  if (branchSettingsId != null) {
+    return <BranchSettingsView branchId={branchSettingsId} />;
+  }
+
   if (pathname === DASHBOARD_ROUTES.digitalMenuCreate) {
-    return <DigitalMenuCreateView />;
+    return (
+      <Suspense fallback={null}>
+        <DigitalMenuCreateView />
+      </Suspense>
+    );
   }
 
   if (pathname === DASHBOARD_ROUTES.digitalMenuProductCreate) {

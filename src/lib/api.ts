@@ -4,7 +4,7 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { isDateUsablePurchase, pickActivePurchase } from "@/lib/product-access";
 
-export { ApiError } from "@/lib/api/errors";
+export { ApiError, getApiErrorCode } from "@/lib/api/errors";
 export {
   hasActiveProductAccess,
   hasExpiredProductAccess,

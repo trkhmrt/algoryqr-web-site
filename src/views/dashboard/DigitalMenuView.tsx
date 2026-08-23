@@ -8,7 +8,7 @@ import { Check, ChevronRight, Crown, Loader2 } from "lucide-react";
 
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 
-import { useDigitalMenuAccess, useDigitalMenuOptions } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import TrialPackagePicker from "@/components/dashboard/TrialPackagePicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,14 +19,15 @@ import {
   useEligibleTrialPackages,
   useTrialStatus,
 } from "@/hooks/use-commerce";
-import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { useBranches } from "@/hooks/use-branches";
+import { useActivePackages } from "@/hooks/use-subscription";
 import { ApiError, type PlanPackageApiItem } from "@/lib/api";
-import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
-  canCreateMenu,
-  formatMenuQuotaLabel,
-  summarizeMenuEntitlements,
-} from "@/lib/entitlement-display";
+  canCreateMenuOnBranch,
+  formatBranchMenuQuota,
+  formatBranchQuota,
+} from "@/lib/branch";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 
@@ -45,11 +46,11 @@ export default function DigitalMenuView() {
   const trial = useTrialStatus(!canUseDigitalMenu && !accessLoading);
   const eligibleTrials = useEligibleTrialPackages(!canUseDigitalMenu && !accessLoading);
   const packages = useActivePackages(!canUseDigitalMenu && !accessLoading);
-  const subscription = useSubscription(canUseDigitalMenu);
-  const menuQuota = summarizeMenuEntitlements(subscription.data?.entitlements ?? []);
-  const menuQuotaLabel = formatMenuQuotaLabel(menuQuota);
-  const canCreateNewMenu = canCreateMenu(menuQuota);
-  const { menuQrs, loading: menusLoading } = useDigitalMenuOptions(canUseDigitalMenu);
+  const branchesQuery = useBranches(canUseDigitalMenu);
+  const branchQuotaLabel = formatBranchQuota(branchesQuery.data?.quota);
+  const extraMenuQuotaLabel = formatBranchMenuQuota(branchesQuery.data?.menuQuota);
+  const branches = branchesQuery.data?.content ?? [];
+  const canCreateBranch = Boolean(branchesQuery.data?.quota.canCreate);
   const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
   const status = trial.data?.status ?? "NOT_STARTED";
   const expiredTrial = status === "TRIAL_EXPIRED";
@@ -104,55 +105,108 @@ export default function DigitalMenuView() {
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü</h1>
-            <p className="text-sm text-muted-foreground">Menü QR&apos;larınızı oluşturun ve yönetin.</p>
-            {menuQuotaLabel ? (
-              <p className="mt-1 text-xs text-muted-foreground">{menuQuotaLabel}</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Şubeler</h1>
+            <p className="text-sm text-muted-foreground">Şubelerinizi ve menülerinizi yönetin.</p>
+            {branchQuotaLabel ? (
+              <p className="mt-1 text-xs text-muted-foreground">{branchQuotaLabel}</p>
+            ) : null}
+            {extraMenuQuotaLabel ? (
+              <p className="text-xs text-muted-foreground">{extraMenuQuotaLabel}</p>
             ) : null}
           </div>
           <Button
-            onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}
-            disabled={!canCreateNewMenu}
+            onClick={() =>
+              router.push(
+                canCreateBranch
+                  ? DASHBOARD_ROUTES.branchCreate
+                  : DASHBOARD_ROUTES.catalogProductCheckout("QR_BRANCH"),
+              )
+            }
           >
-            Menü QR Oluştur
+            {canCreateBranch ? "Şube ekle" : "Ek şube satın al"}
           </Button>
         </div>
 
         <div className="space-y-3">
-          <h2 className="text-sm font-medium text-foreground">Menülerim</h2>
-          {menusLoading ? (
+          {branchesQuery.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Menüler yükleniyor…
+              Şubeler yükleniyor…
             </div>
-          ) : menuQrs.length === 0 ? (
+          ) : branches.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
-              <p className="text-sm text-muted-foreground">Henüz menü oluşturmadınız.</p>
+              <p className="text-sm text-muted-foreground">Henüz şube oluşturmadınız.</p>
               <Button
                 className="mt-4"
-                disabled={!canCreateNewMenu}
-                onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuCreate)}
+                onClick={() =>
+                  router.push(
+                    canCreateBranch
+                      ? DASHBOARD_ROUTES.branchCreate
+                      : DASHBOARD_ROUTES.catalogProductCheckout("QR_BRANCH"),
+                  )
+                }
               >
-                İlk menüyü oluştur
+                {canCreateBranch ? "İlk şubeyi oluştur" : "Ek şube satın al"}
               </Button>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {menuQrs.map((menuQr) => (
-                <Link
-                  key={menuQr.id}
-                  href={DASHBOARD_ROUTES.digitalMenuEdit(menuQr.id)}
-                  className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">{menuQr.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {String(menuQr.details.businessName ?? "Menü QR")}
-                    </p>
+            <div className="grid gap-3">
+              {branches.map((branch) => {
+                const canAddMenu = canCreateMenuOnBranch(branch, branchesQuery.data?.menuQuota);
+                return (
+                  <div key={branch.id} className="rounded-lg border border-border bg-card p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {branch.photoUrl ? (
+                          <img
+                            src={branch.photoUrl}
+                            alt={branch.name}
+                            className="h-12 w-12 rounded-lg object-cover border border-border"
+                          />
+                        ) : null}
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">{branch.name}</p>
+                          {branch.address ? (
+                            <p className="text-xs text-muted-foreground">{branch.address}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={DASHBOARD_ROUTES.branchSettings(branch.id)}>Ayarlar</Link>
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {branch.menus.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Bu şubede henüz menü yok. İlk menü ücretsizdir.</p>
+                      ) : (
+                        branch.menus.map((menu) => (
+                          <Link
+                            key={menu.menuId}
+                            href={DASHBOARD_ROUTES.digitalMenuEdit(menu.qrId)}
+                            className="group flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 hover:bg-muted/50"
+                          >
+                            <span className="min-w-0 truncate text-sm">{menu.businessName}</span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        router.push(
+                          canAddMenu
+                            ? DASHBOARD_ROUTES.digitalMenuCreateForBranch(branch.id)
+                            : DASHBOARD_ROUTES.catalogProductCheckout("QR_MENU"),
+                        )
+                      }
+                    >
+                      {canAddMenu ? "Menü oluştur" : "Ek menü satın al"}
+                    </Button>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

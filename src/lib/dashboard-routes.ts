@@ -24,6 +24,13 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/dijital-menu/urunler/${productId}?qr=${qrId}`,
   digitalMenuCategories: "/dashboard/dijital-menu/kategoriler",
   digitalMenuCreate: "/dashboard/dijital-menu/olustur",
+  digitalMenuCreateForBranch: (branchId: number | string) =>
+    `/dashboard/dijital-menu/olustur?branch=${branchId}`,
+  branchCreate: "/dashboard/dijital-menu/subeler/yeni",
+  branchSettings: (branchId: number | string) =>
+    `/dashboard/dijital-menu/subeler/${branchId}/ayarlar`,
+  catalogProductCheckout: (code: string) =>
+    `/dashboard/dijital-menu/urun-satin-al/${encodeURIComponent(code)}`,
   digitalMenuEdit: (qrId: number | string) => `/dashboard/dijital-menu/qr/${qrId}`,
   digitalMenuSettings: (qrId: number | string) =>
     `/dashboard/dijital-menu/qr/${qrId}/ayarlar`,

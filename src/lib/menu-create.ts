@@ -19,6 +19,7 @@ export type MenuCreateProduct = {
 
 export type MenuCreateOptions = {
   sourceMenuId?: number;
+  branchId?: number;
 };
 
 export function buildMenuCreateDetails(
@@ -37,5 +38,6 @@ export function buildMenuCreateDetails(
     chefAvatarKey: menu.chefAvatarKey,
     products,
     ...(options.sourceMenuId != null ? { sourceMenuId: options.sourceMenuId } : {}),
+    ...(options.branchId != null ? { branchId: options.branchId } : {}),
   };
 }

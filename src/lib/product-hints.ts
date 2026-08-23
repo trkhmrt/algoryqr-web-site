@@ -9,6 +9,7 @@ export type FeatureHintContent = {
 export type CatalogProductCode =
   | "QR_CREATE"
   | "QR_MENU"
+  | "QR_BRANCH"
   | "MENU_PRODUCT"
   | "SMART_REPORTING"
   | "SMART_ASSISTANT"
@@ -19,6 +20,7 @@ export type CatalogProductCode =
 const PRODUCT_CODE_ALIASES: Record<string, CatalogProductCode> = {
   QR_CREATE: "QR_CREATE",
   QR_MENU: "QR_MENU",
+  QR_BRANCH: "QR_BRANCH",
   MENU_PRODUCT: "MENU_PRODUCT",
   SMART_REPORTING: "SMART_REPORTING",
   QR_ANALYTICS: "SMART_REPORTING",
@@ -38,7 +40,12 @@ export const PRODUCT_HINTS: Record<CatalogProductCode, FeatureHintContent> = {
   QR_MENU: {
     title: "Dijital menü nedir?",
     description:
-      "Dijital menü oluşturma, şablon seçimi ve yayınlama imkânı. QR kodunuzla misafirler menünüze anında ulaşır.",
+      "Her şubede bir ücretsiz menü oluşturabilirsiniz. Aynı şubeye ek menü eklemek ücretlidir.",
+  },
+  QR_BRANCH: {
+    title: "Şube nedir?",
+    description:
+      "Paketiniz bir ücretsiz şube hakkı verir. Ek şube satın alarak birden fazla lokasyonu ayrı yönetebilirsiniz.",
   },
   MENU_PRODUCT: {
     title: "Menü ürün hakkı nedir?",
