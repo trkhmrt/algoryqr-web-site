@@ -62,6 +62,10 @@ export interface PlanChangeItem {
   warningAck: boolean;
   createdAt?: string;
   completedAt?: string | null;
+  conversationId?: string;
+  token?: string;
+  paymentPageUrl?: string;
+  checkoutFormContent?: string;
 }
 
 export async function previewPlanChange(toPackageId: number): Promise<PlanChangePreview> {

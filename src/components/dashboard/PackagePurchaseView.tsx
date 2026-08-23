@@ -45,6 +45,7 @@ import {
 import PaymentCheckoutOverlay, {
   type PaymentCheckoutOverlayContent,
 } from "@/components/dashboard/PaymentCheckoutOverlay";
+import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import { cn } from "@/lib/utils";
 
 interface PackagePurchaseViewProps {
@@ -189,14 +190,13 @@ export default function PackagePurchaseView({
       return;
     }
 
-    const usingNewCard = paymentMethodId == null;
     const selectedAddress = addresses.data?.find((item) => item.id === billingAddressId);
 
     setIsPaying(true);
     try {
       const payload: Record<string, unknown> = {
         packageId,
-        paymentMode: usingNewCard ? "CHECKOUT_FORM" : "THREE_DS",
+        paymentMode: "CHECKOUT_FORM",
         paymentStyle: "SUBSCRIPTION",
         billingPeriod,
         billingAddressId,
@@ -211,23 +211,15 @@ export default function PackagePurchaseView({
       storePendingPurchaseId(response.data.purchaseId);
       setPurchaseId(response.data.purchaseId);
       setPollStartedAt(Date.now());
-      if (usingNewCard) {
-        if (response.data.paymentPageUrl) {
-          setPaymentOverlay({ kind: "url", content: response.data.paymentPageUrl });
-        } else if (response.data.checkoutFormContent) {
-          setPaymentOverlay({
-            kind: "html",
-            content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.data.checkoutFormContent}`,
-          });
-        } else {
-          throw new Error("Güvenli ödeme sayfası alınamadı.");
-        }
+      if (response.data.paymentPageUrl) {
+        setPaymentOverlay({ kind: "url", content: response.data.paymentPageUrl });
+      } else if (response.data.checkoutFormContent) {
+        setPaymentOverlay({
+          kind: "html",
+          content: paytrCheckoutHtml(response.data.checkoutFormContent),
+        });
       } else {
-        const html = response.data.paymentHtml ?? response.data.htmlContent ?? null;
-        if (!html) {
-          throw new Error("3D Secure sayfası alınamadı.");
-        }
-        setPaymentOverlay({ kind: "html", content: html });
+        throw new Error("Güvenli ödeme sayfası alınamadı.");
       }
     } catch (error) {
       onNotify("danger", error instanceof ApiError ? error.message : "Ödeme işlemi tamamlanamadı.");
@@ -237,18 +229,9 @@ export default function PackagePurchaseView({
   };
 
   if (paymentOverlay) {
-    const isPaytr =
-      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
-    const isIyzico =
-      paymentOverlay.kind === "html"
-      || (paymentOverlay.kind === "url" && /iyzipay|iyzico/i.test(paymentOverlay.content));
-    const title = isPaytr
+    const title = isPaytrCheckout(paymentOverlay)
       ? "Güvenli Ödeme (PayTR)"
-      : isIyzico
-        ? "Güvenli Ödeme (iyzico)"
-        : paymentOverlay.kind === "url"
-          ? "Güvenli Ödeme"
-          : "3D Secure doğrulama";
+      : "Güvenli Ödeme";
     return (
       <PaymentCheckoutOverlay
         overlay={paymentOverlay}

@@ -293,7 +293,7 @@ export interface PurchaseSummaryApiItem {
   expiryApproaching?: boolean;
   expired: boolean;
   usable: boolean;
-  paymentMode?: "DIRECT" | "THREE_DS" | string;
+  paymentMode?: "DIRECT" | "THREE_DS" | "CHECKOUT_FORM" | string;
   installmentCount?: number;
   paymentId?: string | null;
   paymentConversationId?: string | null;
@@ -343,7 +343,7 @@ export interface PlanPackageApiItem {
   trialEligible?: boolean;
   priority?: number | null;
   items: PlanPackageItemApi[];
-  allowedPaymentModes?: Array<"DIRECT" | "THREE_DS">;
+  allowedPaymentModes?: Array<"DIRECT" | "THREE_DS" | "CHECKOUT_FORM">;
   installmentOptions?: InstallmentOptionApiItem[];
   allowedInstallments?: number[];
 }

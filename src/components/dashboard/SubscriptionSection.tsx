@@ -59,6 +59,7 @@ import {
 import PaymentCheckoutOverlay, {
   type PaymentCheckoutOverlayContent,
 } from "@/components/dashboard/PaymentCheckoutOverlay";
+import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import {
   cancelPlanChange,
   directionLabel,
@@ -298,7 +299,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       if (response.checkoutFormContent) {
         setPaymentOverlay({
           kind: "html",
-          content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.checkoutFormContent}`,
+          content: paytrCheckoutHtml(response.checkoutFormContent),
         });
         return;
       }
@@ -314,9 +315,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   });
 
   if (paymentOverlay) {
-    const isPaytr =
-      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
-    const title = isPaytr ? "Borç ödemesi (PayTR)" : "Borç ödemesi";
+    const title = isPaytrCheckout(paymentOverlay) ? "Borç ödemesi (PayTR)" : "Borç ödemesi";
     return (
       <PaymentCheckoutOverlay
         overlay={paymentOverlay}
@@ -502,8 +501,8 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
               ) : null}
               {!pastDue && isSubscription && !hasSavedCard ? (
                 <p className="text-sm text-muted-foreground">
-                  Kayıtlı kart yok; otomatik yenileme çalışmaz. Kart ekleyebilir veya dönem
-                  gelince borcu manuel ödeyebilirsiniz.
+                  Kayıtlı kart yok; otomatik yenileme çalışmaz. PayTR ödemesinde kart kaydı
+                  açabilir veya dönem gelince borcu manuel ödeyebilirsiniz.
                 </p>
               ) : null}
               {(summary?.cancelAtPeriodEnd ?? activePurchase?.cancelAtPeriodEnd) ? (
@@ -647,7 +646,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                 </Button>
                 {isSubscription && !hasSavedCard ? (
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={DASHBOARD_ROUTES.accountPaymentMethods}>Kart ekle</Link>
+                    <Link href={DASHBOARD_ROUTES.accountPaymentMethods}>Kayıtlı kartlar</Link>
                   </Button>
                 ) : null}
               </div>

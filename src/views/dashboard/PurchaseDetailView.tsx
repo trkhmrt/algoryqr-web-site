@@ -52,6 +52,7 @@ import {
 import PaymentCheckoutOverlay, {
   type PaymentCheckoutOverlayContent,
 } from "@/components/dashboard/PaymentCheckoutOverlay";
+import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
@@ -169,7 +170,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       if (response.checkoutFormContent) {
         setPaymentOverlay({
           kind: "html",
-          content: `<div id="iyzipay-checkout-form" class="responsive"></div>${response.checkoutFormContent}`,
+          content: paytrCheckoutHtml(response.checkoutFormContent),
         });
         return;
       }
@@ -195,9 +196,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
   const pastDue = data ? isSubscriptionPastDue(data) : false;
 
   if (paymentOverlay) {
-    const isPaytr =
-      paymentOverlay.kind === "url" && /paytr\.com/i.test(paymentOverlay.content);
-    const title = isPaytr ? "Borç ödemesi (PayTR)" : "Borç ödemesi";
+    const title = isPaytrCheckout(paymentOverlay) ? "Borç ödemesi (PayTR)" : "Borç ödemesi";
     return (
       <PaymentCheckoutOverlay
         overlay={paymentOverlay}
@@ -378,8 +377,8 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
               ) : null}
               {!pastDue && isSubscription && !data.paymentMethodId ? (
                 <p className="text-sm text-muted-foreground">
-                  Kayıtlı kart yok; otomatik yenileme çalışmaz. Kart ekleyebilir veya dönem
-                  gelince borcu manuel ödeyebilirsiniz.
+                  Kayıtlı kart yok; otomatik yenileme çalışmaz. PayTR ödemesinde kart kaydı
+                  açabilir veya dönem gelince borcu manuel ödeyebilirsiniz.
                 </p>
               ) : null}
               {data.cancelAtPeriodEnd ? (
@@ -479,7 +478,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
               {isSubscription && !data.paymentMethodId ? (
                 <div className="border-t border-border/60 pt-4">
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={DASHBOARD_ROUTES.accountPaymentMethods}>Kart ekle</Link>
+                    <Link href={DASHBOARD_ROUTES.accountPaymentMethods}>Kayıtlı kartlar</Link>
                   </Button>
                 </div>
               ) : null}
