@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/BrandLogo";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { abandonPendingPaymentAttempt } from "@/lib/purchase-fulfillment";
 
 function resolvePaymentRedirect(status: string | null): "success" | "failed" | "unknown" {
   const normalized = status?.trim().toLowerCase() ?? "";
@@ -40,12 +42,16 @@ function PaymentResultContent() {
       return;
     }
 
+    if (payment === "failed" && !cardVerification) {
+      void abandonPendingPaymentAttempt({ cancelIfPending: true });
+    }
+
     const timer = window.setTimeout(() => {
       router.replace(redirectTarget);
     }, 2500);
 
     return () => window.clearTimeout(timer);
-  }, [redirectTarget, router]);
+  }, [cardVerification, payment, redirectTarget, router]);
 
   const isSuccess = payment === "success";
   const isFailed = payment === "failed";
@@ -53,6 +59,7 @@ function PaymentResultContent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-6 text-center">
+        <BrandLogo size="lg" className="mx-auto" />
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
           {isSuccess ? (
             <CheckCircle2 className="h-8 w-8 text-primary" />
