@@ -36,7 +36,7 @@ async function proxy(req: Request, method: string, path: string[]) {
       data,
       headers,
       validateStatus: () => true,
-      timeout: 25_000,
+      timeout: 60_000,
     });
     if (upstream.status === 204 || upstream.data == null) {
       return new NextResponse(null, { status: upstream.status });
