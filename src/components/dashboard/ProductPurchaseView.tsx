@@ -71,12 +71,12 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
   }, [addresses.data]);
 
   useEffect(() => {
-    if (fulfillment.data?.status === "ACTIVE") {
+    if (fulfillment.summary.data?.status === "ACTIVE") {
       void refreshAccessAfterEntitlementChange(queryClient);
       onNotify("info", "Satın alma tamamlandı.");
       router.push(DASHBOARD_ROUTES.digitalMenu);
     }
-  }, [fulfillment.data?.status, onNotify, queryClient, router]);
+  }, [fulfillment.summary.data?.status, onNotify, queryClient, router]);
 
   const pay = async () => {
     const checkout = checkoutSchema.safeParse({

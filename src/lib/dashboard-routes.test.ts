@@ -19,6 +19,9 @@ describe("dashboard report routes", () => {
     expect(DASHBOARD_ROUTES.orderPanelReportsForBranch(4, 12)).toBe(
       "/dashboard/siparis-paneli/raporlar?branch=4&qr=12",
     );
+  });
+});
+
 describe("trendyol go routes", () => {
   it("exposes partner console paths", () => {
     expect(DASHBOARD_ROUTES.trendyolGo).toBe("/dashboard/trendyol-go");
