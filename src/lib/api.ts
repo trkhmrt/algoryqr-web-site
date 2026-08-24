@@ -313,6 +313,21 @@ export interface PurchaseSummaryApiItem {
 export interface SubscriptionOverviewApiItem {
   activePackage: PurchaseSummaryApiItem | null;
   entitlements: UserEntitlementApiItem[];
+  addonPurchases?: PurchaseSummaryApiItem[];
+  branchQuota?: {
+    used: number;
+    allowed: number;
+    remaining: number;
+    grandfathered: number;
+    extraPurchased: number;
+    canCreate: boolean;
+  } | null;
+  menuQuota?: {
+    extraUsed: number;
+    extraAllowed: number;
+    extraRemaining: number;
+    canCreateExtra: boolean;
+  } | null;
 }
 
 export interface PlanPackageItemApi {
@@ -425,6 +440,9 @@ export async function getMySubscriptionOverviewRequest(): Promise<SubscriptionOv
   return {
     activePackage: response.data.activePackage ?? null,
     entitlements: Array.isArray(response.data.entitlements) ? response.data.entitlements : [],
+    addonPurchases: Array.isArray(response.data.addonPurchases) ? response.data.addonPurchases : [],
+    branchQuota: response.data.branchQuota ?? null,
+    menuQuota: response.data.menuQuota ?? null,
   };
 }
 

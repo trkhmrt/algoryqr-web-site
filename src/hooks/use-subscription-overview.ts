@@ -8,6 +8,7 @@ import {
   type PackageUsageSummary,
   type PurchaseApiItem,
   type PurchaseSummaryApiItem,
+  type SubscriptionOverviewApiItem,
   type UserEntitlementApiItem,
 } from "@/lib/api";
 import { isRefundInFlight } from "@/lib/refund-display";
@@ -17,6 +18,9 @@ export const SUBSCRIPTION_OVERVIEW_QUERY_KEY = ["subscriptionOverview"] as const
 export interface SubscriptionOverviewData {
   activePackage: PurchaseSummaryApiItem | null;
   entitlements: UserEntitlementApiItem[];
+  addonPurchases: PurchaseSummaryApiItem[];
+  branchQuota: SubscriptionOverviewApiItem["branchQuota"];
+  menuQuota: SubscriptionOverviewApiItem["menuQuota"];
   usage: PackageUsageSummary;
   activePurchase: PurchaseApiItem | null;
 }
@@ -76,6 +80,9 @@ export function useSubscriptionOverview(enabled = true) {
       return {
         activePackage: overview.activePackage,
         entitlements: overview.entitlements,
+        addonPurchases: overview.addonPurchases ?? [],
+        branchQuota: overview.branchQuota ?? null,
+        menuQuota: overview.menuQuota ?? null,
         usage,
         activePurchase,
       };

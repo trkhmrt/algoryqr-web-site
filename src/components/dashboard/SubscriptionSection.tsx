@@ -25,11 +25,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { prefetchActivePackages } from "@/hooks/use-subscription";
 import {
+  addonProductLabel,
   formatDaysUntilExpiry,
   formatPackageDate,
   formatPackagePrice,
   purchaseTypeLabel,
 } from "@/lib/package-display";
+import { formatBranchMenuQuota, formatBranchQuota } from "@/lib/branch";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import {
@@ -98,6 +100,9 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const purchaseId = activePurchase?.id;
   const summary = data?.activePackage ?? null;
   const hasActivePackage = !!(summary ?? activePurchase);
+  const addonPurchases = data?.addonPurchases ?? [];
+  const branchQuotaLabel = formatBranchQuota(data?.branchQuota ?? null);
+  const menuQuotaLabel = formatBranchMenuQuota(data?.menuQuota ?? null);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -572,6 +577,73 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : null}
+
+              {branchQuotaLabel || menuQuotaLabel || addonPurchases.length > 0 ? (
+                <div className="space-y-2 border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Ek şube ve menü hakları
+                  </p>
+                  <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+                    {data?.branchQuota ? (
+                      <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">Şube hakkı</p>
+                          <p className="text-xs text-muted-foreground">
+                            {data.branchQuota.extraPurchased > 0
+                              ? `${data.branchQuota.extraPurchased} ek şube satın alındı`
+                              : "Paket dahil 1 şube"}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {data.branchQuota.used}/{data.branchQuota.allowed} ·{" "}
+                          {data.branchQuota.remaining} kalan
+                        </p>
+                      </div>
+                    ) : null}
+                    {data?.menuQuota ? (
+                      <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">Ek menü hakkı</p>
+                          <p className="text-xs text-muted-foreground">
+                            Her şubenin ilk menüsü ücretsizdir
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {data.menuQuota.extraUsed}/{data.menuQuota.extraAllowed} ·{" "}
+                          {data.menuQuota.extraRemaining} kalan
+                        </p>
+                      </div>
+                    ) : null}
+                    {addonPurchases.map((addon) => (
+                      <Link
+                        key={addon.purchaseId}
+                        href={DASHBOARD_ROUTES.accountPaymentHistoryDetail(addon.purchaseId)}
+                        className="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {addonProductLabel(addon.packageCode, addon.packageName)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {addon.installmentCount && addon.installmentCount > 0
+                              ? `${addon.installmentCount} adet`
+                              : "1 adet"}
+                            {addon.purchasedAt ? ` · ${formatPackageDate(addon.purchasedAt)}` : ""}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {formatPackagePrice(addon.price, addon.currency)}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                  {branchQuotaLabel || menuQuotaLabel ? (
+                    <p className="text-xs text-muted-foreground">
+                      {[branchQuotaLabel, menuQuotaLabel].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 

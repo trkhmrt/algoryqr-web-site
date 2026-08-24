@@ -440,7 +440,26 @@ export function purchaseTypeLabel(purchaseType?: string | null): string {
       return "Ücretli";
     case "FREE":
       return "Free";
+    case "ADD_ON":
+      return "Ek ürün";
+    case "SYSTEM_GRANT":
+      return "Sistem";
     default:
       return "Paket";
+  }
+}
+
+export function addonProductLabel(packageCode?: string | null, packageName?: string | null): string {
+  switch (packageCode) {
+    case "QR_BRANCH":
+      return "Ek şube";
+    case "QR_MENU":
+      return "Ek menü";
+    case "QR_CREATE":
+      return "Ek QR hakkı";
+    case "MENU_PRODUCT":
+      return "Ek menü ürünü";
+    default:
+      return packageName?.trim() || packageCode || "Ek ürün";
   }
 }

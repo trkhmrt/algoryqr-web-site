@@ -53,6 +53,7 @@ export function pickActivePurchase<T extends ProductAccessPurchase>(purchases: T
   if (pool.length === 0) return null;
 
   const rank = (purchase: ProductAccessPurchase) => {
+    if (purchase.purchaseType === "ADD_ON") return -1;
     if (purchase.purchaseType === "PAID") return 3;
     if (purchase.purchaseType === "TRIAL") return 2;
     if (purchase.packageCode && purchase.packageCode !== "FREE_PACKAGE") return 1;
