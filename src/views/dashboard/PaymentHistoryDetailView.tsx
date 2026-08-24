@@ -6,7 +6,12 @@ import { ArrowLeft, CreditCard, Receipt } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { formatPackageDate, formatPackagePrice } from "@/lib/package-display";
+import {
+  addonProductLabel,
+  formatPackageDate,
+  formatPackagePrice,
+  purchaseTypeLabel,
+} from "@/lib/package-display";
 import { getPurchaseSummary } from "@/lib/purchase-fulfillment";
 import { purchaseStatusLabel } from "@/lib/refund-display";
 
@@ -24,6 +29,13 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
   const installments = data?.installments ?? data?.installmentSchedule ?? [];
   const billing = data?.billingSnapshot;
   const isSubscription = data?.paymentStyle === "SUBSCRIPTION";
+  const isAddon = data?.purchaseType === "ADD_ON";
+  const title = isAddon
+    ? addonProductLabel(data?.packageCode, data?.packageName)
+    : (data?.packageName ?? "Ödeme");
+  const addonQuantity =
+    isAddon && data?.installmentCount && data.installmentCount > 0 ? data.installmentCount : null;
+  const products = data?.products ?? [];
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -50,19 +62,72 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
             <CardContent className="space-y-3 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Paket</p>
-                  <h2 className="mt-1 text-lg font-semibold text-foreground">{data.packageName}</h2>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {isAddon ? "Ek ürün" : "Paket"}
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-foreground">{title}</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {purchaseStatusLabel(data.status)}
                     {data.purchasedAt ? ` · ${formatPackageDate(data.purchasedAt)}` : ""}
+                    {data.purchaseType ? ` · ${purchaseTypeLabel(data.purchaseType)}` : ""}
                   </p>
                 </div>
                 <p className="text-lg font-semibold text-foreground">
                   {formatPackagePrice(data.price, data.currency)}
                 </p>
               </div>
+              {isAddon ? (
+                <div className="space-y-2 rounded-lg border border-border/70 bg-background p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Ürün</span>
+                    <span className="font-medium text-foreground">{title}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Ürün kodu</span>
+                    <span className="font-mono text-foreground">{data.packageCode || "—"}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Adet</span>
+                    <span className="font-medium text-foreground">{addonQuantity ?? 1}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Geçerlilik</span>
+                    <span className="text-foreground">
+                      {formatPackageDate(data.startsAt)} – {formatPackageDate(data.expiresAt)}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
+
+          {isAddon && products.length > 0 ? (
+            <Card className="glow-card">
+              <CardContent className="space-y-3 p-5">
+                <h3 className="text-sm font-medium text-foreground">Tanımlanan haklar</h3>
+                <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+                  {products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">
+                          {addonProductLabel(product.productCode, product.productName)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{product.productCode}</p>
+                      </div>
+                      <p className="shrink-0 text-xs text-muted-foreground">
+                        {product.unlimited
+                          ? "Sınırsız"
+                          : `${product.usedQuantity}/${product.totalQuantity} · ${product.remainingQuantity} kalan`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="glow-card">
             <CardContent className="space-y-4 p-5">

@@ -143,6 +143,21 @@ describe("pickActivePurchase", () => {
     ]);
     expect(selected?.id).toBe(2);
   });
+  it("prefers PAID over ADD_ON even when addon packageCode looks paid", () => {
+    const selected = pickActivePurchase([
+      purchase({
+        id: 1,
+        purchaseType: "ADD_ON",
+        packageCode: "QR_MENU",
+      }),
+      purchase({
+        id: 2,
+        purchaseType: "PAID",
+        packageCode: "PRO_PACKAGE",
+      }),
+    ]);
+    expect(selected?.id).toBe(2);
+  });
 });
 
 describe("hasExpiredProductAccess", () => {
