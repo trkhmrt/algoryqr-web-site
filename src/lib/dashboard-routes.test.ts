@@ -22,8 +22,10 @@ describe("dashboard report routes", () => {
   });
 });
 
-describe("trendyol go routes", () => {
-  it("exposes partner console paths", () => {
+describe("integrations routes", () => {
+  it("exposes hub and partner console paths", () => {
+    expect(DASHBOARD_ROUTES.integrations).toBe("/dashboard/entegrasyonlar");
+    expect(DASHBOARD_ROUTES.yemekSepeti).toBe("/dashboard/entegrasyonlar/yemek-sepeti");
     expect(DASHBOARD_ROUTES.trendyolGo).toBe("/dashboard/trendyol-go");
     expect(DASHBOARD_ROUTES.trendyolGoProducts).toBe("/dashboard/trendyol-go/urunler");
     expect(DASHBOARD_ROUTES.trendyolGoOrders).toBe("/dashboard/trendyol-go/siparisler");

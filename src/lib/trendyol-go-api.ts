@@ -52,11 +52,15 @@ export type TrendyolGoOrderItem = {
   quantity: number;
   unitPrice?: number | null;
   options?: string | null;
+  detail?: string | null;
 };
 
 export type TrendyolGoOrder = {
   id: number;
   externalOrderId: string;
+  orderNumber?: string | null;
+  deliveryType?: string | null;
+  paymentMethod?: string | null;
   packageStatus?: string | null;
   totalAmount?: number | null;
   currency?: string | null;
@@ -131,10 +135,41 @@ export async function listTrendyolGoProducts(branchId: number, q: string, page: 
   return data;
 }
 
-export async function listTrendyolGoOrders(branchId: number, status: string, page: number, size = 20) {
+export async function listTrendyolGoOrders(
+  branchId: number,
+  status: string,
+  page: number,
+  params?: { from?: string; to?: string; size?: number },
+) {
   const { data } = await api.get<TrendyolGoOrderPage>("/integrations/trendyol-go/orders", {
-    params: { branchId, status: status || undefined, page, size },
+    params: {
+      branchId,
+      status: status || undefined,
+      from: params?.from || undefined,
+      to: params?.to || undefined,
+      page,
+      size: params?.size ?? 20,
+    },
   });
+  return data;
+}
+
+export async function syncTrendyolGoOrders(
+  branchId: number,
+  params?: { from?: string; to?: string },
+) {
+  const { data } = await api.post<{ upserted: number; lookbackHours: number; from?: string; to?: string }>(
+    "/integrations/trendyol-go/orders/sync",
+    {},
+    {
+      params: {
+        branchId,
+        from: params?.from || undefined,
+        to: params?.to || undefined,
+      },
+      timeout: 60_000,
+    },
+  );
   return data;
 }
 

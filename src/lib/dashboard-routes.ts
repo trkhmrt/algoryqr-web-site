@@ -61,6 +61,8 @@ export const DASHBOARD_ROUTES = {
   restaurantLayout: "/dashboard/dijital-menu/restaurant-layout",
   restaurantLayoutForQr: (qrId: number | string) =>
     `/dashboard/dijital-menu/restaurant-layout?qr=${qrId}`,
+  integrations: "/dashboard/entegrasyonlar",
+  yemekSepeti: "/dashboard/entegrasyonlar/yemek-sepeti",
   trendyolGo: "/dashboard/trendyol-go",
   trendyolGoProducts: "/dashboard/trendyol-go/urunler",
   trendyolGoOrders: "/dashboard/trendyol-go/siparisler",
@@ -168,9 +170,9 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   },
   {
     key: "trendyolGo",
-    label: "Trendyol Go",
-    mobileLabel: "TGO",
-    href: DASHBOARD_ROUTES.trendyolGo,
+    label: "Entegrasyonlar",
+    mobileLabel: "Entegrasyonlar",
+    href: DASHBOARD_ROUTES.integrations,
     requiredScope: "QR_MENU_OWNER",
   },
   {
@@ -231,8 +233,8 @@ export function isDashboardNavActive(pathname: string, href: string): boolean {
   if (href === DASHBOARD_ROUTES.reservations) {
     return isReservationsSectionActive(pathname);
   }
-  if (href === DASHBOARD_ROUTES.trendyolGo) {
-    return isTrendyolGoSectionActive(pathname);
+  if (href === DASHBOARD_ROUTES.integrations) {
+    return isIntegrationsSectionActive(pathname);
   }
   if (href === DASHBOARD_ROUTES.orderPanel) {
     return isOrderPanelSectionActive(pathname);
@@ -278,11 +280,17 @@ export function isReservationsSectionActive(pathname: string): boolean {
   );
 }
 
-export function isTrendyolGoSectionActive(pathname: string): boolean {
+export function isIntegrationsSectionActive(pathname: string): boolean {
   return (
+    pathname === DASHBOARD_ROUTES.integrations ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.integrations}/`) ||
     pathname === DASHBOARD_ROUTES.trendyolGo ||
     pathname.startsWith(`${DASHBOARD_ROUTES.trendyolGo}/`)
   );
+}
+
+export function isTrendyolGoSectionActive(pathname: string): boolean {
+  return isIntegrationsSectionActive(pathname);
 }
 
 export function isDigitalMenuSectionActive(pathname: string): boolean {

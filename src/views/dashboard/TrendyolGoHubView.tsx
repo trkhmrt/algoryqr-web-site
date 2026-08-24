@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Package, ShoppingBag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useBranches } from "@/hooks/use-branches";
+import { IntegrationsSectionHeader } from "@/components/dashboard/IntegrationsSectionHeader";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -21,18 +22,23 @@ import {
   upsertTrendyolGoConnection,
   type TrendyolGoConnection,
 } from "@/lib/trendyol-go-api";
+import {
+  connectionStatusClass,
+  connectionStatusLabel,
+  formatTrendyolGoDateTime,
+  shortDisplayId,
+  TGO_SOFT_CARD_CLASS,
+  TGO_SOFT_FIELD_CLASS,
+} from "@/lib/trendyol-go-ui";
+import { cn } from "@/lib/utils";
 
-function statusLabel(status?: string) {
-  switch (status) {
-    case "CONNECTED":
-      return "Bağlı";
-    case "PENDING_RESTAURANT":
-      return "Restoran seçin";
-    case "ERROR":
-      return "Hata";
-    default:
-      return "Bağlı değil";
-  }
+function SummaryField({ label, value, title }: { label: string; value: string; title?: string }) {
+  return (
+    <div className={TGO_SOFT_FIELD_CLASS} title={title}>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
+    </div>
+  );
 }
 
 export default function TrendyolGoHubView() {
@@ -47,6 +53,7 @@ export default function TrendyolGoHubView() {
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [restaurantId, setRestaurantId] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const connectionQuery = useQuery({
     queryKey: ["tgo-connection", selectedBranchId],
@@ -114,28 +121,104 @@ export default function TrendyolGoHubView() {
     return <p className="text-sm text-muted-foreground">Bu özellik dijital menü paketi gerektirir.</p>;
   }
 
+  const selectedBranch = branches.find((branch) => branch.id === selectedBranchId);
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Trendyol Go</h1>
-        <p className="text-sm text-muted-foreground">
-          Uber Eats Trendyol Go Yemek hesabınızdaki ürünleri görün ve siparişleri takip edin.
-        </p>
+    <div className="space-y-6 animate-fade-in">
+      <Link
+        href={DASHBOARD_ROUTES.integrations}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Entegrasyonlar
+      </Link>
+
+      <IntegrationsSectionHeader />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+          <p className="text-xs text-muted-foreground">Bağlantı durumu</p>
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${connectionStatusClass(connection?.status)}`}
+            >
+              {connectionStatusLabel(connection?.status)}
+            </span>
+          </div>
+        </div>
+        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+          <p className="text-xs text-muted-foreground">Restoran</p>
+          <p className="mt-1 text-xl font-semibold truncate">
+            {connection?.restaurantName || "Seçilmedi"}
+          </p>
+        </div>
+        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+          <p className="text-xs text-muted-foreground">Son senkron</p>
+          <p className="mt-1 text-xl font-semibold">
+            {formatTrendyolGoDateTime(connection?.lastSyncedAt)}
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="secondary">
-          <Link href={DASHBOARD_ROUTES.trendyolGoProducts}>Ürünler</Link>
-        </Button>
-        <Button asChild variant="secondary">
-          <Link href={DASHBOARD_ROUTES.trendyolGoOrders}>Siparişler</Link>
-        </Button>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href={DASHBOARD_ROUTES.trendyolGoProducts}
+          className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fafafa] dark:bg-muted">
+              <Package className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Ürünler</p>
+              <p className="text-xs text-muted-foreground">Partner menüsündeki ürünler</p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </Link>
+        <Link
+          href={DASHBOARD_ROUTES.trendyolGoOrders}
+          className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fafafa] dark:bg-muted">
+              <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Siparişler</p>
+              <p className="text-xs text-muted-foreground">Gelen siparişleri yönetin</p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </div>
 
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="space-y-2">
-            <Label>Şube</Label>
+      <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <div className={TGO_SOFT_CARD_CLASS}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-start justify-between gap-3 p-5 text-left sm:p-6"
+            >
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Bağlantı ayarları</h2>
+                <p className="text-xs text-muted-foreground">
+                  Şube bazında Trendyol Go kimlik bilgilerinizi tanımlayın.
+                </p>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+                  settingsOpen && "rotate-180",
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent>
+            <div className="space-y-4 border-t border-border px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Şube</Label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={selectedBranchId ?? ""}
@@ -154,61 +237,80 @@ export default function TrendyolGoHubView() {
           </div>
 
           {connection ? (
-            <p className="text-sm text-muted-foreground">
-              Durum: {statusLabel(connection.status)}
-              {connection.restaurantName ? ` · ${connection.restaurantName}` : ""}
-              {connection.apiKeyMasked ? ` · key ${connection.apiKeyMasked}` : ""}
-            </p>
-          ) : null}
-          {connection?.lastError ? (
-            <p className="text-sm text-destructive">{connection.lastError}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SummaryField label="Şube" value={selectedBranch?.name ?? "—"} />
+              <SummaryField
+                label="Satıcı kimliği"
+                value={shortDisplayId(connection.sellerId, 12)}
+                title={connection.sellerId}
+              />
+              {connection.apiKeyMasked ? (
+                <SummaryField label="API anahtarı" value={connection.apiKeyMasked} />
+              ) : null}
+              {connection.restaurantId ? (
+                <SummaryField
+                  label="Restoran kimliği"
+                  value={shortDisplayId(connection.restaurantId)}
+                  title={connection.restaurantId}
+                />
+              ) : null}
+            </div>
           ) : null}
 
-          <div className="space-y-2">
-            <Label>Seller ID</Label>
-            <Input
-              value={sellerId || connection?.sellerId || ""}
-              onChange={(event) => setSellerId(event.target.value)}
-              placeholder="TGO seller / supplier id"
-            />
+          {connection?.lastError ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              {connection.lastError}
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Satıcı ID</Label>
+              <Input
+                value={sellerId || connection?.sellerId || ""}
+                onChange={(event) => setSellerId(event.target.value)}
+                placeholder="Trendyol Go satıcı numarası"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">API anahtarı</Label>
+              <Input
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                placeholder={connection?.apiKeyMasked ? "Değiştirmek için yeni anahtar" : "API anahtarı"}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>API Key</Label>
-            <Input
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              placeholder={connection?.apiKeyMasked ? "Değiştirmek için yeni key" : "API key"}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>API Secret</Label>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">API gizli anahtarı</Label>
             <Input
               type="password"
               value={apiSecret}
               onChange={(event) => setApiSecret(event.target.value)}
-              placeholder="API secret"
+              placeholder="API gizli anahtarı"
             />
           </div>
 
           {restaurants.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Restoran</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Restoran</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={restaurantId || connection?.restaurantId || ""}
                 onChange={(event) => setRestaurantId(event.target.value)}
               >
-                <option value="">Seçin</option>
+                <option value="">Restoran seçin</option>
                 {restaurants.map((restaurant) => (
                   <option key={restaurant.id} value={restaurant.id}>
-                    {restaurant.name || restaurant.id}
+                    {restaurant.name || shortDisplayId(restaurant.id)}
                   </option>
                 ))}
               </select>
             </div>
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 pt-1">
             <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !selectedBranchId}>
               {saveMutation.isPending ? "Kaydediliyor..." : "Kaydet / bağla"}
             </Button>
@@ -222,8 +324,10 @@ export default function TrendyolGoHubView() {
               </Button>
             ) : null}
           </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
     </div>
   );
 }

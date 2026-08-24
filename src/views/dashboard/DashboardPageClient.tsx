@@ -42,6 +42,8 @@ import ReservationsView from "@/views/dashboard/ReservationsView";
 import TrendyolGoHubView from "@/views/dashboard/TrendyolGoHubView";
 import TrendyolGoOrdersView from "@/views/dashboard/TrendyolGoOrdersView";
 import TrendyolGoProductsView from "@/views/dashboard/TrendyolGoProductsView";
+import IntegrationsHubView from "@/views/dashboard/IntegrationsHubView";
+import YemekSepetiHubView from "@/views/dashboard/YemekSepetiHubView";
 import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
 import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
 import SmartReportsView from "@/views/dashboard/SmartReportsView";
@@ -234,6 +236,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <ReservationsView />
       </Suspense>
     );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.integrations) {
+    return <IntegrationsHubView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.yemekSepeti) {
+    return <YemekSepetiHubView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.trendyolGo) {
