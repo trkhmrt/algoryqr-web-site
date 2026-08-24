@@ -1,8 +1,8 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 import {
   DigitalMenuPicker,
@@ -33,6 +33,7 @@ import {
   listMenuFixedExpensesRequest,
   type AccountingEntryApiItem,
   type AccountingEntryType,
+  type AccountingSourceType,
   type MenuFixedExpenseItem,
 } from "@/lib/api";
 
@@ -83,6 +84,29 @@ function entryTypeLabel(type: AccountingEntryType): string {
   }
 }
 
+function sourceTypeLabel(type: AccountingSourceType): string {
+  switch (type) {
+    case "BILL_SALE":
+      return "Adisyon satışı";
+    case "BILL_TIP":
+      return "Bahşiş";
+    case "ORDER_SALE":
+      return "Sipariş satışı";
+    case "MANUAL":
+      return "Manuel kayıt";
+    default:
+      return type;
+  }
+}
+
+function canLoadEntryLines(item: AccountingEntryApiItem): boolean {
+  return (
+    item.sourceType === "BILL_SALE" ||
+    item.sourceBillId != null ||
+    item.sourceOrderId != null
+  );
+}
+
 function entryTypeClass(type: AccountingEntryType): string {
   switch (type) {
     case "GELIR":
@@ -108,7 +132,7 @@ export default function AccountingView() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(0);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [detailItem, setDetailItem] = useState<AccountingEntryApiItem | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<AccountingEntryType>("GELIR");
@@ -191,6 +215,7 @@ export default function AccountingView() {
     mutationFn: deleteAccountingEntryRequest,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["accounting-entries"] });
+      setDetailItem(null);
       notify("info", "Kayıt silindi.");
     },
     onError: (err) => {
@@ -272,12 +297,13 @@ export default function AccountingView() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {summaryCards.map((card) => (
-          <Card key={card.label} className="border-border/60">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{card.label}</p>
-              <p className="mt-1 text-xl font-semibold">{card.value}</p>
-            </CardContent>
-          </Card>
+          <div
+            key={card.label}
+            className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card"
+          >
+            <p className="text-xs text-muted-foreground">{card.label}</p>
+            <p className="mt-1 text-xl font-semibold">{card.value}</p>
+          </div>
         ))}
       </div>
 
@@ -438,7 +464,6 @@ export default function AccountingView() {
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-3 font-medium w-8" />
                     <th className="px-4 py-3 font-medium">Tarih</th>
                     <th className="px-4 py-3 font-medium">Tür</th>
                     <th className="px-4 py-3 font-medium">Başlık</th>
@@ -452,10 +477,7 @@ export default function AccountingView() {
                     <AccountingRow
                       key={item.id}
                       item={item}
-                      expanded={expandedId === item.id}
-                      onToggle={() =>
-                        setExpandedId((current) => (current === item.id ? null : item.id))
-                      }
+                      onOpen={() => setDetailItem(item)}
                       onDelete={
                         item.sourceType === "MANUAL"
                           ? () => deleteMutation.mutate(item.id)
@@ -575,134 +597,202 @@ export default function AccountingView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AccountingEntryDetailDialog
+        item={detailItem}
+        deleting={deleteMutation.isPending}
+        onDelete={
+          detailItem?.sourceType === "MANUAL"
+            ? () => deleteMutation.mutate(detailItem.id)
+            : undefined
+        }
+        onOpenChange={(open) => {
+          if (!open) setDetailItem(null);
+        }}
+      />
     </div>
   );
 }
 
 function AccountingRow({
   item,
-  expanded,
-  onToggle,
+  onOpen,
   onDelete,
   deleting,
 }: {
   item: AccountingEntryApiItem;
-  expanded: boolean;
-  onToggle: () => void;
+  onOpen: () => void;
   onDelete?: () => void;
   deleting: boolean;
 }) {
-  const canExpand =
-    item.sourceType === "BILL_SALE" ||
-    item.sourceBillId != null ||
-    item.sourceOrderId != null;
+  return (
+    <tr
+      className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-muted/30"
+      onClick={onOpen}
+    >
+      <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.occurredAt)}</td>
+      <td className="px-4 py-3">
+        <span
+          className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
+        >
+          {entryTypeLabel(item.entryType)}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        <div>
+          <p className="font-medium text-foreground">{item.title}</p>
+          {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
+        </div>
+      </td>
+      <td className="px-4 py-3 font-medium">{formatAmount(item.amount, item.currency)}</td>
+      <td className="px-4 py-3 text-muted-foreground">{item.menuName ?? "—"}</td>
+      <td className="px-4 py-3 text-right">
+        {onDelete ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={deleting}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            aria-label="Kaydı sil"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </td>
+    </tr>
+  );
+}
 
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2.5 dark:border-border dark:bg-background">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function AccountingEntryDetailDialog({
+  item,
+  onOpenChange,
+  onDelete,
+  deleting,
+}: {
+  item: AccountingEntryApiItem | null;
+  onOpenChange: (open: boolean) => void;
+  onDelete?: () => void;
+  deleting: boolean;
+}) {
+  const loadLines = item ? canLoadEntryLines(item) : false;
   const detailQuery = useQuery({
-    queryKey: ["accounting-entry-detail", item.id],
-    queryFn: () => getAccountingEntryDetailRequest(item.id),
-    enabled: expanded && canExpand,
+    queryKey: ["accounting-entry-detail", item?.id],
+    queryFn: () => getAccountingEntryDetailRequest(item!.id),
+    enabled: item != null && loadLines,
   });
+  const lines = detailQuery.data?.items ?? [];
+  const currency = detailQuery.data?.currency ?? item?.currency ?? "TRY";
 
   return (
-    <Fragment>
-      <tr
-        className={`border-b border-border/60 last:border-0 ${canExpand ? "cursor-pointer hover:bg-muted/30" : ""}`}
-        onClick={canExpand ? onToggle : undefined}
-      >
-        <td className="px-4 py-3">
-          {canExpand ? (
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-            />
-          ) : null}
-        </td>
-        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.occurredAt)}</td>
-        <td className="px-4 py-3">
-          <span
-            className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
-          >
-            {entryTypeLabel(item.entryType)}
-          </span>
-        </td>
-        <td className="px-4 py-3">
-          <div>
-            <p className="font-medium text-foreground">{item.title}</p>
-            {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
-            {item.sourceOrderId != null ? (
-              <p className="text-xs text-muted-foreground">Sipariş #{item.sourceOrderId}</p>
-            ) : null}
-          </div>
-        </td>
-        <td className="px-4 py-3 font-medium">{formatAmount(item.amount, item.currency)}</td>
-        <td className="px-4 py-3 text-muted-foreground">{item.menuName ?? "—"}</td>
-        <td className="px-4 py-3 text-right">
-          {onDelete ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={deleting}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              aria-label="Kaydı sil"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          ) : null}
-        </td>
-      </tr>
-      {expanded ? (
-        <tr className="border-b border-border/60 bg-muted/10">
-          <td colSpan={7} className="px-4 py-4">
-            {detailQuery.isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Detay yükleniyor…
+    <Dialog open={item != null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border-[#e5e7eb] sm:max-w-lg">
+        {item ? (
+          <>
+            <DialogHeader>
+              <div className="flex flex-wrap items-center gap-2 pr-6">
+                <DialogTitle>{item.title}</DialogTitle>
+                <span
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
+                >
+                  {entryTypeLabel(item.entryType)}
+                </span>
               </div>
-            ) : detailQuery.isError ? (
-              <p className="text-sm text-destructive">Detay yüklenemedi.</p>
-            ) : (detailQuery.data?.items.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Bu kayıt için sipariş/adisyon kalemi yok.
-              </p>
-            ) : (
+              <DialogDescription>
+                {formatAmount(item.amount, item.currency)} · {formatDateTime(item.occurredAt)}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <DetailField label="Kaynak" value={sourceTypeLabel(item.sourceType)} />
+              <DetailField label="Menü" value={item.menuName ?? "—"} />
+              {item.sourceOrderId != null ? (
+                <DetailField label="Sipariş" value={`#${item.sourceOrderId}`} />
+              ) : null}
+              {item.sourceBillId != null ? (
+                <DetailField label="Adisyon" value={`#${item.sourceBillId}`} />
+              ) : null}
+              {item.note ? <DetailField label="Not" value={item.note} /> : null}
+            </div>
+
+            {loadLines ? (
               <div className="space-y-3">
-                {detailQuery.data?.sourceOrderId != null ? (
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Sipariş #{detailQuery.data.sourceOrderId} detayı
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Kalemler
+                </p>
+                {detailQuery.isLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Detay yükleniyor…
+                  </div>
+                ) : detailQuery.isError ? (
+                  <p className="text-sm text-destructive">Detay yüklenemedi.</p>
+                ) : lines.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Bu kayıt için sipariş/adisyon kalemi yok.
                   </p>
-                ) : detailQuery.data?.sourceBillId != null ? (
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Adisyon #{detailQuery.data.sourceBillId} kalemleri
-                  </p>
-                ) : null}
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {detailQuery.data?.items.map((line) => (
-                    <div
-                      key={line.id}
-                      className="rounded-xl border border-border/50 bg-white px-2.5 py-1.5 shadow-sm transition-colors dark:border-border/60 dark:bg-muted/60"
-                    >
-                      <p className="text-sm font-medium">{line.productName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {line.quantity} × {formatAmount(line.unitPrice, detailQuery.data?.currency)}
-                      </p>
-                      <p className="text-sm font-medium">
-                        {formatAmount(line.lineTotal, detailQuery.data?.currency)}
-                      </p>
-                      {line.sourceOrderId != null && detailQuery.data?.sourceOrderId == null ? (
-                        <p className="text-[11px] text-muted-foreground">
-                          Sipariş #{line.sourceOrderId}
-                        </p>
-                      ) : null}
+                ) : (
+                  <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] dark:border-border">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 border-b border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground dark:border-border dark:bg-background">
+                      <span>Ürün</span>
+                      <span>Tutar</span>
                     </div>
-                  ))}
-                </div>
+                    <ul className="divide-y divide-[#e5e7eb] dark:divide-border">
+                      {lines.map((line) => (
+                        <li key={line.id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2.5">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">{line.productName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {line.quantity} × {formatAmount(line.unitPrice, currency)}
+                              {line.sourceOrderId != null &&
+                              detailQuery.data?.sourceOrderId == null
+                                ? ` · Sipariş #${line.sourceOrderId}`
+                                : ""}
+                            </p>
+                            {line.note ? (
+                              <p className="text-xs text-muted-foreground">{line.note}</p>
+                            ) : null}
+                          </div>
+                          <p className="text-sm font-medium text-foreground">
+                            {formatAmount(line.lineTotal, currency)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-            )}
-          </td>
-        </tr>
-      ) : null}
-    </Fragment>
+            ) : null}
+
+            <DialogFooter>
+              {onDelete ? (
+                <Button
+                  variant="destructive"
+                  disabled={deleting}
+                  onClick={onDelete}
+                >
+                  {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Sil
+                </Button>
+              ) : null}
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Kapat
+              </Button>
+            </DialogFooter>
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
