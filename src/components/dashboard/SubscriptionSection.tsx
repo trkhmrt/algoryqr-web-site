@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Zap } from "lucide-react";
+import { ArrowLeft, Sparkles, Zap } from "lucide-react";
 
 import RefundConfirmDialog from "@/components/dashboard/RefundConfirmDialog";
 import RefundStatusBadge from "@/components/dashboard/RefundStatusBadge";
@@ -97,6 +97,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const activePurchase = data?.activePurchase;
   const purchaseId = activePurchase?.id;
   const summary = data?.activePackage ?? null;
+  const hasActivePackage = !!(summary ?? activePurchase);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -352,6 +353,37 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
         </Card>
       ) : isError ? (
         <p className="text-sm text-destructive">Abonelik bilgileri yüklenemedi.</p>
+      ) : data && !hasActivePackage ? (
+        <div className="smart-feature-panel flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                Henüz bir paketiniz bulunmuyor
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Paketleri inceleyerek size uygun planı seçin.
+              </p>
+            </div>
+          </div>
+          <span className="btn-shine-pulse inline-flex w-fit shrink-0 self-start rounded-full sm:self-auto">
+            <Button
+              variant="hero"
+              size="sm"
+              className="h-10 shrink-0 rounded-full px-5 shadow-none"
+              asChild
+            >
+              <Link
+                href={DASHBOARD_ROUTES.accountPackages}
+                onMouseEnter={() => prefetchActivePackages(queryClient)}
+              >
+                Paketleri incele
+              </Link>
+            </Button>
+          </span>
+        </div>
       ) : data ? (
         <>
           {summary ? (
