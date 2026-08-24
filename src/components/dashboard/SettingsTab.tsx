@@ -503,42 +503,39 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     const trialDays = active?.daysUntilExpiry;
     const trialUrgent = typeof trialDays === "number" && trialDays <= 3;
 
+    const selectedChip =
+      "rounded-xl bg-background text-foreground shadow-sm ring-1 ring-border/70 transition-all duration-200";
+
     return (
-      <div className="mx-auto w-full max-w-md space-y-4 animate-fade-in">
+      <div className="mx-auto w-full max-w-md space-y-3 animate-fade-in">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Hesabım</h1>
         </div>
-        <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+        <div className="flex flex-col gap-1">
           {isActiveTrial && active ? (
             <button
               type="button"
               className={cn(
-                "flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors",
+                "flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-medium",
+                selectedChip,
                 trialUrgent
-                  ? "bg-amber-500/5 hover:bg-amber-500/10"
-                  : "bg-emerald-500/5 hover:bg-emerald-500/10",
+                  ? "ring-amber-300/80"
+                  : "ring-emerald-300/80",
               )}
               onClick={() => router.push(DASHBOARD_ROUTES.accountPackages)}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <div
+                <Clock3
                   className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
-                    trialUrgent ? "bg-amber-500/10" : "bg-emerald-500/10",
+                    "h-4 w-4 shrink-0",
+                    trialUrgent ? "text-amber-600" : "text-emerald-600",
                   )}
-                >
-                  <Clock3
-                    className={cn(
-                      "h-4 w-4",
-                      trialUrgent ? "text-amber-600" : "text-emerald-600",
-                    )}
-                  />
-                </div>
+                />
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-foreground">
                     {active.packageName} denemeniz aktif
                   </h3>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="truncate text-xs font-normal text-muted-foreground">
                     {formatDaysUntilExpiry(trialDays)}
                     {active.expiresAt
                       ? ` · ${new Intl.DateTimeFormat("tr-TR", {
@@ -572,7 +569,10 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             <button
               key={item.title}
               type="button"
-              className="flex w-full cursor-pointer items-center justify-between gap-3 bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+              className={cn(
+                "flex h-11 w-full cursor-pointer items-center justify-between gap-3 px-3 text-left text-sm font-medium",
+                selectedChip,
+              )}
               onClick={() => {
                 if (item.key === "subscription") {
                   router.push(DASHBOARD_ROUTES.accountSubscription);
@@ -598,9 +598,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
               }}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                  <item.icon className="h-4 w-4 text-muted-foreground" />
-                </div>
+                <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -608,20 +606,23 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-destructive/20">
-          <div className="flex items-center justify-between gap-3 bg-card px-3 py-2.5">
-            <h3 className="text-sm font-medium text-foreground">Çıkış Yap</h3>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="shrink-0"
-              onClick={() => void handleLogout()}
-              disabled={logoutLoading}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              {logoutLoading ? "Çıkış yapılıyor…" : "Çıkış Yap"}
-            </Button>
-          </div>
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 px-3 py-2",
+            selectedChip,
+          )}
+        >
+          <h3 className="text-sm font-medium text-foreground">Çıkış Yap</h3>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 shrink-0 rounded-xl"
+            onClick={() => void handleLogout()}
+            disabled={logoutLoading}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            {logoutLoading ? "Çıkış yapılıyor…" : "Çıkış Yap"}
+          </Button>
         </div>
       </div>
     );
