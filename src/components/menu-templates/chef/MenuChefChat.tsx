@@ -12,9 +12,11 @@ import {
   type ChefChatMessage,
 } from "@/lib/chef/chef-chat-session";
 import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
+import type { ChefChatBadge } from "@/lib/chef/chef-chat-badges";
 import { stripProductListFromReply } from "@/lib/chef/strip-product-list-from-reply";
 
 import { MenuChefProductCard } from "./MenuChefProductCard";
+import { MenuChefQuickBadges } from "./MenuChefQuickBadges";
 
 type MenuChefChatProps = {
   menuId: number;
@@ -311,18 +313,17 @@ export function MenuChefChat({
     setMessages([{ ...CHEF_WELCOME_MESSAGE }]);
   };
 
-  const send = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
-    setInput("");
+  const sendMessage = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
     setSendPulse((value) => value + 1);
-    setMessages((prev) => [...prev, { id: nextId(), role: "user", text }]);
+    setMessages((prev) => [...prev, { id: nextId(), role: "user", text: trimmed }]);
     setLoading(true);
     try {
       const res = await fetch("/api/menu/chef/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ menuId, message: text, conversationId }),
+        body: JSON.stringify({ menuId, message: trimmed, conversationId }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         reply?: string;
@@ -367,6 +368,65 @@ export function MenuChefChat({
     } finally {
       setLoading(false);
     }
+  };
+
+  const sendBadge = async (badge: ChefChatBadge) => {
+    if (loading) return;
+    setSendPulse((value) => value + 1);
+    setMessages((prev) => [...prev, { id: nextId(), role: "user", text: badge.label }]);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/menu/chef/badge-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ menuId, badgeId: badge.id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        reply?: string;
+        message?: string;
+        products?: ChefProductItem[];
+      };
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextId(),
+            role: "assistant",
+            text: data.message || "Öneri alınamadı. Lütfen tekrar deneyin.",
+          },
+        ]);
+        return;
+      }
+      const reply = data.reply?.trim();
+      const products = Array.isArray(data.products) ? data.products : undefined;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextId(),
+          role: "assistant",
+          text: reply || "Bu filtre için uygun ürün bulamadım.",
+          products: products?.length ? products : undefined,
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextId(),
+          role: "assistant",
+          text: "Bağlantı hatası. Lütfen tekrar deneyin.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput("");
+    await sendMessage(text);
   };
 
   return (
@@ -515,6 +575,13 @@ export function MenuChefChat({
                 void send();
               }}
             >
+              <MenuChefQuickBadges
+                menuId={menuId}
+                disabled={loading}
+                onSelect={(badge) => {
+                  void sendBadge(badge);
+                }}
+              />
               <div className="mx-auto flex max-w-2xl items-center gap-2 rounded-full border border-[#1c2824]/[0.08] bg-white/90 p-1.5 shadow-[0_10px_30px_rgba(28,40,36,0.06)]">
                 <input
                   ref={inputRef}
