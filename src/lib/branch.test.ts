@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   branchAllowsFirstMenu,
   canCreateMenuOnBranch,
+  formatBranchCreateQuota,
   formatBranchMenuQuota,
   formatBranchQuota,
   type BranchItem,
@@ -35,6 +36,24 @@ describe("formatBranchQuota", () => {
     const exhausted: BranchQuota = { ...remaining, remaining: 0, canCreate: false };
     expect(formatBranchQuota(remaining)).toBe("1 şube hakkınız kaldı");
     expect(formatBranchQuota(exhausted)).toBe("Şube hakkınız doldu. Ek şube ücretlidir.");
+  });
+});
+
+describe("formatBranchCreateQuota", () => {
+  it("describes branch creation quota for the branch entry screen", () => {
+    const remaining: BranchQuota = {
+      used: 1,
+      allowed: 2,
+      remaining: 1,
+      grandfathered: 0,
+      extraPurchased: 0,
+      canCreate: true,
+    };
+
+    expect(formatBranchCreateQuota(remaining)).toBe("Şube oluşturma hakkınız: 1/2");
+    expect(formatBranchCreateQuota({ ...remaining, remaining: 0, canCreate: false })).toBe(
+      "Şube ekleme hakkınız bitti. Satın alın.",
+    );
   });
 });
 

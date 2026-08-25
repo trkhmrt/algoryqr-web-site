@@ -106,6 +106,12 @@ export function formatBranchQuota(quota: BranchQuota | null | undefined) {
   return `${quota.remaining} şube hakkınız kaldı`;
 }
 
+export function formatBranchCreateQuota(quota: BranchQuota | null | undefined) {
+  if (!quota) return null;
+  if (quota.remaining <= 0) return "Şube ekleme hakkınız bitti. Satın alın.";
+  return `Şube oluşturma hakkınız: ${quota.remaining}/${quota.allowed}`;
+}
+
 export function formatBranchMenuQuota(quota: BranchMenuQuota | null | undefined) {
   if (!quota) return null;
   if (quota.extraRemaining <= 0) return "Ek menü hakkınız yok. Her şubenin ilk menüsü ücretsizdir.";

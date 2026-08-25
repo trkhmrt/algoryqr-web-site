@@ -24,8 +24,8 @@ import { useActivePackages } from "@/hooks/use-subscription";
 import { ApiError, type PlanPackageApiItem } from "@/lib/api";
 import {
   canCreateMenuOnBranch,
+  formatBranchCreateQuota,
   formatBranchMenuQuota,
-  formatBranchQuota,
 } from "@/lib/branch";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
@@ -47,7 +47,7 @@ export default function DigitalMenuView() {
   const eligibleTrials = useEligibleTrialPackages(!canUseDigitalMenu && !accessLoading);
   const packages = useActivePackages(!canUseDigitalMenu && !accessLoading);
   const branchesQuery = useBranches(canUseDigitalMenu);
-  const branchQuotaLabel = formatBranchQuota(branchesQuery.data?.quota);
+  const branchQuotaLabel = formatBranchCreateQuota(branchesQuery.data?.quota);
   const extraMenuQuotaLabel = formatBranchMenuQuota(branchesQuery.data?.menuQuota);
   const branches = branchesQuery.data?.content ?? [];
   const canCreateBranch = Boolean(branchesQuery.data?.quota.canCreate);
@@ -123,7 +123,7 @@ export default function DigitalMenuView() {
               )
             }
           >
-            {canCreateBranch ? "Şube ekle" : "Ek şube satın al"}
+            {canCreateBranch ? "Şube oluştur" : "Hak satın al"}
           </Button>
         </div>
 
@@ -146,7 +146,7 @@ export default function DigitalMenuView() {
                   )
                 }
               >
-                {canCreateBranch ? "İlk şubeyi oluştur" : "Ek şube satın al"}
+                {canCreateBranch ? "İlk şubeyi oluştur" : "Hak satın al"}
               </Button>
             </div>
           ) : (
