@@ -48,6 +48,7 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
   const queryClient = useQueryClient();
   const addresses = useBillingAddresses();
   const [billingAddressId, setBillingAddressId] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [isPaying, setIsPaying] = useState(false);
   const [purchaseId, setPurchaseId] = useState<number | null>(null);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
@@ -93,7 +94,7 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
     try {
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases/addons", {
         productCode,
-        quantity: 1,
+        quantity,
         billingAddressId,
         identityNumber: resolveIdentityNumber(selectedAddress?.tckn, selectedAddress?.vkn),
       });
@@ -134,7 +135,8 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
   const product = productQuery.data;
   const unitPrice = Number(product?.unitPrice ?? 0);
   const vatRate = Number(product?.vatRate ?? 20);
-  const total = Number((unitPrice * (1 + vatRate / 100)).toFixed(2));
+  const unitTotal = Number((unitPrice * (1 + vatRate / 100)).toFixed(2));
+  const grandTotal = Number((unitTotal * quantity).toFixed(2));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -161,7 +163,37 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
         </div>
       ) : (
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <p className="text-lg font-semibold">₺{total.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg font-semibold">
+                ₺{grandTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+              </p>
+              {quantity > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  {quantity} × ₺{unitTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} (KDV dahil)
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                disabled={quantity <= 1}
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm font-medium disabled:opacity-40 hover:bg-muted"
+              >
+                −
+              </button>
+              <span className="w-8 text-center text-sm font-semibold tabular-nums">{quantity}</span>
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.min(20, q + 1))}
+                disabled={quantity >= 20}
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-sm font-medium disabled:opacity-40 hover:bg-muted"
+              >
+                +
+              </button>
+            </div>
+          </div>
           <div className="space-y-2">
             <SearchableSelect
               value={billingAddressId == null ? "" : String(billingAddressId)}
