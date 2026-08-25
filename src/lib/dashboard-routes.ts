@@ -156,8 +156,8 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { key: "overview", label: "Genel Bakış", mobileLabel: "Genel", href: DASHBOARD_ROUTES.overview },
   {
     key: "digitalMenu",
-    label: "Dijital Menü",
-    mobileLabel: "Menü",
+    label: "Şubeler",
+    mobileLabel: "Şubeler",
     href: DASHBOARD_ROUTES.digitalMenu,
     requiredScope: "QR_MENU_OWNER",
   },
