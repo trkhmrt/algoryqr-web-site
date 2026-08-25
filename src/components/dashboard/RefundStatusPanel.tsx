@@ -46,7 +46,7 @@ export default function RefundStatusPanel({
   const cardLabel = formatRefundCardLabel(cardBrand, cardLastFour);
 
   return (
-    <Card className="glow-card border-emerald-500/30">
+    <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
       <CardContent className="space-y-4 p-6">
         <div className="flex items-start gap-3">
           {inFlight ? (
@@ -63,7 +63,7 @@ export default function RefundStatusPanel({
             </p>
           </div>
         </div>
-        <div className="space-y-2 rounded-lg border border-border/70 bg-background p-4 text-sm">
+        <div className="space-y-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] p-4 text-sm dark:border-border dark:bg-background">
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">İade tutarı</span>
             <span className="font-semibold text-foreground">
