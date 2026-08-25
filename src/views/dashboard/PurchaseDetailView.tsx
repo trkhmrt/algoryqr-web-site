@@ -230,7 +230,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
       </div>
 
       {isLoading ? (
-        <Card className="glow-card">
+        <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
           <CardContent className="p-6">
             <div className="h-32 animate-pulse rounded-md bg-muted" />
           </CardContent>
@@ -250,7 +250,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
             cardLastFour={data.cardLastFour}
           />
 
-          <Card className="glow-card">
+          <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
             <CardContent className="space-y-4 p-6">
               <div className="flex items-start gap-3">
                 <Package className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -290,7 +290,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                 </div>
               </div>
 
-              <dl className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+              <dl className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] divide-y divide-border dark:border-border dark:bg-background">
                 <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
                   <dt className="text-muted-foreground">Başlangıç</dt>
                   <dd className="text-right font-medium text-foreground">
@@ -489,13 +489,13 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
             </CardContent>
           </Card>
 
-          <Card className="glow-card">
+          <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
             <CardContent className="space-y-3 p-6">
               <h3 className="text-sm font-medium text-foreground">Paketteki ürünler</h3>
               {products.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Ürün kaydı bulunamadı.</p>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-border">
+                <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] dark:border-border dark:bg-background">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">

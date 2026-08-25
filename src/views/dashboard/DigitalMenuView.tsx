@@ -25,7 +25,6 @@ import { ApiError, type PlanPackageApiItem } from "@/lib/api";
 import {
   canCreateMenuOnBranch,
   formatBranchCreateQuota,
-  formatBranchMenuQuota,
 } from "@/lib/branch";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
@@ -48,7 +47,6 @@ export default function DigitalMenuView() {
   const packages = useActivePackages(!canUseDigitalMenu && !accessLoading);
   const branchesQuery = useBranches(canUseDigitalMenu);
   const branchQuotaLabel = formatBranchCreateQuota(branchesQuery.data?.quota);
-  const extraMenuQuotaLabel = formatBranchMenuQuota(branchesQuery.data?.menuQuota);
   const branches = branchesQuery.data?.content ?? [];
   const canCreateBranch = Boolean(branchesQuery.data?.quota.canCreate);
   const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
@@ -110,9 +108,6 @@ export default function DigitalMenuView() {
             {branchQuotaLabel ? (
               <p className="mt-1 text-xs text-muted-foreground">{branchQuotaLabel}</p>
             ) : null}
-            {extraMenuQuotaLabel ? (
-              <p className="text-xs text-muted-foreground">{extraMenuQuotaLabel}</p>
-            ) : null}
           </div>
           <Button
             onClick={() =>
@@ -134,7 +129,7 @@ export default function DigitalMenuView() {
               Şubeler yükleniyor…
             </div>
           ) : branches.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-8 text-center">
+            <div className="rounded-2xl border border-dashed border-[#e5e7eb] bg-white p-8 text-center shadow-none dark:border-border dark:bg-card">
               <p className="text-sm text-muted-foreground">Henüz şube oluşturmadınız.</p>
               <Button
                 className="mt-4"
@@ -154,7 +149,10 @@ export default function DigitalMenuView() {
               {branches.map((branch) => {
                 const canAddMenu = canCreateMenuOnBranch(branch, branchesQuery.data?.menuQuota);
                 return (
-                  <div key={branch.id} className="rounded-lg border border-border bg-card p-4 space-y-3">
+                  <div
+                    key={branch.id}
+                    className="space-y-3 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-none dark:border-border dark:bg-card"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         {branch.photoUrl ? (
