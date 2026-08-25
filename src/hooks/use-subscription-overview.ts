@@ -5,6 +5,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import {
   aggregatePackageUsage,
   getMySubscriptionOverviewRequest,
+  type FulfillmentDetailApiItem,
   type PackageUsageSummary,
   type PurchaseApiItem,
   type PurchaseSummaryApiItem,
@@ -23,6 +24,8 @@ export interface SubscriptionOverviewData {
   menuQuota: SubscriptionOverviewApiItem["menuQuota"];
   usage: PackageUsageSummary;
   activePurchase: PurchaseApiItem | null;
+  fulfillmentDetails: FulfillmentDetailApiItem[];
+  fulfillmentActive: boolean;
 }
 
 function mapSummaryToPurchaseItem(summary: PurchaseSummaryApiItem): PurchaseApiItem {
@@ -85,6 +88,8 @@ export function useSubscriptionOverview(enabled = true) {
         menuQuota: overview.menuQuota ?? null,
         usage,
         activePurchase,
+        fulfillmentDetails: overview.fulfillmentDetails ?? [],
+        fulfillmentActive: overview.fulfillmentActive ?? false,
       };
     },
     enabled,

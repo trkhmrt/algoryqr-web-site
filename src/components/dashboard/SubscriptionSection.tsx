@@ -26,6 +26,7 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { prefetchActivePackages } from "@/hooks/use-subscription";
 import {
   addonProductLabel,
+  featureCodeLabel,
   formatDaysUntilExpiry,
   formatPackageDate,
   formatPackagePrice,
@@ -68,7 +69,10 @@ import {
   listMyPlanChanges,
 } from "@/lib/plan-change";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
-import { formatEntitlementUsageSummary } from "@/lib/entitlement-display";
+import {
+  formatPackageEntitlementName,
+  formatPackageEntitlementUsageSummary,
+} from "@/lib/entitlement-display";
 import { isRefundInFlight, purchaseStatusLabel } from "@/lib/refund-display";
 import { ApiError } from "@/lib/api/errors";
 
@@ -101,8 +105,22 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const summary = data?.activePackage ?? null;
   const hasActivePackage = !!(summary ?? activePurchase);
   const addonPurchases = data?.addonPurchases ?? [];
+  const visibleAddonPurchases = addonPurchases.filter(
+    (addon) => addon.packageCode !== "QR_BRANCH" && addon.packageCode !== "QR_BRANCH_ADDON",
+  );
+  const fulfillmentDetails = data?.fulfillmentDetails ?? [];
+  const fulfillmentActive = data?.fulfillmentActive ?? false;
   const branchQuotaLabel = formatBranchQuota(data?.branchQuota ?? null);
   const menuQuotaLabel = formatBranchMenuQuota(data?.menuQuota ?? null);
+  const products = summary?.products ?? [];
+  const branchAddonTotal = data?.branchQuota?.extraPurchased ?? 0;
+  const branchIncludedTotal =
+    products.find((product) => product.productCode === "QR_BRANCH" && !product.unlimited)
+      ?.totalQuantity ?? 1;
+  const branchAddonUsed = data?.branchQuota
+    ? Math.max(0, data.branchQuota.used - branchIncludedTotal - data.branchQuota.grandfathered)
+    : 0;
+  const branchAddonRemaining = Math.max(0, branchAddonTotal - branchAddonUsed);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -171,7 +189,6 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
     !activePurchase.expired;
   const packageName =
     summary?.packageName ?? activePurchase?.packageName ?? data?.usage.packageName ?? "Paket";
-  const products = summary?.products ?? [];
   const scheduledChange = useMemo(
     () => planChangesQuery.data?.find((item) => item.status === "SCHEDULED") ?? null,
     [planChangesQuery.data],
@@ -568,11 +585,11 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                       >
                         <div className="min-w-0">
                           <p className="truncate font-medium text-foreground">
-                            {product.productName}
+                            {formatPackageEntitlementName(product)}
                           </p>
                         </div>
                         <p className="shrink-0 text-xs text-muted-foreground">
-                          {formatEntitlementUsageSummary(product)}
+                          {formatPackageEntitlementUsageSummary(product)}
                         </p>
                       </div>
                     ))}
@@ -580,10 +597,10 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                 </div>
               ) : null}
 
-              {branchQuotaLabel || menuQuotaLabel || addonPurchases.length > 0 ? (
+              {branchQuotaLabel || menuQuotaLabel || visibleAddonPurchases.length > 0 ? (
                 <div className="space-y-2 border-t border-border/60 pt-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Ek şube ve menü hakları
+                    Şube ve menü hakları
                   </p>
                   <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
                     {data?.branchQuota ? (
@@ -592,13 +609,14 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                           <p className="font-medium text-foreground">Şube hakkı</p>
                           <p className="text-xs text-muted-foreground">
                             {data.branchQuota.extraPurchased > 0
-                              ? `${data.branchQuota.extraPurchased} ek şube satın alındı`
-                              : "Paket dahil 1 şube"}
+                              ? "Satın alınan şube hakkı"
+                              : `Paket dahil ${branchIncludedTotal} şube`}
                           </p>
                         </div>
                         <p className="shrink-0 text-xs text-muted-foreground">
-                          {data.branchQuota.used}/{data.branchQuota.allowed} ·{" "}
-                          {data.branchQuota.remaining} kalan
+                          {data.branchQuota.extraPurchased > 0
+                            ? `${branchAddonRemaining}/${branchAddonTotal}`
+                            : `${data.branchQuota.remaining}/${data.branchQuota.allowed}`}
                         </p>
                       </div>
                     ) : null}
@@ -616,7 +634,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                         </p>
                       </div>
                     ) : null}
-                    {addonPurchases.map((addon) => (
+                    {visibleAddonPurchases.map((addon) => (
                       <Link
                         key={addon.purchaseId}
                         href={DASHBOARD_ROUTES.accountPaymentHistoryDetail(addon.purchaseId)}
@@ -644,6 +662,41 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                       {[branchQuotaLabel, menuQuotaLabel].filter(Boolean).join(" · ")}
                     </p>
                   ) : null}
+                </div>
+              ) : null}
+
+              {fulfillmentActive && fulfillmentDetails.length > 0 ? (
+                <div className="space-y-2 border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Hak detayları (Fulfillment)
+                  </p>
+                  <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+                    {fulfillmentDetails.map((detail) => (
+                      <div
+                        key={detail.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">
+                            {featureCodeLabel(detail.featureCode)}
+                            {detail.source === "ADDON_PURCHASE" ? (
+                              <span className="ml-1.5 rounded bg-primary/10 px-1 py-0.5 text-xs font-normal text-primary">
+                                ek
+                              </span>
+                            ) : null}
+                          </p>
+                          {detail.scopeCode ? (
+                            <p className="text-xs text-muted-foreground">{detail.scopeCode}</p>
+                          ) : null}
+                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">
+                          {detail.unlimited
+                            ? "Sınırsız"
+                            : `${detail.usedQuantity}/${detail.quantity} · ${detail.remainingQuantity} kalan`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 

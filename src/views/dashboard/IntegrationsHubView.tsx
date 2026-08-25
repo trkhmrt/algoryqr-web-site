@@ -41,8 +41,11 @@ export default function IntegrationsHubView() {
         <Link
           href={DASHBOARD_ROUTES.yemekSepeti}
           aria-label="Yemek Sepeti"
-          className={`group flex items-center justify-center ${TGO_SOFT_CARD_CLASS} p-6 transition-colors hover:border-primary/30 sm:p-8`}
+          className={`group relative flex items-center justify-center ${TGO_SOFT_CARD_CLASS} p-6 transition-colors hover:border-primary/30 sm:p-8`}
         >
+          <span className="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            Yakında
+          </span>
           <Image
             src="/yemek-sepeti/wordmark.png"
             alt="Yemek Sepeti"
