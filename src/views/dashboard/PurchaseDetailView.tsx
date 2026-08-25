@@ -30,7 +30,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { formatEntitlementRemaining, formatEntitlementUsed } from "@/lib/entitlement-display";
+import {
+  formatEntitlementRemaining,
+  formatEntitlementUsed,
+  formatPackageEntitlementName,
+} from "@/lib/entitlement-display";
 import { formatDaysUntilExpiry, formatPackageDate, formatPackagePrice } from "@/lib/package-display";
 import {
   abandonPendingPaymentAttempt,
@@ -504,7 +508,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                       {products.map((product) => (
                         <TableRow key={product.id} className="hover:bg-muted/30">
                           <TableCell className="px-3 py-2.5 font-medium text-foreground">
-                            {product.productName}
+                            {formatPackageEntitlementName(product)}
                           </TableCell>
                           <TableCell className="px-3 py-2.5 text-right text-muted-foreground">
                             {formatEntitlementUsed(product)}

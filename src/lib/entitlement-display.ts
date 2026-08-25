@@ -24,6 +24,24 @@ export function formatEntitlementUsageSummary(product: EntitlementUsageFields): 
   return "Aktif";
 }
 
+export function formatPackageEntitlementName(
+  product: Pick<UserEntitlementApiItem, "productCode" | "productName">,
+): string {
+  switch (product.productCode) {
+    case "QR_BRANCH":
+      return "Şube hakkı";
+    default:
+      return product.productName;
+  }
+}
+
+export function formatPackageEntitlementUsageSummary(product: EntitlementUsageFields): string {
+  if (product.productCode === "QR_BRANCH" && !product.unlimited) {
+    return `Adet ${product.totalQuantity}`;
+  }
+  return formatEntitlementUsageSummary(product);
+}
+
 export function formatEntitlementUsed(product: EntitlementUsageFields): string {
   if (product.unlimited) {
     return "—";

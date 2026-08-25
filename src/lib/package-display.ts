@@ -449,11 +449,30 @@ export function purchaseTypeLabel(purchaseType?: string | null): string {
   }
 }
 
+export function featureCodeLabel(featureCode?: string | null): string {
+  switch (featureCode) {
+    case "QR_BRANCH":
+      return "Şube hakkı";
+    case "QR_MENU":
+      return "Menü hakkı";
+    case "QR_CREATE":
+      return "QR kodu hakkı";
+    case "QR_BRANCH_ADDON":
+      return "Ek şube hakkı";
+    case "QR_MENU_ADDON":
+      return "Ek menü hakkı";
+    default:
+      return featureCode || "Hak";
+  }
+}
+
 export function addonProductLabel(packageCode?: string | null, packageName?: string | null): string {
   switch (packageCode) {
     case "QR_BRANCH":
+    case "QR_BRANCH_ADDON":
       return "Ek şube";
     case "QR_MENU":
+    case "QR_MENU_ADDON":
       return "Ek menü";
     case "QR_CREATE":
       return "Ek QR hakkı";

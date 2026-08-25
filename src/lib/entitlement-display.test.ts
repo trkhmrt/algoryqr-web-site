@@ -5,6 +5,8 @@ import {
   formatEntitlementRemaining,
   formatEntitlementUsageSummary,
   formatEntitlementUsed,
+  formatPackageEntitlementName,
+  formatPackageEntitlementUsageSummary,
   formatMenuQuotaLabel,
   formatQrCreateQuotaLabel,
   hasQrCreateQuotaRemaining,
@@ -43,6 +45,22 @@ describe("entitlement-display", () => {
     expect(formatEntitlementUsageSummary(product)).toBe("Aktif");
     expect(formatEntitlementUsed(product)).toBe("Kullanımda");
     expect(formatEntitlementRemaining(product)).toBe("Aktif");
+  });
+
+  it("formats package branch entitlement as a package right", () => {
+    const product = {
+      productCode: "QR_BRANCH",
+      productName: "Ek Sube",
+      unlimited: false,
+      usedQuantity: 0,
+      totalQuantity: 1,
+      remainingQuantity: 1,
+      usable: true,
+      expired: false,
+    };
+
+    expect(formatPackageEntitlementName(product)).toBe("Şube hakkı");
+    expect(formatPackageEntitlementUsageSummary(product)).toBe("Adet 1");
   });
 
   it("summarizes menu quota across entitlements", () => {

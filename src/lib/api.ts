@@ -310,6 +310,21 @@ export interface PurchaseSummaryApiItem {
   updateCardAvailable?: boolean;
 }
 
+export interface FulfillmentDetailApiItem {
+  id: number;
+  fulfillmentId: number;
+  featureCode: string;
+  scopeCode: string | null;
+  productTypeId: "PACKAGE_PRODUCT" | "ADDON_PRODUCT" | null;
+  source: "PACKAGE_INCLUDE" | "ADDON_PURCHASE";
+  quantity: number;
+  unlimited: boolean;
+  usedQuantity: number;
+  remainingQuantity: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+}
+
 export interface SubscriptionOverviewApiItem {
   activePackage: PurchaseSummaryApiItem | null;
   entitlements: UserEntitlementApiItem[];
@@ -328,6 +343,8 @@ export interface SubscriptionOverviewApiItem {
     extraRemaining: number;
     canCreateExtra: boolean;
   } | null;
+  fulfillmentDetails?: FulfillmentDetailApiItem[];
+  fulfillmentActive?: boolean;
 }
 
 export interface PlanPackageItemApi {
