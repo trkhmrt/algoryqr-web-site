@@ -554,6 +554,11 @@ export interface MenuProductApiItem {
   servesPeopleMin?: number | null;
   servesPeopleMax?: number | null;
   nutrition?: NutritionFacts | null;
+  pairings?: {
+    productIds?: number[];
+    mainCategoryIds?: number[];
+    subCategoryIds?: number[];
+  };
 }
 
 export interface MenuTagApiItem {
@@ -653,6 +658,11 @@ export interface MenuProductRequestBody {
   servesPeopleMin?: number | null;
   servesPeopleMax?: number | null;
   nutrition?: NutritionFacts;
+  pairings?: {
+    productIds?: number[];
+    mainCategoryIds?: number[];
+    subCategoryIds?: number[];
+  };
 }
 
 export interface ProductFacetsApiResponse {
