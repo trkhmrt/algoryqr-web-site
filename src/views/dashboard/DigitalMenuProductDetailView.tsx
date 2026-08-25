@@ -12,6 +12,11 @@ import {
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import ProductNutritionPanel from "@/components/dashboard/menu/ProductNutritionPanel";
 import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
+import {
+  ProductPairingFields,
+  emptyPairings,
+  type ProductPairingsForm,
+} from "@/components/dashboard/menu/ProductPairingFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { Button } from "@/components/ui/button";
@@ -56,6 +61,7 @@ type ProductFormState = {
   servesPeopleMin: string;
   servesPeopleMax: string;
   chefRecommended: boolean;
+  pairings: ProductPairingsForm;
 };
 
 function formFromProduct(product: MenuProductApiItem): ProductFormState {
@@ -72,6 +78,11 @@ function formFromProduct(product: MenuProductApiItem): ProductFormState {
     servesPeopleMin: product.servesPeopleMin != null ? String(product.servesPeopleMin) : "",
     servesPeopleMax: product.servesPeopleMax != null ? String(product.servesPeopleMax) : "",
     chefRecommended: Boolean(product.chefRecommended),
+    pairings: {
+      productIds: product.pairings?.productIds ?? [],
+      mainCategoryIds: product.pairings?.mainCategoryIds ?? [],
+      subCategoryIds: product.pairings?.subCategoryIds ?? [],
+    },
   };
 }
 
@@ -207,6 +218,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
       servesPeopleMax: maxValue,
       nutrition: product?.nutrition ?? undefined,
       chefRecommended: next.chefRecommended,
+      pairings: next.pairings ?? emptyPairings(),
     };
   };
 
@@ -440,6 +452,16 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                     onChange={(e) => setForm({ ...form, servesPeopleMax: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="col-span-2">
+                <ProductPairingFields
+                  pairings={form.pairings ?? emptyPairings()}
+                  onChange={(pairings) => setForm({ ...form, pairings })}
+                  products={productsQuery.data ?? []}
+                  categories={categories}
+                  excludeProductId={product.productId}
+                  disabled={busy}
+                />
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label className="text-xs">Etiketler</Label>

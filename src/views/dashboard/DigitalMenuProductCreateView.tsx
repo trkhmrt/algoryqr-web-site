@@ -15,6 +15,7 @@ import {
   emptyNutritionFacts,
 } from "@/components/dashboard/menu/ProductNutritionPanel";
 import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
+import { ProductPairingFields, emptyPairings } from "@/components/dashboard/menu/ProductPairingFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
-import { invalidateMenuProducts } from "@/hooks/use-menu-products";
+import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
 
 type NutritionFormFields = {
@@ -74,6 +75,7 @@ const emptyForm = (subCategoryId?: number | null): MenuProductRequestBody => ({
   servesPeopleMin: 1,
   servesPeopleMax: 1,
   nutrition: emptyNutritionFacts(),
+  pairings: emptyPairings(),
 });
 
 export default function DigitalMenuProductCreateView() {
@@ -111,6 +113,7 @@ export default function DigitalMenuProductCreateView() {
   const allergens = allergensQuery.data ?? [];
   const menuId =
     selectionState.selection?.menu.menuId ?? categoriesQuery.data?.menuId ?? 0;
+  const productsQuery = useMenuProducts(menuId > 0 ? menuId : null);
 
   const [form, setForm] = useState<MenuProductRequestBody>(() => emptyForm(presetCategoryId));
   const [mainCategoryId, setMainCategoryId] = useState<number | "">("");
@@ -422,6 +425,14 @@ export default function DigitalMenuProductCreateView() {
               </div>
             </div>
           </div>
+
+          <ProductPairingFields
+            pairings={form.pairings ?? emptyPairings()}
+            onChange={(pairings) => setForm({ ...form, pairings })}
+            products={productsQuery.data ?? []}
+            categories={categories}
+            disabled={busy}
+          />
 
           <div className="space-y-1.5">
             <Label className="text-xs">Etiketler</Label>
