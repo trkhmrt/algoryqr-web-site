@@ -167,6 +167,9 @@ function AssistantBubble({
   onAvatarClick,
   chefAvatarUrl,
   chefDisplayName,
+  menuId,
+  badgesDisabled,
+  onBadgeSelect,
 }: {
   msg: Extract<ChefChatMessage, { role: "assistant" }>;
   animateEnter: boolean;
@@ -175,6 +178,9 @@ function AssistantBubble({
   onAvatarClick: () => void;
   chefAvatarUrl: string;
   chefDisplayName: string;
+  menuId: number;
+  badgesDisabled: boolean;
+  onBadgeSelect: (badge: ChefChatBadge) => void;
 }) {
   const onEnteredRef = useRef(onEntered);
   onEnteredRef.current = onEntered;
@@ -210,14 +216,23 @@ function AssistantBubble({
         />
       </motion.div>
       <div className="min-w-0 flex-1 space-y-2.5">
-        {displayText ? (
+        {displayText || msg.id === "welcome" ? (
           <motion.div
             initial={animateEnter ? bubbleShellMotion.initial : false}
             animate={bubbleShellMotion.animate}
             transition={{ ...bubbleTransition, delay: 0.06 }}
-            className="origin-bottom-left whitespace-pre-wrap rounded-[1.35rem] rounded-bl-md border border-white/70 bg-white/80 px-4 py-3 text-[14.5px] leading-relaxed tracking-[-0.01em] text-[#24302c] shadow-[0_8px_28px_rgba(28,40,36,0.05)] backdrop-blur-sm"
+            className="origin-bottom-left rounded-[1.35rem] rounded-bl-md border border-white/70 bg-white/80 px-4 py-3 text-[14.5px] leading-relaxed tracking-[-0.01em] text-[#24302c] shadow-[0_8px_28px_rgba(28,40,36,0.05)] backdrop-blur-sm"
           >
-            {displayText}
+            {displayText ? (
+              <p className="whitespace-pre-wrap">{displayText}</p>
+            ) : null}
+            {msg.id === "welcome" ? (
+              <MenuChefQuickBadges
+                menuId={menuId}
+                disabled={badgesDisabled}
+                onSelect={onBadgeSelect}
+              />
+            ) : null}
           </motion.div>
         ) : null}
         {products ? (
@@ -514,6 +529,11 @@ export function MenuChefChat({
                           onAvatarClick={() => setAvatarOpen(true)}
                           chefAvatarUrl={chefAvatarUrl}
                           chefDisplayName={chefDisplayName}
+                          menuId={menuId}
+                          badgesDisabled={loading}
+                          onBadgeSelect={(badge) => {
+                            void sendBadge(badge);
+                          }}
                         />
                       );
                     }
@@ -575,13 +595,6 @@ export function MenuChefChat({
                 void send();
               }}
             >
-              <MenuChefQuickBadges
-                menuId={menuId}
-                disabled={loading}
-                onSelect={(badge) => {
-                  void sendBadge(badge);
-                }}
-              />
               <div className="mx-auto flex max-w-2xl items-center gap-2 rounded-full border border-[#1c2824]/[0.08] bg-white/90 p-1.5 shadow-[0_10px_30px_rgba(28,40,36,0.06)]">
                 <input
                   ref={inputRef}
