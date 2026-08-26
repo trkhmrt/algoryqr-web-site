@@ -5,14 +5,11 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { Loader2, UserRound } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 import {
   Sheet,
@@ -46,62 +43,12 @@ type AccountUiValue = {
   openAccount: () => void;
   openAuth: (mode: "login" | "register") => void;
   profile: CustomerProfile | null;
-  registerInline: () => () => void;
 };
 
 const AccountUiContext = createContext<AccountUiValue | null>(null);
 
-function AccountButton({
-  profile,
-  onOpen,
-  className,
-}: {
-  profile: CustomerProfile | null;
-  onOpen: () => void;
-  className?: string;
-}) {
-  const locale = useMenuLocaleOptional();
-  const t = locale?.t;
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={cn(
-        "flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 text-sm font-semibold shadow-md backdrop-blur",
-        className,
-      )}
-      aria-label={t?.account || "Hesabım"}
-    >
-      {profile ? initials(profile) : <UserRound className="h-4 w-4" />}
-    </button>
-  );
-}
-
 export function useCustomerAccountUi() {
-  const ctx = useContext(AccountUiContext);
-  const registerInline = ctx?.registerInline;
-
-  useLayoutEffect(() => {
-    if (!registerInline) return;
-    return registerInline();
-  }, [registerInline]);
-
-  return ctx;
-}
-
-export function CustomerAccountTrigger({ className }: { className?: string }) {
-  const ctx = useCustomerAccountUi();
-  if (!ctx) return null;
-  return <AccountButton profile={ctx.profile} onOpen={ctx.openAccount} className={className} />;
-}
-
-function initials(profile: CustomerProfile | null): string {
-  if (!profile) return "";
-  const a = (profile.firstName || "").trim().charAt(0);
-  const b = (profile.lastName || "").trim().charAt(0);
-  const out = `${a}${b}`.toUpperCase();
-  if (out) return out;
-  return (profile.email || "?").charAt(0).toUpperCase();
+  return useContext(AccountUiContext);
 }
 
 export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuProps) {
@@ -111,7 +58,6 @@ export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuPro
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
-  const [inlineCount, setInlineCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [panel, setPanel] = useState<Panel>("home");
   const [firstName, setFirstName] = useState("");
@@ -162,33 +108,14 @@ export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuPro
     setAuthOpen(true);
   }, []);
 
-  const registerInline = useCallback(() => {
-    setInlineCount((count) => count + 1);
-    return () => setInlineCount((count) => Math.max(0, count - 1));
-  }, []);
-
   const uiValue = useMemo<AccountUiValue>(
-    () => ({
-      openAccount,
-      openAuth,
-      profile,
-      registerInline,
-    }),
-    [openAccount, openAuth, profile, registerInline],
+    () => ({ openAccount, openAuth, profile }),
+    [openAccount, openAuth, profile],
   );
 
   return (
     <AccountUiContext.Provider value={uiValue}>
       {children}
-      {inlineCount === 0 ? (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-[70] mx-auto flex max-w-md justify-end px-3 pt-2.5">
-          <AccountButton
-            profile={profile}
-            onOpen={openAccount}
-            className="pointer-events-auto"
-          />
-        </div>
-      ) : null}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2, Plus } from "lucide-react";
 
 import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
@@ -11,6 +12,7 @@ import {
 import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { useOrderingOptional } from "../shared/ordering-context";
 import { techGourmetCategoryMark } from "./styles";
 
 type HomeViewProps = {
@@ -211,133 +213,159 @@ function TechProductCard({
   index: number;
   onOpen: (product: MenuProductApiItem) => void;
 }) {
+  const ordering = useOrderingOptional();
+  const [busy, setBusy] = useState(false);
   const price = formatMenuPrice(product.price, product.currency);
   const isUnavailable = product.available === false;
 
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(product)}
-      disabled={isUnavailable}
-      className="group relative flex flex-col text-left transition-colors"
+    <article
+      className="group relative flex flex-col transition-colors"
       style={{
         backgroundColor: "var(--tg-surface-container)",
         minHeight: "200px",
         opacity: isUnavailable ? 0.5 : 1,
-        cursor: isUnavailable ? "not-allowed" : "pointer",
       }}
     >
-      {/* ID badge */}
-      <div
-        className="tg-id-badge"
-        style={{
-          position: "absolute",
-          top: 10,
-          right: 10,
-          backgroundColor: "var(--tg-bg)",
-          border: "1px solid var(--tg-outline-variant)",
-          padding: "3px 7px",
-          fontFamily: "var(--tg-font-mono)",
-          fontSize: "10px",
-          letterSpacing: "0.06em",
-          color: "var(--tg-primary)",
-          zIndex: 10,
-        }}
+      <button
+        type="button"
+        onClick={() => onOpen(product)}
+        disabled={isUnavailable}
+        className="flex flex-1 flex-col text-left"
+        style={{ cursor: isUnavailable ? "not-allowed" : "pointer" }}
       >
-        ID: {String(index + 1).padStart(2, "0")}
-      </div>
+        {/* ID badge */}
+        <div
+          className="tg-id-badge"
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            backgroundColor: "var(--tg-bg)",
+            border: "1px solid var(--tg-outline-variant)",
+            padding: "3px 7px",
+            fontFamily: "var(--tg-font-mono)",
+            fontSize: "10px",
+            letterSpacing: "0.06em",
+            color: "var(--tg-primary)",
+            zIndex: 10,
+          }}
+        >
+          ID: {String(index + 1).padStart(2, "0")}
+        </div>
 
-      {/* Image */}
-      {product.imageUrl ? (
-        <div className="relative w-full overflow-hidden" style={{ height: "160px" }}>
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            style={{ filter: "grayscale(20%) contrast(1.05)" }}
-          />
+        {/* Image */}
+        {product.imageUrl ? (
+          <div className="relative w-full overflow-hidden" style={{ height: "160px" }}>
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              style={{ filter: "grayscale(20%) contrast(1.05)" }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(to top, var(--tg-surface-container) 0%, transparent 60%)" }}
+            />
+          </div>
+        ) : (
           <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(to top, var(--tg-surface-container) 0%, transparent 60%)" }}
-          />
-        </div>
-      ) : (
-        <div
-          className="flex w-full items-center justify-center"
-          style={{ height: "80px", backgroundColor: "var(--tg-surface-high)" }}
-        >
-          <span
-            className="text-3xl"
-            style={{ color: "var(--tg-primary)", fontFamily: "var(--tg-font-mono)" }}
+            className="flex w-full items-center justify-center"
+            style={{ height: "80px", backgroundColor: "var(--tg-surface-high)" }}
           >
-            ◆
-          </span>
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="flex flex-1 flex-col justify-between p-4">
-        <div>
-          {(product.subCategoryName || product.mainCategoryName) && (
-            <p
-              className="mb-1 text-xs uppercase"
-              style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-fg-variant)", letterSpacing: "0.08em" }}
+            <span
+              className="text-3xl"
+              style={{ color: "var(--tg-primary)", fontFamily: "var(--tg-font-mono)" }}
             >
-              {product.subCategoryName || product.mainCategoryName}
-            </p>
-          )}
-          <h3
-            className="text-base uppercase leading-tight"
-            style={{
-              fontFamily: "var(--tg-font-display)",
-              fontWeight: 700,
-              color: "var(--tg-fg)",
-              letterSpacing: "-0.01em",
-            }}
+              ◆
+            </span>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex flex-1 flex-col justify-between p-4">
+          <div>
+            {(product.subCategoryName || product.mainCategoryName) && (
+              <p
+                className="mb-1 text-xs uppercase"
+                style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-fg-variant)", letterSpacing: "0.08em" }}
+              >
+                {product.subCategoryName || product.mainCategoryName}
+              </p>
+            )}
+            <h3
+              className="text-base uppercase leading-tight"
+              style={{
+                fontFamily: "var(--tg-font-display)",
+                fontWeight: 700,
+                color: "var(--tg-fg)",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {product.name}
+            </h3>
+            {product.description && (
+              <p
+                className="mt-1 line-clamp-2 text-xs"
+                style={{ color: "var(--tg-fg-variant)" }}
+              >
+                {product.description}
+              </p>
+            )}
+          </div>
+
+          <div
+            className="mt-3 flex items-center justify-between pt-3"
+            style={{ borderTop: "1px solid var(--tg-outline-variant)" }}
           >
-            {product.name}
-          </h3>
-          {product.description && (
-            <p
-              className="mt-1 line-clamp-2 text-xs"
-              style={{ color: "var(--tg-fg-variant)" }}
-            >
-              {product.description}
-            </p>
-          )}
+            {price ? (
+              <span
+                className="text-sm"
+                style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-primary)", letterSpacing: "0.05em" }}
+              >
+                {price}
+              </span>
+            ) : (
+              <span />
+            )}
+            {isUnavailable ? (
+              <span
+                className="text-xs uppercase"
+                style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-fg-variant)", letterSpacing: "0.06em" }}
+              >
+                MEVCUT DEĞİL
+              </span>
+            ) : (
+              <span
+                className="text-xs uppercase opacity-0 transition-opacity group-hover:opacity-100"
+                style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-primary)", letterSpacing: "0.06em" }}
+              >
+                İNCELE →
+              </span>
+            )}
+          </div>
         </div>
+      </button>
 
-        <div
-          className="mt-3 flex items-center justify-between pt-3"
-          style={{ borderTop: "1px solid var(--tg-outline-variant)" }}
+      {ordering && !isUnavailable ? (
+        <button
+          type="button"
+          disabled={busy || ordering.loading}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await ordering.addProduct(product, 1);
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center transition-opacity disabled:opacity-50"
+          style={{ backgroundColor: "var(--tg-primary)", color: "var(--tg-on-primary)", zIndex: 20 }}
+          aria-label="Sepete ekle"
         >
-          {price ? (
-            <span
-              className="text-sm"
-              style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-primary)", letterSpacing: "0.05em" }}
-            >
-              {price}
-            </span>
-          ) : (
-            <span />
-          )}
-          {isUnavailable ? (
-            <span
-              className="text-xs uppercase"
-              style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-fg-variant)", letterSpacing: "0.06em" }}
-            >
-              MEVCUT DEĞİL
-            </span>
-          ) : (
-            <span
-              className="text-xs uppercase opacity-0 transition-opacity group-hover:opacity-100"
-              style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-primary)", letterSpacing: "0.06em" }}
-            >
-              İNCELE →
-            </span>
-          )}
-        </div>
-      </div>
-    </button>
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+        </button>
+      ) : null}
+    </article>
   );
 }
