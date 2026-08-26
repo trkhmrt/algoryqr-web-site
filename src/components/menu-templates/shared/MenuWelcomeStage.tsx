@@ -3,6 +3,7 @@
 import type { MenuProfileApiItem } from "@/lib/api";
 
 import { LuxurySiteLayout } from "../luxury/LuxurySiteLayout";
+import { MaisonNoirWelcomeStage } from "../maison-noir/WelcomeStage";
 import { MenuLandingScreens } from "./MenuLandingScreens";
 import { useMenuExperience } from "./menu-experience";
 import { usePublicMenuTheme } from "./public-menu-theme";
@@ -13,6 +14,16 @@ type MenuWelcomeStageProps = {
 };
 
 export function MenuWelcomeStage({ menu }: MenuWelcomeStageProps) {
+  const theme = usePublicMenuTheme();
+
+  if (theme.id === "maison-noir") {
+    return <MaisonNoirWelcomeStage menu={menu} />;
+  }
+
+  return <LuxuryWelcomeStage menu={menu} />;
+}
+
+function LuxuryWelcomeStage({ menu }: MenuWelcomeStageProps) {
   const theme = usePublicMenuTheme();
   const { welcomePanel, selectWelcomeAction, backToLandingHub } = useMenuExperience();
   const feedback = useMenuFeedback(
