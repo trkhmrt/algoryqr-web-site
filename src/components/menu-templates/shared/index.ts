@@ -9,7 +9,7 @@ export {
   useCampaignProductIds,
   useIsCampaignProduct,
 } from "./campaign-product-context";
-export { CustomerAccountMenu, CustomerAccountTrigger } from "./CustomerAccountMenu";
+export { CustomerAccountMenu } from "./CustomerAccountMenu";
 export { CustomerAuthDialog } from "./CustomerAuthDialog";
 export { WaiterAuthDialog } from "./WaiterAuthDialog";
 export { MenuEntryGate } from "./MenuEntryGate";
