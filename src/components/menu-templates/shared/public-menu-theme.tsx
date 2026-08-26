@@ -15,6 +15,11 @@ import {
   CLEVER_DISH_SCRIBE_STYLES,
 } from "../clever-dish-scribe/styles";
 import {
+  MAISON_NOIR_CATEGORY_MARKS,
+  MAISON_NOIR_HERO_IMAGE,
+  MAISON_NOIR_STYLES,
+} from "../maison-noir/styles";
+import {
   MODERN_BISTRO_CATEGORY_MARKS,
   MODERN_BISTRO_HERO_IMAGE,
   MODERN_BISTRO_STYLES,
@@ -31,7 +36,8 @@ export type PublicMenuThemeId =
   | "elixir"
   | "tech-gourmet"
   | "modern-bistro"
-  | "clever-dish-scribe";
+  | "clever-dish-scribe"
+  | "maison-noir";
 
 export type PublicMenuThemeLayout = "classic" | "editorial" | "elixir";
 
@@ -200,6 +206,22 @@ const CLEVER_DISH_SCRIBE_CHROME: PublicMenuThemeChrome = {
   categoryMarks: CLEVER_DISH_SCRIBE_CATEGORY_MARKS,
 };
 
+const MAISON_NOIR_CHROME: PublicMenuThemeChrome = {
+  id: "maison-noir",
+  layout: "editorial",
+  rootClassName: "maison-noir-menu",
+  styles: MAISON_NOIR_STYLES,
+  footerKicker: "Maison Noir",
+  defaultSlogan:
+    "Akşam servisi 19.00 — 24.00 arasındadır. Menümüz mevsimin getirdiği ürünlerle her hafta yeniden yazılır.",
+  heroImage: MAISON_NOIR_HERO_IMAGE,
+  reservationBackgroundUrl: MAISON_NOIR_HERO_IMAGE,
+  contactBackgroundUrl: MAISON_NOIR_HERO_IMAGE,
+  feedbackBackgroundUrl: MAISON_NOIR_HERO_IMAGE,
+  loadingBg: "#1c1a17",
+  categoryMarks: MAISON_NOIR_CATEGORY_MARKS,
+};
+
 const CHROME_BY_ID: Record<PublicMenuThemeId, PublicMenuThemeChrome> = {
   luxury: LUXURY_CHROME,
   "petite-patisserie": PETITE_CHROME,
@@ -211,6 +233,7 @@ const CHROME_BY_ID: Record<PublicMenuThemeId, PublicMenuThemeChrome> = {
   "tech-gourmet": TECH_GOURMET_CHROME,
   "modern-bistro": MODERN_BISTRO_CHROME,
   "clever-dish-scribe": CLEVER_DISH_SCRIBE_CHROME,
+  "maison-noir": MAISON_NOIR_CHROME,
 };
 
 export function getPublicMenuThemeChrome(themeId: string): PublicMenuThemeChrome {
