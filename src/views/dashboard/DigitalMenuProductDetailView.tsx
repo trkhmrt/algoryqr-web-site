@@ -14,7 +14,7 @@ import ProductNutritionPanel from "@/components/dashboard/menu/ProductNutritionP
 import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
 import {
   ProductPairingFields,
-  emptyPairings,
+  normalizePairings,
   type ProductPairingsForm,
 } from "@/components/dashboard/menu/ProductPairingFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
@@ -78,11 +78,7 @@ function formFromProduct(product: MenuProductApiItem): ProductFormState {
     servesPeopleMin: product.servesPeopleMin != null ? String(product.servesPeopleMin) : "",
     servesPeopleMax: product.servesPeopleMax != null ? String(product.servesPeopleMax) : "",
     chefRecommended: Boolean(product.chefRecommended),
-    pairings: {
-      productIds: product.pairings?.productIds ?? [],
-      mainCategoryIds: product.pairings?.mainCategoryIds ?? [],
-      subCategoryIds: product.pairings?.subCategoryIds ?? [],
-    },
+    pairings: normalizePairings(product.pairings),
   };
 }
 
@@ -218,7 +214,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
       servesPeopleMax: maxValue,
       nutrition: product?.nutrition ?? undefined,
       chefRecommended: next.chefRecommended,
-      pairings: next.pairings ?? emptyPairings(),
+      pairings: normalizePairings(next.pairings),
     };
   };
 
@@ -455,7 +451,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
               </div>
               <div className="col-span-2">
                 <ProductPairingFields
-                  pairings={form.pairings ?? emptyPairings()}
+                  pairings={normalizePairings(form.pairings)}
                   onChange={(pairings) => setForm({ ...form, pairings })}
                   products={productsQuery.data ?? []}
                   categories={categories}

@@ -15,7 +15,7 @@ import {
   emptyNutritionFacts,
 } from "@/components/dashboard/menu/ProductNutritionPanel";
 import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
-import { ProductPairingFields, emptyPairings } from "@/components/dashboard/menu/ProductPairingFields";
+import { ProductPairingFields, emptyPairings, normalizePairings } from "@/components/dashboard/menu/ProductPairingFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { Button } from "@/components/ui/button";
@@ -427,7 +427,7 @@ export default function DigitalMenuProductCreateView() {
           </div>
 
           <ProductPairingFields
-            pairings={form.pairings ?? emptyPairings()}
+            pairings={normalizePairings(form.pairings)}
             onChange={(pairings) => setForm({ ...form, pairings })}
             products={productsQuery.data ?? []}
             categories={categories}
