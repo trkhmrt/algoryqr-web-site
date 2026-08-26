@@ -22,7 +22,7 @@ export async function proxyCustomerAuthenticatedRequest(
 
     const customerId = accessToken ? getUserIdFromAccessToken(accessToken) : null;
     const requestUrl = new URL(request.url);
-    const query = requestUrl.search;
+    const query = upstreamPath.includes("?") ? "" : requestUrl.search;
     const text = method === "GET" || method === "DELETE" ? "" : await request.text();
     let data: unknown;
     if (text) {
@@ -92,7 +92,7 @@ export async function proxyPublicTableSessionRequest(
       : null;
 
     const requestUrl = new URL(request.url);
-    const query = requestUrl.search;
+    const query = upstreamPath.includes("?") ? "" : requestUrl.search;
     const text = method === "GET" || method === "DELETE" ? "" : await request.text();
     let data: unknown;
     if (text) {

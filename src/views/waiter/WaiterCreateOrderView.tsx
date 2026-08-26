@@ -262,6 +262,12 @@ export default function WaiterCreateOrderView({
               <div className="flex justify-center py-16 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
+            ) : catalogQuery.isError ? (
+              <p className="rounded-lg border border-dashed border-destructive/40 px-4 py-12 text-center text-sm text-destructive">
+                {catalogQuery.error instanceof WaiterApiError
+                  ? catalogQuery.error.message
+                  : "Menü alınamadı."}
+              </p>
             ) : filteredProducts.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
                 Ürün bulunamadı.
