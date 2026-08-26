@@ -10,11 +10,25 @@ export type ProductPairingsForm = {
   subCategoryIds: number[];
 };
 
+export type ProductPairingsInput = {
+  productIds?: number[];
+  mainCategoryIds?: number[];
+  subCategoryIds?: number[];
+};
+
 export const emptyPairings = (): ProductPairingsForm => ({
   productIds: [],
   mainCategoryIds: [],
   subCategoryIds: [],
 });
+
+export function normalizePairings(pairings?: ProductPairingsInput | null): ProductPairingsForm {
+  return {
+    productIds: pairings?.productIds ?? [],
+    mainCategoryIds: pairings?.mainCategoryIds ?? [],
+    subCategoryIds: pairings?.subCategoryIds ?? [],
+  };
+}
 
 type ProductPairingFieldsProps = {
   pairings: ProductPairingsForm;
