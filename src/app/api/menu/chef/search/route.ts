@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { normalizeChefProducts } from "@/lib/chef/normalize-chef-products";
+import { reconcileChefProductsWithMenuCatalog } from "@/lib/chef/reconcile-chef-products";
 import { QR_AGENT_BASE_URL } from "@/lib/config";
 
 const bodySchema = z.object({
@@ -66,6 +67,23 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalized = normalizeChefProducts(upstream.data.products);
+    let products = normalized;
+    try {
+      products = await reconcileChefProductsWithMenuCatalog(
+        parsed.data.menuId,
+        normalized,
+      );
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "chef_product_reconcile_failed",
+          menuId: parsed.data.menuId,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+
     const bffMs = Math.round(performance.now() - bffStarted);
     const timing = upstream.data.timing
       ? { ...upstream.data.timing, bffMs }
@@ -77,6 +95,8 @@ export async function POST(req: Request) {
           event: "chef_bff_timing",
           menuId: parsed.data.menuId,
           conversationId: upstream.data.conversationId,
+          agentProductCount: normalized.length,
+          reconciledProductCount: products.length,
           ...timing,
         }),
       );
@@ -85,7 +105,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       reply: upstream.data.reply ?? "",
       conversationId: upstream.data.conversationId,
-      products: normalizeChefProducts(upstream.data.products),
+      products,
       timing,
     });
   } catch (error) {

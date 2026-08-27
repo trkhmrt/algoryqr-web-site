@@ -1,12 +1,11 @@
-import axios from "axios";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import type { MenuProductApiItem } from "@/lib/api";
 import { DEFAULT_CHEF_CHAT_BADGES, type ChefChatBadgeFilter } from "@/lib/chef/chef-chat-badges";
+import { fetchPublicMenuProducts } from "@/lib/chef/fetch-public-menu-products";
 import { mapMenuProductToChefItem } from "@/lib/chef/map-menu-product-to-chef-item";
 import { normalizeChefProducts } from "@/lib/chef/normalize-chef-products";
-import type { MenuProductApiItem } from "@/lib/api";
-import { API_BASE_URL } from "@/lib/config";
 
 const MAX_PRODUCTS = 10;
 
@@ -14,10 +13,6 @@ const bodySchema = z.object({
   menuId: z.number().int().positive(),
   badgeId: z.string().trim().min(1).max(64),
 });
-
-type ProductPageResponse = {
-  content?: MenuProductApiItem[];
-};
 
 function resolveBadgeFilter(badgeId: string): ChefChatBadgeFilter | null {
   const badge = DEFAULT_CHEF_CHAT_BADGES.find((entry) => entry.id === badgeId);
@@ -35,30 +30,6 @@ function ratingScore(product: MenuProductApiItem): number {
       : Number(product.ratingCount ?? 0);
   if (!Number.isFinite(avg) || !Number.isFinite(count)) return 0;
   return avg * 1000 + count;
-}
-
-async function fetchPublicProducts(
-  menuId: number,
-  params: Record<string, string | number | boolean>,
-): Promise<MenuProductApiItem[]> {
-  const upstream = await axios.get<ProductPageResponse>(
-    `${API_BASE_URL}/menu/public/${menuId}/products`,
-    {
-      params,
-      validateStatus: () => true,
-      timeout: 20_000,
-    },
-  );
-
-  if (upstream.status >= 400) {
-    throw new Error(
-      typeof upstream.data === "object" && upstream.data && "message" in upstream.data
-        ? String((upstream.data as { message?: string }).message)
-        : "Ürünler alınamadı",
-    );
-  }
-
-  return Array.isArray(upstream.data?.content) ? upstream.data.content : [];
 }
 
 function buildReply(badgeId: string, count: number): string {
@@ -97,19 +68,19 @@ export async function POST(req: Request) {
     let products: MenuProductApiItem[] = [];
 
     if (filter.type === "chefRecommended") {
-      products = await fetchPublicProducts(menuId, {
+      products = await fetchPublicMenuProducts(menuId, {
         page: 0,
         size: MAX_PRODUCTS,
         chefRecommended: true,
       });
     } else if (filter.type === "tagSlug") {
-      products = await fetchPublicProducts(menuId, {
+      products = await fetchPublicMenuProducts(menuId, {
         page: 0,
         size: MAX_PRODUCTS,
         tagSlug: filter.slug,
       });
     } else {
-      const fetched = await fetchPublicProducts(menuId, {
+      const fetched = await fetchPublicMenuProducts(menuId, {
         page: 0,
         size: 50,
       });
