@@ -7,7 +7,9 @@ import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
 import { formatMenuPrice } from "../types";
 import {
   chefItemToMenuProduct,
+  useMenuLocaleOptional,
   useMenuProductNavigatorOptional,
+  useOrderingOptional,
 } from "../shared";
 
 import { MenuChefProductActionSheet } from "./MenuChefProductActionSheet";
@@ -19,12 +21,28 @@ type MenuChefProductCardProps = {
 
 export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps) {
   const navigator = useMenuProductNavigatorOptional();
+  const ordering = useOrderingOptional();
+  const locale = useMenuLocaleOptional();
   const priceLabel = formatMenuPrice(item.price ?? undefined, item.currency || "TRY");
   const [actionOpen, setActionOpen] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
+
+  const canAddToOrder = Boolean(ordering) && item.available !== false;
 
   const openProductDetail = () => {
     navigator?.openProduct(chefItemToMenuProduct(item));
     onOpened?.();
+  };
+
+  const handleAddToOrder = async () => {
+    if (!ordering || item.available === false) return;
+    setAddBusy(true);
+    try {
+      await ordering.addProduct(chefItemToMenuProduct(item), 1);
+      ordering.setCartOpen(true);
+    } finally {
+      setAddBusy(false);
+    }
   };
 
   return (
@@ -63,6 +81,13 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
         productName={item.name}
         onClose={() => setActionOpen(false)}
         onProductDetail={openProductDetail}
+        {...(canAddToOrder && ordering
+          ? {
+              onAddToOrder: handleAddToOrder,
+              addToOrderLabel: locale?.t.addToOrder || "Siparişe ekle",
+              addBusy: addBusy || ordering.loading,
+            }
+          : {})}
       />
     </Popover>
   );
