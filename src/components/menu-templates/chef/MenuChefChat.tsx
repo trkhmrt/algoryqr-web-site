@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, RotateCcw, X } from "lucide-react";
+import { ArrowUp, Bell, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -14,6 +14,7 @@ import {
 import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
 import type { ChefChatBadge } from "@/lib/chef/chef-chat-badges";
 import { stripProductListFromReply } from "@/lib/chef/strip-product-list-from-reply";
+import { useOrderingOptional } from "../shared";
 
 import { MenuChefProductCard } from "./MenuChefProductCard";
 import { MenuChefQuickBadges } from "./MenuChefQuickBadges";
@@ -266,6 +267,77 @@ function AssistantBubble({
   );
 }
 
+function ChefResetConfirm({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          key="chef-reset-confirm"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="chef-reset-title"
+          aria-describedby="chef-reset-desc"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-[85] flex items-center justify-center bg-[#0f1613]/55 p-5 backdrop-blur-[2px]"
+          onClick={onCancel}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 6 }}
+            transition={{ type: "spring", stiffness: 420, damping: 28 }}
+            className="w-full max-w-[20.5rem] rounded-[1.25rem] border border-white/80 bg-white/95 p-5 text-[#1c2824] shadow-[0_20px_50px_rgba(28,40,36,0.22)] backdrop-blur-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="chef-reset-title" className="text-[16px] font-semibold tracking-[-0.01em]">
+              Sohbeti sıfırla?
+            </h2>
+            <p id="chef-reset-desc" className="mt-2 text-[13.5px] leading-relaxed text-[#5f6f68]">
+              Tüm sohbet geçmişi ve öneriler temizlenecek. Bu işlem geri alınamaz.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex h-9 items-center justify-center rounded-full px-3.5 text-[13px] font-medium text-[#3d4a45] transition hover:bg-[#1c2824]/[0.06]"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-[#2a3833] px-3.5 text-[13px] font-medium text-white transition hover:bg-[#1f2b27]"
+              >
+                Temizle
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 export function MenuChefChat({
   menuId,
   chefDisplayName,
@@ -273,6 +345,7 @@ export function MenuChefChat({
   open,
   onClose,
 }: MenuChefChatProps) {
+  const ordering = useOrderingOptional();
   const saved = getChefChatSession(menuId);
   const [messages, setMessages] = useState<ChefChatMessage[]>(
     () => saved?.messages ?? [CHEF_WELCOME_MESSAGE],
@@ -284,6 +357,7 @@ export function MenuChefChat({
   );
   const [sendPulse, setSendPulse] = useState(0);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const enteredIdsRef = useRef(
@@ -295,7 +369,10 @@ export function MenuChefChat({
   }, [menuId, messages, conversationId]);
 
   useEffect(() => {
-    if (!open) setAvatarOpen(false);
+    if (!open) {
+      setAvatarOpen(false);
+      setResetConfirmOpen(false);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -326,6 +403,7 @@ export function MenuChefChat({
     setConversationId(undefined);
     setInput("");
     setMessages([{ ...CHEF_WELCOME_MESSAGE }]);
+    setResetConfirmOpen(false);
   };
 
   const sendMessage = async (text: string) => {
@@ -484,9 +562,27 @@ export function MenuChefChat({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
+                  {ordering ? (
+                    <button
+                      type="button"
+                      onClick={() => ordering.setCartOpen(true)}
+                      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1c2824]/[0.04] text-[#3d4a45] transition hover:bg-[#1c2824]/[0.08] hover:text-[#1c2824]"
+                      aria-label="Sipariş"
+                    >
+                      <Bell className="h-4 w-4" strokeWidth={2.25} />
+                      {ordering.cartCount > 0 ? (
+                        <span className="absolute -right-0.5 -top-0.5 inline-flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-[#2a3833] px-1 text-[10px] font-semibold leading-none text-white">
+                          {ordering.cartCount > 99 ? "99+" : ordering.cartCount}
+                        </span>
+                      ) : null}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={resetChat}
+                    onClick={() => {
+                      if (!canReset || loading) return;
+                      setResetConfirmOpen(true);
+                    }}
                     disabled={!canReset || loading}
                     className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#1c2824]/[0.04] px-3 text-[12px] font-medium text-[#3d4a45] transition hover:bg-[#1c2824]/[0.08] hover:text-[#1c2824] disabled:pointer-events-none disabled:opacity-35"
                     aria-label="Sohbeti sıfırla"
@@ -625,6 +721,11 @@ export function MenuChefChat({
               src={chefAvatarUrl}
               name={chefDisplayName}
               onClose={() => setAvatarOpen(false)}
+            />
+            <ChefResetConfirm
+              open={resetConfirmOpen}
+              onCancel={() => setResetConfirmOpen(false)}
+              onConfirm={resetChat}
             />
           </div>
         </motion.div>

@@ -49,7 +49,8 @@ export function CartSheet() {
     <Sheet open={cartOpen} onOpenChange={setCartOpen}>
       <SheetContent
         side="right"
-        className={`${theme.rootClassName} h-full w-[min(100%,24rem)] overflow-y-auto border-l border-[var(--lx-border)] bg-[var(--lx-bg)] p-0 text-[var(--lx-fg)]`}
+        overlayClassName="z-[80]"
+        className={`${theme.rootClassName} z-[80] h-full w-[min(100%,24rem)] overflow-y-auto border-l border-[var(--lx-border)] bg-[var(--lx-bg)] p-0 text-[var(--lx-fg)]`}
         dir={locale?.dir}
       >
         <div className="space-y-4 px-4 pb-8 pt-4">
