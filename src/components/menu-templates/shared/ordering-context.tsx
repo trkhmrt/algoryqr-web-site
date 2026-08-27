@@ -15,6 +15,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 import {
   getCart,
   openTableSession,
+  OrderingApiError,
   putCart,
   submitOrder as submitOrderApi,
   type OrderResponse,
@@ -46,7 +47,7 @@ type OrderingContextValue = {
   loading: boolean;
   submitting: boolean;
   error: string | null;
-  addProduct: (product: MenuProductApiItem, quantity?: number) => Promise<void>;
+  addProduct: (product: MenuProductApiItem, quantity?: number) => Promise<string | null>;
   updateQty: (productId: number, quantity: number) => Promise<void>;
   submitOrder: () => Promise<OrderResponse | null>;
   refreshCart: () => Promise<void>;
@@ -194,13 +195,19 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
               syncLocalFromCart(next);
             }
           } catch {
-            // stale session — yeniden aç
             try {
               const session = await openTableSession(identifier, tableToken);
               if (cancelled) return;
-              setSessionToken(session.sessionToken);
-              setTableName(session.tableName);
+              token = session.sessionToken;
+              name = session.tableName;
+              setSessionToken(token);
+              setTableName(name);
               persistSession(session);
+              const next = await getCart(identifier, token);
+              if (!cancelled) {
+                setCart(next);
+                syncLocalFromCart(next);
+              }
             } catch (err) {
               if (!cancelled) {
                 setError(err instanceof Error ? err.message : "Sipariş oturumu açılamadı");
@@ -247,15 +254,22 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
   );
 
   const addProduct = useCallback(
-    async (product: MenuProductApiItem, quantity = 1) => {
+    async (product: MenuProductApiItem, quantity = 1): Promise<string | null> => {
       setError(null);
+      if (!Number.isFinite(product.productId) || product.productId <= 0) {
+        const message = "Ürün bilgisi eksik";
+        setError(message);
+        return message;
+      }
+
       let token = sessionToken;
       if (!token) {
         try {
           token = await ensureSession();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Sipariş oturumu açılamadı");
-          return;
+          const message = err instanceof Error ? err.message : "Sipariş oturumu açılamadı";
+          setError(message);
+          return message;
         }
       }
 
@@ -276,12 +290,34 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
               currency: product.currency,
             },
           ];
-      setLocalItems(nextItems);
+
+      const persistWithToken = async (activeToken: string) => {
+        await persistCart(nextItems, note, activeToken);
+      };
+
       try {
-        await persistCart(nextItems, note, token);
+        await persistWithToken(token);
+        return null;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Sepete eklenemedi");
+        const expired =
+          err instanceof OrderingApiError && (err.status === 401 || err.status === 403);
+        if (expired) {
+          try {
+            token = await ensureSession();
+            await persistWithToken(token);
+            return null;
+          } catch (retryErr) {
+            const message =
+              retryErr instanceof Error ? retryErr.message : "Sepete eklenemedi";
+            setError(message);
+            await refreshCart();
+            return message;
+          }
+        }
+        const message = err instanceof Error ? err.message : "Sepete eklenemedi";
+        setError(message);
         await refreshCart();
+        return message;
       }
     },
     [ensureSession, localItems, note, persistCart, refreshCart, sessionToken],
