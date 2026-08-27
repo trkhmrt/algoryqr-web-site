@@ -68,6 +68,7 @@ const emptyForm = (subCategoryId?: number | null): MenuProductRequestBody => ({
   price: "",
   currency: "TRY",
   subCategoryId: subCategoryId ?? 0,
+  descriptorCategoryId: null,
   tagIds: [],
   allergenIds: [],
   imageUrl: "",
@@ -150,6 +151,11 @@ export default function DigitalMenuProductCreateView() {
   const subCategorySelectOptions = subOptions.map((sub) => ({
     value: String(sub.id),
     label: sub.name,
+  }));
+  const descriptorOptions = selectedSub?.descriptors ?? [];
+  const descriptorSelectOptions = descriptorOptions.map((descriptor) => ({
+    value: String(descriptor.id),
+    label: descriptor.name,
   }));
 
   const backHref =
@@ -293,7 +299,7 @@ export default function DigitalMenuProductCreateView() {
                 value={mainCategoryId === "" ? "" : String(mainCategoryId)}
                 onValueChange={(next) => {
                   setMainCategoryId(next ? Number(next) : "");
-                  setForm({ ...form, subCategoryId: 0 });
+                  setForm({ ...form, subCategoryId: 0, descriptorCategoryId: null });
                 }}
                 options={mainCategorySelectOptions}
                 placeholder="Ana kategori seçin"
@@ -309,6 +315,7 @@ export default function DigitalMenuProductCreateView() {
                   setForm({
                     ...form,
                     subCategoryId: next ? Number(next) : 0,
+                    descriptorCategoryId: null,
                   })
                 }
                 options={subCategorySelectOptions}
@@ -318,6 +325,24 @@ export default function DigitalMenuProductCreateView() {
                 disabled={mainCategoryId === ""}
               />
             </div>
+            {descriptorSelectOptions.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tanımlayıcı Kategori</Label>
+                <SearchableSelect
+                  value={form.descriptorCategoryId ? String(form.descriptorCategoryId) : ""}
+                  onValueChange={(next) =>
+                    setForm({
+                      ...form,
+                      descriptorCategoryId: next ? Number(next) : null,
+                    })
+                  }
+                  options={descriptorSelectOptions}
+                  placeholder="Tanımlayıcı seçin (isteğe bağlı)"
+                  searchPlaceholder="Tanımlayıcı ara..."
+                  emptyText="Tanımlayıcı bulunamadı."
+                />
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label className="text-xs">Fiyat</Label>
               <Input

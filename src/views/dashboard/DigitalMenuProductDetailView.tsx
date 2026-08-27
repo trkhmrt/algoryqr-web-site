@@ -54,6 +54,7 @@ type ProductFormState = {
   price: string;
   currency: string;
   subCategoryId: number;
+  descriptorCategoryId: number | null;
   tagIds: number[];
   allergenIds: number[];
   imageUrl: string;
@@ -71,6 +72,7 @@ function formFromProduct(product: MenuProductApiItem): ProductFormState {
     price: product.price != null ? String(product.price) : "",
     currency: product.currency || "TRY",
     subCategoryId: product.subCategoryId ?? 0,
+    descriptorCategoryId: product.descriptorCategoryId ?? null,
     tagIds: (product.tags ?? []).map((tag) => tag.id),
     allergenIds: (product.allergens ?? []).map((allergen) => allergen.id),
     imageUrl: product.imageUrl ?? "",
@@ -177,6 +179,11 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
     value: String(sub.id),
     label: sub.name,
   }));
+  const selectedSub = subOptions.find((sub) => sub.id === form?.subCategoryId);
+  const descriptorSelectOptions = (selectedSub?.descriptors ?? []).map((descriptor) => ({
+    value: String(descriptor.id),
+    label: descriptor.name,
+  }));
 
   const buildPayload = (next: ProductFormState): MenuProductRequestBody | null => {
     if (!next.name.trim()) {
@@ -206,6 +213,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
       price: next.price,
       currency: next.currency,
       subCategoryId: next.subCategoryId,
+      descriptorCategoryId: next.descriptorCategoryId,
       tagIds: next.tagIds,
       allergenIds: next.allergenIds,
       imageUrl: next.imageUrl,
@@ -396,7 +404,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                   value={mainCategoryId === "" ? "" : String(mainCategoryId)}
                   onValueChange={(next) => {
                     setMainCategoryId(next ? Number(next) : "");
-                    setForm({ ...form, subCategoryId: 0 });
+                    setForm({ ...form, subCategoryId: 0, descriptorCategoryId: null });
                   }}
                   options={mainCategorySelectOptions}
                   placeholder="Ana kategori seçin"
@@ -412,6 +420,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                     setForm({
                       ...form,
                       subCategoryId: next ? Number(next) : 0,
+                      descriptorCategoryId: null,
                     })
                   }
                   options={subCategorySelectOptions}
@@ -421,6 +430,24 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                   disabled={mainCategoryId === ""}
                 />
               </div>
+              {descriptorSelectOptions.length > 0 ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tanımlayıcı kategori</Label>
+                  <SearchableSelect
+                    value={form.descriptorCategoryId ? String(form.descriptorCategoryId) : ""}
+                    onValueChange={(next) =>
+                      setForm({
+                        ...form,
+                        descriptorCategoryId: next ? Number(next) : null,
+                      })
+                    }
+                    options={descriptorSelectOptions}
+                    placeholder="Tanımlayıcı seçin (isteğe bağlı)"
+                    searchPlaceholder="Tanımlayıcı ara..."
+                    emptyText="Tanımlayıcı bulunamadı."
+                  />
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label className="text-xs">Fiyat</Label>
                 <Input

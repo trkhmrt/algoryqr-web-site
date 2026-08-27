@@ -540,6 +540,9 @@ export interface MenuProductApiItem {
   subCategoryId: number;
   subCategorySlug?: string;
   subCategoryName?: string;
+  descriptorCategoryId?: number | null;
+  descriptorCategorySlug?: string | null;
+  descriptorCategoryName?: string | null;
   mainCategoryId?: number;
   mainCategorySlug?: string;
   mainCategoryName?: string;
@@ -575,12 +578,21 @@ export interface MenuAllergenApiItem {
   sortOrder: number;
 }
 
+export interface DescriptorCategoryApiItem {
+  id: number;
+  subCategoryId: number;
+  slug: string;
+  name: string;
+  sortOrder: number;
+}
+
 export interface SubCategoryApiItem {
   id: number;
   mainCategoryId: number;
   slug: string;
   name: string;
   sortOrder: number;
+  descriptors?: DescriptorCategoryApiItem[];
 }
 
 export interface MainCategoryApiItem {
@@ -649,6 +661,7 @@ export interface MenuProductRequestBody {
   price?: number | string;
   currency?: string;
   subCategoryId: number;
+  descriptorCategoryId?: number | null;
   tagIds?: number[];
   allergenIds?: number[];
   sortOrder?: number;
