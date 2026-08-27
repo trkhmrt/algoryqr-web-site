@@ -27,9 +27,11 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
   const priceLabel = formatMenuPrice(item.price ?? undefined, item.currency || "TRY");
   const [actionOpen, setActionOpen] = useState(false);
   const [addBusy, setAddBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const canAddToOrder = Boolean(ordering) && item.available !== false;
   const addLabel = locale?.t.addToOrder || "Siparişe ekle";
+  const errorText = localError || ordering?.error || null;
 
   const openProductDetail = () => {
     navigator?.openProduct(chefItemToMenuProduct(item));
@@ -39,9 +41,16 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
   const handleAddToOrder = async () => {
     if (!ordering || item.available === false) return;
     setAddBusy(true);
+    setLocalError(null);
     try {
-      await ordering.addProduct(chefItemToMenuProduct(item), 1);
+      const failure = await ordering.addProduct(chefItemToMenuProduct(item), 1);
+      if (failure) {
+        setLocalError(failure);
+        return;
+      }
       ordering.setCartOpen(true);
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : "Sepete eklenemedi");
     } finally {
       setAddBusy(false);
     }
@@ -94,11 +103,13 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
         />
       </Popover>
       {canAddToOrder && ordering ? (
-        <div className="px-2 pb-2">
+        <div className="space-y-1 px-2 pb-2">
           <button
             type="button"
             disabled={addBusy || ordering.loading}
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
+              event.preventDefault();
               event.stopPropagation();
               void handleAddToOrder();
             }}
@@ -111,6 +122,9 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
             )}
             {addLabel}
           </button>
+          {errorText ? (
+            <p className="px-0.5 text-[10px] leading-snug text-[#b42318]">{errorText}</p>
+          ) : null}
         </div>
       ) : null}
     </div>
