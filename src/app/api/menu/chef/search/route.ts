@@ -25,6 +25,7 @@ type AgentChatResponse = {
   conversationId?: string;
   message?: string;
   products?: unknown;
+  searchComplete?: unknown;
   timing?: ChatTiming;
 };
 
@@ -86,6 +87,7 @@ export async function POST(req: Request) {
       reply: upstream.data.reply ?? "",
       conversationId: upstream.data.conversationId,
       products: normalizeChefProducts(upstream.data.products),
+      ...(upstream.data.searchComplete ? { searchComplete: upstream.data.searchComplete } : {}),
       timing,
     });
   } catch (error) {

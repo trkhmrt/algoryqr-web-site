@@ -18,6 +18,8 @@ import { useOrderingOptional } from "../shared";
 
 import { MenuChefProductCard } from "./MenuChefProductCard";
 import { MenuChefQuickBadges } from "./MenuChefQuickBadges";
+import { MenuChefSearchComplete } from "./MenuChefSearchComplete";
+import { isSearchCompleteVisible, type SearchCompletePayload } from "@/lib/chef/search-complete";
 
 type MenuChefChatProps = {
   menuId: number;
@@ -262,6 +264,9 @@ function AssistantBubble({
             ))}
           </motion.div>
         ) : null}
+        {msg.searchComplete ? (
+          <MenuChefSearchComplete visible={isSearchCompleteVisible()} payload={msg.searchComplete} />
+        ) : null}
       </div>
     </motion.div>
   );
@@ -423,6 +428,7 @@ export function MenuChefChat({
         conversationId?: string;
         message?: string;
         products?: ChefProductItem[];
+        searchComplete?: SearchCompletePayload;
       };
       if (data.conversationId) {
         setConversationId(data.conversationId);
@@ -447,6 +453,7 @@ export function MenuChefChat({
           role: "assistant",
           text: reply || "Menüde uygun ürün bulamadım. Başka bir şekilde sorabilir misiniz?",
           products: products?.length ? products : undefined,
+          ...(data.searchComplete ? { searchComplete: data.searchComplete } : {}),
         },
       ]);
     } catch {

@@ -1,7 +1,14 @@
 import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
+import type { SearchCompletePayload } from "@/lib/chef/search-complete";
 
 export type ChefChatMessage =
-  | { id: string; role: "assistant"; text: string; products?: ChefProductItem[] }
+  | {
+      id: string;
+      role: "assistant";
+      text: string;
+      products?: ChefProductItem[];
+      searchComplete?: SearchCompletePayload;
+    }
   | { id: string; role: "user"; text: string };
 
 type ChefChatSession = {
