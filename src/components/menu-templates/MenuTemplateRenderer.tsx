@@ -1,9 +1,8 @@
 "use client";
 
-import { type ComponentProps, Suspense, useCallback, useEffect, useState } from "react";
+import { type ComponentProps, Suspense, useEffect } from "react";
 
 import { useMenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
-import { customerMe } from "@/lib/customer-auth";
 
 import { MenuThemeLayout } from "./MenuThemeLayout";
 import { MenuChefFab } from "./chef";
@@ -11,7 +10,6 @@ import { getMenuTemplate } from "./registry";
 import {
   CustomerAccountMenu,
   MenuCategoryFeed,
-  MenuEntryGate,
   MenuExperienceProvider,
   CampaignProductIdsProvider,
   MenuLocaleProvider,
@@ -27,7 +25,6 @@ import {
   useMenuProductFeed,
   useMenuCategoryFeed,
 } from "./shared";
-import { getPublicMenuThemeChrome } from "./shared/public-menu-theme";
 import type { MenuTemplateRendererProps } from "./types";
 
 function gateStorageKey(identifier: string) {
@@ -98,107 +95,60 @@ function MenuShell({
   const analytics = useMenuVisitAnalytics(menu.menuId);
   const qrIdentifier = identifier ?? String(menu.qrId);
   const { dir } = useMenuLocale();
-  const [ready, setReady] = useState(false);
-  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    async function bootstrap() {
-      try {
-        const stored =
-          typeof window !== "undefined"
-            ? window.sessionStorage.getItem(gateStorageKey(qrIdentifier))
-            : null;
-        if (stored === "1") {
-          if (!cancelled) setEntered(true);
-          return;
-        }
-        const me = await customerMe();
-        if (!cancelled && me) {
-          window.sessionStorage.setItem(gateStorageKey(qrIdentifier), "1");
-          setEntered(true);
-        }
-      } catch {
-        /* show gate */
-      } finally {
-        if (!cancelled) setReady(true);
-      }
-    }
-    void bootstrap();
-    return () => {
-      cancelled = true;
-    };
-  }, [qrIdentifier]);
-
-  const markEntered = useCallback(() => {
     try {
       window.sessionStorage.setItem(gateStorageKey(qrIdentifier), "1");
     } catch {
       /* ignore */
     }
-    setEntered(true);
   }, [qrIdentifier]);
 
-  const chrome = getPublicMenuThemeChrome(themeId);
-
-  if (!ready) {
-    return <div className="min-h-[100dvh]" style={{ background: chrome.loadingBg }} />;
-  }
-
-  const body = !entered ? (
-    <MenuEntryGate
-      menu={menu}
-      identifier={qrIdentifier}
-      onContinueAsGuest={markEntered}
-      onAuthenticated={markEntered}
-    />
-  ) : (
-    <div dir={dir}>
-      <MenuProductFeed
-        menuId={menu.menuId}
-        initialProducts={products}
-        productPage={productPage}
-        productSize={productSize}
-        productHasNext={productHasNext}
-      >
-        <MenuCategoryFeed
-          initialCategories={categories}
-          categoryPage={categoryPage}
-          categorySize={categorySize}
-          categoryHasNext={categoryHasNext}
-          categoryTotalElements={categoryTotalElements}
-        >
-        <MenuProductNavigatorProvider>
-          <Suspense fallback={null}>
-            <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
-              <CampaignProductIdsProvider identifier={qrIdentifier}>
-              <MenuExperienceProvider>
-                <CustomerAccountMenu menuId={menu.menuId}>
-                  <MenuTemplateBody
-                    menu={menu}
-                    themeId={themeId}
-                    analytics={analytics}
-                  />
-                  <SharedMenuChrome menuId={menu.menuId} />
-                  <MenuChefFabGate
-                    menuId={menu.menuId}
-                    chefName={menu.chefName}
-                    chefDisplayName={menu.chefDisplayName}
-                    chefAvatarUrl={menu.chefAvatarUrl}
-                  />
-                </CustomerAccountMenu>
-              </MenuExperienceProvider>
-              </CampaignProductIdsProvider>
-            </OrderingProvider>
-          </Suspense>
-        </MenuProductNavigatorProvider>
-        </MenuCategoryFeed>
-      </MenuProductFeed>
-    </div>
-  );
-
   return (
-    <PublicMenuThemeProvider themeId={themeId}>{body}</PublicMenuThemeProvider>
+    <PublicMenuThemeProvider themeId={themeId}>
+      <div dir={dir}>
+        <MenuProductFeed
+          menuId={menu.menuId}
+          initialProducts={products}
+          productPage={productPage}
+          productSize={productSize}
+          productHasNext={productHasNext}
+        >
+          <MenuCategoryFeed
+            initialCategories={categories}
+            categoryPage={categoryPage}
+            categorySize={categorySize}
+            categoryHasNext={categoryHasNext}
+            categoryTotalElements={categoryTotalElements}
+          >
+            <MenuProductNavigatorProvider>
+              <Suspense fallback={null}>
+                <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
+                  <CampaignProductIdsProvider identifier={qrIdentifier}>
+                    <MenuExperienceProvider>
+                      <CustomerAccountMenu menuId={menu.menuId}>
+                        <MenuTemplateBody
+                          menu={menu}
+                          themeId={themeId}
+                          analytics={analytics}
+                        />
+                        <SharedMenuChrome menuId={menu.menuId} />
+                        <MenuChefFabGate
+                          menuId={menu.menuId}
+                          chefName={menu.chefName}
+                          chefDisplayName={menu.chefDisplayName}
+                          chefAvatarUrl={menu.chefAvatarUrl}
+                        />
+                      </CustomerAccountMenu>
+                    </MenuExperienceProvider>
+                  </CampaignProductIdsProvider>
+                </OrderingProvider>
+              </Suspense>
+            </MenuProductNavigatorProvider>
+          </MenuCategoryFeed>
+        </MenuProductFeed>
+      </div>
+    </PublicMenuThemeProvider>
   );
 }
 

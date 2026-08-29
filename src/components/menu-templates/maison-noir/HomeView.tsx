@@ -89,7 +89,7 @@ export function MaisonNoirHomeView({
           onOpenProduct={onOpenProduct}
         />
 
-        {sections.length > 1 ? (
+        {categories.length > 0 ? (
           <section>
             <h2 className="mn-tracked text-[0.58rem] text-[var(--mn-primary)]">Kategoriler</h2>
             <div className="mt-5">

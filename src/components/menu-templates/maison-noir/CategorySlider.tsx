@@ -24,30 +24,21 @@ export function MaisonNoirCategorySlider({
   onShowAll,
 }: CategorySliderProps) {
   const cards = useMemo(() => {
-    return categories
-      .map((category, index) => {
-        const categoryProducts = filterProductsByNavNode(products, category).filter(
-          (p) => p.available !== false,
-        );
-        if (categoryProducts.length === 0) return null;
-        const coverImage =
-          categoryProducts.find((p) => p.imageUrl)?.imageUrl ?? null;
-        return {
-          category,
-          mark: maisonNoirCategoryMark(index),
-          coverImage,
-          count: categoryProducts.length,
-        };
-      })
-      .filter(Boolean) as Array<{
-      category: TaxonomyNavNode;
-      mark: string;
-      coverImage: string | null;
-      count: number;
-    }>;
+    return categories.map((category, index) => {
+      const categoryProducts = filterProductsByNavNode(products, category).filter(
+        (p) => p.available !== false,
+      );
+      const coverImage = categoryProducts.find((p) => p.imageUrl)?.imageUrl ?? null;
+      return {
+        category,
+        mark: maisonNoirCategoryMark(index),
+        coverImage,
+        count: categoryProducts.length,
+      };
+    });
   }, [categories, products]);
 
-  if (cards.length === 0) return null;
+  if (categories.length === 0) return null;
 
   return (
     <div className="-mx-8 px-8">
@@ -65,7 +56,7 @@ export function MaisonNoirCategorySlider({
             active={activeCategoryId === category.categoryId}
             mark={mark}
             title={category.name}
-            subtitle={`${count} ürün`}
+            subtitle={count > 0 ? `${count} ürün` : undefined}
             coverImage={coverImage}
             onClick={() => onSelectCategory(category)}
           />
