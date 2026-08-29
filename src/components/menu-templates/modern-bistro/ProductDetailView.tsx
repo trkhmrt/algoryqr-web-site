@@ -39,7 +39,7 @@ export function ModernBistroProductDetailView({
       <div className="relative aspect-[4/3] max-h-[420px] w-full overflow-hidden bg-[#f3f4f6]">
         {product.imageUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+          <img src={product.imageUrl} alt={product.name} className="h-full w-full object-contain object-center" />
         ) : (
           <div className="flex h-full items-center justify-center text-5xl opacity-30">🍽️</div>
         )}
