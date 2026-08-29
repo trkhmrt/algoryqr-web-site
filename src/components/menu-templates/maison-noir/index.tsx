@@ -119,14 +119,17 @@ export function MaisonNoirMenuTemplate({
           products={products}
           onSelectCategory={selectCategory}
           onOpenProduct={openProduct}
+          onShowAll={goHome}
         />
       ) : null}
 
       {view.type === "category" && activeCategory ? (
         <MaisonNoirCategoryView
           category={activeCategory}
+          categories={displayCategories}
           products={products}
-          onHome={goHome}
+          onSelectCategory={selectCategory}
+          onShowAll={goHome}
           onOpenProduct={openProduct}
         />
       ) : null}

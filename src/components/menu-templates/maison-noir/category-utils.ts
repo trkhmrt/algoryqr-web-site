@@ -47,6 +47,12 @@ export function findCategoryNode(
   return findCategoryById(categories, categoryId);
 }
 
+export function pickChefRecommendedProducts(
+  products: MenuProductApiItem[],
+): MenuProductApiItem[] {
+  return products.filter((p) => p.chefRecommended && p.available !== false);
+}
+
 export function formatMaisonPrice(price?: number | string) {
   const amount = typeof price === "string" ? parseFloat(price) : price;
   if (amount == null || !Number.isFinite(amount)) return "";
