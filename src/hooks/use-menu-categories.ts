@@ -7,22 +7,16 @@ import {
   getMenuCategoriesRequest,
   getMenuAllergensRequest,
   getMenuTagsRequest,
-  getMenuTaxonomyPageRequest,
-  getMenuTaxonomyRequest,
   type MainCategoryApiItem,
   type MenuAllergenApiItem,
   type MenuCategoriesByQrApiResponse,
   type MenuTagApiItem,
-  type TaxonomyPageApiResponse,
 } from "@/lib/api";
 
 export const menuCategoriesQueryKey = (menuId: number | string) =>
   ["menuCategories", menuId] as const;
 export const menuCategoriesByQrQueryKey = (qrId: number | string) =>
   ["menuCategoriesByQr", qrId] as const;
-export const menuTaxonomyQueryKey = ["menuTaxonomy"] as const;
-export const menuTaxonomyPageQueryKey = (page: number, size: number, q: string) =>
-  ["menuTaxonomyPage", page, size, q] as const;
 export const menuTagsQueryKey = ["menuTags"] as const;
 export const menuAllergensQueryKey = ["menuAllergens"] as const;
 
@@ -43,35 +37,6 @@ export function useMenuCategoriesByQr(qrId: number | null | undefined, enabled =
     queryFn: (): Promise<MenuCategoriesByQrApiResponse> =>
       getMenuCategoriesByQrRequest(qrId as number),
     enabled: enabled && qrId != null && qrId > 0,
-    staleTime: 30_000,
-    gcTime: 30 * 60 * 1000,
-    retry: 1,
-  });
-}
-
-export function useMenuTaxonomy(enabled = true) {
-  return useQuery({
-    queryKey: menuTaxonomyQueryKey,
-    queryFn: (): Promise<MainCategoryApiItem[]> => getMenuTaxonomyRequest(),
-    enabled,
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60 * 1000,
-    retry: 1,
-  });
-}
-
-export function useMenuTaxonomyPage(
-  options: { page?: number; size?: number; q?: string } = {},
-  enabled = true,
-) {
-  const page = options.page ?? 0;
-  const size = options.size ?? 5;
-  const q = options.q?.trim() ?? "";
-  return useQuery({
-    queryKey: menuTaxonomyPageQueryKey(page, size, q),
-    queryFn: (): Promise<TaxonomyPageApiResponse> =>
-      getMenuTaxonomyPageRequest({ page, size, q: q || undefined }),
-    enabled,
     staleTime: 30_000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
@@ -105,10 +70,7 @@ export function invalidateMenuCategories(
   menuId?: number | string | null,
   qrId?: number | string | null,
 ) {
-  const tasks: Promise<unknown>[] = [
-    queryClient.invalidateQueries({ queryKey: menuTaxonomyQueryKey }),
-    queryClient.invalidateQueries({ queryKey: ["menuTaxonomyPage"], exact: false }),
-  ];
+  const tasks: Promise<unknown>[] = [];
   if (menuId != null) {
     tasks.push(queryClient.invalidateQueries({ queryKey: menuCategoriesQueryKey(menuId) }));
   }

@@ -23,9 +23,9 @@ export default function DigitalMenuCategoriesView() {
     return Number.isSafeInteger(raw) && raw > 0 ? raw : null;
   }, [searchParams]);
   const fromHub = initialQrId != null;
-  const selectionState = useDigitalMenuSelection(undefined, !fromHub);
-  const qrId = fromHub ? initialQrId : selectionState.selection?.qr.id ?? null;
-  const menuId = fromHub ? null : selectionState.selection?.menu.menuId ?? null;
+  const selectionState = useDigitalMenuSelection(initialQrId);
+  const qrId = selectionState.selection?.qr.id ?? initialQrId;
+  const menuId = selectionState.selection?.menu.menuId ?? 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -57,7 +57,7 @@ export default function DigitalMenuCategoriesView() {
       {qrId != null ? (
         <div className={DASHBOARD_PANEL}>
           <MenuCategoriesPanel
-            menuId={menuId ?? 0}
+            menuId={menuId}
             qrId={qrId}
             onAddProduct={(categoryId) => {
               router.push(DASHBOARD_ROUTES.digitalMenuProductCreateFor(qrId, categoryId));

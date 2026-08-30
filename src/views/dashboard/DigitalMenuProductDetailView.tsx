@@ -41,7 +41,7 @@ import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
-import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
+import { useMenuCategories, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
 import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
@@ -56,7 +56,6 @@ type ProductFormState = {
   price: string;
   currency: string;
   subCategoryId: number;
-  descriptorCategoryId: number | null;
   tagIds: number[];
   allergenIds: number[];
   imageUrl: string;
@@ -74,7 +73,6 @@ function formFromProduct(product: MenuProductApiItem): ProductFormState {
     price: product.price != null ? String(product.price) : "",
     currency: product.currency || "TRY",
     subCategoryId: product.subCategoryId ?? 0,
-    descriptorCategoryId: product.descriptorCategoryId ?? null,
     tagIds: (product.tags ?? []).map((tag) => tag.id),
     allergenIds: (product.allergens ?? []).map((allergen) => allergen.id),
     imageUrl: product.imageUrl ?? "",
@@ -106,10 +104,10 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
   const menuId = selection?.menu.menuId ?? null;
   const qrId = selection?.qr.id ?? initialQrId;
   const productsQuery = useMenuProducts(menuId);
-  const categoriesQuery = useMenuCategoriesByQr(qrId);
+  const categoriesQuery = useMenuCategories(menuId);
   const tagsQuery = useMenuTags();
   const allergensQuery = useMenuAllergens();
-  const categories = categoriesQuery.data?.categories ?? [];
+  const categories = categoriesQuery.data ?? [];
   const tags = tagsQuery.data ?? [];
   const allergens = allergensQuery.data ?? [];
   const [productOverride, setProductOverride] = useState<MenuProductApiItem | null>(null);
@@ -182,11 +180,6 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
     value: String(sub.id),
     label: sub.name,
   }));
-  const selectedSub = subOptions.find((sub) => sub.id === form?.subCategoryId);
-  const descriptorSelectOptions = (selectedSub?.descriptors ?? []).map((descriptor) => ({
-    value: String(descriptor.id),
-    label: descriptor.name,
-  }));
 
   const buildPayload = (next: ProductFormState): MenuProductRequestBody | null => {
     if (!next.name.trim()) {
@@ -216,7 +209,6 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
       price: next.price,
       currency: next.currency,
       subCategoryId: next.subCategoryId,
-      descriptorCategoryId: next.descriptorCategoryId,
       tagIds: next.tagIds,
       allergenIds: next.allergenIds,
       imageUrl: next.imageUrl,
@@ -407,7 +399,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                   value={mainCategoryId === "" ? "" : String(mainCategoryId)}
                   onValueChange={(next) => {
                     setMainCategoryId(next ? Number(next) : "");
-                    setForm({ ...form, subCategoryId: 0, descriptorCategoryId: null });
+                    setForm({ ...form, subCategoryId: 0 });
                   }}
                   options={mainCategorySelectOptions}
                   placeholder="Ana kategori seçin"
@@ -423,7 +415,6 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                     setForm({
                       ...form,
                       subCategoryId: next ? Number(next) : 0,
-                      descriptorCategoryId: null,
                     })
                   }
                   options={subCategorySelectOptions}
@@ -433,24 +424,6 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                   disabled={mainCategoryId === ""}
                 />
               </div>
-              {descriptorSelectOptions.length > 0 ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Tanımlayıcı kategori</Label>
-                  <SearchableSelect
-                    value={form.descriptorCategoryId ? String(form.descriptorCategoryId) : ""}
-                    onValueChange={(next) =>
-                      setForm({
-                        ...form,
-                        descriptorCategoryId: next ? Number(next) : null,
-                      })
-                    }
-                    options={descriptorSelectOptions}
-                    placeholder="Tanımlayıcı seçin (isteğe bağlı)"
-                    searchPlaceholder="Tanımlayıcı ara..."
-                    emptyText="Tanımlayıcı bulunamadı."
-                  />
-                </div>
-              ) : null}
               <div className="space-y-1.5">
                 <Label className="text-xs">Fiyat</Label>
                 <Input
