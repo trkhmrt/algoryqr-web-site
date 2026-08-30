@@ -33,7 +33,7 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
+import { useMenuCategories, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
 import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
@@ -70,7 +70,6 @@ const emptyForm = (subCategoryId?: number | null): MenuProductRequestBody => ({
   price: "",
   currency: "TRY",
   subCategoryId: subCategoryId ?? 0,
-  descriptorCategoryId: null,
   tagIds: [],
   allergenIds: [],
   imageUrl: "",
@@ -104,18 +103,14 @@ export default function DigitalMenuProductCreateView() {
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const selectionState = useDigitalMenuSelection(initialQrId);
   const qrId = selectionState.selection?.qr.id ?? initialQrId;
+  const menuId = selectionState.selection?.menu.menuId ?? 0;
 
-  const categoriesQuery = useMenuCategoriesByQr(qrId);
+  const categoriesQuery = useMenuCategories(menuId > 0 ? menuId : null);
   const tagsQuery = useMenuTags();
   const allergensQuery = useMenuAllergens();
-  const categories = useMemo(
-    () => categoriesQuery.data?.categories ?? [],
-    [categoriesQuery.data],
-  );
+  const categories = categoriesQuery.data ?? [];
   const tags = tagsQuery.data ?? [];
   const allergens = allergensQuery.data ?? [];
-  const menuId =
-    selectionState.selection?.menu.menuId ?? categoriesQuery.data?.menuId ?? 0;
   const productsQuery = useMenuProducts(menuId > 0 ? menuId : null);
 
   const [form, setForm] = useState<MenuProductRequestBody>(() => emptyForm(presetCategoryId));
@@ -153,11 +148,6 @@ export default function DigitalMenuProductCreateView() {
   const subCategorySelectOptions = subOptions.map((sub) => ({
     value: String(sub.id),
     label: sub.name,
-  }));
-  const descriptorOptions = selectedSub?.descriptors ?? [];
-  const descriptorSelectOptions = descriptorOptions.map((descriptor) => ({
-    value: String(descriptor.id),
-    label: descriptor.name,
   }));
 
   const backHref =
@@ -296,7 +286,7 @@ export default function DigitalMenuProductCreateView() {
                 value={mainCategoryId === "" ? "" : String(mainCategoryId)}
                 onValueChange={(next) => {
                   setMainCategoryId(next ? Number(next) : "");
-                  setForm({ ...form, subCategoryId: 0, descriptorCategoryId: null });
+                  setForm({ ...form, subCategoryId: 0 });
                 }}
                 options={mainCategorySelectOptions}
                 placeholder="Ana kategori seçin"
@@ -312,7 +302,6 @@ export default function DigitalMenuProductCreateView() {
                   setForm({
                     ...form,
                     subCategoryId: next ? Number(next) : 0,
-                    descriptorCategoryId: null,
                   })
                 }
                 options={subCategorySelectOptions}
@@ -322,24 +311,6 @@ export default function DigitalMenuProductCreateView() {
                 disabled={mainCategoryId === ""}
               />
             </div>
-            {descriptorSelectOptions.length > 0 ? (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Tanımlayıcı Kategori</Label>
-                <SearchableSelect
-                  value={form.descriptorCategoryId ? String(form.descriptorCategoryId) : ""}
-                  onValueChange={(next) =>
-                    setForm({
-                      ...form,
-                      descriptorCategoryId: next ? Number(next) : null,
-                    })
-                  }
-                  options={descriptorSelectOptions}
-                  placeholder="Tanımlayıcı seçin (isteğe bağlı)"
-                  searchPlaceholder="Tanımlayıcı ara..."
-                  emptyText="Tanımlayıcı bulunamadı."
-                />
-              </div>
-            ) : null}
             <div className="space-y-1.5">
               <Label className="text-xs">Fiyat</Label>
               <Input

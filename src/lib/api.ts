@@ -540,9 +540,6 @@ export interface MenuProductApiItem {
   subCategoryId: number;
   subCategorySlug?: string;
   subCategoryName?: string;
-  descriptorCategoryId?: number | null;
-  descriptorCategorySlug?: string | null;
-  descriptorCategoryName?: string | null;
   mainCategoryId?: number;
   mainCategorySlug?: string;
   mainCategoryName?: string;
@@ -578,21 +575,12 @@ export interface MenuAllergenApiItem {
   sortOrder: number;
 }
 
-export interface DescriptorCategoryApiItem {
-  id: number;
-  subCategoryId: number;
-  slug: string;
-  name: string;
-  sortOrder: number;
-}
-
 export interface SubCategoryApiItem {
   id: number;
   mainCategoryId: number;
   slug: string;
   name: string;
   sortOrder: number;
-  descriptors?: DescriptorCategoryApiItem[];
 }
 
 export interface MainCategoryApiItem {
@@ -603,14 +591,27 @@ export interface MainCategoryApiItem {
   subs: SubCategoryApiItem[];
 }
 
-export interface TaxonomyPageApiResponse {
-  content: MainCategoryApiItem[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-  hasNext: boolean;
-  q?: string | null;
+export interface MenuCategoryCreateBody {
+  name: string;
+  slug?: string;
+  sortOrder?: number;
+}
+
+export interface MenuCategoryUpdateBody {
+  name?: string;
+  sortOrder?: number;
+}
+
+export interface MenuSubCategoryCreateBody {
+  name: string;
+  slug?: string;
+  sortOrder?: number;
+}
+
+export interface MenuSubCategoryUpdateBody {
+  name?: string;
+  sortOrder?: number;
+  mainCategoryId?: number;
 }
 
 /** @deprecated legacy tree shape — prefer MainCategoryApiItem */
@@ -661,7 +662,6 @@ export interface MenuProductRequestBody {
   price?: number | string;
   currency?: string;
   subCategoryId: number;
-  descriptorCategoryId?: number | null;
   tagIds?: number[];
   allergenIds?: number[];
   sortOrder?: number;
@@ -978,31 +978,59 @@ export async function getMenuCategoriesRequest(menuId: number | string): Promise
   return Array.isArray(response.data) ? response.data : [];
 }
 
-export async function getMenuTaxonomyRequest(): Promise<MainCategoryApiItem[]> {
-  const response = await api.get<MainCategoryApiItem[]>("/menu/taxonomy");
-  return Array.isArray(response.data) ? response.data : [];
+export async function createMenuCategoryRequest(
+  menuId: number | string,
+  payload: MenuCategoryCreateBody,
+): Promise<MainCategoryApiItem> {
+  const response = await api.post<MainCategoryApiItem>(`/menu/${menuId}/categories`, payload);
+  return response.data;
 }
 
-export async function getMenuTaxonomyPageRequest(options?: {
-  page?: number;
-  size?: number;
-  q?: string;
-}): Promise<TaxonomyPageApiResponse> {
-  const page = options?.page ?? 0;
-  const size = options?.size ?? 6;
-  const q = options?.q?.trim();
-  const response = await api.get<TaxonomyPageApiResponse>("/menu/taxonomy/page", {
-    params: { page, size, ...(q ? { q } : {}) },
-  });
-  return {
-    content: Array.isArray(response.data?.content) ? response.data.content : [],
-    page: response.data?.page ?? page,
-    size: response.data?.size ?? size,
-    totalElements: response.data?.totalElements ?? 0,
-    totalPages: response.data?.totalPages ?? 0,
-    hasNext: Boolean(response.data?.hasNext),
-    q: response.data?.q ?? null,
-  };
+export async function updateMenuCategoryRequest(
+  menuId: number | string,
+  categoryId: number | string,
+  payload: MenuCategoryUpdateBody,
+): Promise<MainCategoryApiItem> {
+  const response = await api.put<MainCategoryApiItem>(
+    `/menu/${menuId}/categories/${categoryId}`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function deleteMenuCategoryRequest(
+  menuId: number | string,
+  categoryId: number | string,
+): Promise<void> {
+  await api.delete(`/menu/${menuId}/categories/${categoryId}`);
+}
+
+export async function createMenuSubCategoryRequest(
+  menuId: number | string,
+  categoryId: number | string,
+  payload: MenuSubCategoryCreateBody,
+): Promise<SubCategoryApiItem> {
+  const response = await api.post<SubCategoryApiItem>(
+    `/menu/${menuId}/categories/${categoryId}/subs`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function updateMenuSubCategoryRequest(
+  menuId: number | string,
+  subId: number | string,
+  payload: MenuSubCategoryUpdateBody,
+): Promise<SubCategoryApiItem> {
+  const response = await api.put<SubCategoryApiItem>(`/menu/${menuId}/subs/${subId}`, payload);
+  return response.data;
+}
+
+export async function deleteMenuSubCategoryRequest(
+  menuId: number | string,
+  subId: number | string,
+): Promise<void> {
+  await api.delete(`/menu/${menuId}/subs/${subId}`);
 }
 
 export async function getMenuTagsRequest(): Promise<MenuTagApiItem[]> {
@@ -1015,7 +1043,7 @@ export async function getMenuAllergensRequest(): Promise<MenuAllergenApiItem[]> 
   return Array.isArray(response.data) ? response.data : [];
 }
 
-export function flattenTaxonomySubs(
+export function flattenMenuCategories(
   categories: MainCategoryApiItem[],
 ): Array<{ id: number; label: string; mainCategoryId: number }> {
   return categories.flatMap((main) =>
@@ -1025,12 +1053,6 @@ export function flattenTaxonomySubs(
       label: `${main.name} / ${sub.name}`,
     })),
   );
-}
-
-export function flattenMenuCategories(
-  categories: MainCategoryApiItem[],
-): Array<{ id: number; label: string }> {
-  return flattenTaxonomySubs(categories).map(({ id, label }) => ({ id, label }));
 }
 
 export interface MenuUpdateRequestBody {

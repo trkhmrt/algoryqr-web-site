@@ -1,15 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { MainCategoryApiItem, SubCategoryApiItem } from "@/lib/api";
-import { useMenuTaxonomyPage } from "@/hooks/use-menu-categories";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  createMenuCategoryRequest,
+  createMenuSubCategoryRequest,
+  deleteMenuCategoryRequest,
+  deleteMenuSubCategoryRequest,
+  updateMenuCategoryRequest,
+  updateMenuSubCategoryRequest,
+  type MainCategoryApiItem,
+  type SubCategoryApiItem,
+} from "@/lib/api";
+import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { invalidateMenuCategories, useMenuCategories } from "@/hooks/use-menu-categories";
+import { useMenuByQr } from "@/hooks/use-menu-by-qr";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 5;
 const SEARCH_DEBOUNCE_MS = 300;
 
 type MenuCategoriesPanelProps = {
@@ -18,11 +48,41 @@ type MenuCategoriesPanelProps = {
   onAddProduct?: (subCategoryId: number) => void;
 };
 
+type NameDialogState =
+  | { kind: "create-main" }
+  | { kind: "rename-main"; main: MainCategoryApiItem }
+  | { kind: "create-sub"; main: MainCategoryApiItem }
+  | { kind: "rename-sub"; sub: SubCategoryApiItem }
+  | null;
+
+type DeleteTarget =
+  | { kind: "main"; id: number; name: string }
+  | { kind: "sub"; id: number; name: string }
+  | null;
+
+function matchesSearch(main: MainCategoryApiItem, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLocaleLowerCase("tr");
+  if (main.name.toLocaleLowerCase("tr").includes(q) || main.slug.toLocaleLowerCase("tr").includes(q)) {
+    return true;
+  }
+  return (main.subs ?? []).some(
+    (sub) =>
+      sub.name.toLocaleLowerCase("tr").includes(q) || sub.slug.toLocaleLowerCase("tr").includes(q),
+  );
+}
+
 function SubRow({
   sub,
+  busy,
+  onRename,
+  onDelete,
   onAddProduct,
 }: {
   sub: SubCategoryApiItem;
+  busy: boolean;
+  onRename: () => void;
+  onDelete: () => void;
   onAddProduct?: (subCategoryId: number) => void;
 }) {
   return (
@@ -32,11 +92,41 @@ function SubRow({
         <span className="truncate text-sm">{sub.name}</span>
         <span className="truncate text-xs text-muted-foreground">{sub.slug}</span>
       </div>
-      {onAddProduct ? (
-        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => onAddProduct(sub.id)}>
-          Ürün ekle
+      <div className="flex shrink-0 items-center gap-1">
+        {onAddProduct ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-xs"
+            disabled={busy}
+            onClick={() => onAddProduct(sub.id)}
+          >
+            Ürün ekle
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          disabled={busy}
+          onClick={onRename}
+          aria-label="Alt kategoriyi yeniden adlandır"
+        >
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
-      ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-destructive hover:text-destructive"
+          disabled={busy}
+          onClick={onDelete}
+          aria-label="Alt kategoriyi sil"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -44,57 +134,153 @@ function SubRow({
 function MainBlock({
   main,
   expanded,
+  busy,
   onToggle,
+  onRename,
+  onDelete,
+  onAddSub,
+  onRenameSub,
+  onDeleteSub,
   onAddProduct,
 }: {
   main: MainCategoryApiItem;
   expanded: boolean;
+  busy: boolean;
   onToggle: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+  onAddSub: () => void;
+  onRenameSub: (sub: SubCategoryApiItem) => void;
+  onDeleteSub: (sub: SubCategoryApiItem) => void;
   onAddProduct?: (subCategoryId: number) => void;
 }) {
   const subCount = main.subs?.length ?? 0;
   return (
     <div className="rounded-xl border border-border/80">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between gap-2 px-3 py-3 text-left transition-colors hover:bg-muted/40"
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold">{main.name}</h3>
-          <p className="truncate text-xs text-muted-foreground">
-            {main.slug}
-            {subCount > 0 ? ` · ${subCount} alt kategori` : ""}
-          </p>
-        </div>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-            expanded ? "rotate-180" : "rotate-0",
-          )}
-        />
-      </button>
+      <div className="flex items-center gap-1 px-2 py-2 sm:px-3">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-muted/40"
+          onClick={onToggle}
+          aria-expanded={expanded}
+        >
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold">{main.name}</h3>
+            <p className="truncate text-xs text-muted-foreground">
+              {main.slug}
+              {subCount > 0 ? ` · ${subCount} alt kategori` : ""}
+            </p>
+          </div>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              expanded ? "rotate-180" : "rotate-0",
+            )}
+          />
+        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          disabled={busy}
+          onClick={onRename}
+          aria-label="Kategoriyi yeniden adlandır"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+          disabled={busy}
+          onClick={onDelete}
+          aria-label="Kategoriyi sil"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
       {expanded ? (
         <div className="space-y-2 border-t border-border/60 px-3 py-3">
           {subCount === 0 ? (
             <p className="text-xs text-muted-foreground">Alt kategori yok.</p>
           ) : (
             (main.subs ?? []).map((sub) => (
-              <SubRow key={sub.id} sub={sub} onAddProduct={onAddProduct} />
+              <SubRow
+                key={sub.id}
+                sub={sub}
+                busy={busy}
+                onRename={() => onRenameSub(sub)}
+                onDelete={() => onDeleteSub(sub)}
+                onAddProduct={onAddProduct}
+              />
             ))
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            disabled={busy}
+            onClick={onAddSub}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Alt kategori ekle
+          </Button>
         </div>
       ) : null}
     </div>
   );
 }
 
-export default function MenuCategoriesPanel({ onAddProduct }: MenuCategoriesPanelProps) {
-  const [page, setPage] = useState(0);
+function dialogTitle(state: NameDialogState): string {
+  if (!state) return "";
+  switch (state.kind) {
+    case "create-main":
+      return "Ana kategori ekle";
+    case "rename-main":
+      return "Kategoriyi yeniden adlandır";
+    case "create-sub":
+      return "Alt kategori ekle";
+    case "rename-sub":
+      return "Alt kategoriyi yeniden adlandır";
+  }
+}
+
+function dialogInitialName(state: NameDialogState): string {
+  if (!state) return "";
+  if (state.kind === "rename-main") return state.main.name;
+  if (state.kind === "rename-sub") return state.sub.name;
+  return "";
+}
+
+export default function MenuCategoriesPanel({
+  menuId,
+  qrId,
+  onAddProduct,
+}: MenuCategoriesPanelProps) {
+  const queryClient = useQueryClient();
+  const { notify } = useDashboardBanners();
+  const menuByQr = useMenuByQr(qrId, menuId <= 0);
+  const resolvedMenuId =
+    menuId > 0
+      ? menuId
+      : menuByQr.data?.menuId != null && menuByQr.data.menuId > 0
+        ? menuByQr.data.menuId
+        : 0;
+
+  const categoriesQuery = useMenuCategories(resolvedMenuId > 0 ? resolvedMenuId : null);
+  const categories = categoriesQuery.data ?? [];
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [nameDialog, setNameDialog] = useState<NameDialogState>(null);
+  const [nameValue, setNameValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -104,25 +290,23 @@ export default function MenuCategoriesPanel({ onAddProduct }: MenuCategoriesPane
   }, [search]);
 
   useEffect(() => {
-    setPage(0);
-  }, [debouncedSearch]);
+    if (categoriesQuery.isError) {
+      notify(
+        "danger",
+        categoriesQuery.error instanceof Error
+          ? categoriesQuery.error.message
+          : "Kategori listesi alınamadı.",
+      );
+    }
+  }, [categoriesQuery.error, categoriesQuery.isError, notify]);
 
-  const taxonomyQuery = useMenuTaxonomyPage({
-    page,
-    size: PAGE_SIZE,
-    q: debouncedSearch || undefined,
-  });
-  const categories = taxonomyQuery.data?.content ?? [];
-  const totalElements = taxonomyQuery.data?.totalElements ?? 0;
-  const totalPages = taxonomyQuery.data?.totalPages ?? 0;
-  const hasNext = taxonomyQuery.data?.hasNext ?? page + 1 < totalPages;
+  const filtered = useMemo(
+    () => categories.filter((main) => matchesSearch(main, debouncedSearch)),
+    [categories, debouncedSearch],
+  );
   const expandAllFromSearch = Boolean(debouncedSearch);
 
-  useEffect(() => {
-    if (!taxonomyQuery.isFetching && categories.length === 0 && page > 0) {
-      setPage((current) => Math.max(0, current - 1));
-    }
-  }, [categories.length, page, taxonomyQuery.isFetching]);
+  const refresh = () => invalidateMenuCategories(queryClient, resolvedMenuId, qrId);
 
   const toggleMain = (id: number) => {
     if (expandAllFromSearch) return;
@@ -134,76 +318,200 @@ export default function MenuCategoriesPanel({ onAddProduct }: MenuCategoriesPane
     });
   };
 
+  const openNameDialog = (state: Exclude<NameDialogState, null>) => {
+    setNameDialog(state);
+    setNameValue(dialogInitialName(state));
+  };
+
+  const handleSaveName = async () => {
+    if (!nameDialog || resolvedMenuId <= 0) return;
+    const trimmed = nameValue.trim();
+    if (!trimmed) {
+      notify("warning", "Kategori adı zorunlu.");
+      return;
+    }
+    setSaving(true);
+    try {
+      switch (nameDialog.kind) {
+        case "create-main":
+          await createMenuCategoryRequest(resolvedMenuId, { name: trimmed });
+          notify("info", "Kategori eklendi.");
+          break;
+        case "rename-main":
+          await updateMenuCategoryRequest(resolvedMenuId, nameDialog.main.id, { name: trimmed });
+          notify("info", "Kategori güncellendi.");
+          break;
+        case "create-sub":
+          await createMenuSubCategoryRequest(resolvedMenuId, nameDialog.main.id, {
+            name: trimmed,
+          });
+          setExpandedIds((prev) => new Set(prev).add(nameDialog.main.id));
+          notify("info", "Alt kategori eklendi.");
+          break;
+        case "rename-sub":
+          await updateMenuSubCategoryRequest(resolvedMenuId, nameDialog.sub.id, {
+            name: trimmed,
+          });
+          notify("info", "Alt kategori güncellendi.");
+          break;
+      }
+      setNameDialog(null);
+      await refresh();
+    } catch (error) {
+      notify("danger", error instanceof Error ? error.message : "İşlem başarısız.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget || resolvedMenuId <= 0) return;
+    setDeleting(true);
+    try {
+      if (deleteTarget.kind === "main") {
+        await deleteMenuCategoryRequest(resolvedMenuId, deleteTarget.id);
+        notify("info", "Kategori silindi.");
+      } else {
+        await deleteMenuSubCategoryRequest(resolvedMenuId, deleteTarget.id);
+        notify("info", "Alt kategori silindi.");
+      }
+      setDeleteTarget(null);
+      await refresh();
+    } catch (error) {
+      notify("danger", error instanceof Error ? error.message : "Silme başarısız.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const busy = saving || deleting;
+
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-dashed border-border/80 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-        Kategoriler platform genelinde sabittir. Yeni ana/alt kategori eklemek için admin paneli gerekir.
-        Ürün eklerken yalnızca listeden seçim yapabilirsiniz.
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Kategori ara…"
+            className="pl-9"
+          />
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="gap-1"
+          disabled={busy || resolvedMenuId <= 0}
+          onClick={() => openNameDialog({ kind: "create-main" })}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Kategori ekle
+        </Button>
       </div>
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Kategori ara…"
-          className="pl-9"
-        />
-      </div>
-
-      {taxonomyQuery.isLoading ? (
+      {categoriesQuery.isLoading || (menuId <= 0 && menuByQr.isLoading) ? (
         <p className="text-sm text-muted-foreground">Kategoriler yükleniyor…</p>
-      ) : taxonomyQuery.isError ? (
+      ) : categoriesQuery.isError ? (
         <p className="text-sm text-destructive">Kategori listesi alınamadı.</p>
-      ) : categories.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          {debouncedSearch ? "Aramayla eşleşen kategori bulunamadı." : "Kategori bulunamadı."}
+          {debouncedSearch
+            ? "Aramayla eşleşen kategori bulunamadı."
+            : "Henüz kategori yok. Yeni ana kategori ekleyin."}
         </p>
       ) : (
         <div className="space-y-3">
-          {categories.map((main) => (
+          {filtered.map((main) => (
             <MainBlock
               key={main.id}
               main={main}
               expanded={expandAllFromSearch || expandedIds.has(main.id)}
+              busy={busy}
               onToggle={() => toggleMain(main.id)}
+              onRename={() => openNameDialog({ kind: "rename-main", main })}
+              onDelete={() => setDeleteTarget({ kind: "main", id: main.id, name: main.name })}
+              onAddSub={() => openNameDialog({ kind: "create-sub", main })}
+              onRenameSub={(sub) => openNameDialog({ kind: "rename-sub", sub })}
+              onDeleteSub={(sub) => setDeleteTarget({ kind: "sub", id: sub.id, name: sub.name })}
               onAddProduct={onAddProduct}
             />
           ))}
         </div>
       )}
 
-      {!taxonomyQuery.isLoading && !taxonomyQuery.isError && totalElements > PAGE_SIZE ? (
-        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
-          <p className="text-xs text-muted-foreground">
-            Sayfa {page + 1} / {Math.max(1, totalPages)} · {totalElements} ana kategori
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              disabled={page <= 0 || taxonomyQuery.isFetching}
-              onClick={() => setPage((value) => Math.max(0, value - 1))}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Önceki
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              disabled={!hasNext || taxonomyQuery.isFetching}
-              onClick={() => setPage((value) => value + 1)}
-            >
-              Sonraki
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+      <Dialog
+        open={nameDialog != null}
+        onOpenChange={(open) => {
+          if (!open && !saving) setNameDialog(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{dialogTitle(nameDialog)}</DialogTitle>
+            <DialogDescription>Görünen ad menüde ve ürün seçiminde kullanılır.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Ad</Label>
+            <Input
+              value={nameValue}
+              onChange={(event) => setNameValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleSaveName();
+                }
+              }}
+              autoFocus
+            />
           </div>
-        </div>
-      ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={() => setNameDialog(null)}
+            >
+              Vazgeç
+            </Button>
+            <Button type="button" disabled={saving} onClick={() => void handleSaveName()}>
+              {saving ? "Kaydediliyor…" : "Kaydet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.kind === "main" ? "Kategori silinsin mi?" : "Alt kategori silinsin mi?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `"${deleteTarget.name}" kalıcı olarak silinecek. Ürünü olan kategoriler silinemez.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDelete();
+              }}
+            >
+              {deleting ? "Siliniyor…" : "Sil"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
