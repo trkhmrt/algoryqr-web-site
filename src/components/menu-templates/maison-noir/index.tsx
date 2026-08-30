@@ -55,6 +55,13 @@ export function MaisonNoirMenuTemplate({
         ? view.categoryId
         : null;
 
+  const activeSubCategoryId =
+    view.type === "category"
+      ? view.subCategoryId
+      : view.type === "product"
+        ? view.subCategoryId
+        : null;
+
   const activeCategory =
     activeCategoryId != null ? findCategoryById(displayCategories, activeCategoryId) : null;
 
@@ -73,20 +80,36 @@ export function MaisonNoirMenuTemplate({
   const selectCategory = (category: TaxonomyNavNode) => {
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "category", categoryId: category.categoryId });
+    setView({ type: "category", categoryId: category.categoryId, subCategoryId: null });
     analytics?.trackCategoryView(trackIdForNavNode(category));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const selectSubCategory = (subCategoryId: number | null) => {
+    if (view.type !== "category") return;
+    setView({ type: "category", categoryId: view.categoryId, subCategoryId });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
     const categoryId = productCategory?.categoryId ?? activeCategoryId;
+    const subCategoryId =
+      view.type === "category"
+        ? view.subCategoryId
+        : view.type === "product"
+          ? view.subCategoryId
+          : productCategory?.kind === "sub"
+            ? productCategory.categoryId
+            : null;
+
     setPinnedProduct(product);
     feedback.syncProductState(product);
     setView({
       type: "product",
       productId: product.productId,
       categoryId,
+      subCategoryId,
     });
     analytics?.trackProductView(
       product.productId,
@@ -103,7 +126,11 @@ export function MaisonNoirMenuTemplate({
     setPinnedProduct(null);
     feedback.syncProductState(null);
     if (view.type === "product" && view.categoryId != null) {
-      setView({ type: "category", categoryId: view.categoryId });
+      setView({
+        type: "category",
+        categoryId: view.categoryId,
+        subCategoryId: view.subCategoryId,
+      });
     } else {
       goHome();
     }
@@ -119,17 +146,16 @@ export function MaisonNoirMenuTemplate({
           products={products}
           onSelectCategory={selectCategory}
           onOpenProduct={openProduct}
-          onShowAll={goHome}
         />
       ) : null}
 
       {view.type === "category" && activeCategory ? (
         <MaisonNoirCategoryView
           category={activeCategory}
-          categories={displayCategories}
           products={products}
-          onSelectCategory={selectCategory}
-          onShowAll={goHome}
+          subCategoryId={activeSubCategoryId}
+          onBackToCategories={goHome}
+          onSelectSubCategory={selectSubCategory}
           onOpenProduct={openProduct}
         />
       ) : null}
@@ -163,7 +189,7 @@ function MissingState({ message, onHome }: { message: string; onHome: () => void
         <button
           type="button"
           onClick={onHome}
-          className="mt-4 mn-tracked text-[0.58rem] text-[var(--mn-primary)] underline"
+          className="mt-4 text-xs text-[var(--mn-primary)] underline underline-offset-2"
         >
           {EMPTY_FALLBACK.backToMenu}
         </button>
