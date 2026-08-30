@@ -8,6 +8,7 @@ describe("buildSetupSteps", () => {
     const steps = buildSetupSteps({
       hasCard: false,
       canOperate: false,
+      hasActiveSubscription: false,
       branchCount: 0,
       totalMenus: 0,
       liveMenus: 0,
@@ -21,6 +22,7 @@ describe("buildSetupSteps", () => {
     const steps = buildSetupSteps({
       hasCard: true,
       canOperate: false,
+      hasActiveSubscription: false,
       branchCount: 0,
       totalMenus: 0,
       liveMenus: 0,
@@ -29,10 +31,25 @@ describe("buildSetupSteps", () => {
     expect(isSetupComplete(steps)).toBe(false);
   });
 
+  it("completes card step for active subscribers once a card exists", () => {
+    const steps = buildSetupSteps({
+      hasCard: true,
+      canOperate: true,
+      hasActiveSubscription: true,
+      branchCount: 0,
+      totalMenus: 0,
+      liveMenus: 0,
+    });
+    expect(steps[0].done).toBe(true);
+    expect(steps[0].href).toBe(DASHBOARD_ROUTES.accountPaymentMethods);
+    expect(nextSetupStep(steps)?.id).toBe("branch");
+  });
+
   it("marks the first incomplete product step as next", () => {
     const steps = buildSetupSteps({
       hasCard: true,
       canOperate: true,
+      hasActiveSubscription: false,
       branchCount: 1,
       totalMenus: 0,
       liveMenus: 0,
@@ -46,6 +63,7 @@ describe("buildSetupSteps", () => {
     const steps = buildSetupSteps({
       hasCard: true,
       canOperate: true,
+      hasActiveSubscription: false,
       branchCount: 1,
       totalMenus: 2,
       liveMenus: 1,

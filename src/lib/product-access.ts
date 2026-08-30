@@ -18,6 +18,16 @@ export type ProductAccessPurchase = {
   status?: string | null;
 };
 
+export function isActivePaidPurchase(purchase: ProductAccessPurchase | null | undefined): boolean {
+  if (!purchase || !isDateUsablePurchase(purchase)) {
+    return false;
+  }
+  if (purchase.purchaseType !== "PAID") {
+    return false;
+  }
+  return purchase.packageCode !== "FREE_PACKAGE";
+}
+
 export function isDateUsablePurchase(purchase: ProductAccessPurchase): boolean {
   if (purchase.expired) {
     return false;

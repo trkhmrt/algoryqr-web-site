@@ -19,6 +19,7 @@ import {
 } from "@/hooks/use-commerce";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
 import { ApiError } from "@/lib/api";
+import { isActivePaidPurchase } from "@/lib/product-access";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
@@ -29,6 +30,7 @@ import {
   readPersistedTrialPackage,
   readTrialPackageFromSearch,
   resolveTrialPackageId,
+  buildTrialStartUrl,
 } from "@/lib/trial-flow";
 
 const REDIRECT_DELAY_MS = 4000;
@@ -69,13 +71,10 @@ export default function TrialStartView() {
     [packages, packageId],
   );
 
-  const activePaidPurchase = useMemo(() => {
-    const purchase = subscription.data?.activePurchase;
-    if (!purchase?.usable || purchase.expired) return null;
-    if (purchase.purchaseType !== "PAID") return null;
-    if (purchase.packageCode === "FREE_PACKAGE") return null;
-    return purchase;
-  }, [subscription.data?.activePurchase]);
+  const activePaidPurchase = useMemo(
+    () => (isActivePaidPurchase(subscription.data?.activePurchase ?? null) ? subscription.data?.activePurchase ?? null : null),
+    [subscription.data?.activePurchase],
+  );
 
   useEffect(() => {
     clearPersistedTrialIntent();
@@ -206,7 +205,9 @@ export default function TrialStartView() {
         </p>
       </div>
 
-      {hasCard ? null : <CardVerificationPanel />}
+      {hasCard ? null : (
+        <CardVerificationPanel returnPath={buildTrialStartUrl(packageCode)} />
+      )}
 
       <Button
         variant="hero"

@@ -4,6 +4,7 @@ import {
   hasActiveProductAccess,
   hasActivePackageProduct,
   hasExpiredProductAccess,
+  isActivePaidPurchase,
   packageIncludesProduct,
   pickActivePurchase,
   type ProductAccessEntitlement,
@@ -177,5 +178,49 @@ describe("hasExpiredProductAccess", () => {
 
   it("returns false when user never had the product", () => {
     expect(hasExpiredProductAccess([], [], "QR_MENU")).toBe(false);
+  });
+});
+
+describe("isActivePaidPurchase", () => {
+  it("returns true for usable paid package", () => {
+    expect(
+      isActivePaidPurchase({
+        id: 1,
+        usable: true,
+        expired: false,
+        expiresAt: "2099-01-01T00:00:00",
+        purchaseType: "PAID",
+        packageCode: "ULTIMATE_PACKAGE",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+  });
+
+  it("returns false for free package", () => {
+    expect(
+      isActivePaidPurchase({
+        id: 1,
+        usable: true,
+        expired: false,
+        expiresAt: "2099-01-01T00:00:00",
+        purchaseType: "PAID",
+        packageCode: "FREE_PACKAGE",
+        status: "ACTIVE",
+      }),
+    ).toBe(false);
+  });
+
+  it("returns false for expired purchase", () => {
+    expect(
+      isActivePaidPurchase({
+        id: 1,
+        usable: false,
+        expired: true,
+        expiresAt: "2020-01-01T00:00:00",
+        purchaseType: "PAID",
+        packageCode: "ULTIMATE_PACKAGE",
+        status: "EXPIRED",
+      }),
+    ).toBe(false);
   });
 });

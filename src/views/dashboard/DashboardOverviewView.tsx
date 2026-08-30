@@ -13,9 +13,11 @@ import { ReportIssueCard } from "@/components/dashboard/ReportIssueCard";
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import { usePaymentMethods, useTrialStatus } from "@/hooks/use-commerce";
 import { useOverviewOpsStats } from "@/hooks/use-overview-ops-stats";
+import { useSubscription } from "@/hooks/use-subscription";
 import { hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { buildSetupSteps, isSetupComplete } from "@/lib/dashboard-setup";
+import { isActivePaidPurchase } from "@/lib/product-access";
 
 export default function DashboardOverviewView() {
   const { data: accessProfile } = useAccessProfile();
@@ -23,6 +25,8 @@ export default function DashboardOverviewView() {
   const showMenus = hasScope(accessProfile, "QR_MENU_OWNER");
   const cards = usePaymentMethods();
   const trial = useTrialStatus();
+  const subscription = useSubscription();
+  const hasActiveSubscription = isActivePaidPurchase(subscription.data?.activePurchase ?? null);
   const stats = useOverviewOpsStats({
     orders: showOrders,
     reservations: showMenus,
@@ -30,13 +34,18 @@ export default function DashboardOverviewView() {
   });
   const steps = buildSetupSteps({
     hasCard: (cards.data?.length ?? 0) > 0,
-    canOperate: trial.data?.status === "ACTIVE" || showMenus,
+    canOperate: trial.data?.status === "ACTIVE" || showMenus || hasActiveSubscription,
+    hasActiveSubscription,
     branchCount: stats.branchCount,
     totalMenus: stats.totalMenus,
     liveMenus: stats.liveMenus,
   });
   const showChecklist =
-    !stats.loading && !cards.isLoading && !trial.isLoading && !isSetupComplete(steps);
+    !stats.loading &&
+    !cards.isLoading &&
+    !trial.isLoading &&
+    !subscription.isLoading &&
+    !isSetupComplete(steps);
   const showStats = !stats.loading && (showOrders || (showMenus && stats.branchCount > 0));
 
   return (

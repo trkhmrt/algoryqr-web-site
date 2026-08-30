@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CreditCard, Loader2, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 import PaymentCheckoutOverlay, {
   type PaymentCheckoutOverlayContent,
@@ -9,20 +10,21 @@ import PaymentCheckoutOverlay, {
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { ApiError } from "@/lib/api";
-import { initiateCardVerification } from "@/lib/card-verification";
+import { initiateCardVerification, persistCardVerificationReturn } from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
-import Link from "next/link";
 import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
+import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 
 type CardVerificationPanelProps = {
   title?: string;
   description?: string;
+  returnPath?: string;
 };
 
 export function CardVerificationPanel({
   title = "Kredi kartı ekle",
-  description = "Kart bilgileri PayTR’da saklanır. 1 TL doğrulama çekilir ve iade edilir. Deneme bitince aynı karttan paket bedeli alınır.",
+  description = "Kart bilgileri PayTR'da saklanır. 1 TL doğrulama çekilir ve iade edilir. Deneme bitince aynı karttan paket bedeli alınır.",
+  returnPath = DASHBOARD_ROUTES.accountPaymentMethods,
 }: CardVerificationPanelProps) {
   const { notify } = useDashboardBanners();
   const [starting, setStarting] = useState(false);
@@ -31,6 +33,7 @@ export function CardVerificationPanel({
   const start = async () => {
     setStarting(true);
     try {
+      persistCardVerificationReturn(returnPath);
       const response = await initiateCardVerification();
       if (response.paymentPageUrl) {
         setOverlay({ kind: "url", content: response.paymentPageUrl });

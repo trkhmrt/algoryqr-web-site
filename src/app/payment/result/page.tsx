@@ -6,7 +6,7 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
-import { isCardVerificationConversation } from "@/lib/card-verification";
+import { isCardVerificationConversation, resolveCardVerificationReturnPath } from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { abandonPendingPaymentAttempt } from "@/lib/purchase-fulfillment";
 
@@ -28,7 +28,8 @@ function PaymentResultContent() {
 
   const redirectTarget = useMemo(() => {
     if (cardVerification) {
-      return `${DASHBOARD_ROUTES.trialStart}?verification=${payment}`;
+      const returnPath = resolveCardVerificationReturnPath(DASHBOARD_ROUTES.accountPaymentMethods);
+      return `${returnPath}?verification=${payment}`;
     }
     return `${DASHBOARD_ROUTES.accountSubscription}?payment=${payment}`;
   }, [cardVerification, payment]);

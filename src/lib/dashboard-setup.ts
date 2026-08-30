@@ -13,18 +13,26 @@ export type SetupStep = {
 export type SetupStats = {
   hasCard: boolean;
   canOperate: boolean;
+  hasActiveSubscription: boolean;
   branchCount: number;
   totalMenus: number;
   liveMenus: number;
 };
 
 export function buildSetupSteps(stats: SetupStats): SetupStep[] {
+  const cardHref = stats.hasActiveSubscription
+    ? DASHBOARD_ROUTES.accountPaymentMethods
+    : DASHBOARD_ROUTES.trialStart;
+  const cardHint = stats.hasActiveSubscription
+    ? "Yenileme ve ödemeler için kayıtlı kart"
+    : "Deneme bitince bu karttan çekilir";
+
   return [
     {
       id: "card",
       label: "Kart ekle",
-      hint: "Deneme bitince bu karttan çekilir",
-      href: DASHBOARD_ROUTES.trialStart,
+      hint: cardHint,
+      href: cardHref,
       done: stats.hasCard && stats.canOperate,
     },
     {
