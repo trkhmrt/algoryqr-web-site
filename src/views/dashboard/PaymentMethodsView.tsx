@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CreditCard, Trash2 } from "lucide-react";
 
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
@@ -10,15 +12,31 @@ import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { CardVerificationPanel } from "@/components/dashboard/CardVerificationPanel";
 import { invalidatePaymentMethods, usePaymentMethods } from "@/hooks/use-commerce";
+import { useSubscription } from "@/hooks/use-subscription";
 import { ApiError } from "@/lib/api";
+import { clearCardVerificationReturn } from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
+import { isActivePaidPurchase } from "@/lib/product-access";
 
 export default function PaymentMethodsView() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const { notify } = useDashboardBanners();
   const methods = usePaymentMethods();
+  const subscription = useSubscription();
+  const hasActiveSubscription = isActivePaidPurchase(subscription.data?.activePurchase ?? null);
+  const verification = searchParams.get("verification");
+
+  useEffect(() => {
+    if (verification !== "success") {
+      return;
+    }
+    clearCardVerificationReturn();
+    void invalidatePaymentMethods(queryClient);
+    notify("info", "Kartınız kaydedildi.");
+  }, [notify, queryClient, verification]);
 
   const removeMethod = async (id: string) => {
     try {
@@ -42,7 +60,13 @@ export default function PaymentMethodsView() {
         }
       />
 
-      <CardVerificationPanel />
+      <CardVerificationPanel
+        description={
+          hasActiveSubscription
+            ? "Kart bilgileri PayTR'da saklanır. 1 TL doğrulama çekilir ve iade edilir. Paket yenilemeleri kayıtlı karttan yapılır."
+            : undefined
+        }
+      />
 
       {methods.isLoading ? (
         <DashboardLoadingState label="Kayıtlı kartlar yükleniyor…" />
