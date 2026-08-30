@@ -18,6 +18,7 @@ import { ProductImageField } from "@/components/dashboard/menu/ProductImageField
 import { ProductPairingFields, emptyPairings, normalizePairings } from "@/components/dashboard/menu/ProductPairingFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 type NutritionFormFields = {
   basis: NutritionBasis;
@@ -269,22 +271,17 @@ export default function DigitalMenuProductCreateView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-        <div className="flex items-start gap-3">
-          <Link
-            href={backHref}
-            className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ürün Ekle</h1>
-            <p className="text-sm text-muted-foreground">
-              Ürün bilgilerini girin ve bir alt kategoriye bağlayın.
-            </p>
-          </div>
-        </div>
+        <DashboardPageHeader
+          title="Ürün Ekle"
+          hint="Ürün bilgilerini girin ve bir alt kategoriye bağlayın."
+          back={
+            <Link href={backHref} aria-label="Ürün listesine dön" className={DASHBOARD_BACK}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          }
+        />
 
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4 sm:p-6">
+        <div className={`${DASHBOARD_PANEL} space-y-3`}>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <Label className="text-xs">Ürün Adı</Label>

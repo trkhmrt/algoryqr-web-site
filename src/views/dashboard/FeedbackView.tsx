@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, MessageSquareText, Star } from "lucide-react";
+import { ArrowLeft, MessageSquareText, Star } from "lucide-react";
 
 import {
   DigitalMenuPicker,
@@ -12,16 +12,19 @@ import {
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { FilterSelect } from "@/components/dashboard/FilterSelect";
 import { useListQueryState } from "@/hooks/use-list-query-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   getMenuFeedbackRequest,
   getMenuFeedbackSummaryRequest,
   type FeedbackTypeFilter,
 } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_LIST_ITEM, DASHBOARD_STAT_TILE } from "@/lib/dashboard-surface";
 
 function formatDateTime(value?: string | null): string {
   if (!value) return "—";
@@ -125,8 +128,12 @@ export default function FeedbackView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Geri Bildirimler"
+          hint="Müşterilerin menü ve ürün puanlarını buradan inceleyin."
+        />
+        <DashboardLoadingState label="Geri bildirimler hazırlanıyor..." />
       </div>
     );
   }
@@ -146,38 +153,33 @@ export default function FeedbackView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <Button variant="ghost" size="sm" className="-ml-2 w-fit gap-1.5" asChild>
-            <Link
-              href={
-                selection
-                  ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
-                  : DASHBOARD_ROUTES.digitalMenu
-              }
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Geri
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Geri Bildirimler
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Müşterilerin menü ve ürün puanlarını buradan inceleyin.
-            </p>
-          </div>
-        </div>
-        <DigitalMenuPicker
-          menuQrs={menuQrs}
-          selectedQrId={selection?.qr.id ?? null}
-          onSelectQrId={(qrId) => {
-            setPage(0);
-            void selectQrId(qrId);
-          }}
-        />
-      </div>
+      <DashboardPageHeader
+        title="Geri Bildirimler"
+        hint="Müşterilerin menü ve ürün puanlarını buradan inceleyin."
+        back={
+          <Link
+            href={
+              selection
+                ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
+                : DASHBOARD_ROUTES.digitalMenu
+            }
+            aria-label="Geri"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+        action={
+          <DigitalMenuPicker
+            menuQrs={menuQrs}
+            selectedQrId={selection?.qr.id ?? null}
+            onSelectQrId={(qrId) => {
+              setPage(0);
+              void selectQrId(qrId);
+            }}
+          />
+        }
+      />
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
@@ -185,9 +187,9 @@ export default function FeedbackView() {
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             {summaryCards.map((card) => (
-              <Card key={card.key}>
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <div key={card.key} className={DASHBOARD_STAT_TILE}>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-muted/40 text-muted-foreground">
                     {card.key === "menu" ? (
                       <MessageSquareText className="h-4 w-4" />
                     ) : (
@@ -205,12 +207,12 @@ export default function FeedbackView() {
                       </span>
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
 
-          <div className="flex flex-wrap items-end gap-3">
+          <DashboardFilterBar>
             <FilterSelect
               className="w-[11rem]"
               label="Tür"
@@ -245,13 +247,10 @@ export default function FeedbackView() {
                 })),
               ]}
             />
-          </div>
+          </DashboardFilterBar>
 
           {listQuery.isLoading ? (
-            <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Geri bildirimler yükleniyor…
-            </div>
+            <DashboardLoadingState label="Geri bildirimler yükleniyor…" />
           ) : items.length === 0 ? (
             <EmptyState
               title={type !== "all" || minScore !== "" ? "Filtrelere uyan geri bildirim yok" : "Henüz geri bildirim yok"}
@@ -279,11 +278,10 @@ export default function FeedbackView() {
           ) : (
             <div className="space-y-3">
               {items.map((item) => (
-                <Card key={`${item.type}-${item.id}`}>
-                  <CardContent className="space-y-2 p-4">
+                <article key={`${item.type}-${item.id}`} className={`${DASHBOARD_LIST_ITEM} space-y-2`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           {item.type === "product" ? "Ürün" : "Menü"}
                         </span>
                         {item.type === "product" && item.productName ? (
@@ -303,10 +301,9 @@ export default function FeedbackView() {
                       <p className="text-sm text-muted-foreground">Yorum yok</p>
                     )}
                     {item.deviceType ? (
-                      <p className="text-[11px] text-muted-foreground">{item.deviceType}</p>
+                      <p className="text-xs text-muted-foreground">{item.deviceType}</p>
                     ) : null}
-                  </CardContent>
-                </Card>
+                </article>
               ))}
             </div>
           )}

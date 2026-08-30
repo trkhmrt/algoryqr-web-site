@@ -15,7 +15,7 @@ function PackageCardSkeleton() {
         <Skeleton className="h-9 w-36" />
         <Skeleton className="h-4 w-20" />
       </div>
-      <ul className="mt-5 flex-1 space-y-2.5 border-t border-[#e5e7eb] pt-4 dark:border-border">
+      <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-4">
         {Array.from({ length: FEATURE_SKELETON_ROWS }).map((_, index) => (
           <li key={index} className="flex items-center gap-2.5">
             <Skeleton className="h-5 w-5 shrink-0 rounded-full" />

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard, Receipt } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   addonProductLabel,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/package-display";
 import { getPurchaseSummary } from "@/lib/purchase-fulfillment";
 import { purchaseStatusLabel } from "@/lib/refund-display";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 type PaymentHistoryDetailViewProps = {
   purchaseId: number;
@@ -38,28 +40,28 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
   const products = data?.products ?? [];
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.accountPaymentHistory}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ödeme detayı</h1>
-          <p className="text-sm text-muted-foreground">Ödeme, kart ve dönem bilgileri</p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title="Ödeme detayı"
+        hint="Ödeme, kart ve dönem bilgileri"
+        back={
+          <Link
+            href={DASHBOARD_ROUTES.accountPaymentHistory}
+            aria-label="Ödeme geçmişine dön"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {isLoading ? (
-        <div className="h-32 animate-pulse rounded-lg border border-border bg-muted" />
+        <DashboardLoadingState label="Ödeme detayı yükleniyor…" />
       ) : isError || !data ? (
         <p className="text-sm text-destructive">Ödeme detayı yüklenemedi.</p>
       ) : (
         <>
-          <Card className="glow-card">
-            <CardContent className="space-y-3 p-5">
+          <div className={`${DASHBOARD_PANEL} space-y-3`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -98,12 +100,10 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
                   </div>
                 </div>
               ) : null}
-            </CardContent>
-          </Card>
+            </div>
 
           {isAddon && products.length > 0 ? (
-            <Card className="glow-card">
-              <CardContent className="space-y-3 p-5">
+            <div className={`${DASHBOARD_PANEL} space-y-3`}>
                 <h3 className="text-sm font-medium text-foreground">Tanımlanan haklar</h3>
                 <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
                   {products.map((product) => (
@@ -125,12 +125,10 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           ) : null}
 
-          <Card className="glow-card">
-            <CardContent className="space-y-4 p-5">
+          <div className={`${DASHBOARD_PANEL} space-y-4`}>
               <div className="flex items-center gap-2">
                 <Receipt className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-medium text-foreground">Ödeme bilgileri</h3>
@@ -172,12 +170,10 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
           {isSubscription ? (
-            <Card className="glow-card">
-              <CardContent className="space-y-3 p-5">
+            <div className={`${DASHBOARD_PANEL} space-y-3`}>
                 <h3 className="text-sm font-medium text-foreground">Ödeme dönemleri</h3>
                 <p className="text-sm text-foreground">
                   Sonraki ödeme:{" "}
@@ -209,13 +205,11 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           ) : null}
 
           {billing ? (
-            <Card className="glow-card">
-              <CardContent className="space-y-2 p-5 text-sm">
+            <div className={`${DASHBOARD_PANEL} space-y-2 text-sm`}>
                 <h3 className="text-sm font-medium text-foreground">Fatura adresi</h3>
                 <p className="text-muted-foreground">
                   {[billing.legalName, billing.name, billing.surname].filter(Boolean).join(" ") || "—"}
@@ -228,8 +222,7 @@ export default function PaymentHistoryDetailView({ purchaseId }: PaymentHistoryD
                     {[billing.email, billing.phone].filter(Boolean).join(" · ")}
                   </p>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           ) : null}
 
           <p className="text-xs text-muted-foreground">

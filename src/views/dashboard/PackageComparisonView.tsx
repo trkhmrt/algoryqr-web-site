@@ -9,6 +9,7 @@ import {
   PackageComparisonCurrentPlanSkeleton,
   PackageComparisonSkeleton,
 } from "@/components/dashboard/PackageComparisonSkeleton";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { AnimatedPackagePrice } from "@/components/packages/AnimatedPackagePrice";
 import { Button } from "@/components/ui/button";
 import { FeatureHintByProduct } from "@/components/ui/FeatureHint";
@@ -18,6 +19,7 @@ import { usePackageCatalog } from "@/hooks/use-package-catalog";
 import type { PlanPackageApiItem } from "@/lib/api";
 import type { BillingPeriod } from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK } from "@/lib/dashboard-surface";
 import {
   formatDaysUntilExpiry,
   formatPackageDate,
@@ -129,23 +131,26 @@ export default function PackageComparisonView() {
     return DASHBOARD_ROUTES.accountSubscriptionCheckout(pkg.id);
   };
 
+  const packagesHeader = (
+    <DashboardPageHeader
+      title="Paketler"
+      hint="Tüm planları tek ekranda karşılaştırın ve size uygun paketi seçin."
+      back={
+        <Link
+          href={DASHBOARD_ROUTES.accountSubscription}
+          aria-label="Aboneliğe dön"
+          className={DASHBOARD_BACK}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+      }
+    />
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-3">
-          <Link
-            href={DASHBOARD_ROUTES.accountSubscription}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Paketler</h1>
-            <p className="text-sm text-muted-foreground">
-              Tüm planları tek ekranda karşılaştırın ve size uygun paketi seçin.
-            </p>
-          </div>
-        </div>
+        {packagesHeader}
         <PackageComparisonCurrentPlanSkeleton />
         <PackageComparisonSkeleton />
       </div>
@@ -154,24 +159,11 @@ export default function PackageComparisonView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.accountSubscription}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Paketler</h1>
-          <p className="text-sm text-muted-foreground">
-            Tüm planları tek ekranda karşılaştırın ve size uygun paketi seçin.
-          </p>
-        </div>
-      </div>
+      {packagesHeader}
 
       <div className="smart-feature-panel">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0 flex-1">
@@ -184,7 +176,7 @@ export default function PackageComparisonView() {
               <>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-semibold text-foreground">{current.packageName}</h2>
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                     {purchaseTypeLabel(current.purchaseType)}
                   </span>
                 </div>
@@ -248,12 +240,12 @@ export default function PackageComparisonView() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-semibold text-foreground">{pkg.name}</h3>
                         {isCurrent ? (
-                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
                             Mevcut
                           </span>
                         ) : null}
                         {highlightMatch ? (
-                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                             Önerilen
                           </span>
                         ) : null}
@@ -266,7 +258,7 @@ export default function PackageComparisonView() {
 
                   <AnimatedPackagePrice pricing={pricing} currency={pkg.currency} />
 
-                  <ul className="mt-5 flex-1 space-y-2.5 border-t border-[#e5e7eb] pt-4 dark:border-border">
+                  <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-4">
                     {featureRows.map((row) => (
                       <li key={`${pkg.id}-${row.id}`} className="flex items-start gap-2.5">
                         <ComparisonCellValue value={row.values[String(pkg.id)] ?? "—"} />
@@ -295,7 +287,7 @@ export default function PackageComparisonView() {
                       </Button>
                     ) : null}
                     {showTrial ? (
-                      <p className="text-center text-[11px] text-muted-foreground">
+                      <p className="text-center text-xs text-muted-foreground">
                         Deneme için Dijital Menü veya Abonelik ekranından başlatabilirsiniz.
                       </p>
                     ) : null}

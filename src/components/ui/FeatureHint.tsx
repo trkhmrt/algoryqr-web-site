@@ -16,7 +16,7 @@ type FeatureHintProps = FeatureHintContent & {
 
 export function FeatureHint({ title, description, size = "md", className }: FeatureHintProps) {
   const [open, setOpen] = useState(false);
-  const buttonSize = size === "sm" ? "h-4 w-4 text-[10px]" : "h-5 w-5 text-[11px]";
+  const buttonSize = size === "sm" ? "h-4 w-4 text-xs" : "h-5 w-5 text-xs";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

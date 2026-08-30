@@ -44,6 +44,7 @@ import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
 import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 type DigitalMenuProductDetailViewProps = {
   productId: number;
@@ -391,7 +392,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
         ) : !product || !form ? (
           <p className="text-sm text-muted-foreground">Ürün bulunamadı.</p>
         ) : (
-          <div className="rounded-lg border border-border bg-card">
+          <div className={DASHBOARD_SURFACE}>
             <div className="grid grid-cols-2 gap-2 p-3">
               <div className="col-span-2 space-y-1.5">
                 <Label className="text-xs">Ürün adı</Label>

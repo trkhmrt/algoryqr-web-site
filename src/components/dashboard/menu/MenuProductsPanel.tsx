@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { deleteMenuProductRequest, flattenMenuCategories } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_LIST_ITEM } from "@/lib/dashboard-surface";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { useMenuCategoriesByQr } from "@/hooks/use-menu-categories";
@@ -212,29 +213,35 @@ export default function MenuProductsPanel({
         <p className="text-sm text-muted-foreground">Bu filtrede ürün yok.</p>
       ) : (
         <div className="space-y-2">
-          {products.map((product) => (
+          {products.map((product) => {
+            const categoryLabel =
+              [product.mainCategoryName, product.subCategoryName]
+                .filter(Boolean)
+                .join(" / ") || product.subCategorySlug;
+            const servingLabel =
+              product.servesPeopleMin != null && product.servesPeopleMax != null
+                ? product.servesPeopleMin === product.servesPeopleMax
+                  ? `${product.servesPeopleMin} kişilik`
+                  : `${product.servesPeopleMin}–${product.servesPeopleMax} kişilik`
+                : null;
+            const priceLabel = product.price ? `${product.price} ${product.currency}` : null;
+
+            return (
             <div
               key={product.productId}
-              className="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5"
+              className={`${DASHBOARD_LIST_ITEM} flex items-start gap-3 sm:items-center`}
             >
               <ProductListThumbnail name={product.name} imageUrl={product.imageUrl} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{product.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {[
-                    [product.mainCategoryName, product.subCategoryName]
-                      .filter(Boolean)
-                      .join(" / ") || product.subCategorySlug,
-                    product.servesPeopleMin != null && product.servesPeopleMax != null
-                      ? product.servesPeopleMin === product.servesPeopleMax
-                        ? `${product.servesPeopleMin} kişilik`
-                        : `${product.servesPeopleMin}–${product.servesPeopleMax} kişilik`
-                      : null,
-                    product.price ? `${product.price} ${product.currency}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
+                <p className="text-sm font-medium leading-snug">{product.name}</p>
+                {categoryLabel ? (
+                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{categoryLabel}</p>
+                ) : null}
+                {servingLabel || priceLabel ? (
+                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                    {[servingLabel, priceLabel].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
@@ -254,7 +261,8 @@ export default function MenuProductsPanel({
                 </Button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

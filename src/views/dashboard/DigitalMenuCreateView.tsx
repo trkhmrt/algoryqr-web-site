@@ -11,6 +11,8 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuOptions,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { MenuDetails, createInitialMenuData, type MenuData } from "@/components/dashboard/qr-create/MenuDetails";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,9 +26,11 @@ import {
   canCreateMenuOnBranch,
   formatBranchMenuQuota,
 } from "@/lib/branch";
+import Link from "next/link";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { buildMenuCreateDetails } from "@/lib/menu-create";
 import type { MenuThemeId } from "@/components/menu-templates/registry";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 export default function DigitalMenuCreateView() {
   const router = useRouter();
@@ -203,10 +207,11 @@ export default function DigitalMenuCreateView() {
     }
   };
 
-  if (accessLoading) {
+  if (accessLoading || branchesQuery.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader title="Menü QR Oluştur" hint="İşletme bilgilerini girin." />
+        <DashboardLoadingState label="Menü oluşturma ekranı hazırlanıyor…" />
       </div>
     );
   }
@@ -218,14 +223,6 @@ export default function DigitalMenuCreateView() {
           Dijital Menüye Dön
         </Button>
         <p className="text-sm text-muted-foreground">Menü QR oluşturmak için PRO paket veya aktif deneme gerekir.</p>
-      </div>
-    );
-  }
-
-  if (branchesQuery.isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     );
   }
@@ -243,34 +240,27 @@ export default function DigitalMenuCreateView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü QR Oluştur</h1>
-          <p className="text-sm text-muted-foreground">
-            {selectedBranch
-              ? `${selectedBranch.name} şubesi için işletme bilgilerini girin.`
-              : "İşletme bilgilerini girin. İsterseniz mevcut bir menünün ürünlerini yeni menüye kopyalayabilirsiniz."}
-          </p>
-          {extraMenuQuotaLabel ? (
-            <p className="mt-1 text-xs text-muted-foreground">{extraMenuQuotaLabel}</p>
-          ) : null}
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Menü QR Oluştur"
+        hint={
+          extraMenuQuotaLabel
+            ? `${selectedBranch.name} şubesi için işletme bilgilerini girin. · ${extraMenuQuotaLabel}`
+            : `${selectedBranch.name} şubesi için işletme bilgilerini girin.`
+        }
+        back={
+          <Link href={DASHBOARD_ROUTES.digitalMenu} aria-label="Menüye dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {menuQrs.length > 0 ? (
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <div className={`${DASHBOARD_PANEL} space-y-4`}>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Copy className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-medium text-foreground">Mevcut menüden kopyala</h2>
+                <h2 className="text-base font-semibold text-foreground">Mevcut menüden kopyala</h2>
               </div>
               <p className="text-xs text-muted-foreground">
                 Aktif menülerinizden birini seçerek ürün ve kategori içeriğini yeni menüye aktarın.
@@ -312,8 +302,8 @@ export default function DigitalMenuCreateView() {
         </div>
       ) : null}
 
-      <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-        <h2 className="text-sm font-medium text-foreground">İşletme Bilgileri</h2>
+      <div className={`${DASHBOARD_PANEL} space-y-5`}>
+        <h2 className="text-base font-semibold text-foreground">İşletme Bilgileri</h2>
         <MenuDetails value={menu} onChange={setMenu} />
       </div>
 

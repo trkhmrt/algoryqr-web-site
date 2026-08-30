@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 
 import {
   DigitalMenuPicker,
@@ -12,6 +11,9 @@ import {
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import {
   AlertDialog,
@@ -30,6 +32,7 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useListQueryState } from "@/hooks/use-list-query-state";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_LIST_ITEM } from "@/lib/dashboard-surface";
 import {
   confirmMerchantOrder,
   listMerchantOrders,
@@ -81,7 +84,7 @@ function OrderCard({
   onReject: () => void;
 }) {
   return (
-    <article className="rounded-lg border border-border bg-card p-4 shadow-sm">
+    <article className={DASHBOARD_LIST_ITEM}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{order.tableName || "Masa"}</h2>
@@ -207,8 +210,12 @@ export default function WaiterOrdersView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Sipariş Yönetimi"
+          hint="Onay bekleyen siparişler"
+        />
+        <DashboardLoadingState label="Sipariş yönetimi hazırlanıyor..." />
       </div>
     );
   }
@@ -216,31 +223,33 @@ export default function WaiterOrdersView() {
   const orders = ordersQuery.data ?? [];
 
   return (
-    <div className="space-y-4 animate-fade-in pb-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sipariş Yönetimi</h1>
-          <p className="text-sm text-muted-foreground">Onay bekleyen siparişler</p>
-        </div>
-        <Button asChild variant="outline">
-          <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
-            Garson uygulamasını aç
-          </a>
-        </Button>
-      </div>
-
-      <DigitalMenuPicker
-        menuQrs={menuQrs}
-        selectedQrId={selection?.qr.id ?? null}
-        onSelectQrId={(qrId) => {
-          void selectQrId(qrId);
-          router.replace(DASHBOARD_ROUTES.waiterForQr(qrId), { scroll: false });
-        }}
+    <div className="space-y-6 animate-fade-in pb-8">
+      <DashboardPageHeader
+        title="Sipariş Yönetimi"
+        hint="Onay bekleyen siparişler"
+        action={
+          <Button asChild variant="outline">
+            <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
+              Garson uygulamasını aç
+            </a>
+          </Button>
+        }
       />
+
+      <DashboardFilterBar>
+        <DigitalMenuPicker
+          menuQrs={menuQrs}
+          selectedQrId={selection?.qr.id ?? null}
+          onSelectQrId={(qrId) => {
+            void selectQrId(qrId);
+            router.replace(DASHBOARD_ROUTES.waiterForQr(qrId), { scroll: false });
+          }}
+        />
+      </DashboardFilterBar>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {menuId ? (
-        <div className="space-y-3">
+        <DashboardFilterBar>
           <DateRangeFilter
             value={range}
             onChange={(next) => {
@@ -249,6 +258,7 @@ export default function WaiterOrdersView() {
             }}
           />
           <Input
+            className="min-w-[12rem] flex-1"
             value={customerQuery}
             onChange={(event) => {
               const next = event.target.value;
@@ -258,7 +268,7 @@ export default function WaiterOrdersView() {
             placeholder="Müşteri adı"
             aria-label="Müşteri adı ile filtrele"
           />
-        </div>
+        </DashboardFilterBar>
       ) : null}
 
       {!menuId ? (
@@ -272,9 +282,7 @@ export default function WaiterOrdersView() {
           }
         />
       ) : ordersQuery.isLoading ? (
-        <div className="flex justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
+        <DashboardLoadingState label="Bekleyen siparişler yükleniyor..." />
       ) : orders.length === 0 ? (
         <EmptyState
           title="Bekleyen sipariş yok"

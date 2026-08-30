@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK } from "@/lib/dashboard-surface";
 import { TGO_SOFT_CARD_CLASS } from "@/lib/trendyol-go-ui";
 
 export default function YemekSepetiHubView() {
@@ -20,21 +22,21 @@ export default function YemekSepetiHubView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Link
-        href={DASHBOARD_ROUTES.integrations}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Entegrasyonlar
-      </Link>
+      <DashboardPageHeader
+        title="Yemek Sepeti"
+        hint="Yemek Sepeti hesabınızdaki siparişleri takip edin ve menünüzü senkronize edin."
+        back={
+          <Link
+            href={DASHBOARD_ROUTES.integrations}
+            aria-label="Entegrasyonlara dön"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       <div className="space-y-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Yemek Sepeti</h1>
-          <p className="text-sm text-muted-foreground">
-            Yemek Sepeti hesabınızdaki siparişleri takip edin ve menünüzü senkronize edin.
-          </p>
-        </div>
         <div className={`flex items-center justify-center ${TGO_SOFT_CARD_CLASS} p-6 sm:p-8`}>
           <Image
             src="/yemek-sepeti/wordmark.png"

@@ -75,6 +75,7 @@ import {
 } from "@/lib/entitlement-display";
 import { isRefundInFlight, purchaseStatusLabel } from "@/lib/refund-display";
 import { ApiError } from "@/lib/api/errors";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 interface SubscriptionSectionProps {
   onNotify: (type: "info" | "warning" | "danger", message: string) => void;
@@ -368,7 +369,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       </div>
 
       {isLoading ? (
-        <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
+        <Card className={DASHBOARD_SURFACE}>
           <CardContent className="p-6">
             <div className="h-24 animate-pulse rounded-md bg-muted" />
           </CardContent>
@@ -378,7 +379,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
       ) : data && !hasActivePackage ? (
         <div className="smart-feature-panel flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
+            <div className={`${DASHBOARD_SURFACE} flex h-10 w-10 shrink-0 items-center justify-center`}>
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
@@ -421,7 +422,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
             />
           ) : null}
 
-          <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
+          <Card className={DASHBOARD_SURFACE}>
             <CardContent className="space-y-4 p-5">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
@@ -431,16 +432,16 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                       Aktif abonelik
                     </p>
                     {(summary?.purchaseType ?? activePurchase?.purchaseType) ? (
-                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                         {purchaseTypeLabel(summary?.purchaseType ?? activePurchase?.purchaseType)}
                       </span>
                     ) : isActiveTrial ? (
-                      <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                         Deneme
                       </span>
                     ) : null}
                     {(summary?.status ?? activePurchase?.status) ? (
-                      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {purchaseStatusLabel(summary?.status ?? activePurchase?.status)}
                       </span>
                     ) : null}
@@ -467,7 +468,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                 ) : null}
               </div>
 
-              <dl className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] divide-y divide-border dark:border-border dark:bg-background">
+              <dl className="overflow-hidden rounded-2xl border border-border bg-muted divide-y divide-border">
                 <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
                   <dt className="text-muted-foreground">Başlangıç</dt>
                   <dd className="text-right font-medium text-foreground">
@@ -577,7 +578,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Paketteki ürünler
                   </p>
-                  <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] divide-y divide-border dark:border-border dark:bg-background">
+                  <div className="overflow-hidden rounded-2xl border border-border bg-muted divide-y divide-border">
                     {products.map((product) => (
                       <div
                         key={product.id}
@@ -602,7 +603,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Şube ve menü hakları
                   </p>
-                  <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] divide-y divide-border dark:border-border dark:bg-background">
+                  <div className="overflow-hidden rounded-2xl border border-border bg-muted divide-y divide-border">
                     {data?.branchQuota ? (
                       <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                         <div className="min-w-0">
@@ -670,7 +671,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Hak detayları (Fulfillment)
                   </p>
-                  <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] divide-y divide-border dark:border-border dark:bg-background">
+                  <div className="overflow-hidden rounded-2xl border border-border bg-muted divide-y divide-border">
                     {fulfillmentDetails.map((detail) => (
                       <div
                         key={detail.id}
@@ -811,7 +812,7 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
           </Card>
 
           {scheduledChange && (
-            <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
+            <Card className={DASHBOARD_SURFACE}>
               <CardContent className="p-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

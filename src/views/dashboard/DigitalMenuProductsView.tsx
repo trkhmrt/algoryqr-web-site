@@ -10,7 +10,10 @@ import {
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import MenuProductsPanel from "@/components/dashboard/menu/MenuProductsPanel";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 export default function DigitalMenuProductsView() {
   const searchParams = useSearchParams();
@@ -29,22 +32,21 @@ export default function DigitalMenuProductsView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-        <div className="flex items-start gap-3">
-          {fromHub ? (
+      <DashboardPageHeader
+        title="Ürünler"
+        hint="Ürünleri seçili menüye ekleyin ve kategorilere bağlayın."
+        back={
+          fromHub ? (
             <Link
-              href={DASHBOARD_ROUTES.digitalMenuEdit(initialQrId)}
-              className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              href={DASHBOARD_ROUTES.digitalMenuEdit(initialQrId!)}
+              aria-label="Menü editörüne dön"
+              className={DASHBOARD_BACK}
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-          ) : null}
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Ürünler</h1>
-            <p className="text-sm text-muted-foreground">
-              Ürünleri seçili menüye ekleyin ve kategorilere bağlayın.
-            </p>
-          </div>
-        </div>
+          ) : undefined
+        }
+      />
 
         {!fromHub ? (
           <DigitalMenuPicker
@@ -56,14 +58,16 @@ export default function DigitalMenuProductsView() {
         ) : null}
 
         {qrId != null ? (
-          <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
+          <div className={DASHBOARD_PANEL}>
             <MenuProductsPanel
               menuId={menuId ?? 0}
               qrId={qrId}
               presetCategoryId={presetCategoryId}
             />
           </div>
-        ) : selectionState.loading ? null : selectionState.error ? (
+        ) : selectionState.loading ? (
+          <DashboardLoadingState label="Menü bilgisi yükleniyor..." />
+        ) : selectionState.error ? (
           <p className="text-sm text-destructive">{selectionState.error}</p>
         ) : null}
     </div>

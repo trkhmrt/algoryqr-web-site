@@ -317,7 +317,7 @@ function OrderCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-foreground">{orderDisplayReference(order)}</p>
             <span
-              className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${packageStatusClass(order.packageStatus)}`}
+              className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${packageStatusClass(order.packageStatus)}`}
             >
               {packageStatusLabel(order.packageStatus)}
             </span>
@@ -339,7 +339,7 @@ function OrderCard({
       </button>
 
       {open ? (
-        <div className="space-y-4 border-t border-[#e5e7eb] px-4 pb-5 pt-4 dark:border-border sm:px-5">
+        <div className="space-y-4 border-t border-border px-4 pb-5 pt-4 sm:px-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailField label="Sipariş no" value={displayValue(order.orderNumber ?? order.externalOrderId)} />
             <DetailField label="Paket no" value={displayValue(order.externalOrderId)} />
@@ -351,7 +351,7 @@ function OrderCard({
 
           {order.note ? (
             <div className={TGO_SOFT_FIELD_CLASS}>
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Sipariş notu</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Sipariş notu</p>
               <p className="mt-0.5 text-sm text-foreground">{order.note}</p>
             </div>
           ) : null}
@@ -363,7 +363,7 @@ function OrderCard({
                 Ürün detayı bulunamadı.
               </div>
             ) : (
-              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-[#e5e7eb] dark:border-border">
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
                 {order.items.map((item, index) => {
                   const detail = item.detail || item.options;
                   return (
@@ -420,7 +420,7 @@ function DetailField({
 }) {
   return (
     <div className={`${TGO_SOFT_FIELD_CLASS} ${className ?? ""}`}>
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
     </div>
   );

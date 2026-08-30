@@ -76,7 +76,7 @@ export function SmartFeaturePanel({
       }`}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
           <Sparkles className="h-5 w-5 text-primary" />
         </div>
         <div className="min-w-0">
@@ -93,7 +93,7 @@ export function SmartFeaturePanel({
             type="button"
             onClick={secondaryAction.onClick}
             disabled={secondaryAction.disabled}
-            className="rounded-full border border-[#e5e7eb] bg-white px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-[#f3f4f6] hover:text-foreground disabled:opacity-60 dark:border-border dark:bg-background dark:hover:bg-muted"
+            className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60 dark:hover:bg-muted"
           >
             {secondaryAction.label}
           </button>

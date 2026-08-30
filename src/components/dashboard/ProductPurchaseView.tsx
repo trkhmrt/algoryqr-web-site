@@ -23,6 +23,7 @@ import {
 } from "@/lib/purchase-fulfillment";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 type CatalogProduct = {
   id: number;
@@ -162,7 +163,7 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
           Ürün yükleniyor…
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <div className={`${DASHBOARD_SURFACE} p-6 space-y-4`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-lg font-semibold">

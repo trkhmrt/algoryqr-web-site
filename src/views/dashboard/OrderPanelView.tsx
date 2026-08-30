@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { BarChart3, Bell, Check, ChevronRight, Copy, ExternalLink } from "lucide-react";
+import { BarChart3, Bell, Check, Copy, ExternalLink } from "lucide-react";
 
+import { DashboardHubTile } from "@/components/dashboard/DashboardHubTile";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { DASHBOARD_HUB_GRID, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 const HUB_ITEMS = [
@@ -45,13 +47,11 @@ export default function OrderPanelView() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-4 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Garson Paneli</h1>
-        <p className="text-sm text-muted-foreground">
-          Garsonların masa ve sipariş yönetimi için bağımsız uygulama
-        </p>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title="Garson Paneli"
+        hint="Garsonların masa ve sipariş yönetimi için bağımsız uygulama"
+      />
 
       <div className="flex items-center gap-2">
         <Button asChild className="h-11 min-w-0 flex-1 gap-2">
@@ -63,7 +63,7 @@ export default function OrderPanelView() {
         <button
           type="button"
           onClick={() => void copyPanelLink()}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-muted"
+          className={`${DASHBOARD_SURFACE} inline-flex h-11 w-11 shrink-0 items-center justify-center text-foreground transition-colors hover:bg-muted`}
           aria-label="Garson paneli linkini kopyala"
           title={linkCopied ? "Kopyalandı" : "Linki kopyala"}
         >
@@ -75,28 +75,16 @@ export default function OrderPanelView() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
-        {HUB_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.key}
-              href={item.href}
-              className="flex w-full items-center justify-between gap-3 bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
-                  <p className="truncate text-xs text-muted-foreground">{item.description}</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Link>
-          );
-        })}
+      <div className={DASHBOARD_HUB_GRID}>
+        {HUB_ITEMS.map((item) => (
+          <DashboardHubTile
+            key={item.key}
+            title={item.title}
+            description={item.description}
+            icon={item.icon}
+            href={item.href}
+          />
+        ))}
       </div>
     </div>
   );

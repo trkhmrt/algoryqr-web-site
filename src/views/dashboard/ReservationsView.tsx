@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterSelect } from "@/components/dashboard/FilterSelect";
 import { useListQueryState } from "@/hooks/use-list-query-state";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_STAT_TILE, DASHBOARD_TYPE_KPI } from "@/lib/dashboard-surface";
 import {
   DigitalMenuPicker,
   useDigitalMenuSelection,
@@ -287,15 +288,15 @@ function ReservationsPanel() {
                 setStatus("all");
                 setPage(0);
               }}
-              className="rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/50"
+              className={DASHBOARD_STAT_TILE}
             >
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted">
                   <CalendarDays className="h-3.5 w-3.5" style={{ color: "hsl(var(--chart-indigo))" }} />
                 </div>
-                <p className="text-[11px] text-muted-foreground">Toplam</p>
+                <p className="text-xs text-muted-foreground">Toplam</p>
               </div>
-              <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+              <p className={`mt-2 tabular-nums ${DASHBOARD_TYPE_KPI}`}>
                 {counts.total}
               </p>
             </button>
@@ -305,15 +306,15 @@ function ReservationsPanel() {
                 setStatus("PENDING");
                 setPage(0);
               }}
-              className="rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/50"
+              className={DASHBOARD_STAT_TILE}
             >
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted">
                   <Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--chart-orange))" }} />
                 </div>
-                <p className="text-[11px] text-muted-foreground">Bekleyen</p>
+                <p className="text-xs text-muted-foreground">Bekleyen</p>
               </div>
-              <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+              <p className={`mt-2 tabular-nums ${DASHBOARD_TYPE_KPI}`}>
                 {counts.pending}
               </p>
             </button>
@@ -323,15 +324,15 @@ function ReservationsPanel() {
                 setStatus("ACTIVE");
                 setPage(0);
               }}
-              className="rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/50"
+              className={DASHBOARD_STAT_TILE}
             >
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted">
                   <CheckCircle2 className="h-3.5 w-3.5" style={{ color: "hsl(var(--chart-green))" }} />
                 </div>
-                <p className="text-[11px] text-muted-foreground">Aktif</p>
+                <p className="text-xs text-muted-foreground">Aktif</p>
               </div>
-              <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+              <p className={`mt-2 tabular-nums ${DASHBOARD_TYPE_KPI}`}>
                 {counts.active}
               </p>
             </button>
@@ -365,7 +366,7 @@ function ReservationsPanel() {
                 </>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Bu listedeki dağılım · {counts.pending} bekleyen · {counts.active} aktif
               {counts.canceled > 0 ? ` · ${counts.canceled} iptal` : ""}
             </p>
@@ -456,7 +457,7 @@ function ReservationsPanel() {
                         </p>
                       </div>
                       <span
-                        className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${statusClass(item.status)}`}
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${statusClass(item.status)}`}
                       >
                         {statusLabel(item.status)}
                       </span>

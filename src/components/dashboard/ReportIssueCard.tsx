@@ -20,7 +20,7 @@ export function ReportIssueCard({ className }: ReportIssueCardProps) {
         aria-label="Sorun bildir"
         className={className ? `${className} items-start` : undefined}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-muted/30 text-muted-foreground dark:border-border">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-muted-foreground">
           <LifeBuoy className="h-4 w-4" strokeWidth={1.75} aria-hidden />
         </span>
         <span className="min-w-0 text-left">

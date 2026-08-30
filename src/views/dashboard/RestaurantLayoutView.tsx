@@ -11,6 +11,8 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { downloadQrImage, getQrDataUrl } from "@/components/dashboard/qr/qr-actions";
 import {
@@ -26,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 import {
   createMenuTable,
   deleteMenuTable,
@@ -185,30 +188,32 @@ export default function RestaurantLayoutView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader title="Restoran Düzeni" hint="Masa QR kodlarını yönetin." />
+        <DashboardLoadingState label="Restoran düzeni yükleniyor…" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 animate-fade-in">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href={
-            selection?.qr.id
-              ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
-              : DASHBOARD_ROUTES.digitalMenu
-          }
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Restoran Düzeni</h1>
-          <p className="text-sm text-muted-foreground">Masa QR kodlarını yönetin.</p>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-5xl space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title="Restoran Düzeni"
+        hint="Masa QR kodlarını yönetin."
+        back={
+          <Link
+            href={
+              selection?.qr.id
+                ? DASHBOARD_ROUTES.digitalMenuEdit(selection.qr.id)
+                : DASHBOARD_ROUTES.digitalMenu
+            }
+            aria-label="Menü düzenleyiciye dön"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       <DigitalMenuPicker
         menuQrs={menuQrs}
@@ -223,7 +228,7 @@ export default function RestaurantLayoutView() {
         <p className="text-sm text-muted-foreground">Menü seçin.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-          <div className="space-y-3 rounded-lg border border-border p-3">
+          <div className={`${DASHBOARD_PANEL} space-y-3`}>
             <p className="text-sm font-medium">Seçili masa QR</p>
             {selected?.qrImageBase64 ? (
               // eslint-disable-next-line @next/next/no-img-element

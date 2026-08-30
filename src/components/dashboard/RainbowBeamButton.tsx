@@ -28,7 +28,7 @@ export function RainbowBeamButton({
         prominent ? "rainbow-beam-prominent" : ""
       } ${className ?? ""}`}
     >
-      <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide text-white">
+      <span className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide text-primary-foreground">
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
         {label}
       </span>

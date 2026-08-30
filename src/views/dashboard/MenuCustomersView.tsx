@@ -3,9 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
 
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import { listBusinessCustomers, type MenuCustomerItem } from "@/lib/waiter-api";
 import { cn } from "@/lib/utils";
 
@@ -158,8 +163,12 @@ export default function MenuCustomersView() {
 
   if (accessLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in pb-8">
+        <DashboardPageHeader
+          title="Müşteriler"
+          hint="İşletmenize kayıtlı tüm müşteriler (silinen menüler dahil)"
+        />
+        <DashboardLoadingState label="Müşteriler hazırlanıyor..." />
       </div>
     );
   }
@@ -170,30 +179,11 @@ export default function MenuCustomersView() {
       : customers.every((item) => item.menuId == null || String(item.menuId) !== menuFilter);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 animate-fade-in pb-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Müşteriler</h1>
-        <p className="text-sm text-muted-foreground">
-          İşletmenize kayıtlı tüm müşteriler (silinen menüler dahil)
-        </p>
-      </div>
-
-      {menuFilterOptions.length > 0 ? (
-        <div className="max-w-md space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Menü</Label>
-          <SearchableSelect
-            value={menuFilter}
-            onValueChange={setMenuFilter}
-            options={[
-              { value: ALL_MENUS, label: "Tümü" },
-              ...menuFilterOptions,
-            ]}
-            placeholder="Menü seçin"
-            searchPlaceholder="Menü ara..."
-            emptyText="Menü bulunamadı."
-          />
-        </div>
-      ) : null}
+    <div className="space-y-6 animate-fade-in pb-8">
+      <DashboardPageHeader
+        title="Müşteriler"
+        hint="İşletmenize kayıtlı tüm müşteriler (silinen menüler dahil)"
+      />
 
       {customersQuery.isError ? (
         <p className="text-sm text-destructive">
@@ -204,31 +194,53 @@ export default function MenuCustomersView() {
       ) : null}
 
       {customersQuery.isLoading ? (
-        <div className="flex justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
+        <DashboardLoadingState label="Müşteriler yükleniyor..." />
       ) : (
         <>
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ad, e-posta veya menü ara…"
-              className="h-9 pl-9"
-              aria-label="Müşteri ara"
-            />
-          </div>
+          {menuFilterOptions.length > 0 ? (
+            <DashboardFilterBar>
+              <div className="min-w-0 flex-1 space-y-1.5 sm:max-w-xs">
+                <Label className="text-xs text-muted-foreground">Menü</Label>
+                <SearchableSelect
+                  value={menuFilter}
+                  onValueChange={setMenuFilter}
+                  options={[
+                    { value: ALL_MENUS, label: "Tümü" },
+                    ...menuFilterOptions,
+                  ]}
+                  placeholder="Menü seçin"
+                  searchPlaceholder="Menü ara..."
+                  emptyText="Menü bulunamadı."
+                />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5 sm:max-w-xs">
+                <Label className="text-xs text-muted-foreground">Ara</Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Ad, e-posta veya menü ara…"
+                    className="h-9 pl-9"
+                    aria-label="Müşteri ara"
+                  />
+                </div>
+              </div>
+            </DashboardFilterBar>
+          ) : null}
+
           {scopedEmpty ? (
-            <div className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              Henüz müşteri yok.
-            </div>
+            <EmptyState
+              title="Henüz müşteri yok"
+              description="Menü müşterileri kayıt oldukça burada listelenir."
+            />
           ) : filtered.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              Aramanızla eşleşen müşteri yok.
-            </div>
+            <EmptyState
+              title="Eşleşen müşteri yok"
+              description="Arama veya menü filtresini değiştirip tekrar deneyin."
+            />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border">
+            <div className={`${DASHBOARD_SURFACE} overflow-hidden`}>
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40 hover:bg-muted/40">

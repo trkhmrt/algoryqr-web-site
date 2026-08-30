@@ -4,6 +4,7 @@ import { CheckCircle2, Clock3, CreditCard } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPackageDate } from "@/lib/package-display";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   REFUND_BANK_ETA_COPY,
   formatRefundAmountLabel,
@@ -46,7 +47,7 @@ export default function RefundStatusPanel({
   const cardLabel = formatRefundCardLabel(cardBrand, cardLastFour);
 
   return (
-    <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
+    <Card className={DASHBOARD_SURFACE}>
       <CardContent className="space-y-4 p-6">
         <div className="flex items-start gap-3">
           {inFlight ? (
@@ -63,7 +64,7 @@ export default function RefundStatusPanel({
             </p>
           </div>
         </div>
-        <div className="space-y-2 rounded-2xl border border-[#e5e7eb] bg-[#fafafa] p-4 text-sm dark:border-border dark:bg-background">
+        <div className="space-y-2 rounded-2xl border border-border bg-muted p-4 text-sm">
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">İade tutarı</span>
             <span className="font-semibold text-foreground">

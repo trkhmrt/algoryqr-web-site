@@ -6,6 +6,8 @@ import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { useRequireScope } from "@/components/auth/RequireScope";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -18,6 +20,7 @@ import {
   smartReportTitle,
   type SmartReportDetailResponse,
 } from "@/lib/smart-report";
+import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   downloadSmartReportPdf,
   smartReportMarkdownToHtml,
@@ -73,8 +76,17 @@ export default function SmartReportDetailView({ jobId }: Props) {
 
   if (accessLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Akıllı rapor"
+          hint="Rapor detayı yükleniyor"
+          back={
+            <Link href={DASHBOARD_ROUTES.smartReports} aria-label="Raporlara dön" className={DASHBOARD_BACK}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          }
+        />
+        <DashboardLoadingState label="Rapor detayı hazırlanıyor…" />
       </div>
     );
   }
@@ -108,45 +120,40 @@ export default function SmartReportDetailView({ jobId }: Props) {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.smartReports}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
-            {result?.title || (detail ? smartReportTitle(detail) : "Akilli rapor")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {detail
-              ? `${smartReportTitle(detail)} · ${detail.from} – ${detail.to}`
-              : "Rapor detayi"}
-          </p>
-        </div>
-        {result && markdown && !pending ? (
-          <Button onClick={() => void handleDownloadPdf()} disabled={pdfLoading}>
-            {pdfLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            PDF indir
-          </Button>
-        ) : null}
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title={result?.title || (detail ? smartReportTitle(detail) : "Akıllı rapor")}
+        hint={
+          detail
+            ? `${smartReportTitle(detail)} · ${detail.from} – ${detail.to}`
+            : "Rapor detayı"
+        }
+        back={
+          <Link href={DASHBOARD_ROUTES.smartReports} aria-label="Raporlara dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+        action={
+          result && markdown && !pending ? (
+            <Button onClick={() => void handleDownloadPdf()} disabled={pdfLoading}>
+              {pdfLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              PDF indir
+            </Button>
+          ) : null
+        }
+      />
 
       {detailQuery.isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
+        <DashboardLoadingState label="Rapor yükleniyor…" />
       ) : detailQuery.isError ? (
         <p className="text-sm text-destructive">Rapor yuklenemedi.</p>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm sm:grid-cols-3">
+          <div className={`${DASHBOARD_SURFACE} grid gap-2 px-3 py-2.5 text-sm sm:grid-cols-3`}>
             <div>
               <p className="text-xs text-muted-foreground">Durum</p>
               <p className="font-medium text-foreground">{statusLabel(detail?.status)}</p>
@@ -178,7 +185,7 @@ export default function SmartReportDetailView({ jobId }: Props) {
 
           {bodyHtml ? (
             <div
-              className="rounded-lg border border-border bg-card p-4 text-sm text-foreground [&_h1]:mb-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:mb-1 [&_p]:mb-2 [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5"
+              className={`${DASHBOARD_SURFACE} p-4 text-sm text-foreground [&_h1]:mb-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:mb-1 [&_p]:mb-2 [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5`}
               dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
           ) : result && !pending ? (

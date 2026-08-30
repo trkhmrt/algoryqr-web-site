@@ -131,10 +131,10 @@ export default function TrendyolGoProductsView() {
                     <img
                       src={product.imageUrl}
                       alt=""
-                      className="h-16 w-16 shrink-0 rounded-xl border border-[#e5e7eb] object-cover dark:border-border"
+                      className="h-16 w-16 shrink-0 rounded-xl border border-border object-cover"
                     />
                   ) : (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-[#fafafa] text-xs text-muted-foreground dark:border-border dark:bg-muted">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs text-muted-foreground">
                       Görsel yok
                     </div>
                   )}
@@ -150,7 +150,7 @@ export default function TrendyolGoProductsView() {
                         {product.categoryName || "Kategori yok"}
                       </span>
                       <span
-                        className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${productAvailabilityClass(product.available)}`}
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${productAvailabilityClass(product.available)}`}
                       >
                         {productAvailabilityLabel(product.available)}
                       </span>

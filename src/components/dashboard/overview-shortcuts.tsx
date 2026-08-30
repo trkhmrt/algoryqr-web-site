@@ -15,10 +15,17 @@ import { RequireScope } from "@/components/auth/RequireScope";
 import { NavBadge } from "@/components/dashboard/NavBadge";
 import type { ProductScope } from "@/lib/auth-user";
 import { resolveDigitalMenuMenusHref } from "@/lib/dashboard-menu-context";
+import {
+  DASHBOARD_HUB_GRID,
+  DASHBOARD_ICON_WELL,
+  DASHBOARD_TILE,
+  DASHBOARD_TILE_ROW,
+  DASHBOARD_TYPE_KPI,
+  DASHBOARD_TYPE_META,
+} from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
-export const SHORTCUT_CARD_CLASS =
-  "group flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-4 text-left shadow-none transition-colors hover:bg-muted/50 dark:border-border dark:bg-card";
+export const SHORTCUT_CARD_CLASS = DASHBOARD_TILE_ROW;
 
 type OverviewTile = {
   title: string;
@@ -79,7 +86,7 @@ function Tile({
 
   return (
     <Link href={resolvedHref} className={SHORTCUT_CARD_CLASS}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] bg-muted/30 text-muted-foreground dark:border-border">
+      <span className={`${DASHBOARD_ICON_WELL} h-9 w-9 text-sm`}>
         <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
       </span>
       <span className="min-w-0 flex-1 text-sm font-medium tracking-tight text-foreground">{title}</span>
@@ -96,7 +103,7 @@ export function OverviewShortcutGrid({
   pendingOrderCount: number;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+    <div className={DASHBOARD_HUB_GRID}>
       {tiles.map((tile) => (
         <RequireScope key={tile.title} scope={tile.requiredScope}>
           <Tile
@@ -125,14 +132,14 @@ export function OverviewStatCard({
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-[#e5e7eb] bg-white p-4 transition-colors hover:bg-muted/50 dark:border-border dark:bg-card"
+      className={DASHBOARD_TILE}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className={`${DASHBOARD_TYPE_META} font-semibold uppercase tracking-wider`}>{label}</p>
         <NavBadge count={badgeCount} className="ml-0" />
       </div>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      <p className={`mt-2 ${DASHBOARD_TYPE_KPI}`}>{value}</p>
+      <p className={`mt-1 ${DASHBOARD_TYPE_META}`}>{hint}</p>
     </Link>
   );
 }

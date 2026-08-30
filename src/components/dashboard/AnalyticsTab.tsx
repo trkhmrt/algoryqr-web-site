@@ -551,7 +551,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       ) : null}
 
       {noBranches ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           {isOrders
             ? "Sipariş raporları için önce bir şube oluşturun. "
             : "Raporlar için önce bir şube oluşturun. "}
@@ -641,13 +641,13 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       ) : null}
 
       {activeReportView === "visits" && branchId != null && reportQuery.isError ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           Rapor yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
 
       {activeReportView === "revenue" && branchId != null && !canUseRevenue ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           Ciro raporları Pro veya Ultimate paket ile kullanılabilir.{" "}
           <Link
             href={DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING")}
@@ -659,7 +659,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       ) : null}
 
       {activeReportView === "revenue" && branchId != null && canUseRevenue && revenueQuery.isError ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           Ciro raporu yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
@@ -669,7 +669,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       ) : null}
 
       {activeReportView === "personnel" && branchId != null && !canUseRevenue ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           Personel raporları Pro veya Ultimate paket ile kullanılabilir.{" "}
           <Link
             href={DASHBOARD_ROUTES.accountPackagesHighlight("SMART_REPORTING")}
@@ -681,7 +681,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       ) : null}
 
       {activeReportView === "personnel" && branchId != null && canUseRevenue && personnelQuery.isError ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           Personel raporu yüklenemedi. Yetkinizi ve menü sahipliğini kontrol edin.
         </div>
       ) : null}
@@ -693,7 +693,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
       {activeReportView === "visits" && branchId != null && !visitLoading && !reportQuery.isError ? (
         <>
           {empty ? (
-            <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
               Seçilen dönemde henüz ziyaret verisi yok. Public menü taramaları burada görünecek.
             </div>
           ) : null}
@@ -705,7 +705,7 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glow-card rounded-lg border bg-card text-card-foreground shadow-sm"
+                className="rounded-2xl border border-[#e5e7eb] bg-white text-card-foreground shadow-none dark:border-border dark:bg-card"
               >
                 <div className="p-5">
                   <m.icon className="h-4 w-4" style={{ color: m.color }} />
@@ -718,8 +718,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
             ))}
           </div>
 
-          <div className="glow-card rounded-lg border bg-card p-6">
-            <h2 className="mb-4 text-sm font-medium text-foreground">Günlük oturum & görüntüleme</h2>
+          <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+            <h2 className="mb-4 text-base font-semibold text-foreground">Günlük oturum & görüntüleme</h2>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={daily}>
@@ -747,8 +747,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">Saatlik yoğunluk</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">Saatlik yoğunluk</h2>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hourly}>
@@ -762,8 +762,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
               </div>
             </div>
 
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">Cihaz dağılımı</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">Cihaz dağılımı</h2>
               <div className="h-56 flex items-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -789,8 +789,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">En çok görüntülenen ürünler</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">En çok görüntülenen ürünler</h2>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -816,8 +816,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
               </div>
             </div>
 
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">En çok görüntülenen kategoriler</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">En çok görüntülenen kategoriler</h2>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={visit.topCategories}>
@@ -833,8 +833,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">Kategori → ürün yoğunluk</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">Kategori → ürün yoğunluk</h2>
               <div className="h-64">
                 {treeData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -852,8 +852,8 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
               </div>
             </div>
 
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">Funnel: menü → kategori → ürün</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">Funnel: menü → kategori → ürün</h2>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={funnel}>

@@ -208,7 +208,7 @@ export function ReportIssueForm({ className, onSuccess }: ReportIssueFormProps) 
               className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80 disabled:opacity-50"
               onChange={(e) => void handleFileChange(e)}
             />
-            <p className="text-[11px] text-muted-foreground">JPEG, PNG veya WebP · en fazla 5 MB</p>
+            <p className="text-xs text-muted-foreground">JPEG, PNG veya WebP · en fazla 5 MB</p>
             {previewUrl ? (
               <Button
                 type="button"

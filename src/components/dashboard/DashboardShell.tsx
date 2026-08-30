@@ -238,7 +238,7 @@ function DashboardShellInner({ children }: DashboardShellProps) {
             {visibleNavGroups.map(({ group, items }) => (
               <div key={group.id} className="space-y-1">
                 {group.label && !collapsed ? (
-                  <p className="px-2.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  <p className="px-2.5 pb-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                     {group.label}
                   </p>
                 ) : null}
@@ -347,7 +347,7 @@ function DashboardShellInner({ children }: DashboardShellProps) {
             >
               <Search className="size-4" />
               Ara
-              <kbd className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium">
+              <kbd className="rounded border border-border px-1.5 py-0.5 text-xs font-medium">
                 Ctrl K
               </kbd>
             </Button>

@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { nextSetupStep, type SetupStep } from "@/lib/dashboard-setup";
 import { cn } from "@/lib/utils";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 type SetupChecklistProps = {
   steps: SetupStep[];
@@ -16,12 +17,12 @@ export function SetupChecklist({ steps }: SetupChecklistProps) {
 
   return (
     <section
-      className="rounded-2xl border border-[#e5e7eb] bg-white p-4 dark:border-border dark:bg-card sm:p-5"
+      className={`${DASHBOARD_SURFACE} p-4 sm:p-5`}
       aria-label="Kurulum"
     >
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">İlk kurulum</h2>
+          <h2 className="text-base font-semibold text-foreground">İlk kurulum</h2>
           <p className="text-xs text-muted-foreground">Şube, menü ve yayın. Sırayla bitirin.</p>
         </div>
         {next ? (
@@ -46,7 +47,7 @@ export function SetupChecklist({ steps }: SetupChecklistProps) {
             >
               <span
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                   step.done ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground",
                 )}
               >

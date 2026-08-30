@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, FileText, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Clock, FileText, RefreshCw } from "lucide-react";
 
 import { useRequireScope } from "@/components/auth/RequireScope";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { EmptyState } from "@/components/dashboard/EmptyState";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   getSmartReportQuotaRequest,
   isSmartReportCompleted,
@@ -68,14 +71,14 @@ function QuotaCountdownCard({
   }, [countdownDone, exhausted, queryClient]);
 
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-3">
+    <div className={`${DASHBOARD_SURFACE} px-3 py-3`}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex items-start gap-2.5">
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Son kullanım
             </p>
             <p className="mt-0.5 text-sm font-medium text-foreground">
@@ -89,7 +92,7 @@ function QuotaCountdownCard({
             <RefreshCw className="h-3.5 w-3.5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {exhausted ? "Yenilenmeye" : "Kalan hak"}
             </p>
             {exhausted ? (
@@ -123,20 +126,17 @@ export default function SmartReportsView() {
 
   if (accessLoading) {
     return (
-      <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-8 rounded-lg" />
-          <div className="space-y-2">
-            <Skeleton className="h-7 w-40" />
-            <Skeleton className="h-4 w-56" />
-          </div>
-        </div>
-        <Skeleton className="h-20 w-full rounded-lg" />
-        <div className="space-y-2">
-          <Skeleton className="h-12 w-full rounded-lg" />
-          <Skeleton className="h-12 w-full rounded-lg" />
-          <Skeleton className="h-12 w-full rounded-lg" />
-        </div>
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Akıllı raporlar"
+          hint="Oluşturduğunuz raporların geçmişi"
+          back={
+            <Link href={DASHBOARD_ROUTES.reportsHub} aria-label="Raporlara dön" className={DASHBOARD_BACK}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          }
+        />
+        <DashboardLoadingState label="Akıllı raporlar yükleniyor…" />
       </div>
     );
   }
@@ -152,45 +152,38 @@ export default function SmartReportsView() {
     null;
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.reportsHub}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Akilli raporlar
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Olusturdugunuz raporlarin gecmisi
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title="Akıllı raporlar"
+        hint="Oluşturduğunuz raporların geçmişi"
+        back={
+          <Link href={DASHBOARD_ROUTES.reportsHub} aria-label="Raporlara dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {quota ? <QuotaCountdownCard quota={quota} lastUsedAt={lastUsedAt} /> : null}
 
       {listQuery.isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
+        <DashboardLoadingState label="Rapor listesi yükleniyor…" />
       ) : listQuery.isError ? (
-        <p className="text-sm text-destructive">Rapor listesi yuklenemedi.</p>
+        <p className="text-sm text-destructive">Rapor listesi yüklenemedi.</p>
       ) : items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center">
-          <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Henuz akilli rapor yok.</p>
-          <Link
-            href={DASHBOARD_ROUTES.analytics}
-            className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
-          >
-            Raporlardan akıllı rapor oluştur
-          </Link>
-        </div>
+        <EmptyState
+          title="Henüz akıllı rapor yok"
+          description="Analitik sayfasından ilk akıllı raporunuzu oluşturabilirsiniz."
+          action={
+            <Link
+              href={DASHBOARD_ROUTES.analytics}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Raporlardan akıllı rapor oluştur
+            </Link>
+          }
+        />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+        <div className={`${DASHBOARD_SURFACE} overflow-hidden divide-y divide-border`}>
           {items.map((item) => {
             const id = resolveSmartReportProcessId(item);
             if (!id) return null;
@@ -198,7 +191,7 @@ export default function SmartReportsView() {
               <Link
                 key={id}
                 href={DASHBOARD_ROUTES.smartReportDetail(id)}
-                className="flex items-center justify-between gap-3 bg-card px-3 py-2.5 transition-colors hover:bg-muted/50"
+                className="flex items-center justify-between gap-3 bg-white px-3 py-2.5 transition-colors hover:bg-muted/50 dark:bg-card"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{smartReportTitle(item)}</p>

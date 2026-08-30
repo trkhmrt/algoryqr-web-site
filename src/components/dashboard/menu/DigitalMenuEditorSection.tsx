@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 type DigitalMenuEditorSectionProps = {
   title: string;
@@ -21,7 +22,7 @@ export default function DigitalMenuEditorSection({
   children,
 }: DigitalMenuEditorSectionProps) {
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className={DASHBOARD_SURFACE}>
       <button
         type="button"
         onClick={() => onOpenChange(!open)}

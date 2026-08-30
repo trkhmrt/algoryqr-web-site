@@ -11,7 +11,7 @@ export function NavBadge({ count, className }: NavBadgeProps) {
   return (
     <span
       className={cn(
-        "ml-auto inline-flex min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold leading-none text-destructive-foreground",
+        "ml-auto inline-flex min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-xs font-semibold leading-none text-destructive-foreground",
         className,
       )}
       aria-label={`${count} bekleyen sipariş`}

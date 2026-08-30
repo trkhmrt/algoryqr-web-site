@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -11,22 +11,24 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterSelect } from "@/components/dashboard/FilterSelect";
 import { useListQueryState } from "@/hooks/use-list-query-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   activateCampaign,
-  createCampaign,
   listCampaigns,
   pauseCampaign,
   type CampaignItem,
 } from "@/lib/campaign-api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_LIST_ITEM } from "@/lib/dashboard-surface";
 
 function statusLabel(status: CampaignItem["status"]): string {
   switch (status) {
@@ -102,8 +104,12 @@ export default function CampaignsView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Kampanyalar"
+          hint="Sadakat programı kampanyalarını oluşturun ve müşterilerinize sunun."
+        />
+        <DashboardLoadingState label="Kampanyalar hazırlanıyor..." />
       </div>
     );
   }
@@ -123,14 +129,11 @@ export default function CampaignsView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Kampanyalar</h1>
-          <p className="text-sm text-muted-foreground">
-            Sadakat programı kampanyalarını oluşturun ve müşterilerinize sunun.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:items-end">
+      <DashboardPageHeader
+        title="Kampanyalar"
+        hint="Sadakat programı kampanyalarını oluşturun ve müşterilerinize sunun."
+        action={
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <DigitalMenuPicker
             menuQrs={menuQrs}
             selectedQrId={selection?.qr.id ?? null}
@@ -153,7 +156,8 @@ export default function CampaignsView() {
             Kampanya Oluştur
           </Button>
         </div>
-      </div>
+        }
+      />
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
@@ -168,18 +172,12 @@ export default function CampaignsView() {
           }
         />
       ) : menuId == null ? (
-        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Menü bilgisi yükleniyor…
-        </div>
+        <DashboardLoadingState label="Menü bilgisi yükleniyor..." />
       ) : campaignsQuery.isLoading ? (
-        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Kampanyalar yükleniyor…
-        </div>
+        <DashboardLoadingState label="Kampanyalar yükleniyor..." />
       ) : (
         <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <DashboardFilterBar>
             <FilterSelect
               className="w-full sm:w-[12rem]"
               label="Durum"
@@ -210,7 +208,7 @@ export default function CampaignsView() {
                 aria-label="Kampanya ara"
               />
             </div>
-          </div>
+          </DashboardFilterBar>
       {campaigns.length === 0 ? (
         <EmptyState
           title="Henüz kampanya yok"
@@ -251,8 +249,8 @@ export default function CampaignsView() {
       ) : (
         <div className="space-y-3">
           {filteredCampaigns.map((campaign) => (
-            <Card key={campaign.id} className="transition-colors hover:border-primary/40">
-              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <article key={campaign.id} className={DASHBOARD_LIST_ITEM}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Link
                   href={
                     selection?.qr.id
@@ -304,8 +302,8 @@ export default function CampaignsView() {
                     </Button>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           ))}
         </div>
       )}
