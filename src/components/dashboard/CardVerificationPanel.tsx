@@ -4,16 +4,13 @@ import { useState } from "react";
 import { CreditCard, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-import PaymentCheckoutOverlay, {
-  type PaymentCheckoutOverlayContent,
-} from "@/components/dashboard/PaymentCheckoutOverlay";
+import { CardStorageOverlay, type CardStorageSession } from "@/components/dashboard/CardStorageOverlay";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { ApiError } from "@/lib/api";
 import { initiateCardVerification, persistCardVerificationReturn } from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
-import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 
 type CardVerificationPanelProps = {
   title?: string;
@@ -23,30 +20,27 @@ type CardVerificationPanelProps = {
 
 export function CardVerificationPanel({
   title = "Kredi kartı ekle",
-  description = "Kart bilgileri PayTR'da saklanır. 1 TL doğrulama çekilir ve iade edilir. Deneme bitince aynı karttan paket bedeli alınır.",
+  description = "Kart bilgileri doğrudan PayTR'ye iletilir ve orada saklanır. 1 TL doğrulama çekilir, ardından otomatik iade edilir. Deneme bitince aynı karttan paket bedeli alınır.",
   returnPath = DASHBOARD_ROUTES.accountPaymentMethods,
 }: CardVerificationPanelProps) {
   const { notify } = useDashboardBanners();
   const [starting, setStarting] = useState(false);
-  const [overlay, setOverlay] = useState<PaymentCheckoutOverlayContent | null>(null);
+  const [session, setSession] = useState<CardStorageSession | null>(null);
 
   const start = async () => {
     setStarting(true);
     try {
       persistCardVerificationReturn(returnPath);
       const response = await initiateCardVerification();
-      if (response.paymentPageUrl) {
-        setOverlay({ kind: "url", content: response.paymentPageUrl });
+      if (!response.actionUrl || !response.fields) {
+        notify("danger", "Kart kayıt oturumu açılamadı.");
         return;
       }
-      if (response.checkoutFormContent) {
-        setOverlay({
-          kind: "html",
-          content: paytrCheckoutHtml(response.checkoutFormContent),
-        });
-        return;
-      }
-      notify("danger", "PayTR ödeme ekranı açılamadı.");
+      setSession({
+        conversationId: response.conversationId,
+        actionUrl: response.actionUrl,
+        fields: response.fields,
+      });
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Kart doğrulama başlatılamadı.";
       notify("danger", message);
@@ -63,7 +57,7 @@ export function CardVerificationPanel({
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <p className="text-sm text-muted-foreground">{description}</p>
           <p className="text-xs text-muted-foreground">
-            PayTR ekranında kart kaydını onaylayın. Onaysız kart kaydedilmez. Fatura adresi ve telefon
+            Kart numarası sunucumuza gelmez; form doğrudan PayTR&apos;ye gider. Fatura adresi ve telefon
             zorunludur.{" "}
             <Link href={DASHBOARD_ROUTES.accountBillingAddresses} className="text-primary underline">
               Fatura adresi
@@ -73,15 +67,9 @@ export function CardVerificationPanel({
       </div>
       <Button className="w-full gap-2" disabled={starting} onClick={() => void start()}>
         {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-        Kartı PayTR ile kaydet
+        Kartı kaydet
       </Button>
-      {overlay ? (
-        <PaymentCheckoutOverlay
-          overlay={overlay}
-          title={isPaytrCheckout(overlay) ? "Kart kaydı (PayTR)" : "Kart kaydı"}
-          onClose={() => setOverlay(null)}
-        />
-      ) : null}
+      {session ? <CardStorageOverlay session={session} onClose={() => setSession(null)} /> : null}
     </div>
   );
 }

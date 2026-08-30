@@ -12,9 +12,8 @@ export type CardVerificationStatusValue = "INITIATED" | "SUCCESS" | "REFUNDED" |
 
 export interface CardVerificationInitResponse {
   conversationId: string;
-  token?: string;
-  paymentPageUrl?: string;
-  checkoutFormContent?: string;
+  actionUrl: string;
+  fields: Record<string, string>;
 }
 
 export interface CardVerificationStatusResponse {
