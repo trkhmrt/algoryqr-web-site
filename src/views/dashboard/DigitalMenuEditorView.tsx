@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  ChevronRight,
   ExternalLink,
   LayoutGrid,
   Loader2,
@@ -13,10 +11,13 @@ import {
 } from "lucide-react";
 
 import { RequireScope } from "@/components/auth/RequireScope";
+import { DashboardHubTile } from "@/components/dashboard/DashboardHubTile";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import { Button } from "@/components/ui/button";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
+import { DASHBOARD_BACK, DASHBOARD_HUB_GRID } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 type DigitalMenuEditorViewProps = {
@@ -67,58 +68,44 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
   }
 
   return (
-    <div className="mx-auto w-full max-w-md space-y-4 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
-            {menuName || "Menü"}
-          </h1>
-          <p className="truncate text-sm text-muted-foreground">
-            {menuName ? "Dijital menü" : "Menü yönetimi"}
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm" className="h-8 shrink-0 gap-1.5">
-          <a href={menuHref} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-3.5 w-3.5" />
-            Menüyü aç
-          </a>
-        </Button>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title={menuName || "Menü"}
+        hint={menuName ? "Dijital menü" : "Menü yönetimi"}
+        back={
+          <button
+            type="button"
+            onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+        }
+        action={
+          <Button asChild variant="outline" size="sm" className="h-8 shrink-0 gap-1.5">
+            <a href={menuHref} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5" />
+              Menüyü aç
+            </a>
+          </Button>
+        }
+      />
 
-      <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+      <div className={DASHBOARD_HUB_GRID}>
         {HUB_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const link = (
-            <Link
-              href={item.href(qrId)}
-              className="flex w-full items-center justify-between gap-3 bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Link>
+          const tile = (
+            <DashboardHubTile title={item.title} icon={item.icon} href={item.href(qrId)} />
           );
 
           if ("requiredScope" in item && item.requiredScope) {
             return (
               <RequireScope key={item.key} scope={item.requiredScope}>
-                {link}
+                {tile}
               </RequireScope>
             );
           }
 
-          return <div key={item.key}>{link}</div>;
+          return <div key={item.key}>{tile}</div>;
         })}
       </div>
     </div>

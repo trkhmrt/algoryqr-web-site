@@ -9,9 +9,11 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuOptions,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
 import {
   Dialog,
@@ -22,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { DASHBOARD_PANEL, DASHBOARD_STAT_TILE } from "@/lib/dashboard-surface";
 import {
   ApiError,
   createAccountingEntryRequest,
@@ -277,38 +280,32 @@ export default function AccountingView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Muhasebe</h1>
-          <p className="text-sm text-muted-foreground">
-            Gelir, gider ve borç kayıtlarınızı takip edin.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => openDialog("GELIR")}>Gelir Gir</Button>
-          <Button variant="outline" onClick={() => openDialog("GIDER")}>
-            Gider Gir
-          </Button>
-          <Button variant="outline" onClick={() => openDialog("BORC")}>
-            Borç Gir
-          </Button>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Muhasebe"
+        hint="Gelir, gider ve borç kayıtlarınızı takip edin."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => openDialog("GELIR")}>Gelir Gir</Button>
+            <Button variant="outline" onClick={() => openDialog("GIDER")}>
+              Gider Gir
+            </Button>
+            <Button variant="outline" onClick={() => openDialog("BORC")}>
+              Borç Gir
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         {summaryCards.map((card) => (
-          <div
-            key={card.label}
-            className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card"
-          >
+          <div key={card.label} className={DASHBOARD_STAT_TILE}>
             <p className="text-xs text-muted-foreground">{card.label}</p>
             <p className="mt-1 text-xl font-semibold">{card.value}</p>
           </div>
         ))}
       </div>
 
-      <Card className="border-border/60">
-        <CardContent className="space-y-4 p-4">
+      <div className={`${DASHBOARD_PANEL} space-y-4`}>
           <div>
             <h2 className="text-base font-semibold text-foreground">Sabit giderler</h2>
             <p className="text-xs text-muted-foreground">
@@ -403,12 +400,10 @@ export default function AccountingView() {
               )}
             </>
           ) : null}
-        </CardContent>
-      </Card>
+      </div>
 
-      <Card className="border-border/60">
-        <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap items-end gap-3">
+      <div className={`${DASHBOARD_PANEL} space-y-4`}>
+        <DashboardFilterBar className="sm:items-end">
             <div className="min-w-[160px] space-y-1.5">
               <label className="text-xs text-muted-foreground">Tür</label>
               <SearchableSelect
@@ -448,13 +443,10 @@ export default function AccountingView() {
                 }}
               />
             </div>
-          </div>
+        </DashboardFilterBar>
 
           {listQuery.isLoading ? (
-            <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Kayıtlar yükleniyor…
-            </div>
+            <DashboardLoadingState label="Kayıtlar yükleniyor…" />
           ) : items.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
               Bu filtrelerle kayıt yok.
@@ -516,8 +508,7 @@ export default function AccountingView() {
               </div>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -633,7 +624,7 @@ function AccountingRow({
       <td className="px-4 py-3 text-muted-foreground">{formatDateTime(item.occurredAt)}</td>
       <td className="px-4 py-3">
         <span
-          className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
+          className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
         >
           {entryTypeLabel(item.entryType)}
         </span>
@@ -668,8 +659,8 @@ function AccountingRow({
 
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2.5 dark:border-border dark:bg-background">
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border bg-muted px-3 py-2.5">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
     </div>
   );
@@ -697,14 +688,14 @@ function AccountingEntryDetailDialog({
 
   return (
     <Dialog open={item != null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border-[#e5e7eb] sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border-border sm:max-w-lg">
         {item ? (
           <>
             <DialogHeader>
               <div className="flex flex-wrap items-center gap-2 pr-6">
                 <DialogTitle>{item.title}</DialogTitle>
                 <span
-                  className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
+                  className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${entryTypeClass(item.entryType)}`}
                 >
                   {entryTypeLabel(item.entryType)}
                 </span>
@@ -743,12 +734,12 @@ function AccountingEntryDetailDialog({
                     Bu kayıt için sipariş/adisyon kalemi yok.
                   </p>
                 ) : (
-                  <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] dark:border-border">
-                    <div className="grid grid-cols-[1fr_auto] gap-x-3 border-b border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground dark:border-border dark:bg-background">
+                  <div className="overflow-hidden rounded-2xl border border-border">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 border-b border-border bg-muted px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">
                       <span>Ürün</span>
                       <span>Tutar</span>
                     </div>
-                    <ul className="divide-y divide-[#e5e7eb] dark:divide-border">
+                    <ul className="divide-y divide-border">
                       {lines.map((line) => (
                         <li key={line.id} className="grid grid-cols-[1fr_auto] gap-x-3 px-3 py-2.5">
                           <div className="min-w-0">

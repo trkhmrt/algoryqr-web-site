@@ -7,7 +7,8 @@ import { UberEatsWordmarkSvg } from "@/components/icons/UberEatsWordmarkSvg";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { TGO_SOFT_CARD_CLASS } from "@/lib/trendyol-go-ui";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { DASHBOARD_TILE } from "@/lib/dashboard-surface";
 
 export default function IntegrationsHubView() {
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
@@ -22,18 +23,16 @@ export default function IntegrationsHubView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Entegrasyonlar</h1>
-        <p className="text-sm text-muted-foreground">
-          Bağlamak istediğiniz platformu seçin.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Entegrasyonlar"
+        hint="Bağlamak istediğiniz platformu seçin."
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Link
           href={DASHBOARD_ROUTES.trendyolGo}
           aria-label="Uber Eats"
-          className={`group flex items-center justify-center ${TGO_SOFT_CARD_CLASS} p-6 transition-colors hover:border-primary/30 sm:p-8`}
+          className={`group flex min-h-[10rem] items-center justify-center ${DASHBOARD_TILE} sm:p-8`}
         >
           <UberEatsWordmarkSvg />
         </Link>
@@ -41,9 +40,9 @@ export default function IntegrationsHubView() {
         <Link
           href={DASHBOARD_ROUTES.yemekSepeti}
           aria-label="Yemek Sepeti"
-          className={`group relative flex items-center justify-center ${TGO_SOFT_CARD_CLASS} p-6 transition-colors hover:border-primary/30 sm:p-8`}
+          className={`group relative flex min-h-[10rem] items-center justify-center ${DASHBOARD_TILE} sm:p-8`}
         >
-          <span className="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             Yakında
           </span>
           <Image

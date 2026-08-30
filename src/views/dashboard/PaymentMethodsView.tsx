@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CreditCard, Trash2 } from "lucide-react";
 
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { CardVerificationPanel } from "@/components/dashboard/CardVerificationPanel";
 import { invalidatePaymentMethods, usePaymentMethods } from "@/hooks/use-commerce";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 export default function PaymentMethodsView() {
   const queryClient = useQueryClient();
@@ -30,55 +32,47 @@ export default function PaymentMethodsView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" asChild>
-          <Link href={DASHBOARD_ROUTES.account}>
+      <DashboardPageHeader
+        title="Kayıtlı Kartlarım"
+        hint="Kart bilgileriniz PayTR üzerinde tutulur; sunucularımızda PAN saklanmaz."
+        back={
+          <Link href={DASHBOARD_ROUTES.account} aria-label="Hesaba dön" className={DASHBOARD_BACK}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Kayıtlı Kartlarım</h1>
-          <p className="text-sm text-muted-foreground">
-            Kart bilgileriniz PayTR üzerinde tutulur; sunucularımızda PAN saklanmaz.
-          </p>
-        </div>
-      </div>
+        }
+      />
 
       <CardVerificationPanel />
 
       {methods.isLoading ? (
-        <div className="h-32 animate-pulse rounded-lg bg-muted" />
+        <DashboardLoadingState label="Kayıtlı kartlar yükleniyor…" />
       ) : methods.isError ? (
         <p className="text-sm text-destructive">Kayıtlı kartlar yüklenemedi.</p>
       ) : methods.data?.length ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {methods.data.map((method) => (
-            <Card key={method.id} className="glow-card">
-              <CardContent className="flex items-start justify-between gap-4 p-5">
-                <div className="flex gap-3">
-                  <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
-                  <div>
-                    <h2 className="font-medium">{method.cardAlias || method.brand || "Kayıtlı kart"}</h2>
-                    <p className="mt-2 font-mono text-sm text-muted-foreground">•••• •••• •••• {method.lastFour}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {method.brand}
-                      {method.expiryMonth && method.expiryYear ? ` · ${method.expiryMonth}/${method.expiryYear}` : ""}
-                    </p>
-                  </div>
+            <div key={method.id} className={`${DASHBOARD_PANEL} flex items-start justify-between gap-4`}>
+              <div className="flex gap-3">
+                <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="font-medium">{method.cardAlias || method.brand || "Kayıtlı kart"}</h2>
+                  <p className="mt-2 font-mono text-sm text-muted-foreground">•••• •••• •••• {method.lastFour}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {method.brand}
+                    {method.expiryMonth && method.expiryYear ? ` · ${method.expiryMonth}/${method.expiryYear}` : ""}
+                  </p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => void removeMethod(method.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </CardContent>
-            </Card>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => void removeMethod(method.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
           ))}
         </div>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Henüz kayıtlı kartınız yok. Yukarıdaki PayTR adımıyla kart ekleyin.
-          </CardContent>
-        </Card>
+        <div className={`${DASHBOARD_PANEL} border-dashed text-center text-sm text-muted-foreground`}>
+          Henüz kayıtlı kartınız yok. Yukarıdaki PayTR adımıyla kart ekleyin.
+        </div>
       )}
     </div>
   );

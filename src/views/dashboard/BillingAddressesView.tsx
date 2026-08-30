@@ -6,8 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, MapPin, Plus } from "lucide-react";
 
 import BillingAddressForm from "@/components/dashboard/commerce/BillingAddressForm";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/commerce";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
+import { DASHBOARD_BACK, DASHBOARD_PANEL, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 function shortAddressLine(value: string | null | undefined, max = 36): string {
   const text = (value ?? "").trim().replace(/\s+/g, " ");
@@ -116,38 +118,34 @@ export default function BillingAddressesView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" asChild>
-          <Link href={DASHBOARD_ROUTES.account}>
+      <DashboardPageHeader
+        title="Fatura Adreslerim"
+        hint="Aktif adres ödeme sayfasında varsayılan seçilir; istediğiniz zaman değiştirebilirsiniz."
+        back={
+          <Link href={DASHBOARD_ROUTES.account} aria-label="Hesaba dön" className={DASHBOARD_BACK}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Fatura Adreslerim</h1>
-          <p className="text-sm text-muted-foreground">
-            Aktif adres ödeme sayfasında varsayılan seçilir; istediğiniz zaman değiştirebilirsiniz.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => {
-            setEditingId(null);
-            setCreating((value) => !value);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Yeni adres
-        </Button>
-      </div>
+        }
+        action={
+          <Button
+            variant="outline"
+            className="gap-2 self-start sm:self-auto"
+            onClick={() => {
+              setEditingId(null);
+              setCreating((value) => !value);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Yeni adres
+          </Button>
+        }
+      />
 
-      {creating && (
-        <Card className="glow-card">
-          <CardContent className="p-6">
-            <BillingAddressForm onSubmit={createAddress} />
-          </CardContent>
-        </Card>
-      )}
+      {creating ? (
+        <div className={DASHBOARD_PANEL}>
+          <BillingAddressForm onSubmit={createAddress} />
+        </div>
+      ) : null}
 
       <Dialog
         open={editingId != null}
@@ -176,7 +174,7 @@ export default function BillingAddressesView() {
       </Dialog>
 
       {addresses.isLoading ? (
-        <div className="h-32 animate-pulse rounded-lg bg-muted" />
+        <DashboardLoadingState label="Fatura adresleri yükleniyor…" />
       ) : addresses.isError ? (
         <p className="text-sm text-destructive">
           {addresses.error instanceof ApiError
@@ -188,13 +186,12 @@ export default function BillingAddressesView() {
           {addresses.data.map((address) => {
             const street = shortAddressLine(address.address, 28);
             return (
-              <Card key={address.id} className="glow-card">
-                <CardContent className="flex items-center gap-4 p-4">
+              <div key={address.id} className={`${DASHBOARD_SURFACE} flex items-center gap-4 p-4`}>
                   <MapPin className="h-5 w-5 shrink-0 text-primary" />
                   <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden text-sm">
                     <span className="shrink-0 font-medium">{displayBillingName(address)}</span>
                     {address.defaultAddress && (
-                      <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                         Aktif
                       </span>
                     )}
@@ -241,17 +238,14 @@ export default function BillingAddressesView() {
                       Sil
                     </a>
                   </div>
-                </CardContent>
-              </Card>
+              </div>
             );
           })}
         </div>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Henüz kayıtlı fatura adresiniz yok.
-          </CardContent>
-        </Card>
+        <div className={`${DASHBOARD_PANEL} border-dashed text-center text-sm text-muted-foreground`}>
+          Henüz kayıtlı fatura adresiniz yok.
+        </div>
       )}
     </div>
   );

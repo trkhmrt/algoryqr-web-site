@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import {
   MenuDetails,
   createInitialMenuData,
@@ -30,8 +32,10 @@ import { invalidateMenuByQr, useMenuByQr } from "@/hooks/use-menu-by-qr";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
 import { ApiError, deleteMenuRequest, updateMenuRequest } from "@/lib/api";
+import Link from "next/link";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { DASHBOARD_BACK, DASHBOARD_PANEL, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 type DigitalMenuSettingsViewProps = {
   qrId: number;
@@ -125,8 +129,21 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
 
   if (accessLoading || menuQuery.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Menü Ayarları"
+          hint="İşletme bilgileri, tema ve yayın ayarları"
+          back={
+            <Link
+              href={DASHBOARD_ROUTES.digitalMenuEdit(qrId)}
+              aria-label="Menü düzenleyiciye dön"
+              className={DASHBOARD_BACK}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          }
+        />
+        <DashboardLoadingState label="Menü ayarları yükleniyor…" />
       </div>
     );
   }
@@ -144,26 +161,26 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuEdit(qrId))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Menü Ayarları</h1>
-          <p className="text-sm text-muted-foreground">
-            {profile?.businessName
-              ? `${profile.businessName} · işletme, tema ve yayın`
-              : "İşletme bilgileri, tema ve yayın ayarları"}
-          </p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Menü Ayarları"
+        hint={
+          profile?.businessName
+            ? `${profile.businessName} · işletme, tema ve yayın`
+            : "İşletme bilgileri, tema ve yayın ayarları"
+        }
+        back={
+          <Link
+            href={DASHBOARD_ROUTES.digitalMenuEdit(qrId)}
+            aria-label="Menü düzenleyiciye dön"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {menuId != null ? (
-        <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+        <div className={`${DASHBOARD_SURFACE} p-4 sm:p-6`}>
           <Tabs defaultValue="info" className="space-y-5">
             <TabsList className="grid h-auto w-full grid-cols-2">
               <TabsTrigger value="info">Menü bilgileri</TabsTrigger>
@@ -199,10 +216,10 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
       ) : null}
 
       {menuId != null ? (
-        <div className="rounded-xl border border-destructive/30 bg-card p-4 sm:p-6">
+        <div className={`${DASHBOARD_PANEL} border-destructive/30`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <h2 className="text-sm font-medium text-foreground">Menüyü sil</h2>
+              <h2 className="text-base font-semibold text-foreground">Menüyü sil</h2>
               <p className="text-xs text-muted-foreground">
                 Menü ve bağlı QR kodu kalıcı olarak silinmez; soft delete uygulanır. Menü kotanız geri açılır.
               </p>

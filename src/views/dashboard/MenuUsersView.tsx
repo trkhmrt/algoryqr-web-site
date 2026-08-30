@@ -7,6 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Loader2, Plus, Search, UserRound } from "lucide-react";
 
 import { BranchPicker, useBranchSelection } from "@/components/dashboard/BranchPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +37,7 @@ import {
   WaiterApiError,
 } from "@/lib/waiter-api";
 import { cn } from "@/lib/utils";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 function ownerName(owner: {
   firstName?: string | null;
@@ -54,7 +57,7 @@ function StatusTag({ active }: { active: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium uppercase tracking-wide",
         active
           ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
           : "bg-muted text-muted-foreground",
@@ -135,30 +138,31 @@ export default function MenuUsersView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in pb-8">
+        <DashboardPageHeader title="Kullanıcılar" hint="Ana kullanıcı ve garson hesapları" />
+        <DashboardLoadingState label="Kullanıcılar hazırlanıyor..." />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 animate-fade-in pb-8">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kullanıcılar</h1>
-          <p className="text-sm text-muted-foreground">Ana kullanıcı ve garson hesapları</p>
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          className="shrink-0 gap-1.5"
-          disabled={!branchId}
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Yeni kullanıcı
-        </Button>
-      </div>
+    <div className="space-y-6 animate-fade-in pb-8">
+      <DashboardPageHeader
+        title="Kullanıcılar"
+        hint="Ana kullanıcı ve garson hesapları"
+        action={
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            disabled={!branchId}
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Yeni kullanıcı
+          </Button>
+        }
+      />
 
       <BranchPicker
         branches={branches}
@@ -177,13 +181,11 @@ export default function MenuUsersView() {
       {!branchId ? (
         <p className="text-sm text-muted-foreground">Şube seçin.</p>
       ) : usersQuery.isLoading ? (
-        <div className="flex justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
+        <DashboardLoadingState label="Kullanıcılar yükleniyor..." />
       ) : (
         <div className="space-y-4">
           {owner ? (
-            <article className="rounded-lg border border-border bg-card p-4">
+            <article className={`${DASHBOARD_SURFACE} p-4`}>
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
                   <UserRound className="h-5 w-5 text-muted-foreground" />
@@ -191,7 +193,7 @@ export default function MenuUsersView() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-foreground">{ownerName(owner)}</p>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Ana
                     </span>
                   </div>
@@ -205,7 +207,7 @@ export default function MenuUsersView() {
 
           <section className="space-y-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold">Garsonlar</h2>
+              <h2 className="text-base font-semibold">Garsonlar</h2>
               <div className="relative w-full sm:max-w-xs">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -222,7 +224,7 @@ export default function MenuUsersView() {
                 {query ? "Aramanızla eşleşen garson yok." : "Henüz garson yok."}
               </div>
             ) : (
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>

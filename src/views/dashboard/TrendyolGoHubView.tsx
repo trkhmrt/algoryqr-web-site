@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 function SummaryField({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
     <div className={TGO_SOFT_FIELD_CLASS} title={title}>
-      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
     </div>
   );
@@ -140,7 +140,7 @@ export default function TrendyolGoHubView() {
           <p className="text-xs text-muted-foreground">Bağlantı durumu</p>
           <div className="mt-2 flex items-center gap-2">
             <span
-              className={`rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide ${connectionStatusClass(connection?.status)}`}
+              className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${connectionStatusClass(connection?.status)}`}
             >
               {connectionStatusLabel(connection?.status)}
             </span>
@@ -166,7 +166,7 @@ export default function TrendyolGoHubView() {
           className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fafafa] dark:bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted dark:bg-muted">
               <Package className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
@@ -181,7 +181,7 @@ export default function TrendyolGoHubView() {
           className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fafafa] dark:bg-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted dark:bg-muted">
               <ShoppingBag className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>

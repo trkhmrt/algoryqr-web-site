@@ -130,7 +130,7 @@ export default function AkilliSefView() {
 
         <section className="relative border-y border-border bg-white py-[clamp(2rem,5vw,3.5rem)]">
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[380px] bg-[radial-gradient(ellipse_at_50%_100%,hsl(var(--chart-violet)/0.14),hsl(var(--chart-indigo)/0.08)_42%,transparent_68%)]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[380px] bg-[radial-gradient(ellipse_at_50%_100%,hsl(var(--primary)/0.12),transparent_68%)]"
             aria-hidden
           />
           <div className="container relative mx-auto w-full max-w-6xl px-4 sm:px-6">
@@ -143,7 +143,7 @@ export default function AkilliSefView() {
             <div className="flex flex-col gap-8 sm:gap-10">
               <Reveal className="relative mx-auto w-full max-w-[min(100%,16rem)] sm:max-w-[20rem] md:max-w-[22rem]">
                 <div
-                  className="pointer-events-none absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,hsl(var(--chart-violet)/0.22),hsl(var(--chart-indigo)/0.1)_45%,transparent_70%)] blur-2xl"
+                  className="pointer-events-none absolute left-1/2 top-1/2 h-[85%] w-[85%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.12),transparent_70%)] blur-2xl"
                   aria-hidden
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}

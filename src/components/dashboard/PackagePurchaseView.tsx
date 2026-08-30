@@ -47,6 +47,7 @@ import PaymentCheckoutOverlay, {
 } from "@/components/dashboard/PaymentCheckoutOverlay";
 import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import { cn } from "@/lib/utils";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 interface PackagePurchaseViewProps {
   packageId: number;
@@ -240,9 +241,9 @@ export default function PackagePurchaseView({
   })();
 
   return (
-    <div className="space-y-6 animate-fade-in rounded-2xl border border-[#e5e7eb] bg-[#fafafa] p-4 sm:p-6 dark:border-border dark:bg-muted/20">
+    <div className="space-y-6 animate-fade-in rounded-2xl border border-border bg-muted p-4 sm:p-6/20">
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" asChild className="border-[#e5e7eb] bg-white dark:border-border dark:bg-background">
+        <Button variant="outline" size="icon" asChild className="border-border bg-card">
           <Link href={returnHref}><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <BrandLogo size="sm" />
@@ -253,7 +254,7 @@ export default function PackagePurchaseView({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr] lg:items-start">
-        <div className="space-y-5 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+        <div className={`${DASHBOARD_SURFACE} space-y-5 p-6 shadow-none`}>
           <div>
             <p className="text-xs uppercase text-muted-foreground">Paket</p>
             <h2 className="mt-1 text-xl font-semibold">{pkg.name}</h2>
@@ -268,7 +269,7 @@ export default function PackagePurchaseView({
                 </p>
                 {pricing.yearlySavings != null && pricing.yearlySavings > 0 ? (
                   <span
-                    className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium leading-none text-emerald-600 dark:text-emerald-400"
+                    className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium leading-none text-emerald-600 dark:text-emerald-400"
                     title={formatYearlySavingsLabel(pricing.yearlySavings, pkg.currency)}
                   >
                     {formatYearlySavingsBadge(
@@ -281,7 +282,7 @@ export default function PackagePurchaseView({
               </div>
             </div>
           </div>
-          <ul className="space-y-2 border-t border-[#e5e7eb] pt-4 dark:border-border">
+          <ul className="space-y-2 border-t border-border pt-4">
             {packageFeatures(pkg).map((feature) => (
               <li key={feature} className="flex gap-2 text-sm text-muted-foreground">
                 <Check className="mt-0.5 h-4 w-4 text-primary" />{feature}
@@ -291,15 +292,15 @@ export default function PackagePurchaseView({
         </div>
 
         <div className="space-y-5">
-          <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
-            <h2 className="font-medium">Faturalama periyodu</h2>
+          <div className={`${DASHBOARD_SURFACE} space-y-4 p-6 shadow-none`}>
+            <h2 className="text-base font-semibold text-foreground">Faturalama periyodu</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <label
                 className={cn(
                   "flex cursor-pointer items-center gap-2 rounded-xl border p-3",
                   billingPeriod === "MONTHLY"
                     ? "border-primary bg-primary/5"
-                    : "border-[#e5e7eb] bg-[#fafafa] dark:border-border dark:bg-background",
+                    : "border-border bg-muted",
                 )}
               >
                 <input
@@ -315,7 +316,7 @@ export default function PackagePurchaseView({
                   "flex cursor-pointer items-center gap-2 rounded-xl border p-3",
                   billingPeriod === "YEARLY"
                     ? "border-primary bg-primary/5"
-                    : "border-[#e5e7eb] bg-[#fafafa] dark:border-border dark:bg-background",
+                    : "border-border bg-muted",
                 )}
               >
                 <input
@@ -329,9 +330,9 @@ export default function PackagePurchaseView({
             </div>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+          <div className={`${DASHBOARD_SURFACE} space-y-4 p-6 shadow-none`}>
             <div className="flex items-center justify-between">
-              <h2 className="font-medium">Fatura adresi</h2>
+              <h2 className="text-base font-semibold text-foreground">Fatura adresi</h2>
               <Button variant="ghost" size="sm" onClick={() => setCreatingAddress((value) => !value)}>Yeni adres</Button>
             </div>
             {creatingAddress ? (
@@ -361,13 +362,13 @@ export default function PackagePurchaseView({
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-none dark:border-border dark:bg-card">
+          <div className={`${DASHBOARD_SURFACE} space-y-4 p-6 shadow-none`}>
             <div className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              <h2 className="font-medium">Ödeme</h2>
+              <h2 className="text-base font-semibold text-foreground">Ödeme</h2>
             </div>
 
-            <div className="flex items-start gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
+            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted p-3 text-xs text-muted-foreground">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <p>
                 Kart bilgileriniz bizim sunucularımıza ulaşmaz. &quot;Ödemeyi Tamamla&quot; butonuna bastığınızda
@@ -377,7 +378,7 @@ export default function PackagePurchaseView({
               </p>
             </div>
 
-            <div className="rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-3 text-xs text-muted-foreground dark:border-border dark:bg-background">
+            <div className="rounded-xl border border-border bg-muted p-3 text-xs text-muted-foreground">
               <p>
                 Bu ödeme: bugün · Dönem bitişi:{" "}
                 <span className="font-medium text-foreground">{nextDueLabel}</span>

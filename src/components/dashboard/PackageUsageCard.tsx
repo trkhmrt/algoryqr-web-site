@@ -8,6 +8,7 @@ import { Clock3, Zap } from "lucide-react";
 import type { PackageUsageSummary } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatDaysUntilExpiry, formatPackageDate } from "@/lib/package-display";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 interface PackageUsageCardProps {
   usage: PackageUsageSummary | undefined;
@@ -17,7 +18,7 @@ interface PackageUsageCardProps {
 const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
   if (isLoading) {
     return (
-      <Card className="glow-card">
+      <Card className={DASHBOARD_SURFACE}>
         <CardContent className="p-5">
           <div className="h-16 animate-pulse rounded-md bg-muted" />
         </CardContent>
@@ -32,7 +33,7 @@ const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
   const isTrial = !!usage.isTrial;
 
   return (
-    <Card className="glow-card">
+    <Card className={DASHBOARD_SURFACE}>
       <CardContent className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -40,7 +41,7 @@ const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
               <Zap className="h-4 w-4 shrink-0 text-primary" />
               <p className="text-sm font-medium text-foreground">{usage.packageName}</p>
               {isTrial ? (
-                <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                   Deneme
                 </span>
               ) : null}
@@ -74,13 +75,13 @@ const PackageUsageCard = ({ usage, isLoading }: PackageUsageCardProps) => {
             <p className="text-2xl font-semibold tracking-tight text-foreground">
               {usage.unlimited ? "Sınırsız" : usage.remaining}
             </p>
-            {!usage.unlimited && <p className="text-[11px] text-muted-foreground">/ {usage.total} hak</p>}
+            {!usage.unlimited && <p className="text-xs text-muted-foreground">/ {usage.total} hak</p>}
           </div>
         </div>
         {!usage.unlimited && (
           <div className="space-y-1.5">
             <Progress value={usedPercent} className="h-1.5" />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {usage.used} kullanıldı · {usage.remaining} kalan
             </p>
           </div>

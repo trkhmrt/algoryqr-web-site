@@ -9,8 +9,9 @@ import { ArrowLeft, Check } from "lucide-react";
 import PaymentCheckoutOverlay, {
   type PaymentCheckoutOverlayContent,
 } from "@/components/dashboard/PaymentCheckoutOverlay";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { usePaymentMethods } from "@/hooks/use-commerce";
@@ -41,6 +42,7 @@ import {
   storePendingPurchaseId,
 } from "@/lib/purchase-fulfillment";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 function optionMoneySummary(
   option: PlanChangePreview["options"][number],
@@ -264,28 +266,23 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.accountPackages}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {preview ? directionLabel(preview.direction) : "Paket değiştir"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {preview
-              ? `${preview.fromPackage.name} → ${preview.toPackage.name}`
-              : "Geçiş zamanını ve ödemeyi onaylayın."}
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title={preview ? directionLabel(preview.direction) : "Paket değiştir"}
+        hint={
+          preview
+            ? `${preview.fromPackage.name} → ${preview.toPackage.name}`
+            : "Geçiş zamanını ve ödemeyi onaylayın."
+        }
+        back={
+          <Link href={DASHBOARD_ROUTES.accountPackages} aria-label="Paketlere dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {previewQuery.isLoading ? (
-        <div className="h-40 animate-pulse rounded-lg bg-muted" />
+        <DashboardLoadingState label="Paket geçişi önizlemesi yükleniyor…" />
       ) : previewQuery.isError ? (
         <p className="text-sm text-destructive">
           {(previewQuery.error as ApiError)?.message ?? "Önizleme yüklenemedi"}
@@ -306,8 +303,7 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
           )}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="glow-card">
-              <CardContent className="space-y-3 p-5">
+            <div className={`${DASHBOARD_PANEL} space-y-3`}>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mevcut</p>
                 <h2 className="text-lg font-semibold">{preview.fromPackage.name}</h2>
                 <p className="text-sm text-muted-foreground">
@@ -323,10 +319,8 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
                       </li>
                     ))}
                 </ul>
-              </CardContent>
-            </Card>
-            <Card className="glow-card border-primary/30">
-              <CardContent className="space-y-3 p-5">
+            </div>
+            <div className={`${DASHBOARD_PANEL} space-y-3 border-primary/30`}>
                 <p className="text-xs font-medium uppercase tracking-wide text-primary">Hedef</p>
                 <h2 className="text-lg font-semibold">{preview.toPackage.name}</h2>
                 <p className="text-sm text-muted-foreground">
@@ -358,12 +352,10 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
                       ))}
                   </ul>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           </div>
 
-          <Card className="glow-card">
-            <CardContent className="space-y-4 p-5">
+          <div className={`${DASHBOARD_PANEL} space-y-4`}>
               <div>
                 <Label className="text-base">Ne zaman geçilsin?</Label>
                 <div className="mt-3 grid gap-2">
@@ -478,8 +470,7 @@ export default function PlanChangeView({ onNotify }: PlanChangeViewProps) {
                       : "Onayla"}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
         </>
       ) : null}
     </div>

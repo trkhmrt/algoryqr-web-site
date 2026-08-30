@@ -1,6 +1,7 @@
 "use client";
 
 import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import {
   ACCOUNT_TILES,
   OPERATION_TILES,
@@ -40,14 +41,12 @@ export default function DashboardOverviewView() {
 
   return (
     <div className="animate-fade-in">
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-          Genel Bakış
-        </h1>
-        <p className="mt-2 text-[15px] text-muted-foreground">
-          Bugünün operasyonu ve sık kullanılan işlemler.
-        </p>
-      </header>
+      <div className="mb-8">
+        <DashboardPageHeader
+          title="Genel Bakış"
+          hint="Bugünün operasyonu ve sık kullanılan işlemler."
+        />
+      </div>
 
       {showChecklist ? (
         <div className="mb-8">

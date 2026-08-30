@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +15,9 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidateBranches } from "@/hooks/use-branches";
 import { ApiError, getApiErrorCode } from "@/lib/api";
 import { createBranchRequest } from "@/lib/branch";
+import Link from "next/link";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 export default function BranchCreateView() {
   const router = useRouter();
@@ -55,8 +59,9 @@ export default function BranchCreateView() {
 
   if (accessLoading) {
     return (
-      <div className="flex justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader title="Yeni şube" hint="İsim, adres ve iletişim bilgilerini girin." />
+        <DashboardLoadingState label="Şube formu hazırlanıyor…" />
       </div>
     );
   }
@@ -67,20 +72,16 @@ export default function BranchCreateView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Yeni şube</h1>
-          <p className="text-sm text-muted-foreground">İsim, adres ve iletişim bilgilerini girin.</p>
-        </div>
-      </div>
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <DashboardPageHeader
+        title="Yeni şube"
+        hint="İsim, adres ve iletişim bilgilerini girin."
+        back={
+          <Link href={DASHBOARD_ROUTES.digitalMenu} aria-label="Menüye dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
+      <div className={`${DASHBOARD_PANEL} space-y-4`}>
         <div className="space-y-2">
           <Label htmlFor="branch-name">Şube adı</Label>
           <Input id="branch-name" value={name} onChange={(event) => setName(event.target.value)} />

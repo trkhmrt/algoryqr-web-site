@@ -8,6 +8,8 @@ import { ArrowLeft, Package } from "lucide-react";
 import RefundConfirmDialog from "@/components/dashboard/RefundConfirmDialog";
 import RefundStatusBadge from "@/components/dashboard/RefundStatusBadge";
 import RefundStatusPanel from "@/components/dashboard/RefundStatusPanel";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +22,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -63,6 +64,7 @@ import { invalidateSubscription } from "@/hooks/use-subscription";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { isRefundInFlight, purchaseStatusLabel } from "@/lib/refund-display";
 import { ApiError } from "@/lib/api/errors";
+import { DASHBOARD_BACK, DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 
 type PurchaseDetailViewProps = {
   purchaseId: number;
@@ -216,25 +218,22 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.accountSubscription}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Paket detayı</h1>
-          <p className="text-sm text-muted-foreground">Paket hakları ve abonelik işlemleri.</p>
-        </div>
-      </div>
+      <DashboardPageHeader
+        title="Paket detayı"
+        hint="Paket hakları ve abonelik işlemleri"
+        back={
+          <Link
+            href={DASHBOARD_ROUTES.accountSubscription}
+            aria-label="Aboneliğe dön"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       {isLoading ? (
-        <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
-          <CardContent className="p-6">
-            <div className="h-32 animate-pulse rounded-md bg-muted" />
-          </CardContent>
-        </Card>
+        <DashboardLoadingState label="Paket detayı yükleniyor…" />
       ) : isError || !data ? (
         <p className="text-sm text-destructive">Paket detayı yüklenemedi.</p>
       ) : (
@@ -250,8 +249,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
             cardLastFour={data.cardLastFour}
           />
 
-          <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
-            <CardContent className="space-y-4 p-6">
+          <div className={`${DASHBOARD_PANEL} space-y-4`}>
               <div className="flex items-start gap-3">
                 <Package className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                 <div className="min-w-0 flex-1">
@@ -259,19 +257,19 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                   <h2 className="mt-1 text-xl font-semibold text-foreground">{data.packageName}</h2>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {data.packageCode ? (
-                      <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {data.packageCode}
                       </span>
                     ) : null}
-                    <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                       #{purchaseId}
                     </span>
                     {data.purchaseType ? (
-                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                         {data.purchaseType}
                       </span>
                     ) : null}
-                    <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                       {purchaseStatusLabel(data.status)}
                     </span>
                     <RefundStatusBadge
@@ -290,7 +288,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                 </div>
               </div>
 
-              <dl className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] divide-y divide-border dark:border-border dark:bg-background">
+              <dl className="overflow-hidden rounded-2xl border border-border bg-muted divide-y divide-border">
                 <div className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
                   <dt className="text-muted-foreground">Başlangıç</dt>
                   <dd className="text-right font-medium text-foreground">
@@ -486,16 +484,14 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                   </Button>
                 </div>
               ) : null}
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
-            <CardContent className="space-y-3 p-6">
+          <div className={`${DASHBOARD_PANEL} space-y-3`}>
               <h3 className="text-sm font-medium text-foreground">Paketteki ürünler</h3>
               {products.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Ürün kaydı bulunamadı.</p>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-[#fafafa] dark:border-border dark:bg-background">
+                <div className="overflow-hidden rounded-2xl border border-border bg-muted">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
@@ -522,8 +518,7 @@ export default function PurchaseDetailView({ purchaseId }: PurchaseDetailViewPro
                   </Table>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
         </>
       )}
     </div>

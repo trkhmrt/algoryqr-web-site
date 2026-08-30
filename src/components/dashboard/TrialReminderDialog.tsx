@@ -48,7 +48,7 @@ export default function TrialReminderDialog() {
                 <DialogTitle className="text-xl font-semibold tracking-tight">
                   Deneme süreniz bitiyor
                 </DialogTitle>
-                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   Deneme
                 </span>
               </div>

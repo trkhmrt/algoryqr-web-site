@@ -41,7 +41,7 @@ const WhyUsSection = () => {
   return (
     <section id="why-us" className="relative py-[clamp(3.5rem,8vw,8rem)]">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--chart-indigo)/0.1),transparent_65%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--primary)/0.1),transparent_65%)]"
         aria-hidden
       />
 
@@ -110,7 +110,7 @@ const WhyUsSection = () => {
                 >
                   {"aiIcon" in item && item.aiIcon ? (
                     <Sparkles
-                      className="h-[0.95em] w-[0.95em] shrink-0 text-[hsl(var(--chart-indigo))]"
+                      className="h-[0.95em] w-[0.95em] shrink-0 text-primary"
                       aria-hidden
                     />
                   ) : null}

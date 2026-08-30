@@ -16,7 +16,7 @@ export function DigitalMenuHubTabs() {
   const pathname = usePathname();
 
   return (
-    <div className="inline-flex rounded-xl border border-[#e5e7eb] bg-[#fafafa] p-1 dark:border-border dark:bg-background">
+    <div className="inline-flex rounded-2xl border border-border bg-muted p-1 shadow-none">
       {HUB_TABS.map((tab) => {
         const active =
           pathname === tab.href ||
@@ -26,9 +26,9 @@ export function DigitalMenuHubTabs() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+              "rounded-xl px-4 py-2 text-sm font-medium transition-colors",
               active
-                ? "bg-white text-foreground shadow-sm dark:bg-card"
+                ? "bg-card text-foreground"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

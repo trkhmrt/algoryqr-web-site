@@ -21,6 +21,7 @@ import {
   sortMenuDirectory,
   type MenuDirectoryStatusFilter,
 } from "@/lib/digital-menu-directory";
+import { DASHBOARD_PANEL, DASHBOARD_TILE_ROW } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 const STATUS_OPTIONS: Array<{ value: MenuDirectoryStatusFilter; label: string }> = [
@@ -64,7 +65,7 @@ export function DigitalMenuMenusPanel() {
         </Button>
       }
     >
-      <div className="space-y-4 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-none dark:border-border dark:bg-card sm:p-5">
+      <div className={`${DASHBOARD_PANEL} space-y-4`}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
             <Label htmlFor="menu-search" className="text-xs text-muted-foreground">
@@ -156,7 +157,7 @@ export function DigitalMenuMenusPanel() {
             <Link
               key={menu.menuId}
               href={DASHBOARD_ROUTES.digitalMenuEdit(menu.qrId)}
-              className="group flex items-center justify-between gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 transition-colors hover:bg-muted/40 dark:border-border dark:bg-card"
+              className={`${DASHBOARD_TILE_ROW} justify-between px-4 py-3`}
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">{menu.businessName}</p>
@@ -166,8 +167,8 @@ export function DigitalMenuMenusPanel() {
                 <span
                   className={
                     menu.active
-                      ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400"
-                      : "rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                      ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+                      : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
                   }
                 >
                   {menu.active ? "Yayında" : "Pasif"}

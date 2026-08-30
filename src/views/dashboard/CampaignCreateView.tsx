@@ -11,10 +11,11 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { SearchableMultiSelect } from "@/components/dashboard/menu/SearchableMultiSelect";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
@@ -26,6 +27,7 @@ import {
   type CampaignTemplate,
 } from "@/lib/campaign-api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_PANEL_LG, DASHBOARD_SURFACE, DASHBOARD_TYPE_SECTION } from "@/lib/dashboard-surface";
 import { formatMenuPrice } from "@/components/menu-templates/types";
 
 function toLocalDateTimeValue(date: Date): string {
@@ -140,46 +142,49 @@ export default function CampaignCreateView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader title="Kampanya Oluştur" hint="Adım bilgisi yükleniyor." />
+        <DashboardLoadingState label="Kampanya oluşturma ekranı hazırlanıyor..." />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 animate-fade-in pb-8">
-      <Button variant="ghost" size="sm" className="-ml-2 w-fit gap-1.5" asChild>
-        <Link
-          href={
-            selection?.qr.id
-              ? DASHBOARD_ROUTES.campaignsForQr(selection.qr.id)
-              : DASHBOARD_ROUTES.campaigns
-          }
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kampanyalara dön
-        </Link>
-      </Button>
-
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Kampanya Oluştur</h1>
-        <p className="text-sm text-muted-foreground">Adım {step}/3</p>
-      </div>
-
-      <DigitalMenuPicker
-        menuQrs={menuQrs}
-        selectedQrId={selection?.qr.id ?? null}
-        onSelectQrId={(qrId) => {
-          void selectQrId(qrId);
-        }}
+    <div className="space-y-6 animate-fade-in pb-8">
+      <DashboardPageHeader
+        title="Kampanya Oluştur"
+        hint={`Adım ${step}/3`}
+        back={
+          <Link
+            href={
+              selection?.qr.id
+                ? DASHBOARD_ROUTES.campaignsForQr(selection.qr.id)
+                : DASHBOARD_ROUTES.campaigns
+            }
+            aria-label="Kampanyalara dön"
+            className={DASHBOARD_BACK}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
       />
 
+      <div className={DASHBOARD_SURFACE}>
+        <div className="p-4 sm:p-5">
+          <DigitalMenuPicker
+            menuQrs={menuQrs}
+            selectedQrId={selection?.qr.id ?? null}
+            onSelectQrId={(qrId) => {
+              void selectQrId(qrId);
+            }}
+          />
+        </div>
+      </div>
+
       {step === 1 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Şablon seçin</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
+        <div className={DASHBOARD_PANEL_LG}>
+          <h2 className={DASHBOARD_TYPE_SECTION}>Şablon seçin</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {(templatesQuery.data ?? []).map((template: CampaignTemplate) => (
               <button
                 key={template.code}
@@ -195,16 +200,14 @@ export default function CampaignCreateView() {
                 <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
               </button>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : null}
 
       {step === 2 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Temel bilgiler</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className={`${DASHBOARD_PANEL_LG} space-y-4`}>
+          <h2 className={DASHBOARD_TYPE_SECTION}>Temel bilgiler</h2>
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="campaign-name">Kampanya adı</Label>
               <Input id="campaign-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -238,16 +241,14 @@ export default function CampaignCreateView() {
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : null}
 
       {step === 3 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{selectedTemplate?.name ?? "Kampanya ayarları"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className={`${DASHBOARD_PANEL_LG} space-y-4`}>
+          <h2 className={DASHBOARD_TYPE_SECTION}>{selectedTemplate?.name ?? "Kampanya ayarları"}</h2>
+          <div className="space-y-4">
             {templateCode === "STAMP_CARD" ? (
               <>
                 <div className="space-y-1.5">
@@ -327,8 +328,8 @@ export default function CampaignCreateView() {
                 />
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : null}
 
       <div className="flex justify-between gap-3">

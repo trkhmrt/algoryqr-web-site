@@ -13,6 +13,7 @@ import { initiateCardVerification } from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { isPaytrCheckout, paytrCheckoutHtml } from "@/lib/paytr-checkout";
 import Link from "next/link";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
 type CardVerificationPanelProps = {
   title?: string;
@@ -52,11 +53,11 @@ export function CardVerificationPanel({
   };
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
+    <div className={`${DASHBOARD_SURFACE} space-y-4 p-5`}>
       <div className="flex items-start gap-3">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
         <div className="space-y-1">
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <p className="text-sm text-muted-foreground">{description}</p>
           <p className="text-xs text-muted-foreground">
             PayTR ekranında kart kaydını onaylayın. Onaysız kart kaydedilmez. Fatura adresi ve telefon

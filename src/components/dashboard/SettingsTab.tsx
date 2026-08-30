@@ -15,11 +15,14 @@ import { invalidateMyProfile, useMyProfile, MY_PROFILE_QUERY_KEY } from "@/hooks
 import { useAccessProfile } from "@/hooks/use-access-profile";
 import type { MyProfile } from "@/hooks/use-my-profile";
 import {
-  User, Shield, Bell, ChevronRight, ArrowLeft,
+  User, Shield, Bell, ArrowLeft,
   Check, Camera, Key, Lock, Smartphone, Mail,
   RefreshCw, LogOut, Timer, Copy, CreditCard,
   WalletCards, MapPin, History, Monitor, Clock3,
 } from "lucide-react";
+import { DashboardHubTile } from "@/components/dashboard/DashboardHubTile";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { DASHBOARD_BACK, DASHBOARD_HUB_GRID, DASHBOARD_SURFACE, DASHBOARD_TILE } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { authService, type TwoFactorSetupPayload } from "@/lib/auth-service";
 import { copyTextToClipboard } from "@/components/dashboard/qr/qr-actions";
@@ -96,7 +99,7 @@ function formatMemberSince(iso: string | null | undefined): string {
 
 function ComingSoonBadge() {
   return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium shrink-0">
+    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium shrink-0">
       Çok yakında
     </span>
   );
@@ -488,7 +491,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
   const backButton = (
     <button
       onClick={goBackToMain}
-      className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      className={DASHBOARD_BACK}
     >
       <ArrowLeft className="h-4 w-4" />
     </button>
@@ -503,59 +506,52 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
     const trialDays = active?.daysUntilExpiry;
     const trialUrgent = typeof trialDays === "number" && trialDays <= 3;
 
-    const selectedChip =
-      "rounded-xl bg-background text-foreground shadow-sm ring-1 ring-border/70 transition-all duration-200";
-
     return (
-      <div className="mx-auto w-full max-w-md space-y-3 animate-fade-in">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Hesabım</h1>
-        </div>
-        <div className="flex flex-col gap-1">
-          {isActiveTrial && active ? (
-            <button
-              type="button"
-              className={cn(
-                "flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-medium",
-                selectedChip,
-                trialUrgent
-                  ? "ring-amber-300/80"
-                  : "ring-emerald-300/80",
-              )}
-              onClick={() => router.push(DASHBOARD_ROUTES.accountPackages)}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <Clock3
-                  className={cn(
-                    "h-4 w-4 shrink-0",
-                    trialUrgent ? "text-amber-600" : "text-emerald-600",
-                  )}
-                />
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-foreground">
-                    {active.packageName} denemeniz aktif
-                  </h3>
-                  <p className="truncate text-xs font-normal text-muted-foreground">
-                    {formatDaysUntilExpiry(trialDays)}
-                    {active.expiresAt
-                      ? ` · ${new Intl.DateTimeFormat("tr-TR", {
-                          day: "numeric",
-                          month: "long",
-                        }).format(new Date(active.expiresAt))} biter`
-                      : ""}
-                  </p>
-                </div>
-              </div>
-              <span
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader title="Hesabım" hint="Abonelik, güvenlik ve profil ayarları" />
+        {isActiveTrial && active ? (
+          <button
+            type="button"
+            className={cn(
+              DASHBOARD_TILE,
+              "flex w-full items-center justify-between gap-3 text-left",
+              trialUrgent ? "border-amber-300/80" : "border-emerald-300/80",
+            )}
+            onClick={() => router.push(DASHBOARD_ROUTES.accountPackages)}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <Clock3
                 className={cn(
-                  "shrink-0 text-xs font-medium",
-                  trialUrgent ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400",
+                  "h-4 w-4 shrink-0",
+                  trialUrgent ? "text-amber-600" : "text-emerald-600",
                 )}
-              >
-                Pakete geç
-              </span>
-            </button>
-          ) : null}
+              />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium text-foreground">
+                  {active.packageName} denemeniz aktif
+                </h3>
+                <p className="truncate text-xs font-normal text-muted-foreground">
+                  {formatDaysUntilExpiry(trialDays)}
+                  {active.expiresAt
+                    ? ` · ${new Intl.DateTimeFormat("tr-TR", {
+                        day: "numeric",
+                        month: "long",
+                      }).format(new Date(active.expiresAt))} biter`
+                    : ""}
+                </p>
+              </div>
+            </div>
+            <span
+              className={cn(
+                "shrink-0 text-xs font-medium",
+                trialUrgent ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400",
+              )}
+            >
+              Pakete geç
+            </span>
+          </button>
+        ) : null}
+        <div className={DASHBOARD_HUB_GRID}>
           {([
             { icon: CreditCard, title: "Abonelik", key: "subscription" },
             { icon: History, title: "Ödeme geçmişi", key: "paymentHistory" },
@@ -566,13 +562,10 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
             { icon: Shield, title: "Güvenlik", key: "security" },
             { icon: Bell, title: "Bildirimler", key: "notifications" },
           ] as const satisfies ReadonlyArray<{ icon: typeof CreditCard; title: string; key: SettingsMenuKey }>).map((item) => (
-            <button
+            <DashboardHubTile
               key={item.title}
-              type="button"
-              className={cn(
-                "flex h-11 w-full cursor-pointer items-center justify-between gap-3 px-3 text-left text-sm font-medium",
-                selectedChip,
-              )}
+              title={item.title}
+              icon={item.icon}
               onClick={() => {
                 if (item.key === "subscription") {
                   router.push(DASHBOARD_ROUTES.accountSubscription);
@@ -596,27 +589,15 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                 }
                 setPage(item.key as SettingsPage);
               }}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </button>
+            />
           ))}
         </div>
-
-        <div
-          className={cn(
-            "flex items-center justify-between gap-3 px-3 py-2",
-            selectedChip,
-          )}
-        >
+        <div className={`${DASHBOARD_TILE} flex items-center justify-between gap-3`}>
           <h3 className="text-sm font-medium text-foreground">Çıkış Yap</h3>
           <Button
             variant="destructive"
             size="sm"
-            className="h-8 shrink-0 rounded-xl"
+            className="h-8 shrink-0"
             onClick={() => void handleLogout()}
             disabled={logoutLoading}
           >
@@ -639,7 +620,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
-        <Card className="glow-card">
+        <Card className={DASHBOARD_SURFACE}>
           <CardContent className="p-6 space-y-6">
             <div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
@@ -713,7 +694,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <p className="text-sm text-destructive">Profil yüklenemedi. Oturumunuzu kontrol edin.</p>
         ) : null}
 
-        <div className="rounded-lg border border-border bg-card p-6">
+        <div className={`${DASHBOARD_SURFACE} p-6`}>
           <div className="flex items-center gap-5">
             <div className="relative">
               <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
@@ -740,7 +721,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
+        <div className={`${DASHBOARD_SURFACE} p-6 space-y-5`}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Ad</Label>
@@ -830,8 +811,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         </div>
 
         {!isGoogleAccount && (
-          <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <div className={`${DASHBOARD_SURFACE} p-6 space-y-5`}>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Lock className="h-4 w-4 text-muted-foreground" /> Şifre Değiştir
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -851,8 +832,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
         )}
 
         <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-          <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <div className={`${DASHBOARD_SURFACE} p-6 space-y-5`}>
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Smartphone className="h-4 w-4 text-muted-foreground" /> İki Faktörlü Doğrulama
             </h2>
             <div className={cn("space-y-4", isGoogleAccount && "opacity-60")}>
@@ -933,13 +914,13 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                   />
                   <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
                     <p className="text-xs font-medium text-foreground">Tek telefonda (QR taratmadan)</p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       Google Authenticator / Microsoft Authenticator: <span className="text-foreground">+</span> →{" "}
                       <span className="text-foreground">Kurulum anahtarını gir</span> → hesap adı olarak e-postanızı, anahtar
                       olarak aşağıdaki metni kullanın; tür: zamana dayalı, 30 sn.
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <code className="text-[11px] break-all rounded bg-background px-2 py-1.5 font-mono border border-border flex-1 min-w-0">
+                      <code className="text-xs break-all rounded bg-background px-2 py-1.5 font-mono border border-border flex-1 min-w-0">
                         {twoFactorSetup.secret}
                       </code>
                       <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={() => void handleCopyTwoFactorSecret()}>
@@ -950,7 +931,7 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
                     <Button type="button" variant="outline" size="sm" className="w-full gap-2" asChild>
                       <a href={twoFactorSetup.otpAuthUri}>Authenticator’da açmayı dene</a>
                     </Button>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       “Açmayı dene” bazı cihazlarda doğrudan uygulamayı açar; açılmazsa yukarıdaki anahtarı elle girin.
                     </p>
                   </div>
@@ -987,11 +968,11 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
 
           <div className="rounded-lg border border-success/40 bg-success/5 p-6 flex flex-col gap-4 h-full">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <Monitor className="h-4 w-4 text-success" /> Bu Cihaz
               </h2>
               {currentSession ? (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-medium shrink-0">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium shrink-0">
                   Aktif oturum
                 </span>
               ) : null}
@@ -1036,8 +1017,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           <p className="text-sm text-destructive">Bildirim ayarları yüklenemedi.</p>
         ) : null}
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+        <div className={`${DASHBOARD_SURFACE} p-6 space-y-5`}>
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <Mail className="h-4 w-4 text-muted-foreground" /> E-posta Bildirimleri
           </h2>
           {[
@@ -1055,8 +1036,8 @@ export default function SettingsTab({ onNotify }: SettingsTabProps) {
           ))}
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6 space-y-5">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+        <div className={`${DASHBOARD_SURFACE} p-6 space-y-5`}>
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <Monitor className="h-4 w-4 text-muted-foreground" /> Oturum Bildirimleri
           </h2>
           <div className="flex items-center justify-between gap-3">

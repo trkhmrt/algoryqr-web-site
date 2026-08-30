@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/dashboard/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useBranches } from "@/hooks/use-branches";
 import { formatBranchCreateQuota } from "@/lib/branch";
+import { DASHBOARD_HUB_GRID, DASHBOARD_ICON_WELL, DASHBOARD_TILE_SQUARE } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 export function DigitalMenuBranchesPanel() {
@@ -60,12 +61,12 @@ export function DigitalMenuBranchesPanel() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        <div className={DASHBOARD_HUB_GRID}>
           {branches.map((branch) => (
             <Link
               key={branch.id}
               href={DASHBOARD_ROUTES.branchSettings(branch.id)}
-              className="group flex aspect-square flex-col items-center justify-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-none transition-colors hover:bg-muted/50 dark:border-border dark:bg-card"
+              className={DASHBOARD_TILE_SQUARE}
             >
               {branch.photoUrl ? (
                 <img
@@ -74,7 +75,7 @@ export function DigitalMenuBranchesPanel() {
                   className="h-14 w-14 rounded-lg border border-border object-cover"
                 />
               ) : (
-                <span className="flex h-14 w-14 items-center justify-center rounded-lg border border-border bg-muted/40 text-lg font-medium text-muted-foreground">
+                <span className={DASHBOARD_ICON_WELL}>
                   {branch.name.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?"}
                 </span>
               )}

@@ -7,6 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, ImagePlus, Loader2, Trash2 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,13 +37,13 @@ import {
   updateBranchRequest,
   uploadBranchPhotoRequest,
 } from "@/lib/branch";
+import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const SOFT_CARD_CLASS =
-  "rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card";
+const SOFT_CARD_CLASS = DASHBOARD_SURFACE;
 
 type BranchSettingsViewProps = {
   branchId: number;
@@ -92,7 +94,7 @@ function SettingsSection({
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="space-y-4 border-t border-[#e5e7eb] px-5 pb-5 pt-4 dark:border-border sm:px-6 sm:pb-6">
+          <div className="space-y-4 border-t border-border px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
             {children}
           </div>
         </CollapsibleContent>
@@ -243,8 +245,9 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
 
   if (accessLoading || branchQuery.isLoading) {
     return (
-      <div className="flex justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in">
+        <DashboardPageHeader title="Şube ayarları" hint="Şube bilgileri yükleniyor" />
+        <DashboardLoadingState label="Şube ayarları yükleniyor…" />
       </div>
     );
   }
@@ -254,20 +257,16 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white text-muted-foreground hover:bg-muted/50 dark:border-border dark:bg-card"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Şube ayarları</h1>
-          <p className="text-sm text-muted-foreground">{branch?.name ?? "Şube bilgileri"}</p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title="Şube ayarları"
+        hint={branch?.name ?? "Şube bilgileri"}
+        back={
+          <Link href={DASHBOARD_ROUTES.digitalMenu} aria-label="Menüye dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       <SettingsSection
         title="Şube bilgileri"
@@ -308,10 +307,10 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
           <img
             src={branch.photoUrl}
             alt={branch.name}
-            className="h-28 w-28 rounded-xl border border-[#e5e7eb] object-cover dark:border-border"
+            className="h-28 w-28 rounded-xl border border-border object-cover"
           />
         ) : (
-          <div className="flex h-28 w-28 items-center justify-center rounded-xl border border-dashed border-[#e5e7eb] bg-[#fafafa] text-muted-foreground dark:border-border dark:bg-background">
+          <div className="flex h-28 w-28 items-center justify-center rounded-xl border border-dashed border-border bg-muted text-muted-foreground">
             <ImagePlus className="h-6 w-6" />
           </div>
         )}
@@ -364,7 +363,7 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
               <Link
                 key={menu.menuId}
                 href={DASHBOARD_ROUTES.digitalMenuEdit(menu.qrId)}
-                className="group flex items-center justify-between gap-3 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2.5 transition-colors hover:bg-muted/60 dark:border-border dark:bg-background"
+                className="group flex items-center justify-between gap-3 rounded-xl border border-border bg-muted px-3 py-2.5 transition-colors hover:bg-muted/60"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{menu.businessName}</p>

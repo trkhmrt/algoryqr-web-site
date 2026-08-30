@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 
 import { CardVerificationPanel } from "@/components/dashboard/CardVerificationPanel";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
@@ -20,6 +22,7 @@ import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
+import { DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 import {
   clearPersistedTrialIntent,
   DEFAULT_TRIAL_PACKAGE,
@@ -176,26 +179,24 @@ export default function TrialStartView() {
 
   if (phase === "loading" || phase === "blocked") {
     return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <p className="text-sm">Deneme durumunuz kontrol ediliyor…</p>
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-6 animate-fade-in">
+        <DashboardPageHeader
+          title="Ultimate'i 30 gün ücretsiz başlat"
+          hint="Deneme durumunuz kontrol ediliyor…"
+        />
+        <DashboardLoadingState label="Deneme durumunuz kontrol ediliyor…" />
       </div>
     );
   }
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 animate-fade-in">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Ultimate&apos;i 30 gün ücretsiz başlat
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {trialPackage?.name ?? "Ultimate"} paketini 30 gün ücretsiz kullanın. Kart zorunludur; deneme
-          bitince kayıtlı karttan çekim yapılır.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Ultimate'i 30 gün ücretsiz başlat"
+        hint={`${trialPackage?.name ?? "Ultimate"} paketini 30 gün ücretsiz kullanın. Kart zorunludur; deneme bitince kayıtlı karttan çekim yapılır.`}
+      />
 
-      <div className="rounded-lg border border-[hsl(var(--chart-violet)/0.35)] bg-gradient-to-b from-[hsl(var(--chart-violet)/0.14)] via-[hsl(var(--chart-violet)/0.06)] to-transparent p-5">
+      <div className={`${DASHBOARD_PANEL} border-primary/35 bg-gradient-to-b from-primary/12 via-primary/6 to-transparent`}>
         <p className="text-sm font-medium text-foreground">
           {trialPackage?.name ?? "Ultimate"} · 30 gün ücretsiz
         </p>
@@ -221,7 +222,7 @@ export default function TrialStartView() {
           </>
         ) : (
           <>
-            <Sparkles className="h-4 w-4 text-[hsl(var(--chart-violet))]" />
+            <Sparkles className="h-4 w-4" />
             30 gün ücretsiz dene
           </>
         )}

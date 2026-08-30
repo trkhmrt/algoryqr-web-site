@@ -87,7 +87,7 @@ export default function AnalyticsRevenuePanel({
 
   if (empty) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
         Seçilen dönemde tahsilat kaydı yok. Adisyon ödemeleri alındıkça ciro burada görünür.
       </div>
     );
@@ -102,7 +102,7 @@ export default function AnalyticsRevenuePanel({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="glow-card rounded-lg border bg-card text-card-foreground shadow-sm"
+            className="rounded-2xl border border-[#e5e7eb] bg-white text-card-foreground shadow-none dark:border-border dark:bg-card"
           >
             <div className="flex flex-col gap-3 p-5">
               <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export default function AnalyticsRevenuePanel({
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="glow-card rounded-lg border bg-card p-4 shadow-sm"
+              className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-4"
             >
               <div className="flex items-center gap-2">
                 <item.icon className="h-4 w-4" style={{ color: item.color }} />
@@ -150,10 +150,10 @@ export default function AnalyticsRevenuePanel({
       ) : null}
 
       {personnel.length > 0 ? (
-        <div className="glow-card overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <Users className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-medium text-foreground">Personel cirosu</h2>
+            <h2 className="text-base font-semibold text-foreground">Personel cirosu</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -229,8 +229,8 @@ export default function AnalyticsRevenuePanel({
         <UnsoldCard card={spotlight.unsold} />
       </div>
 
-      <div className="glow-card rounded-lg border bg-card p-6">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Saatlik yoğunluk</h2>
+      <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+        <h2 className="mb-4 text-base font-semibold text-foreground">Saatlik yoğunluk</h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={hourly}>
@@ -253,8 +253,8 @@ export default function AnalyticsRevenuePanel({
         </div>
       </div>
 
-      <div className="glow-card rounded-lg border bg-card p-6">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Günlük ciro</h2>
+      <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+        <h2 className="mb-4 text-base font-semibold text-foreground">Günlük ciro</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={daily}>
@@ -298,8 +298,8 @@ export default function AnalyticsRevenuePanel({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="glow-card rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-sm font-medium text-foreground">Kategori cirosu</h2>
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">Kategori cirosu</h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -327,8 +327,8 @@ export default function AnalyticsRevenuePanel({
           </div>
         </div>
 
-        <div className="glow-card rounded-lg border bg-card p-6">
-          <h2 className="mb-4 text-sm font-medium text-foreground">Ürün cirosu</h2>
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">Ürün cirosu</h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={products.slice(0, 8)} layout="vertical" margin={{ left: 8, right: 8 }}>
@@ -381,7 +381,7 @@ function SpotlightProductCard({
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glow-card rounded-lg border bg-card text-card-foreground shadow-sm"
+      className="rounded-2xl border border-[#e5e7eb] bg-white text-card-foreground shadow-none dark:border-border dark:bg-card"
     >
       <div className="flex flex-col gap-3 p-5">
         <div className="flex items-center gap-2">
@@ -403,7 +403,7 @@ function UnsoldCard({ card }: { card: UnsoldSpotlightCard }) {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glow-card rounded-lg border bg-card text-card-foreground shadow-sm"
+      className="rounded-2xl border border-[#e5e7eb] bg-white text-card-foreground shadow-none dark:border-border dark:bg-card"
     >
       <div className="flex flex-col gap-3 p-5">
         <div className="flex items-center gap-2">
@@ -433,9 +433,9 @@ function RevenueTable({
   currency: string;
 }) {
   return (
-    <div className="glow-card overflow-hidden rounded-lg border bg-card">
+    <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
       <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-medium text-foreground">{title}</h2>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

@@ -11,8 +11,9 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
 } from "@/lib/campaign-api";
 import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_PANEL_LG, DASHBOARD_TYPE_SECTION } from "@/lib/dashboard-surface";
 
 function statusLabel(status: CampaignItem["status"]): string {
   switch (status) {
@@ -287,8 +289,17 @@ export default function CampaignDetailView() {
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in pb-8">
+        <DashboardPageHeader
+          title="Kampanya detayı"
+          hint="Kampanya bilgileri ve kazanan müşteriler"
+          back={
+            <Link href={backHref} aria-label="Kampanyalara dön" className={DASHBOARD_BACK}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          }
+        />
+        <DashboardLoadingState label="Kampanya yükleniyor…" />
       </div>
     );
   }
@@ -308,12 +319,19 @@ export default function CampaignDetailView() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
-      <Button variant="ghost" size="sm" className="-ml-2 w-fit gap-1.5" asChild>
-        <Link href={backHref}>
-          <ArrowLeft className="h-4 w-4" />
-          Kampanyalara dön
-        </Link>
-      </Button>
+      <DashboardPageHeader
+        title={campaign?.name ?? "Kampanya detayı"}
+        hint={
+          campaign
+            ? `${campaign.slogan ? `${campaign.slogan} · ` : ""}${templateLabel(campaign.templateCode)} · ${statusLabel(campaign.status)}`
+            : "Kampanya bilgileri ve kazanan müşteriler"
+        }
+        back={
+          <Link href={backHref} aria-label="Kampanyalara dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       <DigitalMenuPicker
         menuQrs={menuQrs}
@@ -325,34 +343,16 @@ export default function CampaignDetailView() {
       />
 
       {menuId == null ? (
-        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Menü bilgisi yükleniyor…
-        </div>
+        <DashboardLoadingState label="Menü bilgisi yükleniyor…" />
       ) : campaignQuery.isLoading ? (
-        <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Kampanya yükleniyor…
-        </div>
+        <DashboardLoadingState label="Kampanya yükleniyor…" />
       ) : campaignQuery.isError || !campaign ? (
         <p className="text-sm text-destructive">Kampanya bulunamadı.</p>
       ) : (
         <>
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">{campaign.name}</h1>
-            {campaign.slogan ? (
-              <p className="text-sm text-muted-foreground">{campaign.slogan}</p>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              {templateLabel(campaign.templateCode)} · {statusLabel(campaign.status)}
-            </p>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Kampanya bilgileri</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+          <div className={DASHBOARD_PANEL_LG}>
+            <h2 className={DASHBOARD_TYPE_SECTION}>Kampanya bilgileri</h2>
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-muted-foreground">Başlangıç</p>
                 <p>{formatWhen(campaign.startsAt)}</p>
@@ -365,24 +365,21 @@ export default function CampaignDetailView() {
                 <p className="text-muted-foreground">Toplam kazanan</p>
                 <p>{totalWinners}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <CardTitle className="text-base">Kazanan müşteriler</CardTitle>
+          <div className={DASHBOARD_PANEL_LG}>
+            <div className="flex flex-row items-center justify-between gap-3">
+              <h2 className={DASHBOARD_TYPE_SECTION}>Kazanan müşteriler</h2>
               {totalWinners > 5 ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => setWinnersDialogOpen(true)}>
                   Tümünü gör
                 </Button>
               ) : null}
-            </CardHeader>
-            <CardContent>
+            </div>
+            <div className="mt-4">
               {winnersPreviewQuery.isLoading ? (
-                <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Kazananlar yükleniyor…
-                </div>
+                <DashboardLoadingState label="Kazananlar yükleniyor…" />
               ) : (
                 <>
                   <WinnersTable winners={previewWinners} />
@@ -395,8 +392,8 @@ export default function CampaignDetailView() {
                   ) : null}
                 </>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </>
       )}
 

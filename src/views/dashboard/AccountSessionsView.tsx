@@ -4,10 +4,13 @@ import Link from "next/link";
 import { ArrowLeft, Monitor } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   formatSessionDate,
   sessionStatusLabel,
@@ -63,8 +66,8 @@ function SessionRow({
         <span
           className={
             session.current
-              ? "shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success"
-              : "shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning"
+              ? "shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success"
+              : "shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"
           }
         >
           {session.current ? "Aktif oturum" : sessionStatusLabel(session)}
@@ -100,33 +103,29 @@ export default function AccountSessionsView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" asChild>
-          <Link href={DASHBOARD_ROUTES.accountSecurity}>
+      <DashboardPageHeader
+        title="Oturumlar"
+        hint="Açık cihazlar ve geçmiş oturumların özeti."
+        back={
+          <Link href={DASHBOARD_ROUTES.accountSecurity} aria-label="Güvenliğe dön" className={DASHBOARD_BACK}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
-        </Button>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">Oturumlar</h1>
-          <p className="text-sm text-muted-foreground">
-            Açık cihazlar ve geçmiş oturumların özeti.
-          </p>
-        </div>
-      </div>
+        }
+      />
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Oturumlar yükleniyor…</p>
+        <DashboardLoadingState label="Oturumlar yükleniyor…" />
       ) : error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-lg border border-success/40 bg-success/5 p-5 flex flex-col gap-3 min-h-[180px]">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <Monitor className="h-4 w-4 text-success" /> Bu Cihaz
               </h2>
               {currentSession ? (
-                <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                   Aktif oturum
                 </span>
               ) : null}
@@ -143,10 +142,10 @@ export default function AccountSessionsView() {
             )}
           </div>
 
-          <div className="rounded-lg border border-[hsl(var(--chart-violet)/0.35)] bg-gradient-to-b from-[hsl(var(--chart-violet)/0.14)] via-[hsl(var(--chart-violet)/0.06)] to-transparent p-5 flex flex-col gap-3 min-h-[180px]">
+          <div className="rounded-lg border border-primary/35 bg-gradient-to-b from-primary/12 via-primary/6 to-transparent p-5 flex flex-col gap-3 min-h-[180px]">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Monitor className="h-4 w-4 text-[hsl(var(--chart-violet))]" /> Diğer aktif oturumlar
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-primary" /> Diğer aktif oturumlar
               </h2>
               {otherActiveSessions.length > 0 ? (
                 <span className="text-xs text-muted-foreground">
@@ -178,9 +177,9 @@ export default function AccountSessionsView() {
             ) : null}
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-5 space-y-3 lg:col-span-2">
+          <div className={`${DASHBOARD_SURFACE} p-5 space-y-3 lg:col-span-2`}>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <Monitor className="h-4 w-4 text-muted-foreground" /> Eski oturumlar
               </h2>
               {oldSessions.length > 0 ? (

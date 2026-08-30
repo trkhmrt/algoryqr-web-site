@@ -115,7 +115,7 @@ export default function AnalyticsWaiterPerformancePanel({
 
   if (baseView.empty) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
         Seçilen dönemde personel performans verisi yok. Garson kayıtları oluşturup siparişler onaylandıkça
         burada görünür.
       </div>
@@ -140,7 +140,7 @@ export default function AnalyticsWaiterPerformancePanel({
         >
           <SelectTrigger
             aria-label="Personel filtresi"
-            className="w-full sm:w-[240px] rounded-xl border border-border/50 bg-white px-2.5 py-1.5 shadow-sm transition-colors dark:border-border/60 dark:bg-muted/60"
+            className="w-full sm:w-[240px] rounded-xl border border-border/50 bg-white px-2.5 py-1.5 shadow-sm transition-colors/60 dark:bg-muted/60"
           >
             <SelectValue placeholder="Tüm personel" />
           </SelectTrigger>
@@ -156,7 +156,7 @@ export default function AnalyticsWaiterPerformancePanel({
       </div>
 
       {empty ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6 text-sm text-muted-foreground">
           Seçilen personel için bu dönemde veri yok.
         </div>
       ) : null}
@@ -170,7 +170,7 @@ export default function AnalyticsWaiterPerformancePanel({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glow-card rounded-lg border bg-card text-card-foreground shadow-sm"
+                className="rounded-2xl border border-[#e5e7eb] bg-white text-card-foreground shadow-none dark:border-border dark:bg-card"
               >
                 <div className="flex flex-col gap-3 p-5">
                   <div className="flex items-center gap-2">
@@ -184,8 +184,8 @@ export default function AnalyticsWaiterPerformancePanel({
           </div>
 
           {!isFiltered && daily.length > 0 ? (
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">Günlük personel cirosu</h2>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">Günlük personel cirosu</h2>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={daily}>
@@ -238,8 +238,8 @@ export default function AnalyticsWaiterPerformancePanel({
 
           <div className={`grid gap-6 ${!isFiltered && hourly.length > 0 ? "lg:grid-cols-2" : ""}`}>
             {chartData.length > 0 ? (
-              <div className="glow-card rounded-lg border bg-card p-6">
-                <h2 className="mb-4 text-sm font-medium text-foreground">
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+                <h2 className="mb-4 text-base font-semibold text-foreground">
                   {isFiltered ? "Seçilen personel cirosu" : "Personel bazlı ciro"}
                 </h2>
                 <div className="h-72">
@@ -284,8 +284,8 @@ export default function AnalyticsWaiterPerformancePanel({
             ) : null}
 
             {!isFiltered && hourly.length > 0 ? (
-              <div className="glow-card rounded-lg border bg-card p-6">
-                <h2 className="mb-4 text-sm font-medium text-foreground">Saatlik sipariş yoğunluğu</h2>
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+                <h2 className="mb-4 text-base font-semibold text-foreground">Saatlik sipariş yoğunluğu</h2>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={hourly}>
@@ -302,8 +302,8 @@ export default function AnalyticsWaiterPerformancePanel({
           </div>
 
           {products.length > 0 ? (
-            <div className="glow-card rounded-lg border bg-card p-6">
-              <h2 className="mb-4 text-sm font-medium text-foreground">
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold text-foreground">
                 {isFiltered ? "En çok sattığı ürünler" : "Personel satışlarındaki en çok satılan ürünler"}
               </h2>
               <div className="h-64">
@@ -332,9 +332,9 @@ export default function AnalyticsWaiterPerformancePanel({
             </div>
           ) : null}
 
-          <div className="glow-card overflow-hidden rounded-lg border bg-card">
+          <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card">
             <div className="border-b border-border px-6 py-4">
-              <h2 className="text-sm font-medium text-foreground">Personel performans tablosu</h2>
+              <h2 className="text-base font-semibold text-foreground">Personel performans tablosu</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Onaylanmış siparişler, garson atamasına göre gruplanır. Satır detayında personelin en çok sattığı ürünler
                 görünür.
@@ -370,12 +370,12 @@ export default function AnalyticsWaiterPerformancePanel({
                               <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
                               <span className="font-medium text-foreground">{row.displayName}</span>
                               {!row.unassigned && !row.active ? (
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                   Pasif
                                 </span>
                               ) : null}
                               {row.unassigned ? (
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                   Atanmamış
                                 </span>
                               ) : null}
@@ -414,7 +414,7 @@ export default function AnalyticsWaiterPerformancePanel({
                                 {row.topProducts.map((product) => (
                                   <div
                                     key={product.key}
-                                    className="rounded-xl border border-border/50 bg-white px-2.5 py-1.5 shadow-sm dark:border-border/60 dark:bg-muted/60"
+                                    className="rounded-xl border border-border/50 bg-white px-2.5 py-1.5 shadow-sm/60 dark:bg-muted/60"
                                   >
                                     <p className="text-sm font-medium text-foreground">{product.name}</p>
                                     <p className="mt-1 text-xs text-muted-foreground">

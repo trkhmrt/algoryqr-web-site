@@ -18,7 +18,6 @@ export default {
         display: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
         heading: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
-        manrope: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

@@ -6,10 +6,14 @@ import { ArrowLeft, Monitor, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useUserSessions, type UserSessionRow } from "@/hooks/use-user-sessions";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   formatSessionDate,
   matchesSessionSearch,
@@ -60,34 +64,32 @@ export default function AccountSessionsDetailView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" asChild>
-          <Link href={DASHBOARD_ROUTES.accountSessions}>
+      <DashboardPageHeader
+        title="Oturum Detayı"
+        hint="Tüm oturumları IP, cihaz veya tarayıcıya göre arayın."
+        back={
+          <Link href={DASHBOARD_ROUTES.accountSessions} aria-label="Oturumlara dön" className={DASHBOARD_BACK}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Oturum Detayı</h1>
-          <p className="text-sm text-muted-foreground">
-            Tüm oturumları IP, cihaz veya tarayıcıya göre arayın.
-          </p>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <DashboardFilterBar>
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="IP, cihaz, tarayıcı veya durum ara…"
           className="pl-9 bg-background"
           aria-label="Oturum ara"
         />
-      </div>
+        </div>
+      </DashboardFilterBar>
 
-      <div className="rounded-lg border border-border bg-card p-5 space-y-3">
+      <div className={`${DASHBOARD_SURFACE} p-5 space-y-3`}>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <Monitor className="h-4 w-4 text-muted-foreground" /> Tüm oturumlar
           </h2>
           {!loading && !error ? (
@@ -99,7 +101,7 @@ export default function AccountSessionsDetailView() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Oturumlar yükleniyor…</p>
+          <DashboardLoadingState label="Oturumlar yükleniyor…" className="border-0 bg-transparent p-0" />
         ) : error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : filtered.length === 0 ? (
@@ -118,7 +120,7 @@ export default function AccountSessionsDetailView() {
                   <p className="text-xs text-muted-foreground truncate">{sessionMeta(session)}</p>
                 </div>
                 {session.current ? (
-                  <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                  <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                     Bu cihaz
                   </span>
                 ) : session.active ? (
@@ -132,7 +134,7 @@ export default function AccountSessionsDetailView() {
                     {revokingId === session.sessionId ? "Sonlandırılıyor…" : "Sonlandır"}
                   </Button>
                 ) : (
-                  <span className="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                  <span className="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                     {sessionStatusLabel(session)}
                   </span>
                 )}

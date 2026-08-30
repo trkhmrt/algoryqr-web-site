@@ -7,6 +7,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { BranchPicker, useBranchSelection } from "@/components/dashboard/BranchPicker";
+import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   listMenuUsers,
   WaiterApiError,
@@ -122,8 +125,9 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
 
   if (accessLoading || loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+      <div className="space-y-6 animate-fade-in pb-8">
+        <DashboardPageHeader title="Kullanıcı detayı" hint="Garson hesabı" />
+        <DashboardLoadingState label="Kullanıcı bilgileri yükleniyor…" />
       </div>
     );
   }
@@ -131,21 +135,16 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
   const busy = updateMutation.isPending;
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-5 animate-fade-in pb-8">
-      <div className="flex items-center gap-3">
-        <Link
-          href={backHref}
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">
-            {member?.displayName || "Kullanıcı detayı"}
-          </h1>
-          <p className="text-sm text-muted-foreground">Garson hesabı</p>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in pb-8">
+      <DashboardPageHeader
+        title={member?.displayName || "Kullanıcı detayı"}
+        hint="Garson hesabı"
+        back={
+          <Link href={backHref} aria-label="Kullanıcı listesine dön" className={DASHBOARD_BACK}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        }
+      />
 
       <BranchPicker
         branches={branches}
@@ -161,9 +160,7 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
       {!branchId ? (
         <p className="text-sm text-muted-foreground">Şube seçin.</p>
       ) : usersQuery.isLoading ? (
-        <div className="flex justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
+        <DashboardLoadingState label="Kullanıcı bilgileri yükleniyor…" />
       ) : !member ? (
         <div className="space-y-3 rounded-lg border border-dashed border-border px-4 py-10 text-center">
           <p className="text-sm text-muted-foreground">Kullanıcı bulunamadı.</p>
@@ -173,14 +170,14 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
         </div>
       ) : (
         <div className="space-y-4">
-          <section className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <section className={`${DASHBOARD_SURFACE} p-4 space-y-3`}>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-lg font-semibold text-foreground">{member.displayName}</p>
               <span
                 className={
                   member.active
-                    ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
-                    : "rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    ? "rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
+                    : "rounded-full bg-muted px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground"
                 }
               >
                 {member.active ? "Aktif" : "Pasif"}
@@ -192,8 +189,8 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
             </p>
           </section>
 
-          <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold">Şifre sıfırla</h2>
+          <section className={`${DASHBOARD_SURFACE} space-y-3 p-4`}>
+            <h2 className="text-base font-semibold">Şifre sıfırla</h2>
             <div className="space-y-1.5">
               <Label htmlFor="detail-password">Yeni şifre</Label>
               <Input
@@ -219,8 +216,8 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
             </Button>
           </section>
 
-          <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold">Komisyon</h2>
+          <section className={`${DASHBOARD_SURFACE} space-y-3 p-4`}>
+            <h2 className="text-base font-semibold">Komisyon</h2>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -332,8 +329,8 @@ export default function MenuUserDetailView({ waiterId }: MenuUserDetailViewProps
             </Button>
           </section>
 
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold">Hesap</h2>
+          <section className={`${DASHBOARD_SURFACE} p-4`}>
+            <h2 className="text-base font-semibold">Hesap</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {member.active
                 ? "Pasifleştirilen garson giriş yapamaz."
