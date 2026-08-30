@@ -188,9 +188,9 @@ export default function DigitalMenuCreateView() {
           : "Dijital menü QR kodunuz oluşturuldu.",
       );
       if (response.qrId != null) {
-        router.push(DASHBOARD_ROUTES.digitalMenuEdit(response.qrId));
+        router.push(DASHBOARD_ROUTES.digitalMenuSettings(response.qrId));
       } else {
-        router.push(DASHBOARD_ROUTES.digitalMenu);
+        router.push(DASHBOARD_ROUTES.digitalMenuMenus);
       }
     } catch (error) {
       if (getApiErrorCode(error) === "EXTRA_MENU_REQUIRED") {

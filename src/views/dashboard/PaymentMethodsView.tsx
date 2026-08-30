@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, CreditCard, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { CardVerificationPanel } from "@/components/dashboard/CardVerificationPanel";
 import { invalidatePaymentMethods, usePaymentMethods } from "@/hooks/use-commerce";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -43,14 +44,7 @@ export default function PaymentMethodsView() {
         </div>
       </div>
 
-      <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background p-3 text-xs text-muted-foreground">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        <p>
-          Yeni kart eklemek için paket satın alırken veya borç öderken PayTR ödeme
-          ekranında kart kaydını onaylayın. Kayıtlı kart, sonraki otomatik yenilemelerde
-          kullanılır.
-        </p>
-      </div>
+      <CardVerificationPanel />
 
       {methods.isLoading ? (
         <div className="h-32 animate-pulse rounded-lg bg-muted" />
@@ -82,8 +76,7 @@ export default function PaymentMethodsView() {
       ) : (
         <Card className="border-dashed">
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Henüz kayıtlı kartınız yok. PayTR ödeme ekranında kart kaydını onayladığınızda
-            burada görünür.
+            Henüz kayıtlı kartınız yok. Yukarıdaki PayTR adımıyla kart ekleyin.
           </CardContent>
         </Card>
       )}

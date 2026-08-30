@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import {
   DigitalMenuPicker,
@@ -12,10 +12,23 @@ import {
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelAccess";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { DateRangeFilter, openQueueDateRange } from "@/components/ui/date-range-filter";
 import { Input } from "@/components/ui/input";
-import { SlidingTabSelect } from "@/components/ui/sliding-tab-select";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useListQueryState } from "@/hooks/use-list-query-state";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   confirmMerchantOrder,
@@ -25,8 +38,6 @@ import {
   type OrderResponse,
 } from "@/lib/ordering-api";
 import { formatMenuPrice } from "@/components/menu-templates/types";
-
-type PeriodFilter = "today" | "7d" | "custom";
 
 function formatWhen(value?: string | null): string {
   if (!value) return "—";
@@ -40,23 +51,10 @@ function formatWhen(value?: string | null): string {
   });
 }
 
-function startOfDay(date: Date): Date {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function endOfDay(date: Date): Date {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
-}
-
-function parseDateInput(value: string, end = false): Date | null {
+function parseYmd(value: string, end = false): Date | null {
   if (!value) return null;
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return end ? endOfDay(parsed) : startOfDay(parsed);
+  const parsed = new Date(`${value}T${end ? "23:59:59.999" : "00:00:00"}`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function orderTimestamp(order: OrderResponse): number | null {
@@ -141,15 +139,21 @@ function OrderCard({
 
 export default function WaiterOrdersView() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, setQuery } = useListQueryState();
   const qrFromQuery = Number(searchParams.get("qr"));
   const initialQrId = Number.isFinite(qrFromQuery) && qrFromQuery > 0 ? qrFromQuery : null;
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
-  const [period, setPeriod] = useState<PeriodFilter>("today");
-  const [customerQuery, setCustomerQuery] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [range, setRange] = useState(() => ({
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
+  }));
+  const [customerQuery, setCustomerQuery] = useState(() => searchParams.get("q") ?? "");
+  const [pendingAction, setPendingAction] = useState<{
+    orderId: number;
+    action: "confirm" | "reject";
+  } | null>(null);
+  const debouncedCustomer = useDebouncedValue(customerQuery);
 
   const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
   const { accessLoading: menuAccessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
@@ -170,24 +174,9 @@ export default function WaiterOrdersView() {
 
   const filteredOrders = useMemo(() => {
     const orders = ordersQuery.data ?? [];
-    const now = new Date();
-    let from: Date | null = null;
-    let to: Date | null = null;
-
-    if (period === "today") {
-      from = startOfDay(now);
-      to = endOfDay(now);
-    } else if (period === "7d") {
-      const start = startOfDay(now);
-      start.setDate(start.getDate() - 6);
-      from = start;
-      to = endOfDay(now);
-    } else {
-      from = parseDateInput(fromDate, false);
-      to = parseDateInput(toDate, true);
-    }
-
-    const query = customerQuery.trim().toLowerCase();
+    const from = parseYmd(range.from, false);
+    const to = parseYmd(range.to, true);
+    const query = debouncedCustomer.trim().toLowerCase();
 
     return orders.filter((order) => {
       const timestamp = orderTimestamp(order);
@@ -198,7 +187,7 @@ export default function WaiterOrdersView() {
       const email = (order.customerEmail || "").trim().toLowerCase();
       return name.includes(query) || email.includes(query);
     });
-  }, [customerQuery, fromDate, ordersQuery.data, period, toDate]);
+  }, [debouncedCustomer, ordersQuery.data, range.from, range.to]);
 
   const actionMutation = useMutation({
     mutationFn: async (payload: { orderId: number; action: "confirm" | "reject" }) => {
@@ -227,18 +216,17 @@ export default function WaiterOrdersView() {
   const orders = ordersQuery.data ?? [];
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4 animate-fade-in pb-8">
-      <div className="flex items-center gap-3">
-        <Link
-          href={DASHBOARD_ROUTES.orderPanel}
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+    <div className="space-y-4 animate-fade-in pb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Siparişler</h1>
-          <p className="text-sm text-muted-foreground">Sipariş panelinden gelen onay bekleyen siparişler</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Sipariş Yönetimi</h1>
+          <p className="text-sm text-muted-foreground">Onay bekleyen siparişler</p>
         </div>
+        <Button asChild variant="outline">
+          <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
+            Garson uygulamasını aç
+          </a>
+        </Button>
       </div>
 
       <DigitalMenuPicker
@@ -253,74 +241,70 @@ export default function WaiterOrdersView() {
 
       {menuId ? (
         <div className="space-y-3">
-          <SlidingTabSelect
-            size="sm"
-            ariaLabel="Dönem"
-            value={period}
-            onValueChange={(next) => setPeriod(next as PeriodFilter)}
-            items={[
-              { value: "today", label: "Bugün" },
-              { value: "7d", label: "7 Gün" },
-              { value: "custom", label: "Tarih aralığı" },
-            ]}
+          <DateRangeFilter
+            value={range}
+            onChange={(next) => {
+              setRange(next);
+              setQuery({ from: next.from || null, to: next.to || null });
+            }}
           />
           <Input
             value={customerQuery}
-            onChange={(event) => setCustomerQuery(event.target.value)}
+            onChange={(event) => {
+              const next = event.target.value;
+              setCustomerQuery(next);
+              setQuery({ q: next.trim() || null });
+            }}
             placeholder="Müşteri adı"
             aria-label="Müşteri adı ile filtrele"
           />
-          {period === "custom" ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground" htmlFor="order-from-date">
-                  Başlangıç
-                </label>
-                <Input
-                  id="order-from-date"
-                  type="date"
-                  value={fromDate}
-                  onChange={(event) => setFromDate(event.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground" htmlFor="order-to-date">
-                  Bitiş
-                </label>
-                <Input
-                  id="order-to-date"
-                  type="date"
-                  value={toDate}
-                  onChange={(event) => setToDate(event.target.value)}
-                />
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : null}
 
       {!menuId ? (
-        <p className="text-sm text-muted-foreground">Menü seçin.</p>
+        <EmptyState
+          title="Menü seçin"
+          description="Bekleyen siparişleri görmek için bir dijital menü seçin."
+          action={
+            <Button asChild variant="outline">
+              <Link href={DASHBOARD_ROUTES.digitalMenu}>Menü & Şubeler</Link>
+            </Button>
+          }
+        />
       ) : ordersQuery.isLoading ? (
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       ) : orders.length === 0 ? (
-        <div
-          className="rounded-lg border border-dashed px-4 py-12 text-center text-sm"
-          style={{
-            borderColor: "hsl(var(--chart-teal) / 0.28)",
-            backgroundImage:
-              "linear-gradient(180deg, hsl(var(--chart-teal) / 0.32) 0%, hsl(var(--chart-teal) / 0.20) 32%, hsl(var(--chart-teal) / 0.08) 62%, hsl(var(--chart-teal) / 0) 100%)",
-            color: "hsl(var(--chart-teal))",
-          }}
-        >
-          Bekleyen sipariş yok.
-        </div>
+        <EmptyState
+          title="Bekleyen sipariş yok"
+          description="Yeni siparişler burada görünür. Garson uygulamasından da sipariş alabilirsiniz."
+          action={
+            <Button asChild variant="outline">
+              <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
+                Garson uygulamasını aç
+              </a>
+            </Button>
+          }
+        />
       ) : filteredOrders.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-          Filtrelere uyan sipariş yok.
-        </div>
+        <EmptyState
+          title="Filtrelere uyan sipariş yok"
+          description="Tarih veya müşteri filtresini temizleyip tekrar deneyin."
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                const next = openQueueDateRange();
+                setRange(next);
+                setCustomerQuery("");
+                setQuery({ from: null, to: null, q: null });
+              }}
+            >
+              Filtreleri temizle
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {filteredOrders.map((order) => (
@@ -328,16 +312,40 @@ export default function WaiterOrdersView() {
               key={order.id}
               order={order}
               busy={actionMutation.isPending}
-              onConfirm={() =>
-                actionMutation.mutate({ orderId: order.id, action: "confirm" })
-              }
-              onReject={() =>
-                actionMutation.mutate({ orderId: order.id, action: "reject" })
-              }
+              onConfirm={() => setPendingAction({ orderId: order.id, action: "confirm" })}
+              onReject={() => setPendingAction({ orderId: order.id, action: "reject" })}
             />
           ))}
         </div>
       )}
+
+      <AlertDialog open={pendingAction != null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAction?.action === "reject" ? "Siparişi reddet?" : "Siparişi onayla?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAction?.action === "reject"
+                ? "Reddettiğiniz sipariş kuyruktan çıkar. Bu işlem geri alınamaz."
+                : "Onaylanan sipariş hazırlık kuyruğuna geçer."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              className={pendingAction?.action === "reject" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+              onClick={() => {
+                if (!pendingAction) return;
+                actionMutation.mutate(pendingAction);
+                setPendingAction(null);
+              }}
+            >
+              {pendingAction?.action === "reject" ? "Reddet" : "Onayla"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

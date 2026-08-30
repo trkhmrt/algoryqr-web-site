@@ -1,19 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, CheckCircle2, Clock, Loader2 } from "lucide-react";
 
+import { DigitalMenuHubGate } from "@/components/dashboard/digital-menu/DigitalMenuHubGate";
+import { DigitalMenuHubShell } from "@/components/dashboard/digital-menu/DigitalMenuHubShell";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { FilterSelect } from "@/components/dashboard/FilterSelect";
+import { useListQueryState } from "@/hooks/use-list-query-state";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
   DigitalMenuPicker,
-  useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
-import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { Input } from "@/components/ui/input";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   ApiError,
@@ -22,7 +28,6 @@ import {
   type MenuReservationApiItem,
   type MenuReservationStatus,
 } from "@/lib/api";
-import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 type StatusFilter = MenuReservationStatus | "all";
 
@@ -76,38 +81,45 @@ function statusClass(status: MenuReservationStatus): string {
   }
 }
 
-export default function ReservationsView() {
+function ReservationsPanel() {
   const searchParams = useSearchParams();
   const qrFromQuery = Number(searchParams.get("qr"));
   const initialQrId = Number.isFinite(qrFromQuery) && qrFromQuery > 0 ? qrFromQuery : null;
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
 
-  const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const { menuQrs, selection, loading, error, selectQrId } = useDigitalMenuSelection(
-    initialQrId,
-    canUseDigitalMenu && !accessLoading,
-  );
+  const { menuQrs, selection, loading, error, selectQrId } = useDigitalMenuSelection(initialQrId);
+  const { setQuery } = useListQueryState();
 
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [q, setQ] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [status, setStatus] = useState<StatusFilter>(
+    () => (searchParams.get("status") as StatusFilter) || "all",
+  );
+  const [q, setQ] = useState(() => searchParams.get("q") ?? "");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [range, setRange] = useState(() => ({
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
+  }));
   const [page, setPage] = useState(0);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
 
   const menuId = selection?.menu.menuId ?? null;
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
   const listQuery = useQuery({
-    queryKey: ["menu-reservations", menuId, status, q, from, to, page],
+    queryKey: ["menu-reservations", menuId, status, debouncedQ, range.from, range.to, page],
     enabled: menuId != null,
     queryFn: () =>
       getMenuReservationsRequest(menuId!, {
         status,
-        q: q.trim() || undefined,
-        from: from || undefined,
-        to: to || undefined,
+        q: debouncedQ || undefined,
+        from: range.from || undefined,
+        to: range.to || undefined,
         page,
         size: 20,
       }),
@@ -149,23 +161,10 @@ export default function ReservationsView() {
     };
   }, [items, listQuery.data?.totalElements]);
 
-  if (accessLoading || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!canUseDigitalMenu) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" asChild>
-          <Link href={DASHBOARD_ROUTES.digitalMenu}>Dijital Menüye Dön</Link>
-        </Button>
-        <p className="text-sm text-muted-foreground">
-          Rezervasyonları görmek için dijital menü erişimi gerekir.
-        </p>
       </div>
     );
   }
@@ -246,17 +245,12 @@ export default function ReservationsView() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Rezervasyonlar
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Onay bekleyen ve aktif rezervasyonları yönetin.
-          </p>
-        </div>
+    <DigitalMenuHubShell
+      title="Rezervasyonlar"
+      hint="Onay bekleyen ve aktif rezervasyonları yönetin."
+      action={
         <DigitalMenuPicker
+          compact
           menuQrs={menuQrs}
           selectedQrId={selection?.qr.id ?? null}
           onSelectQrId={(qrId) => {
@@ -264,14 +258,21 @@ export default function ReservationsView() {
             void selectQrId(qrId);
           }}
         />
-      </div>
+      }
+    >
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {menuQrs.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Rezervasyonları görüntülemek için önce bir dijital menü QR kodu oluşturun.
-        </div>
+        <EmptyState
+          title="Menü gerekli"
+          description="Rezervasyonları görmek için önce bir dijital menü yayınlayın."
+          action={
+            <Button asChild variant="outline">
+              <Link href={DASHBOARD_ROUTES.digitalMenu}>Menü oluştur</Link>
+            </Button>
+          }
+        />
       ) : menuId == null ? (
         <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -371,57 +372,42 @@ export default function ReservationsView() {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <div className="w-[12rem] space-y-1.5">
-              <label className="text-xs text-muted-foreground">Durum</label>
-              <SearchableSelect
-                value={status}
-                onValueChange={(next) => {
-                  setStatus(next as StatusFilter);
-                  setPage(0);
-                }}
-                options={[
-                  { value: "all", label: "Tümü" },
-                  { value: "PENDING", label: "Onay bekliyor" },
-                  { value: "ACTIVE", label: "Aktif" },
-                  { value: "CANCELED", label: "İptal" },
-                ]}
-                placeholder="Durum seçin"
-                searchPlaceholder="Durum ara..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Başlangıç</label>
-              <input
-                type="date"
-                className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={from}
-                onChange={(e) => {
-                  setFrom(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Bitiş</label>
-              <input
-                type="date"
-                className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
+            <FilterSelect
+              className="w-[12rem]"
+              label="Durum"
+              value={status}
+              onValueChange={(next) => {
+                const value = next as StatusFilter;
+                setStatus(value);
+                setPage(0);
+                setQuery({ status: value === "all" ? null : value });
+              }}
+              options={[
+                { value: "all", label: "Tümü" },
+                { value: "PENDING", label: "Onay bekliyor" },
+                { value: "ACTIVE", label: "Aktif" },
+                { value: "CANCELED", label: "İptal" },
+              ]}
+            />
+            <DateRangeFilter
+              className="min-w-0 flex-1"
+              value={range}
+              onChange={(next) => {
+                setRange(next);
+                setPage(0);
+                setQuery({ from: next.from || null, to: next.to || null });
+              }}
+            />
             <div className="min-w-[200px] flex-1 space-y-1.5">
               <label className="text-xs text-muted-foreground">Ara (ad / e-posta)</label>
-              <input
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <Input
                 value={q}
                 placeholder="Müşteri adı veya e-posta"
                 onChange={(e) => {
-                  setQ(e.target.value);
+                  const next = e.target.value;
+                  setQ(next);
                   setPage(0);
+                  setQuery({ q: next.trim() || null });
                 }}
               />
             </div>
@@ -433,9 +419,30 @@ export default function ReservationsView() {
               Rezervasyonlar yükleniyor…
             </div>
           ) : items.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Bu filtrelerle rezervasyon yok.
-            </div>
+            <EmptyState
+              title={status !== "all" || q.trim() || range.from || range.to ? "Filtrelere uyan rezervasyon yok" : "Henüz rezervasyon yok"}
+              description={
+                status !== "all" || q.trim() || range.from || range.to
+                  ? "Durum, tarih veya arama filtresini temizleyip tekrar deneyin."
+                  : "Müşteriler rezervasyon yaptığında burada görünür."
+              }
+              action={
+                status !== "all" || q.trim() || range.from || range.to ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStatus("all");
+                      setQ("");
+                      setRange({ from: "", to: "" });
+                      setPage(0);
+                      setQuery({ status: null, q: null, from: null, to: null });
+                    }}
+                  >
+                    Filtreleri temizle
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="space-y-3">
               {items.map((item) => (
@@ -491,6 +498,14 @@ export default function ReservationsView() {
           ) : null}
         </>
       )}
-    </div>
+    </DigitalMenuHubShell>
+  );
+}
+
+export default function ReservationsView() {
+  return (
+    <DigitalMenuHubGate>
+      <ReservationsPanel />
+    </DigitalMenuHubGate>
   );
 }

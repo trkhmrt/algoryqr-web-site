@@ -2,7 +2,6 @@ import type { ProductScope } from "@/lib/auth-user";
 import {
   DASHBOARD_ROUTES,
   isDigitalMenuSectionActive,
-  isOrderPanelSectionActive,
   isReportsSectionActive,
   isTrendyolGoSectionActive,
 } from "@/lib/dashboard-routes";
@@ -12,8 +11,16 @@ function pathMatches(pathname: string, route: string): boolean {
 }
 
 export function resolveRequiredScope(pathname: string): ProductScope | null {
+  if (pathname === DASHBOARD_ROUTES.reportsHub) {
+    return null;
+  }
+
   if (
-    isOrderPanelSectionActive(pathname) ||
+    pathname === DASHBOARD_ROUTES.orderPanel ||
+    pathname === DASHBOARD_ROUTES.waiter ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.waiter}/`) ||
+    pathname === DASHBOARD_ROUTES.orderPanelReports ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.orderPanelReports}/`) ||
     pathname === DASHBOARD_ROUTES.restaurantLayout ||
     pathname.startsWith(`${DASHBOARD_ROUTES.restaurantLayout}/`) ||
     pathMatches(pathname, DASHBOARD_ROUTES.menuUsers) ||
@@ -42,6 +49,7 @@ export function resolveRequiredScope(pathname: string): ProductScope | null {
 }
 
 export const ROUTE_SCOPES: Partial<Record<string, ProductScope>> = {
+  [DASHBOARD_ROUTES.reportsHub]: "SMART_REPORTING_OWNER",
   [DASHBOARD_ROUTES.orderPanel]: "WAITER_PANEL_OWNER",
   [DASHBOARD_ROUTES.waiter]: "WAITER_PANEL_OWNER",
   [DASHBOARD_ROUTES.menuUsers]: "WAITER_PANEL_OWNER",

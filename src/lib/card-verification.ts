@@ -27,6 +27,16 @@ export function isCardVerificationFailed(status: CardVerificationStatusValue | u
   return status === "FAILURE";
 }
 
+export function isCardVerificationConversation(conversationId: string | null | undefined): boolean {
+  if (conversationId == null || conversationId === "") {
+    return false;
+  }
+  if (conversationId.startsWith("qr-card-verification-")) {
+    return true;
+  }
+  return conversationId.replace(/[^A-Za-z0-9]/g, "").toLowerCase().startsWith("qrcardv");
+}
+
 export async function initiateCardVerification(): Promise<CardVerificationInitResponse> {
   const response = await getSiteSameOriginAxios().post<CardVerificationInitResponse>(
     "/account/payment-methods/verification",

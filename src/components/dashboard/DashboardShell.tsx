@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,26 +22,25 @@ import {
   PanelLeft,
   PanelLeftClose,
   TrendingUp,
-  CalendarDays,
   Calculator,
   Megaphone,
+  Search,
   UtensilsCrossed,
 } from "lucide-react";
 
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import TrialReminderDialog from "@/components/dashboard/TrialReminderDialog";
 import TrialReminderHeaderBadge from "@/components/dashboard/TrialReminderHeaderBadge";
-import { ReportIssueFloatingButton } from "@/components/dashboard/ReportIssueFloatingButton";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DashboardBreadcrumbs } from "@/components/dashboard/DashboardBreadcrumbs";
+import { SetupNextBanner } from "@/components/dashboard/SetupNextBanner";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DashboardCommandPalette,
+  useCommandPaletteHotkey,
+} from "@/components/dashboard/DashboardCommandPalette";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardMobileNav";
+import { NavBadge } from "@/components/dashboard/NavBadge";
+import { DashboardPageLabelProvider, useDashboardPageLabelValue } from "@/contexts/dashboard-page-label";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DashboardBannersProvider,
@@ -49,20 +48,21 @@ import {
 } from "@/contexts/dashboard-banners";
 import { useTokenRefresh } from "@/hooks/use-token-refresh";
 import { useAccessProfile } from "@/hooks/use-access-profile";
+import { usePendingOrderCount } from "@/hooks/use-pending-order-count";
 import {
   DASHBOARD_NAV_ITEMS,
   DASHBOARD_ROUTES,
+  getVisibleDashboardNavGroups,
   isDashboardNavActive,
+  isWideDashboardPath,
 } from "@/lib/dashboard-routes";
 import { hasScope } from "@/lib/auth-user";
 import type { StoredUser } from "@/lib/api";
-import { getStoredUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const NAV_ICONS = {
   overview: BarChart3,
   digitalMenu: DigitalMenuIcon,
-  reservations: CalendarDays,
   trendyolGo: UtensilsCrossed,
   orderPanel: MonitorSmartphone,
   reports: TrendingUp,
@@ -87,15 +87,6 @@ const SIDEBAR_COLLAPSED_KEY = "algory-dashboard-sidebar-collapsed";
 const SIDEBAR_ITEM =
   "flex h-10 w-full items-center justify-start gap-3 overflow-hidden rounded-lg px-2.5 text-sm font-medium transition-colors";
 
-function mobileNavItemClass(active: boolean) {
-  return cn(
-    "flex-1 whitespace-nowrap rounded-lg border bg-white px-3 py-2.5 text-center text-xs font-medium transition-colors sm:text-sm dark:bg-card",
-    active
-      ? "border-transparent bg-muted text-foreground"
-      : "border-border/70 text-muted-foreground hover:text-foreground",
-  );
-}
-
 function sidebarItemClass(active: boolean) {
   return cn(
     SIDEBAR_ITEM,
@@ -117,7 +108,7 @@ interface DashboardShellProps {
   children: ReactNode;
 }
 
-function DashboardShellInner({ initialUser = null, children }: DashboardShellProps) {
+function DashboardShellInner({ children }: DashboardShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { banners, addBanner, removeBanner } = useDashboardBannerState();
@@ -127,11 +118,26 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
   const { data: accessProfile } = useAccessProfile();
   const visibleNavItems = useMemo(
     () =>
-      DASHBOARD_NAV_ITEMS.filter(
-        (item) => !item.requiredScope || hasScope(accessProfile, item.requiredScope),
-      ),
+      DASHBOARD_NAV_ITEMS.filter((item) => {
+        if (item.key === "reports") {
+          return (
+            hasScope(accessProfile, "SMART_REPORTING_OWNER") ||
+            hasScope(accessProfile, "WAITER_PANEL_OWNER")
+          );
+        }
+        return !item.requiredScope || hasScope(accessProfile, item.requiredScope);
+      }),
     [accessProfile],
   );
+  const visibleNavGroups = useMemo(
+    () => getVisibleDashboardNavGroups(visibleNavItems),
+    [visibleNavItems],
+  );
+  const showPendingBadge = hasScope(accessProfile, "WAITER_PANEL_OWNER");
+  const { count: pendingOrderCount } = usePendingOrderCount(showPendingBadge);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const toggleCommand = useCallback(() => setCommandOpen((open) => !open), []);
+  useCommandPaletteHotkey(toggleCommand);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPortalReady(true), 0);
@@ -158,16 +164,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
     });
   };
 
-  const user = useMemo(() => initialUser || getStoredUser(), [initialUser]);
-  const userInitials = useMemo(() => {
-    if (!user) return "?";
-    return (
-      ((user.first_name?.[0] || "") + (user.last_name?.[0] || "")).toUpperCase() ||
-      user.email?.[0]?.toUpperCase() ||
-      "?"
-    );
-  }, [user]);
-  const userFullName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() : "Kullanıcı";
+  const pageLabel = useDashboardPageLabelValue();
 
   const logout = async () => {
     if (typeof window !== "undefined") {
@@ -210,7 +207,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
     <DashboardBannersProvider onBanner={addBanner}>
       {bannerPortal}
       <TrialReminderDialog />
-      <ReportIssueFloatingButton />
+      <DashboardCommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       <div className="flex h-svh overflow-hidden bg-background">
         <aside
           className={cn(
@@ -222,7 +219,7 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             <Tooltip open={collapsed ? undefined : false}>
               <TooltipTrigger asChild>
                 <Link
-                  href="/"
+                  href={DASHBOARD_ROUTES.overview}
                   className={cn(SIDEBAR_ITEM, "text-foreground hover:bg-muted hover:text-foreground")}
                 >
                   <BrandLogo size="sm" />
@@ -237,24 +234,37 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
             </Tooltip>
           </div>
 
-          <nav className="mt-3 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
-            {visibleNavItems.map((item) => {
-              const Icon = NAV_ICONS[item.key];
-              const active = isDashboardNavActive(pathname, item.href);
-              return (
-                <Tooltip key={item.key} open={collapsed ? undefined : false}>
-                  <TooltipTrigger asChild>
-                    <Link href={item.href} className={sidebarItemClass(active)}>
-                      <Icon className="size-4 shrink-0" />
-                      <span className={sidebarLabelClass(collapsed)}>{item.label}</span>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={12}>
-                    {item.label}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
+          <nav className="mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden">
+            {visibleNavGroups.map(({ group, items }) => (
+              <div key={group.id} className="space-y-1">
+                {group.label && !collapsed ? (
+                  <p className="px-2.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    {group.label}
+                  </p>
+                ) : null}
+                {items.map((item) => {
+                  const Icon = NAV_ICONS[item.key];
+                  const active = isDashboardNavActive(pathname, item.href);
+                  const badgeCount =
+                    item.badgeKey === "pendingOrders" ? pendingOrderCount : 0;
+                  return (
+                    <Tooltip key={item.key} open={collapsed ? undefined : false}>
+                      <TooltipTrigger asChild>
+                        <Link href={item.href} className={sidebarItemClass(active)}>
+                          <Icon className="size-4 shrink-0" />
+                          <span className={sidebarLabelClass(collapsed)}>{item.label}</span>
+                          {!collapsed ? <NavBadge count={badgeCount} /> : null}
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={12}>
+                        {item.label}
+                        {badgeCount > 0 ? ` (${badgeCount})` : ""}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
           <div className="mt-3 shrink-0 space-y-1 border-t border-border pt-3">
@@ -303,99 +313,55 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
           </div>
         </aside>
 
-        <main className="relative min-h-0 flex-1 overflow-y-auto">
+        <main className="relative min-h-0 flex-1 overflow-y-auto pb-20 lg:pb-0">
           <header className="flex items-center justify-between border-b border-border bg-card/50 px-4 py-3 lg:hidden">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href={DASHBOARD_ROUTES.overview} className="flex items-center gap-2">
               <BrandLogo size="md" />
               <span className="text-base font-bold">
                 Algory<span className="text-muted-foreground">QR</span>
               </span>
             </Link>
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => setCommandOpen(true)}
+                aria-label="Ara"
+              >
+                <Search className="size-4" />
+              </Button>
               <TrialReminderHeaderBadge compact />
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-80"
-                    aria-label="Profil menusu"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel>{userFullName}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push(DASHBOARD_ROUTES.account)}>
-                    <User className="mr-2 h-4 w-4" />
-                    Hesabım
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </header>
 
-          <div className="overflow-x-auto border-b border-border [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:hidden">
-            <div className="flex min-w-full gap-1.5 py-2 pl-2 pr-2">
-              {visibleNavItems.map((item) => {
-                const active = isDashboardNavActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.key}
-                    href={item.href}
-                    className={mobileNavItemClass(active)}
-                  >
-                    {item.mobileLabel}
-                  </Link>
-                );
-              })}
-              <span aria-hidden className="w-2 shrink-0" />
-            </div>
-          </div>
+          <DashboardMobileNav items={visibleNavItems} pendingOrderCount={pendingOrderCount} />
 
           <div className="hidden items-center justify-end gap-3 border-b border-border bg-card/50 px-8 py-3 lg:flex">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 gap-2 text-sm text-muted-foreground"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Search className="size-4" />
+              Ara
+              <kbd className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium">
+                Ctrl K
+              </kbd>
+            </Button>
             <TrialReminderHeaderBadge />
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-medium leading-none text-foreground">{userFullName}</p>
-                {user?.email && <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p>}
-              </div>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-primary transition-opacity hover:opacity-80"
-                    aria-label="Profil menusu"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel>{userFullName}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push(DASHBOARD_ROUTES.account)}>
-                    <User className="mr-2 h-4 w-4" />
-                    Hesabım
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
 
           <div
             className={cn(
               "mx-auto p-6 lg:p-8",
-              pathname === DASHBOARD_ROUTES.overview ? "max-w-5xl" : "max-w-3xl",
+              isWideDashboardPath(pathname) ? "max-w-5xl" : "max-w-3xl",
             )}
           >
+            <DashboardBreadcrumbs pathname={pathname} currentLabel={pageLabel} />
+            <SetupNextBanner />
             {children}
           </div>
         </main>
@@ -405,5 +371,9 @@ function DashboardShellInner({ initialUser = null, children }: DashboardShellPro
 }
 
 export default function DashboardShell(props: DashboardShellProps) {
-  return <DashboardShellInner {...props} />;
+  return (
+    <DashboardPageLabelProvider>
+      <DashboardShellInner {...props} />
+    </DashboardPageLabelProvider>
+  );
 }

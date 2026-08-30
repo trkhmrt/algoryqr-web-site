@@ -233,10 +233,10 @@ export default function AnalyticsTab({ variant = "menu" }: { variant?: Analytics
   const quota = quotaQuery.data;
   const quotaExhausted = isSmartReportQuotaExhausted(quota);
   const backHref = isOrders
-    ? DASHBOARD_ROUTES.orderPanel
+    ? DASHBOARD_ROUTES.reportsHub
     : selection?.menu?.qrId != null
       ? DASHBOARD_ROUTES.digitalMenuEdit(selection.menu.qrId)
-      : DASHBOARD_ROUTES.digitalMenu;
+      : DASHBOARD_ROUTES.reportsHub;
   const result = normalizeSmartReportResult(smartReport.job);
   const failed = smartReport.isFailed;
   const wasGeneratingRef = useRef(false);

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, ImagePlus, Loader2, Trash2 } from "lucide-react";
 
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import {
@@ -18,27 +19,87 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { invalidateBranches, useBranch } from "@/hooks/use-branches";
+import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
+import { invalidateBranches, useBranch, useBranches } from "@/hooks/use-branches";
 import { ApiError } from "@/lib/api";
 import {
   applyBranchPhotoToAllBranchesRequest,
   applyBranchPhotoToAllMenusRequest,
+  canCreateMenuOnBranch,
   deleteBranchPhotoRequest,
   deleteBranchRequest,
   updateBranchRequest,
   uploadBranchPhotoRequest,
 } from "@/lib/branch";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const SOFT_CARD_CLASS =
+  "rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card";
 
 type BranchSettingsViewProps = {
   branchId: number;
 };
+
+type SettingsSectionProps = {
+  title: string;
+  description?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+  tone?: "default" | "danger";
+};
+
+function SettingsSection({
+  title,
+  description,
+  open,
+  onOpenChange,
+  children,
+  tone = "default",
+}: SettingsSectionProps) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <div
+        className={cn(
+          SOFT_CARD_CLASS,
+          tone === "danger" && "border-destructive/25",
+        )}
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-start justify-between gap-3 p-5 text-left sm:p-6"
+          >
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-foreground">{title}</h2>
+              {description ? (
+                <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+              ) : null}
+            </div>
+            <ChevronDown
+              className={cn(
+                "mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+                open && "rotate-180",
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="space-y-4 border-t border-[#e5e7eb] px-5 pb-5 pt-4 dark:border-border sm:px-6 sm:pb-6">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 export default function BranchSettingsView({ branchId }: BranchSettingsViewProps) {
   const router = useRouter();
@@ -46,6 +107,7 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   const { notify } = useDashboardBanners();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const branchQuery = useBranch(branchId, canUseDigitalMenu);
+  const branchesQuery = useBranches(canUseDigitalMenu);
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -56,8 +118,18 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   const [uploading, setUploading] = useState(false);
   const [applying, setApplying] = useState<"branches" | "menus" | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(true);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [menusOpen, setMenusOpen] = useState(true);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const branch = branchQuery.data ?? null;
+  useDashboardPageLabel(branch?.name);
+  const menus = branch?.menus ?? [];
+  const hasMenus = menus.length > 0;
+  const canAddMenu = branch
+    ? canCreateMenuOnBranch(branch, branchesQuery.data?.menuQuota)
+    : false;
 
   useEffect(() => {
     if (!branch || hydratedFor === branch.id) return;
@@ -66,6 +138,7 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
     setPhone(branch.phone ?? "");
     setEmail(branch.email ?? "");
     setHydratedFor(branch.id);
+    setMenusOpen(branch.menus.length > 0);
   }, [branch, hydratedFor]);
 
   useEffect(() => {
@@ -180,25 +253,28 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
     return <p className="text-sm text-muted-foreground">Şube ayarları için aktif paket gerekir.</p>;
   }
 
-  const hasMenus = (branch?.menus ?? []).length > 0;
-
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white text-muted-foreground hover:bg-muted/50 dark:border-border dark:bg-card"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Şube ayarları</h1>
-          <p className="text-sm text-muted-foreground">{branch?.name ?? "Şube bilgileri ve fotoğraf"}</p>
+          <p className="text-sm text-muted-foreground">{branch?.name ?? "Şube bilgileri"}</p>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+      <SettingsSection
+        title="Şube bilgileri"
+        description="Ad, adres ve iletişim bilgileri"
+        open={infoOpen}
+        onOpenChange={setInfoOpen}
+      >
         <div className="space-y-2">
           <Label htmlFor="branch-name">Şube adı</Label>
           <Input id="branch-name" value={name} onChange={(event) => setName(event.target.value)} />
@@ -215,22 +291,27 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
           <Label htmlFor="branch-email">E-posta</Label>
           <Input id="branch-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-1">
           <Button disabled={saving} onClick={() => void save()}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kaydet"}
           </Button>
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-        <div>
-          <h2 className="text-sm font-medium">Şube fotoğrafı</h2>
-          <p className="text-xs text-muted-foreground">JPEG, PNG veya WebP. En fazla 5 MB.</p>
-        </div>
+      <SettingsSection
+        title="Şube fotoğrafı"
+        description="JPEG, PNG veya WebP · en fazla 5 MB"
+        open={photoOpen}
+        onOpenChange={setPhotoOpen}
+      >
         {branch?.photoUrl ? (
-          <img src={branch.photoUrl} alt={branch.name} className="h-28 w-28 rounded-lg object-cover border border-border" />
+          <img
+            src={branch.photoUrl}
+            alt={branch.name}
+            className="h-28 w-28 rounded-xl border border-[#e5e7eb] object-cover dark:border-border"
+          />
         ) : (
-          <div className="flex h-28 w-28 items-center justify-center rounded-lg border border-dashed border-border text-muted-foreground">
+          <div className="flex h-28 w-28 items-center justify-center rounded-xl border border-dashed border-[#e5e7eb] bg-[#fafafa] text-muted-foreground dark:border-border dark:bg-background">
             <ImagePlus className="h-6 w-6" />
           </div>
         )}
@@ -265,18 +346,66 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
             {applying === "menus" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tüm menülere uygula"}
           </Button>
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className="rounded-lg border border-destructive/30 bg-card p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-sm font-medium">Şubeyi sil</h2>
-            <p className="text-xs text-muted-foreground">
-              {hasMenus
-                ? "Önce bu şubeye bağlı menüleri silmeniz gerekir."
-                : "Şube soft delete ile kaldırılır."}
-            </p>
+      <SettingsSection
+        title="Menüler"
+        description={
+          hasMenus
+            ? `${menus.length} menü · bu şubeye bağlı dijital menüler`
+            : "Bu şubede henüz menü yok · ilk menü ücretsiz"
+        }
+        open={menusOpen}
+        onOpenChange={setMenusOpen}
+      >
+        {hasMenus ? (
+          <div className="space-y-2">
+            {menus.map((menu) => (
+              <Link
+                key={menu.menuId}
+                href={DASHBOARD_ROUTES.digitalMenuEdit(menu.qrId)}
+                className="group flex items-center justify-between gap-3 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2.5 transition-colors hover:bg-muted/60 dark:border-border dark:bg-background"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{menu.businessName}</p>
+                  {!menu.active ? (
+                    <p className="text-xs text-muted-foreground">Yayında değil</p>
+                  ) : null}
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-60 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+              </Link>
+            ))}
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Henüz menü oluşturulmadı.</p>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            router.push(
+              canAddMenu
+                ? DASHBOARD_ROUTES.digitalMenuCreateForBranch(branchId)
+                : DASHBOARD_ROUTES.catalogProductCheckout("QR_MENU"),
+            )
+          }
+        >
+          {canAddMenu ? "Menü oluştur" : "Ek menü satın al"}
+        </Button>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Şubeyi sil"
+        description={
+          hasMenus
+            ? "Önce bu şubeye bağlı menüleri silmeniz gerekir"
+            : "Şube soft delete ile kaldırılır"
+        }
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        tone="danger"
+      >
+        <div className="flex justify-end">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="gap-2" disabled={deleting || hasMenus}>
@@ -298,7 +427,7 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </div>
+      </SettingsSection>
     </div>
   );
 }

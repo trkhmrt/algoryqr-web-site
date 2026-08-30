@@ -5,11 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 
+import { CardVerificationPanel } from "@/components/dashboard/CardVerificationPanel";
 import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   invalidateDigitalMenuTrial,
+  invalidatePaymentMethods,
   startTrialRequest,
+  usePaymentMethods,
   useTrialStatus,
 } from "@/hooks/use-commerce";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
@@ -44,6 +47,9 @@ export default function TrialStartView() {
   const trialStatus = useTrialStatus();
   const subscription = useSubscription();
   const packagesQuery = useActivePackages();
+  const paymentMethods = usePaymentMethods();
+  const hasCard = (paymentMethods.data?.length ?? 0) > 0;
+  const verification = searchParams.get("verification");
 
   const [phase, setPhase] = useState<HubPhase>("loading");
 
@@ -73,8 +79,15 @@ export default function TrialStartView() {
   }, []);
 
   useEffect(() => {
+    if (verification !== "success") return;
+    void invalidatePaymentMethods(queryClient);
+  }, [queryClient, verification]);
+
+  useEffect(() => {
     if (handledRef.current) return;
-    if (trialStatus.isLoading || subscription.isLoading || packagesQuery.isLoading) return;
+    if (trialStatus.isLoading || subscription.isLoading || packagesQuery.isLoading || paymentMethods.isLoading) {
+      return;
+    }
 
     if (trialStatus.isError || packagesQuery.isError) {
       setPhase("blocked");
@@ -110,7 +123,7 @@ export default function TrialStartView() {
     if (status === "ACTIVE") {
       handledRef.current = true;
       notify("info", "Denemeniz devam ediyor.");
-      window.setTimeout(() => router.replace(DASHBOARD_ROUTES.digitalMenuCreate), REDIRECT_DELAY_MS);
+      window.setTimeout(() => router.replace(DASHBOARD_ROUTES.branchCreate), REDIRECT_DELAY_MS);
       setPhase("blocked");
       return;
     }
@@ -122,6 +135,7 @@ export default function TrialStartView() {
     packageId,
     packagesQuery.isError,
     packagesQuery.isLoading,
+    paymentMethods.isLoading,
     router,
     subscription.isLoading,
     trialStatus.data?.status,
@@ -142,7 +156,7 @@ export default function TrialStartView() {
           (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
           ".",
       );
-      router.replace(DASHBOARD_ROUTES.digitalMenuCreate);
+      router.replace(DASHBOARD_ROUTES.branchCreate);
     } catch (error) {
       setPhase("confirm");
       const message = error instanceof ApiError ? error.message : "Deneme süresi başlatılamadı.";
@@ -176,8 +190,8 @@ export default function TrialStartView() {
           Ultimate&apos;i 30 gün ücretsiz başlat
         </h1>
         <p className="text-sm text-muted-foreground">
-          Kredi kartı gerekmez. {trialPackage?.name ?? "Ultimate"} paketinin tüm özelliklerini 30 gün
-          boyunca deneyin.
+          {trialPackage?.name ?? "Ultimate"} paketini 30 gün ücretsiz kullanın. Kart zorunludur; deneme
+          bitince kayıtlı karttan çekim yapılır.
         </p>
       </div>
 
@@ -186,15 +200,18 @@ export default function TrialStartView() {
           {trialPackage?.name ?? "Ultimate"} · 30 gün ücretsiz
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Deneme süresince dijital menü, akıllı araçlar ve raporlamayı kullanabilirsiniz.
+          Deneme süresince dijital menü, akıllı araçlar ve raporlamayı kullanabilirsiniz. İlk 1 TL
+          doğrulama iade edilir.
         </p>
       </div>
+
+      {hasCard ? null : <CardVerificationPanel />}
 
       <Button
         variant="hero"
         size="lg"
         className="w-full gap-2"
-        disabled={phase === "starting"}
+        disabled={phase === "starting" || !hasCard}
         onClick={() => void handleStartTrial()}
       >
         {phase === "starting" ? (

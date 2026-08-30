@@ -11,6 +11,9 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { FilterSelect } from "@/components/dashboard/FilterSelect";
+import { useListQueryState } from "@/hooks/use-list-query-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -81,7 +84,21 @@ export default function CampaignsView() {
     },
   });
 
-  const campaigns = campaignsQuery.data ?? [];
+  const { setQuery } = useListQueryState();
+  const campaigns = useMemo(() => campaignsQuery.data ?? [], [campaignsQuery.data]);
+  const [statusFilter, setStatusFilter] = useState<"all" | CampaignItem["status"]>(
+    () => (searchParams.get("status") as CampaignItem["status"]) || "all",
+  );
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const filteredCampaigns = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("tr");
+    return campaigns.filter((campaign) => {
+      if (statusFilter !== "all" && campaign.status !== statusFilter) return false;
+      if (!query) return true;
+      const haystack = `${campaign.name} ${campaign.slogan ?? ""} ${campaign.templateCode}`.toLocaleLowerCase("tr");
+      return haystack.includes(query);
+    });
+  }, [campaigns, search, statusFilter]);
 
   if (accessLoading || loading) {
     return (
@@ -141,9 +158,15 @@ export default function CampaignsView() {
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       {menuQrs.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Kampanya oluşturmak için önce bir dijital menü QR kodu oluşturun.
-        </div>
+        <EmptyState
+          title="Menü gerekli"
+          description="Kampanya oluşturmak için önce bir dijital menü yayınlayın."
+          action={
+            <Button asChild variant="outline">
+              <Link href={DASHBOARD_ROUTES.digitalMenu}>Menü oluştur</Link>
+            </Button>
+          }
+        />
       ) : menuId == null ? (
         <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -154,13 +177,45 @@ export default function CampaignsView() {
           <Loader2 className="h-4 w-4 animate-spin" />
           Kampanyalar yükleniyor…
         </div>
-      ) : campaigns.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center">
-            <p className="text-sm font-medium text-foreground">Henüz kampanya yok</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              İlk kampanyanızı oluşturarak müşterilerinize puan, indirim veya ödül tanımlayabilirsiniz.
-            </p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <FilterSelect
+              className="w-full sm:w-[12rem]"
+              label="Durum"
+              value={statusFilter}
+              onValueChange={(next) => {
+                const value = next as typeof statusFilter;
+                setStatusFilter(value);
+                setQuery({ status: value === "all" ? null : value });
+              }}
+              options={[
+                { value: "all", label: "Tümü" },
+                { value: "ACTIVE", label: "Aktif" },
+                { value: "PAUSED", label: "Duraklatıldı" },
+                { value: "EXPIRED", label: "Süresi doldu" },
+                { value: "DRAFT", label: "Taslak" },
+              ]}
+            />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Ara</Label>
+              <Input
+                value={search}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setSearch(next);
+                  setQuery({ q: next.trim() || null });
+                }}
+                placeholder="Kampanya adı veya slogan"
+                aria-label="Kampanya ara"
+              />
+            </div>
+          </div>
+      {campaigns.length === 0 ? (
+        <EmptyState
+          title="Henüz kampanya yok"
+          description="İlk kampanyanızı oluşturarak müşterilerinize puan, indirim veya ödül tanımlayın."
+          action={
             <Button
               className="gap-1.5"
               onClick={() =>
@@ -174,11 +229,28 @@ export default function CampaignsView() {
               <Plus className="h-4 w-4" />
               Kampanya Oluştur
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
+      ) : filteredCampaigns.length === 0 ? (
+        <EmptyState
+          title="Filtrelere uyan kampanya yok"
+          description="Durum veya arama filtresini temizleyip tekrar deneyin."
+          action={
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStatusFilter("all");
+                setSearch("");
+                setQuery({ status: null, q: null });
+              }}
+            >
+              Filtreleri temizle
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-3">
-          {campaigns.map((campaign) => (
+          {filteredCampaigns.map((campaign) => (
             <Card key={campaign.id} className="transition-colors hover:border-primary/40">
               <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <Link
@@ -236,6 +308,8 @@ export default function CampaignsView() {
             </Card>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

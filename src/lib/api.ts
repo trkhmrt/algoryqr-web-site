@@ -915,6 +915,19 @@ export async function getPublicProductFacetsRequest(
   return response.json() as Promise<ProductFacetsApiResponse>;
 }
 
+export async function getPublicProductRequest(
+  menuId: number | string,
+  productId: number | string,
+): Promise<MenuProductApiItem> {
+  const response = await fetch(
+    `/api/menu/public/${encodeURIComponent(String(menuId))}/products/${encodeURIComponent(String(productId))}`,
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, "Ürün yüklenemedi");
+  }
+  return response.json() as Promise<MenuProductApiItem>;
+}
+
 export async function getPublicProductRecommendationsRequest(
   menuId: number | string,
   productId: number | string,
@@ -1054,9 +1067,7 @@ export async function deleteMenuRequest(menuId: number | string): Promise<void> 
 }
 
 export async function getPublicMenuRequest(identifier: string): Promise<PublicMenuApiResponse> {
-  const response = await fetch(`/api/menu/public/${encodeURIComponent(identifier)}`, {
-    cache: "no-store",
-  });
+  const response = await fetch(`/api/menu/public/${encodeURIComponent(identifier)}`);
   if (!response.ok) {
     throw new ApiError(response.status, "Menü bulunamadı");
   }

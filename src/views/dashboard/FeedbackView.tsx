@@ -11,7 +11,9 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
-import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { FilterSelect } from "@/components/dashboard/FilterSelect";
+import { useListQueryState } from "@/hooks/use-list-query-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -68,8 +70,15 @@ export default function FeedbackView() {
     canUseDigitalMenu && !accessLoading,
   );
 
-  const [type, setType] = useState<FeedbackTypeFilter>("all");
-  const [minScore, setMinScore] = useState<number | "">("");
+  const { setQuery } = useListQueryState();
+  const [type, setType] = useState<FeedbackTypeFilter>(
+    () => (searchParams.get("type") as FeedbackTypeFilter) || "all",
+  );
+  const [minScore, setMinScore] = useState<number | "">(() => {
+    const raw = searchParams.get("minScore");
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isFinite(parsed) ? parsed : "";
+  });
   const [page, setPage] = useState(0);
 
   const menuId = selection?.menu.menuId ?? null;
@@ -202,42 +211,40 @@ export default function FeedbackView() {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <div className="w-[11rem] space-y-1.5">
-              <label className="text-xs text-muted-foreground">Tür</label>
-              <SearchableSelect
-                value={type}
-                onValueChange={(next) => {
-                  setType(next as FeedbackTypeFilter);
-                  setPage(0);
-                }}
-                options={[
-                  { value: "all", label: "Tümü" },
-                  { value: "menu", label: "Menü" },
-                  { value: "product", label: "Ürün" },
-                ]}
-                placeholder="Tür seçin"
-                searchPlaceholder="Tür ara..."
-              />
-            </div>
-            <div className="w-[11rem] space-y-1.5">
-              <label className="text-xs text-muted-foreground">Min. puan</label>
-              <SearchableSelect
-                value={minScore === "" ? "all" : String(minScore)}
-                onValueChange={(next) => {
-                  setMinScore(next === "all" ? "" : Number(next));
-                  setPage(0);
-                }}
-                options={[
-                  { value: "all", label: "Hepsi" },
-                  ...[1, 2, 3, 4, 5].map((score) => ({
-                    value: String(score),
-                    label: `${score}+`,
-                  })),
-                ]}
-                placeholder="Puan seçin"
-                searchPlaceholder="Puan ara..."
-              />
-            </div>
+            <FilterSelect
+              className="w-[11rem]"
+              label="Tür"
+              value={type}
+              onValueChange={(next) => {
+                const value = next as FeedbackTypeFilter;
+                setType(value);
+                setPage(0);
+                setQuery({ type: value === "all" ? null : value });
+              }}
+              options={[
+                { value: "all", label: "Tümü" },
+                { value: "menu", label: "Menü" },
+                { value: "product", label: "Ürün" },
+              ]}
+            />
+            <FilterSelect
+              className="w-[11rem]"
+              label="Min. puan"
+              value={minScore === "" ? "all" : String(minScore)}
+              onValueChange={(next) => {
+                const value = next === "all" ? "" : Number(next);
+                setMinScore(value);
+                setPage(0);
+                setQuery({ minScore: value === "" ? null : String(value) });
+              }}
+              options={[
+                { value: "all", label: "Hepsi" },
+                ...[1, 2, 3, 4, 5].map((score) => ({
+                  value: String(score),
+                  label: `${score}+`,
+                })),
+              ]}
+            />
           </div>
 
           {listQuery.isLoading ? (
@@ -246,9 +253,29 @@ export default function FeedbackView() {
               Geri bildirimler yükleniyor…
             </div>
           ) : items.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Bu filtrelerle henüz geri bildirim yok.
-            </div>
+            <EmptyState
+              title={type !== "all" || minScore !== "" ? "Filtrelere uyan geri bildirim yok" : "Henüz geri bildirim yok"}
+              description={
+                type !== "all" || minScore !== ""
+                  ? "Tür veya puan filtresini temizleyip tekrar deneyin."
+                  : "Müşteriler puan verdiğinde burada görünür."
+              }
+              action={
+                type !== "all" || minScore !== "" ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setType("all");
+                      setMinScore("");
+                      setPage(0);
+                      setQuery({ type: null, minScore: null });
+                    }}
+                  >
+                    Filtreleri temizle
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="space-y-3">
               {items.map((item) => (

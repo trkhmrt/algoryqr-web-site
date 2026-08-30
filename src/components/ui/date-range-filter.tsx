@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-export type DateRangePreset = "yesterday" | "today" | "7d" | "30d" | "custom";
+export type DateRangePreset = "all" | "yesterday" | "today" | "7d" | "30d" | "custom";
 
 export type DateRangeValue = {
   from: string;
@@ -30,6 +30,7 @@ type DateRangeFilterProps = {
 };
 
 const PRESETS: { id: Exclude<DateRangePreset, "custom">; label: string }[] = [
+  { id: "all", label: "Tümü" },
   { id: "yesterday", label: "Dün" },
   { id: "today", label: "Bugün" },
   { id: "7d", label: "7 gün" },
@@ -57,7 +58,16 @@ function startOfLocalDay(date = new Date()): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+export function todayDateRange(): DateRangeValue {
+  return presetRange("today");
+}
+
+export function openQueueDateRange(): DateRangeValue {
+  return { from: "", to: "" };
+}
+
 function presetRange(id: Exclude<DateRangePreset, "custom">): DateRangeValue {
+  if (id === "all") return openQueueDateRange();
   const today = startOfLocalDay();
   if (id === "today") {
     const ymd = formatLocalYmd(today);
@@ -75,6 +85,7 @@ function presetRange(id: Exclude<DateRangePreset, "custom">): DateRangeValue {
 }
 
 function detectPreset(value: DateRangeValue): DateRangePreset {
+  if (!value.from && !value.to) return "all";
   if (!value.from || !value.to) return "custom";
   for (const preset of PRESETS) {
     const range = presetRange(preset.id);
@@ -158,7 +169,7 @@ export function DateRangeFilter({
   };
 
   const rangeLabel = useMemo(() => {
-    if (!value.from && !value.to) return "Tarih aralığı seç";
+    if (!value.from && !value.to) return "Tümü";
     const fromDate = parseLocalYmd(value.from);
     const toDate = parseLocalYmd(value.to);
     if (fromDate && toDate) {

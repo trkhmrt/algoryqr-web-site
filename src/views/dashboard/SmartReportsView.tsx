@@ -155,7 +155,7 @@ export default function SmartReportsView() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-3">
         <Link
-          href={DASHBOARD_ROUTES.analytics}
+          href={DASHBOARD_ROUTES.reportsHub}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
