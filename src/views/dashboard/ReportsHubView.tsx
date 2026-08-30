@@ -60,7 +60,7 @@ export default function ReportsHubView() {
             </Link>
           );
 
-          if (item.requiredScope) {
+          if ("requiredScope" in item && item.requiredScope) {
             return (
               <RequireScope key={item.key} scope={item.requiredScope}>
                 {link}
