@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ExternalLink,
+  FolderTree,
   LayoutGrid,
   Loader2,
   MessageSquareText,
@@ -30,6 +31,12 @@ const HUB_ITEMS = [
     title: "Ürünler",
     icon: DigitalMenuIcon,
     href: (qrId: number) => DASHBOARD_ROUTES.digitalMenuProductsForQr(qrId),
+  },
+  {
+    key: "categories",
+    title: "Kategoriler",
+    icon: FolderTree,
+    href: (qrId: number) => DASHBOARD_ROUTES.digitalMenuCategoriesForQr(qrId),
   },
   {
     key: "settings",
