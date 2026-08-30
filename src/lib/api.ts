@@ -585,6 +585,8 @@ export interface SubCategoryApiItem {
 
 export interface MainCategoryApiItem {
   id: number;
+  menuId?: number;
+  userId?: number;
   slug: string;
   name: string;
   sortOrder: number;

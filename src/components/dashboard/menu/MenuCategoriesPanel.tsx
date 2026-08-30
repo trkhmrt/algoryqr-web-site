@@ -2,7 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, ChevronRight, GripVertical, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,22 +89,78 @@ function matchesSearch(main: MainCategoryApiItem, query: string): boolean {
   );
 }
 
-function SubRow({
+function bySortOrderThenId<T extends { sortOrder: number; id: number }>(a: T, b: T): number {
+  if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+  return a.id - b.id;
+}
+
+function sortCategories(list: MainCategoryApiItem[]): MainCategoryApiItem[] {
+  return [...list]
+    .map((main) => ({
+      ...main,
+      subs: [...(main.subs ?? [])].sort(bySortOrderThenId),
+    }))
+    .sort(bySortOrderThenId);
+}
+
+function DragHandle({
+  attributes,
+  listeners,
+  disabled,
+}: {
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground",
+        disabled ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing hover:bg-muted/60",
+      )}
+      disabled={disabled}
+      aria-label="Sürükleyerek sırala"
+      {...(disabled ? {} : attributes)}
+      {...(disabled ? {} : listeners)}
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+}
+
+function SortableSubRow({
   sub,
   busy,
+  dragDisabled,
   onRename,
   onDelete,
   onAddProduct,
 }: {
   sub: SubCategoryApiItem;
   busy: boolean;
+  dragDisabled: boolean;
   onRename: () => void;
   onDelete: () => void;
   onAddProduct?: (subCategoryId: number) => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `sub-${sub.id}`,
+    disabled: dragDisabled || busy,
+    data: { type: "sub", subId: sub.id, mainCategoryId: sub.mainCategoryId },
+  });
+
   return (
-    <div className="ml-1 flex items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 sm:ml-4">
-      <div className="flex min-w-0 items-center gap-2">
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "ml-1 flex items-center justify-between gap-2 rounded-lg border border-border/60 px-2 py-2 sm:ml-4",
+        isDragging && "z-10 bg-background shadow-md",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-1">
+        <DragHandle attributes={attributes} listeners={listeners} disabled={dragDisabled || busy} />
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         <span className="truncate text-sm">{sub.name}</span>
         <span className="truncate text-xs text-muted-foreground">{sub.slug}</span>
@@ -131,10 +204,11 @@ function SubRow({
   );
 }
 
-function MainBlock({
+function SortableMainBlock({
   main,
   expanded,
   busy,
+  dragDisabled,
   onToggle,
   onRename,
   onDelete,
@@ -146,6 +220,7 @@ function MainBlock({
   main: MainCategoryApiItem;
   expanded: boolean;
   busy: boolean;
+  dragDisabled: boolean;
   onToggle: () => void;
   onRename: () => void;
   onDelete: () => void;
@@ -154,10 +229,22 @@ function MainBlock({
   onDeleteSub: (sub: SubCategoryApiItem) => void;
   onAddProduct?: (subCategoryId: number) => void;
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `main-${main.id}`,
+    disabled: dragDisabled || busy,
+    data: { type: "main", mainId: main.id },
+  });
   const subCount = main.subs?.length ?? 0;
+  const subIds = (main.subs ?? []).map((sub) => `sub-${sub.id}`);
+
   return (
-    <div className="rounded-xl border border-border/80">
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("rounded-xl border border-border/80", isDragging && "z-10 bg-background shadow-md")}
+    >
       <div className="flex items-center gap-1 px-2 py-2 sm:px-3">
+        <DragHandle attributes={attributes} listeners={listeners} disabled={dragDisabled || busy} />
         <button
           type="button"
           className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-muted/40"
@@ -206,16 +293,21 @@ function MainBlock({
           {subCount === 0 ? (
             <p className="text-xs text-muted-foreground">Alt kategori yok.</p>
           ) : (
-            (main.subs ?? []).map((sub) => (
-              <SubRow
-                key={sub.id}
-                sub={sub}
-                busy={busy}
-                onRename={() => onRenameSub(sub)}
-                onDelete={() => onDeleteSub(sub)}
-                onAddProduct={onAddProduct}
-              />
-            ))
+            <SortableContext items={subIds} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {(main.subs ?? []).map((sub) => (
+                  <SortableSubRow
+                    key={sub.id}
+                    sub={sub}
+                    busy={busy}
+                    dragDisabled={dragDisabled}
+                    onRename={() => onRenameSub(sub)}
+                    onDelete={() => onDeleteSub(sub)}
+                    onAddProduct={onAddProduct}
+                  />
+                ))}
+              </div>
+            </SortableContext>
           )}
           <Button
             type="button"
@@ -271,7 +363,7 @@ export default function MenuCategoriesPanel({
         : 0;
 
   const categoriesQuery = useMenuCategories(resolvedMenuId > 0 ? resolvedMenuId : null);
-  const categories = categoriesQuery.data ?? [];
+  const [orderedCategories, setOrderedCategories] = useState<MainCategoryApiItem[]>([]);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -281,6 +373,7 @@ export default function MenuCategoriesPanel({
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [deleting, setDeleting] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -288,6 +381,12 @@ export default function MenuCategoriesPanel({
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    if (categoriesQuery.data) {
+      setOrderedCategories(sortCategories(categoriesQuery.data));
+    }
+  }, [categoriesQuery.data]);
 
   useEffect(() => {
     if (categoriesQuery.isError) {
@@ -301,12 +400,109 @@ export default function MenuCategoriesPanel({
   }, [categoriesQuery.error, categoriesQuery.isError, notify]);
 
   const filtered = useMemo(
-    () => categories.filter((main) => matchesSearch(main, debouncedSearch)),
-    [categories, debouncedSearch],
+    () => orderedCategories.filter((main) => matchesSearch(main, debouncedSearch)),
+    [orderedCategories, debouncedSearch],
   );
   const expandAllFromSearch = Boolean(debouncedSearch);
+  const dragDisabled = expandAllFromSearch || reordering;
+  const mainIds = filtered.map((main) => `main-${main.id}`);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const refresh = () => invalidateMenuCategories(queryClient, resolvedMenuId, qrId);
+
+  const persistMainOrder = async (next: MainCategoryApiItem[]) => {
+    if (resolvedMenuId <= 0) return;
+    setReordering(true);
+    const previous = orderedCategories;
+    setOrderedCategories(next);
+    try {
+      await Promise.all(
+        next.map((main, index) =>
+          main.sortOrder === index
+            ? Promise.resolve()
+            : updateMenuCategoryRequest(resolvedMenuId, main.id, { sortOrder: index }),
+        ),
+      );
+      await refresh();
+    } catch (error) {
+      setOrderedCategories(previous);
+      notify("danger", error instanceof Error ? error.message : "Sıralama kaydedilemedi.");
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const persistSubOrder = async (mainId: number, nextSubs: SubCategoryApiItem[]) => {
+    if (resolvedMenuId <= 0) return;
+    setReordering(true);
+    const previous = orderedCategories;
+    setOrderedCategories((current) =>
+      current.map((main) => (main.id === mainId ? { ...main, subs: nextSubs } : main)),
+    );
+    try {
+      await Promise.all(
+        nextSubs.map((sub, index) =>
+          sub.sortOrder === index
+            ? Promise.resolve()
+            : updateMenuSubCategoryRequest(resolvedMenuId, sub.id, { sortOrder: index }),
+        ),
+      );
+      await refresh();
+    } catch (error) {
+      setOrderedCategories(previous);
+      notify("danger", error instanceof Error ? error.message : "Sıralama kaydedilemedi.");
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (dragDisabled) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeType = String(active.id).startsWith("sub-") ? "sub" : "main";
+    const overType = String(over.id).startsWith("sub-") ? "sub" : "main";
+    if (activeType !== overType) return;
+
+    if (activeType === "main") {
+      const oldIndex = filtered.findIndex((main) => `main-${main.id}` === active.id);
+      const newIndex = filtered.findIndex((main) => `main-${main.id}` === over.id);
+      if (oldIndex < 0 || newIndex < 0) return;
+      const reorderedFiltered = arrayMove(filtered, oldIndex, newIndex);
+      const filteredIds = new Set(reorderedFiltered.map((main) => main.id));
+      const untouched = orderedCategories.filter((main) => !filteredIds.has(main.id));
+      const next = [...reorderedFiltered, ...untouched].map((main, index) => ({
+        ...main,
+        sortOrder: index,
+      }));
+      void persistMainOrder(next);
+      return;
+    }
+
+    const activeSubId = Number(String(active.id).replace("sub-", ""));
+    const overSubId = Number(String(over.id).replace("sub-", ""));
+    if (!Number.isFinite(activeSubId) || !Number.isFinite(overSubId)) return;
+    const main = orderedCategories.find((item) =>
+      (item.subs ?? []).some((sub) => sub.id === activeSubId),
+    );
+    if (!main) return;
+    const subs = main.subs ?? [];
+    const overInSameMain = subs.some((sub) => sub.id === overSubId);
+    if (!overInSameMain) return;
+    const oldIndex = subs.findIndex((sub) => sub.id === activeSubId);
+    const newIndex = subs.findIndex((sub) => sub.id === overSubId);
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+    const nextSubs = arrayMove(subs, oldIndex, newIndex).map((sub, index) => ({
+      ...sub,
+      sortOrder: index,
+    }));
+    void persistSubOrder(main.id, nextSubs);
+  };
 
   const toggleMain = (id: number) => {
     if (expandAllFromSearch) return;
@@ -334,7 +530,10 @@ export default function MenuCategoriesPanel({
     try {
       switch (nameDialog.kind) {
         case "create-main":
-          await createMenuCategoryRequest(resolvedMenuId, { name: trimmed });
+          await createMenuCategoryRequest(resolvedMenuId, {
+            name: trimmed,
+            sortOrder: orderedCategories.length,
+          });
           notify("info", "Kategori eklendi.");
           break;
         case "rename-main":
@@ -344,6 +543,7 @@ export default function MenuCategoriesPanel({
         case "create-sub":
           await createMenuSubCategoryRequest(resolvedMenuId, nameDialog.main.id, {
             name: trimmed,
+            sortOrder: nameDialog.main.subs?.length ?? 0,
           });
           setExpandedIds((prev) => new Set(prev).add(nameDialog.main.id));
           notify("info", "Alt kategori eklendi.");
@@ -384,7 +584,7 @@ export default function MenuCategoriesPanel({
     }
   };
 
-  const busy = saving || deleting;
+  const busy = saving || deleting || reordering;
 
   return (
     <div className="space-y-4">
@@ -410,6 +610,14 @@ export default function MenuCategoriesPanel({
         </Button>
       </div>
 
+      {expandAllFromSearch ? (
+        <p className="text-xs text-muted-foreground">Arama açıkken sürükle-bırak kapalıdır.</p>
+      ) : orderedCategories.length > 1 || orderedCategories.some((main) => (main.subs?.length ?? 0) > 1) ? (
+        <p className="text-xs text-muted-foreground">
+          Sıralamak için sol taraftaki tutamacı sürükleyin.
+        </p>
+      ) : null}
+
       {categoriesQuery.isLoading || (menuId <= 0 && menuByQr.isLoading) ? (
         <p className="text-sm text-muted-foreground">Kategoriler yükleniyor…</p>
       ) : categoriesQuery.isError ? (
@@ -421,23 +629,28 @@ export default function MenuCategoriesPanel({
             : "Henüz kategori yok. Yeni ana kategori ekleyin."}
         </p>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((main) => (
-            <MainBlock
-              key={main.id}
-              main={main}
-              expanded={expandAllFromSearch || expandedIds.has(main.id)}
-              busy={busy}
-              onToggle={() => toggleMain(main.id)}
-              onRename={() => openNameDialog({ kind: "rename-main", main })}
-              onDelete={() => setDeleteTarget({ kind: "main", id: main.id, name: main.name })}
-              onAddSub={() => openNameDialog({ kind: "create-sub", main })}
-              onRenameSub={(sub) => openNameDialog({ kind: "rename-sub", sub })}
-              onDeleteSub={(sub) => setDeleteTarget({ kind: "sub", id: sub.id, name: sub.name })}
-              onAddProduct={onAddProduct}
-            />
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={mainIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {filtered.map((main) => (
+                <SortableMainBlock
+                  key={main.id}
+                  main={main}
+                  expanded={expandAllFromSearch || expandedIds.has(main.id)}
+                  busy={busy}
+                  dragDisabled={dragDisabled}
+                  onToggle={() => toggleMain(main.id)}
+                  onRename={() => openNameDialog({ kind: "rename-main", main })}
+                  onDelete={() => setDeleteTarget({ kind: "main", id: main.id, name: main.name })}
+                  onAddSub={() => openNameDialog({ kind: "create-sub", main })}
+                  onRenameSub={(sub) => openNameDialog({ kind: "rename-sub", sub })}
+                  onDeleteSub={(sub) => setDeleteTarget({ kind: "sub", id: sub.id, name: sub.name })}
+                  onAddProduct={onAddProduct}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <Dialog
