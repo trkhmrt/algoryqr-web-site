@@ -40,6 +40,7 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
 import { useMenuCategoriesByQr, useMenuAllergens, useMenuTags } from "@/hooks/use-menu-categories";
 import { invalidateMenuProducts, useMenuProducts } from "@/hooks/use-menu-products";
 import { useSmartSummaryAccess } from "@/hooks/use-smart-summary-access";
@@ -123,6 +124,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
   }, [productId, productsQuery.data]);
 
   const product = productOverride?.productId === productId ? productOverride : productFromQuery;
+  useDashboardPageLabel(product?.name);
 
   useEffect(() => {
     setProductOverride(null);

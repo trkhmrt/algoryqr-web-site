@@ -10,18 +10,18 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 const HUB_ITEMS = [
   {
+    key: "orders",
+    title: "Sipariş Yönetimi",
+    description: "Bekleyen siparişleri onayla veya reddet",
+    icon: Bell,
+    href: DASHBOARD_ROUTES.waiter,
+  },
+  {
     key: "reports",
     title: "Sipariş Raporları",
     description: "Personel performansı ve onaylanan siparişler",
     icon: BarChart3,
     href: DASHBOARD_ROUTES.orderPanelReports,
-  },
-  {
-    key: "orders",
-    title: "Siparişler",
-    description: "Bekleyen siparişleri onayla veya reddet",
-    icon: Bell,
-    href: DASHBOARD_ROUTES.waiter,
   },
 ] as const;
 
@@ -37,7 +37,7 @@ export default function OrderPanelView() {
     try {
       await navigator.clipboard.writeText(absolute);
       setLinkCopied(true);
-      notify("info", "Sipariş Paneli linki kopyalandı.");
+      notify("info", "Garson paneli linki kopyalandı.");
       window.setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       notify("danger", "Link kopyalanamadı.");
@@ -47,14 +47,16 @@ export default function OrderPanelView() {
   return (
     <div className="mx-auto w-full max-w-md space-y-4 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sipariş Paneli</h1>
-        <p className="text-sm text-muted-foreground">Garson sipariş uygulaması ve sipariş raporları</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Garson Paneli</h1>
+        <p className="text-sm text-muted-foreground">
+          Garsonların masa ve sipariş yönetimi için bağımsız uygulama
+        </p>
       </div>
 
       <div className="flex items-center gap-2">
         <Button asChild className="h-11 min-w-0 flex-1 gap-2">
           <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
-            Sipariş paneline git
+            Garson paneline git
             <ExternalLink className="h-4 w-4" />
           </a>
         </Button>
@@ -62,7 +64,7 @@ export default function OrderPanelView() {
           type="button"
           onClick={() => void copyPanelLink()}
           className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border text-foreground transition-colors hover:bg-muted"
-          aria-label="Sipariş Paneli linkini kopyala"
+          aria-label="Garson paneli linkini kopyala"
           title={linkCopied ? "Kopyalandı" : "Linki kopyala"}
         >
           {linkCopied ? (

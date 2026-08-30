@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
+import { isCardVerificationConversation } from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { abandonPendingPaymentAttempt } from "@/lib/purchase-fulfillment";
 
@@ -14,10 +15,6 @@ function resolvePaymentRedirect(status: string | null): "success" | "failed" | "
   if (normalized === "success" || normalized === "successful") return "success";
   if (normalized === "failed" || normalized === "failure") return "failed";
   return "unknown";
-}
-
-function isCardVerificationConversation(conversationId: string | null): boolean {
-  return conversationId != null && conversationId.startsWith("qr-card-verification-");
 }
 
 function PaymentResultContent() {
@@ -31,7 +28,7 @@ function PaymentResultContent() {
 
   const redirectTarget = useMemo(() => {
     if (cardVerification) {
-      return `${DASHBOARD_ROUTES.accountPaymentMethods}?verification=${payment}`;
+      return `${DASHBOARD_ROUTES.trialStart}?verification=${payment}`;
     }
     return `${DASHBOARD_ROUTES.accountSubscription}?payment=${payment}`;
   }, [cardVerification, payment]);

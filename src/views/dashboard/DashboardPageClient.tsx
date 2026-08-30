@@ -22,6 +22,7 @@ import BillingAddressesView from "@/views/dashboard/BillingAddressesView";
 import BranchCreateView from "@/views/dashboard/BranchCreateView";
 import BranchSettingsView from "@/views/dashboard/BranchSettingsView";
 import DigitalMenuView from "@/views/dashboard/DigitalMenuView";
+import DigitalMenuMenusView from "@/views/dashboard/DigitalMenuMenusView";
 import OrderPanelView from "@/views/dashboard/OrderPanelView";
 import DigitalMenuCreateView from "@/views/dashboard/DigitalMenuCreateView";
 import DigitalMenuEditorView from "@/views/dashboard/DigitalMenuEditorView";
@@ -47,6 +48,7 @@ import YemekSepetiHubView from "@/views/dashboard/YemekSepetiHubView";
 import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
 import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
 import SmartReportsView from "@/views/dashboard/SmartReportsView";
+import ReportsHubView from "@/views/dashboard/ReportsHubView";
 import MenuCustomersView from "@/views/dashboard/MenuCustomersView";
 import CampaignsView from "@/views/dashboard/CampaignsView";
 import CampaignCreateView from "@/views/dashboard/CampaignCreateView";
@@ -205,6 +207,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <TrialStartView />
       </Suspense>
     );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.reportsHub) {
+    return <ReportsHubView />;
   }
 
   if (
@@ -427,6 +433,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (digitalMenuEditQrId != null) {
     return <DigitalMenuEditorView qrId={digitalMenuEditQrId} />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenuMenus) {
+    return <DigitalMenuMenusView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.digitalMenu) {

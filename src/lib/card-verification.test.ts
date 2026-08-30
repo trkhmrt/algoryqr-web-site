@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isCardVerificationComplete, isCardVerificationFailed } from "./card-verification";
+import {
+  isCardVerificationComplete,
+  isCardVerificationConversation,
+  isCardVerificationFailed,
+} from "./card-verification";
 
 describe("card verification status helpers", () => {
   it("treats SUCCESS as complete", () => {
@@ -26,5 +30,11 @@ describe("card verification status helpers", () => {
   it("does not treat SUCCESS or REFUNDED as failed", () => {
     expect(isCardVerificationFailed("SUCCESS")).toBe(false);
     expect(isCardVerificationFailed("REFUNDED")).toBe(false);
+  });
+
+  it("recognizes PayTR sanitized card verification ids", () => {
+    expect(isCardVerificationConversation("qrcardv720260830120000abcd")).toBe(true);
+    expect(isCardVerificationConversation("qr-card-verification-7-abcd")).toBe(true);
+    expect(isCardVerificationConversation("qr720260830120000abcd")).toBe(false);
   });
 });

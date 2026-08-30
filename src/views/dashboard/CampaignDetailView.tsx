@@ -34,6 +34,7 @@ import {
   type CampaignItem,
   type CampaignWinner,
 } from "@/lib/campaign-api";
+import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 function statusLabel(status: CampaignItem["status"]): string {
@@ -258,6 +259,7 @@ export default function CampaignDetailView() {
   });
 
   const campaign = campaignQuery.data;
+  useDashboardPageLabel(campaign?.name);
   const previewWinners = winnersPreviewQuery.data?.content ?? [];
   const totalWinners = winnersPreviewQuery.data?.totalElements ?? 0;
 

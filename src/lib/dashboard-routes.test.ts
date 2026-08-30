@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { DASHBOARD_ROUTES } from "./dashboard-routes";
+import {
+  DASHBOARD_NAV_ITEMS,
+  DASHBOARD_ROUTES,
+  isWideDashboardPath,
+  splitMobileDashboardNav,
+} from "./dashboard-routes";
+import { applyListQueryParams } from "@/hooks/use-list-query-state";
 
 describe("dashboard report routes", () => {
   it("builds branch analytics urls", () => {
+    expect(DASHBOARD_ROUTES.reportsHub).toBe("/dashboard/raporlar");
     expect(DASHBOARD_ROUTES.digitalMenuAnalyticsForBranch(4)).toBe(
       "/dashboard/dijital-menu/analitik?branch=4",
     );
@@ -29,5 +36,51 @@ describe("integrations routes", () => {
     expect(DASHBOARD_ROUTES.trendyolGo).toBe("/dashboard/trendyol-go");
     expect(DASHBOARD_ROUTES.trendyolGoProducts).toBe("/dashboard/trendyol-go/urunler");
     expect(DASHBOARD_ROUTES.trendyolGoOrders).toBe("/dashboard/trendyol-go/siparisler");
+  });
+});
+
+describe("splitMobileDashboardNav", () => {
+  it("keeps four primary tabs and puts the rest in overflow", () => {
+    const { primary, overflow } = splitMobileDashboardNav(DASHBOARD_NAV_ITEMS);
+    expect(primary.map((item) => item.key)).toEqual([
+      "overview",
+      "orderPanel",
+      "digitalMenu",
+      "reports",
+    ]);
+    expect(overflow.map((item) => item.key)).toContain("account");
+    expect(overflow.map((item) => item.key)).not.toContain("overview");
+  });
+
+  it("fills primary slots when a scoped item is missing", () => {
+    const items = DASHBOARD_NAV_ITEMS.filter((item) => item.key !== "orderPanel");
+    const { primary } = splitMobileDashboardNav(items);
+    expect(primary).toHaveLength(4);
+    expect(primary[0].key).toBe("overview");
+    expect(primary.map((item) => item.key)).not.toContain("orderPanel");
+  });
+});
+
+describe("isWideDashboardPath", () => {
+  it("widens operational lists and keeps account pages narrow", () => {
+    expect(isWideDashboardPath(DASHBOARD_ROUTES.waiter)).toBe(true);
+    expect(isWideDashboardPath(DASHBOARD_ROUTES.reservations)).toBe(true);
+    expect(isWideDashboardPath(DASHBOARD_ROUTES.account)).toBe(false);
+  });
+});
+
+describe("applyListQueryParams", () => {
+  it("writes, updates, and removes list filters", () => {
+    const current = new URLSearchParams("qr=12");
+    const next = applyListQueryParams(current, { q: "ali", status: "ACTIVE", empty: "" });
+    expect(next.get("qr")).toBe("12");
+    expect(next.get("q")).toBe("ali");
+    expect(next.get("status")).toBe("ACTIVE");
+    expect(next.has("empty")).toBe(false);
+
+    const cleared = applyListQueryParams(next, { q: null, status: undefined });
+    expect(cleared.has("q")).toBe(false);
+    expect(cleared.has("status")).toBe(false);
+    expect(cleared.get("qr")).toBe("12");
   });
 });

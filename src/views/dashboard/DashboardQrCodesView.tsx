@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   QrCode, Plus, Eye, Calendar, Download, Share2, Trash2, Edit, Copy,
   Link as LinkIcon, Wifi, Mail, Phone, FileText, MapPin, Paintbrush, RotateCcw, Check, ArrowLeft,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Search,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import PackageUsageCard from "@/components/dashboard/PackageUsageCard";
@@ -44,6 +44,10 @@ import {
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidatePackageUsage, usePackageUsage } from "@/hooks/use-package-usage";
 import { invalidateSubscription } from "@/hooks/use-subscription";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { FilterSelect } from "@/components/dashboard/FilterSelect";
+import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
+import { useListQueryState } from "@/hooks/use-list-query-state";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { useQrCreateAccess } from "@/hooks/use-qr-create-access";
 
@@ -90,8 +94,14 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
   const { notify } = useDashboardBanners();
   const { data: packageUsage, isLoading: isPackageUsageLoading } = usePackageUsage(mode === "create");
   const { canCreateQr, qrQuotaLabel, accessLoading: isQrAccessLoading } = useQrCreateAccess();
+  const { searchParams, setQuery } = useListQueryState();
   const [isLoading, setIsLoading] = useState(false);
   const [listScope, setListScope] = useState<QrListScope>("ALL");
+  const [nameQuery, setNameQuery] = useState(() => searchParams.get("q") ?? "");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
+    () => (searchParams.get("status") as "all" | "active" | "inactive") || "all",
+  );
+  const [typeFilter, setTypeFilter] = useState(() => searchParams.get("type") ?? "all");
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -107,6 +117,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
 
   // QR Detail/Edit state
   const [selectedQR, setSelectedQR] = useState<DashboardQrItem | null>(null);
+  useDashboardPageLabel(mode === "detail" ? selectedQR?.name : undefined);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editActive, setEditActive] = useState(true);
@@ -130,11 +141,13 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     : false;
   const hasChangesForUi = selectedQR ? nameChangedForUi || !activeUnchangedForUi || !detailsUnchangedForUi : false;
 
+  const hasListFilter = nameQuery.trim() !== "" || statusFilter !== "all" || typeFilter !== "all";
+
   const fetchUserQrs = useCallback(async (): Promise<DashboardQrItem[]> => {
     setIsLoading(true);
     try {
-      const pageSize = mode === "detail" ? 50 : QR_PAGE_SIZE;
-      const pageIndex = mode === "detail" ? 0 : page;
+      const pageSize = mode === "detail" || hasListFilter ? 50 : QR_PAGE_SIZE;
+      const pageIndex = mode === "detail" || hasListFilter ? 0 : page;
       const response = await getUserQrsRequest(user?.id ?? "me", {
         includeImage: true,
         page: pageIndex,
@@ -158,11 +171,22 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
     } finally {
       setIsLoading(false);
     }
-  }, [listScope, mode, notify, page, user?.id]);
+  }, [hasListFilter, listScope, mode, notify, page, user?.id]);
 
   useEffect(() => {
     setPage(0);
-  }, [listScope]);
+  }, [hasListFilter, listScope]);
+
+  const visibleQrs = useMemo(() => {
+    const query = nameQuery.trim().toLocaleLowerCase("tr");
+    return userQrs.filter((qr) => {
+      if (statusFilter === "active" && !qr.active) return false;
+      if (statusFilter === "inactive" && qr.active) return false;
+      if (typeFilter !== "all" && qr.type !== typeFilter) return false;
+      if (!query) return true;
+      return `${qr.name} ${qr.content} ${qr.type}`.toLocaleLowerCase("tr").includes(query);
+    });
+  }, [nameQuery, statusFilter, typeFilter, userQrs]);
 
   const handleDeleteQr = useCallback(async (qr: DashboardQrItem) => {
     try {
@@ -509,8 +533,81 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                 )}
               </div>
 
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={nameQuery}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setNameQuery(next);
+                      setQuery({ q: next.trim() || null });
+                    }}
+                    placeholder="Ad veya içerik ara…"
+                    className="h-10 pl-9"
+                    aria-label="QR ara"
+                  />
+                </div>
+                <FilterSelect
+                  className="w-full sm:w-[10rem]"
+                  label="Durum"
+                  value={statusFilter}
+                  onValueChange={(next) => {
+                    const value = next as typeof statusFilter;
+                    setStatusFilter(value);
+                    setQuery({ status: value === "all" ? null : value });
+                  }}
+                  options={[
+                    { value: "all", label: "Tümü" },
+                    { value: "active", label: "Aktif" },
+                    { value: "inactive", label: "Pasif" },
+                  ]}
+                />
+                <FilterSelect
+                  className="w-full sm:w-[10rem]"
+                  label="Tür"
+                  value={typeFilter}
+                  onValueChange={(next) => {
+                    setTypeFilter(next);
+                    setQuery({ type: next === "all" ? null : next });
+                  }}
+                  options={[
+                    { value: "all", label: "Tümü" },
+                    ...qrTypes.map((type) => ({ value: type.label, label: type.label })),
+                  ]}
+                />
+              </div>
+
               <div className="grid gap-4">
-                {userQrs.map((qr) => (
+                {userQrs.length === 0 ? (
+                  <EmptyState
+                    title="Henüz QR kod yok"
+                    description="İlk QR kodunuzu oluşturup masaya veya menüye bağlayın."
+                    action={
+                      <Button asChild>
+                        <Link href={DASHBOARD_ROUTES.qrCodesNew}>QR oluştur</Link>
+                      </Button>
+                    }
+                  />
+                ) : visibleQrs.length === 0 ? (
+                  <EmptyState
+                    title="Filtrelere uyan QR yok"
+                    description="Arama, durum veya tür filtresini temizleyip tekrar deneyin."
+                    action={
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setNameQuery("");
+                          setStatusFilter("all");
+                          setTypeFilter("all");
+                          setQuery({ q: null, status: null, type: null });
+                        }}
+                      >
+                        Filtreleri temizle
+                      </Button>
+                    }
+                  />
+                ) : visibleQrs.map((qr) => (
                   <Card
                     key={qr.id}
                     className="glow-card cursor-pointer transition-colors hover:bg-accent/30"
@@ -594,7 +691,7 @@ const DashboardQrCodesView = ({ mode, qrId, initialUser = null }: DashboardQrCod
                 ))}
               </div>
 
-              {totalElements > QR_PAGE_SIZE ? (
+              {!hasListFilter && totalElements > QR_PAGE_SIZE ? (
                 <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
                   <p className="text-xs text-muted-foreground">
                     Sayfa {page + 1} / {Math.max(1, totalPages)}

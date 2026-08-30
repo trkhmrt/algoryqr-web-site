@@ -19,8 +19,7 @@ import {
   type MenuProfileApiItem,
 } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-
-const STORAGE_KEY = "algory_selected_menu_qr_id";
+import { SELECTED_MENU_QR_STORAGE_KEY } from "@/lib/dashboard-menu-context";
 
 export const MY_ACTIVE_MENUS_QUERY_KEY = ["myActiveMenus"] as const;
 
@@ -108,7 +107,7 @@ export function useDigitalMenuSelection(initialQrId?: number | null, enabled = t
     }
 
     const stored =
-      typeof window !== "undefined" ? Number(window.sessionStorage.getItem(STORAGE_KEY)) : NaN;
+      typeof window !== "undefined" ? Number(window.sessionStorage.getItem(SELECTED_MENU_QR_STORAGE_KEY)) : NaN;
     const nextId =
       (initialQrId != null && menuQrs.some((item) => item.id === initialQrId) ? initialQrId : null) ??
       (preferredQrId != null && menuQrs.some((item) => item.id === preferredQrId)
@@ -128,7 +127,7 @@ export function useDigitalMenuSelection(initialQrId?: number | null, enabled = t
       if (!qr) return;
       setPreferredQrId(qr.id);
       if (typeof window !== "undefined") {
-        window.sessionStorage.setItem(STORAGE_KEY, String(qr.id));
+        window.sessionStorage.setItem(SELECTED_MENU_QR_STORAGE_KEY, String(qr.id));
       }
     },
     [menuQrs],
@@ -147,7 +146,7 @@ export function useDigitalMenuSelection(initialQrId?: number | null, enabled = t
 
   useEffect(() => {
     if (menuQuery.data && preferredQrId != null && typeof window !== "undefined") {
-      window.sessionStorage.setItem(STORAGE_KEY, String(preferredQrId));
+      window.sessionStorage.setItem(SELECTED_MENU_QR_STORAGE_KEY, String(preferredQrId));
     }
   }, [menuQuery.data, preferredQrId]);
 

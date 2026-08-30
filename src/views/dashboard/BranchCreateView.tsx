@@ -41,7 +41,7 @@ export default function BranchCreateView() {
       });
       await invalidateBranches(queryClient);
       notify("info", "Şube oluşturuldu.");
-      router.push(DASHBOARD_ROUTES.branchSettings(created.id));
+      router.push(DASHBOARD_ROUTES.digitalMenuCreateForBranch(created.id));
     } catch (error) {
       if (getApiErrorCode(error) === "EXTRA_BRANCH_REQUIRED") {
         router.push(DASHBOARD_ROUTES.catalogProductCheckout("QR_BRANCH"));
