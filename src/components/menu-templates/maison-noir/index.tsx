@@ -14,6 +14,8 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  usePublicMenuDeepLinkProduct,
+  usePublicMenuViewState,
   useRegisterChefOpenProduct,
 } from "../shared";
 import type { MaisonNoirView } from "./category-utils";
@@ -34,8 +36,18 @@ export function MaisonNoirMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = useState<MaisonNoirView>({ type: "home" });
+  const [view, setView] = usePublicMenuViewState<MaisonNoirView>({ type: "home" }, {
+    supportsSubCategory: true,
+  });
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
+
+  usePublicMenuDeepLinkProduct({
+    menuId: menu.menuId,
+    view,
+    products,
+    pinnedProduct,
+    setPinnedProduct,
+  });
 
   const feedback = useMenuFeedback(
     menu.menuId,

@@ -92,6 +92,12 @@ export {
 export { useMenuTemplateNav } from "./use-menu-template-nav";
 export type { MenuTemplateView } from "./use-menu-template-nav";
 export {
+  parsePublicMenuViewFromSearchParams,
+  usePublicMenuViewState,
+} from "./use-public-menu-url-state";
+export type { PublicMenuUrlViewBase } from "./use-public-menu-url-state";
+export { usePublicMenuDeepLinkProduct } from "./use-public-menu-deep-link-product";
+export {
   MenuProductFeedContext,
   useMenuProductFeed,
   useMenuProductFeedState,
