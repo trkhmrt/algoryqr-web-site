@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, Bell, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   CHEF_WELCOME_MESSAGE,
@@ -363,6 +364,7 @@ export function MenuChefChat({
   const [sendPulse, setSendPulse] = useState(0);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const enteredIdsRef = useRef(
@@ -384,6 +386,19 @@ export function MenuChefChat({
     if (!open) return;
     const t = window.setTimeout(() => inputRef.current?.focus(), 120);
     return () => window.clearTimeout(t);
+  }, [open]);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   const scrollToBottom = () => {
@@ -529,7 +544,9 @@ export function MenuChefChat({
     await sendMessage(text);
   };
 
-  return (
+  if (!portalReady) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open ? (
         <motion.div
@@ -538,7 +555,7 @@ export function MenuChefChat({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-auto fixed inset-0 z-[70] flex flex-col overflow-hidden overscroll-none bg-[#f3f5f4]"
+          className="pointer-events-auto fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none bg-[#f3f5f4]"
         >
           <div className="relative flex h-full min-h-0 flex-col">
             <div
@@ -737,6 +754,7 @@ export function MenuChefChat({
           </div>
         </motion.div>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
