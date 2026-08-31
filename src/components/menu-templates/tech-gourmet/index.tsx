@@ -14,6 +14,8 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  usePublicMenuDeepLinkProduct,
+  usePublicMenuViewState,
   useRegisterChefOpenProduct,
 } from "../shared";
 import type { TechGourmetView } from "./category-utils";
@@ -28,9 +30,17 @@ export function TechGourmetMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = useState<TechGourmetView>({ type: "home" });
+  const [view, setView] = usePublicMenuViewState<TechGourmetView>({ type: "home" });
   const [searchQuery, setSearchQuery] = useState("");
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
+
+  usePublicMenuDeepLinkProduct({
+    menuId: menu.menuId,
+    view,
+    products,
+    pinnedProduct,
+    setPinnedProduct,
+  });
 
   const feedback = useMenuFeedback(
     menu.menuId,

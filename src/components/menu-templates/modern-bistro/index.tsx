@@ -14,6 +14,8 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  usePublicMenuDeepLinkProduct,
+  usePublicMenuViewState,
   useRegisterChefOpenProduct,
 } from "../shared";
 import type { ModernBistroView } from "./category-utils";
@@ -28,9 +30,17 @@ export function ModernBistroMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = useState<ModernBistroView>({ type: "home" });
+  const [view, setView] = usePublicMenuViewState<ModernBistroView>({ type: "home" });
   const [searchQuery, setSearchQuery] = useState("");
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
+
+  usePublicMenuDeepLinkProduct({
+    menuId: menu.menuId,
+    view,
+    products,
+    pinnedProduct,
+    setPinnedProduct,
+  });
 
   const feedback = useMenuFeedback(
     menu.menuId,

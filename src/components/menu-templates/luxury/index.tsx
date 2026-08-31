@@ -14,6 +14,8 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  usePublicMenuDeepLinkProduct,
+  usePublicMenuViewState,
   useRegisterChefOpenProduct,
 } from "../shared";
 import type { LuxuryView } from "./category-utils";
@@ -28,11 +30,19 @@ export function LuxuryMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = useState<LuxuryView>({ type: "home" });
+  const [view, setView] = usePublicMenuViewState<LuxuryView>({ type: "home" });
   const [searchQuery, setSearchQuery] = useState("");
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(
     null,
   );
+
+  usePublicMenuDeepLinkProduct({
+    menuId: menu.menuId,
+    view,
+    products,
+    pinnedProduct,
+    setPinnedProduct,
+  });
   const feedback = useMenuFeedback(
     menu.menuId,
     menu.ratingAvg != null ? Number(menu.ratingAvg) : null,

@@ -14,6 +14,8 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  usePublicMenuDeepLinkProduct,
+  usePublicMenuViewState,
   useRegisterChefOpenProduct,
 } from "../shared";
 import type { CleverDishScribeView } from "./category-utils";
@@ -28,9 +30,17 @@ export function CleverDishScribeMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = useState<CleverDishScribeView>({ type: "home" });
+  const [view, setView] = usePublicMenuViewState<CleverDishScribeView>({ type: "home" });
   const [searchQuery, setSearchQuery] = useState("");
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
+
+  usePublicMenuDeepLinkProduct({
+    menuId: menu.menuId,
+    view,
+    products,
+    pinnedProduct,
+    setPinnedProduct,
+  });
 
   const feedback = useMenuFeedback(
     menu.menuId,
