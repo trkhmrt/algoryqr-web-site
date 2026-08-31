@@ -30,7 +30,7 @@ export function ModernBistroMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = usePublicMenuViewState<ModernBistroView>({ type: "home" });
+  const [view, setView, { replaceView, goBack }] = usePublicMenuViewState<ModernBistroView>({ type: "home" });
   const [searchQuery, setSearchQuery] = useState("");
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
 
@@ -72,7 +72,15 @@ export function ModernBistroMenuTemplate({
     setSearchQuery("");
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "home" });
+    replaceView({ type: "home" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const leaveCategory = () => {
+    setSearchQuery("");
+    setPinnedProduct(null);
+    feedback.syncProductState(null);
+    goBack();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -109,11 +117,7 @@ export function ModernBistroMenuTemplate({
   const backFromProduct = () => {
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    if (view.type === "product" && view.categoryId != null) {
-      setView({ type: "category", categoryId: view.categoryId });
-    } else {
-      goHome();
-    }
+    goBack();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -135,7 +139,7 @@ export function ModernBistroMenuTemplate({
         <ModernBistroCategoryView
           category={activeCategory}
           products={products}
-          onHome={goHome}
+          onHome={leaveCategory}
           onOpenProduct={openProduct}
         />
       ) : null}
