@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
 
+import { RainbowBeamButton } from "@/components/dashboard/RainbowBeamButton";
 import {
   resolveChefAvatarSrc,
   resolveChefDisplayName,
@@ -66,6 +66,11 @@ export function MaisonNoirChefNavButton({
     };
   }, [open]);
 
+  const openChat = () => {
+    setChatMounted(true);
+    setOpen(true);
+  };
+
   return (
     <>
       {chatMounted ? (
@@ -77,29 +82,12 @@ export function MaisonNoirChefNavButton({
           onClose={() => setOpen(false)}
         />
       ) : null}
-      <button
-        type="button"
-        onClick={() => {
-          setChatMounted(true);
-          setOpen(true);
-        }}
-        className="mn-chef-nav-btn mn-chef-nav-btn--pill group relative inline-flex max-w-[min(46vw,9.5rem)] shrink-0"
-        aria-label="Akıllı Şefe Sor"
-      >
-        <span className="mn-chef-nav-btn__ring absolute inset-0 rounded-full" aria-hidden />
-        <span className="mn-chef-nav-btn__glow absolute inset-0 rounded-full opacity-70" aria-hidden />
-        <span className="relative flex min-h-8 items-center gap-1.5 rounded-full bg-[var(--mn-bg)]/92 py-0.5 pl-0.5 pr-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mn-surface)]/80">
-            <Sparkles
-              className="h-3 w-3 text-[var(--mn-fg)] transition-transform group-hover:scale-110 group-active:scale-95"
-              strokeWidth={1.5}
-            />
-          </span>
-          <span className="truncate mn-type-label text-[0.625rem] leading-none text-[var(--mn-fg)]">
-            Akıllı Şefe Sor
-          </span>
-        </span>
-      </button>
+      <RainbowBeamButton
+        label="Akıllı Şefe Sor"
+        prominent={false}
+        className="max-w-[min(46vw,9.75rem)]"
+        onClick={openChat}
+      />
     </>
   );
 }

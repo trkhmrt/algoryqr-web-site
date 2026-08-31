@@ -276,58 +276,23 @@ export const MAISON_NOIR_STYLES = `
     -webkit-backdrop-filter: blur(22px) saturate(150%);
   }
 
-  @keyframes mn-rainbow-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  .maison-noir-menu .rainbow-beam {
+    background: var(--mn-primary);
+    color: var(--mn-primary-fg);
+    box-shadow: 0 8px 20px -10px oklch(0.78 0.09 84 / 0.55);
   }
 
-  @keyframes mn-chef-shimmer {
-    0%, 100% { opacity: 0.45; transform: scale(1); }
-    50% { opacity: 0.85; transform: scale(1.08); }
-  }
-
-  .maison-noir-menu .mn-chef-nav-btn__ring {
-    background: conic-gradient(
-      from 0deg,
-      #ff6b9d,
-      #ffc371,
-      #ffe259,
-      #43e97b,
-      #38f9d7,
-      #4facfe,
-      #a855f7,
-      #ff6b9d
-    );
-    animation: mn-rainbow-spin 3.5s linear infinite;
-  }
-
-  .maison-noir-menu .mn-chef-nav-btn__glow {
-    background: radial-gradient(circle, oklch(0.88 0.12 84 / 0.55), transparent 70%);
-    animation: mn-chef-shimmer 2.4s ease-in-out infinite;
-  }
-
-  .maison-noir-menu .mn-chef-nav-btn {
-    position: relative;
-  }
-
-  .maison-noir-menu .mn-chef-nav-btn--pill .mn-chef-nav-btn__ring,
-  .maison-noir-menu .mn-chef-nav-btn--pill .mn-chef-nav-btn__glow {
-    border-radius: 9999px;
-  }
-
-  .maison-noir-menu .mn-chef-nav-btn:focus-visible {
-    outline: 2px solid oklch(0.88 0.12 84 / 0.8);
-    outline-offset: 2px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .maison-noir-menu .mn-chef-nav-btn__ring {
-      animation: none;
-    }
-    .maison-noir-menu .mn-chef-nav-btn__glow {
-      animation: none;
-      opacity: 0.55;
-    }
+  .maison-noir-menu .rainbow-beam > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-xs);
+    font-weight: 400;
+    letter-spacing: var(--mn-tracking-label);
+    text-transform: none;
+    color: var(--mn-primary-fg);
   }
 
   .maison-noir-menu .text-muted-foreground { color: var(--mn-muted); }
