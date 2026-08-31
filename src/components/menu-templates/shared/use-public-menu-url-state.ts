@@ -20,6 +20,13 @@ export type PublicMenuUrlViewBase =
       subCategoryId?: number | null;
     };
 
+type UrlSyncMode = "push" | "replace";
+
+export type PublicMenuViewNavigation = {
+  replaceView: (nextView: PublicMenuUrlViewBase) => void;
+  goBack: () => void;
+};
+
 function parsePositiveInt(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
@@ -121,7 +128,7 @@ type UsePublicMenuViewStateOptions = {
 export function usePublicMenuViewState<T extends PublicMenuUrlViewBase>(
   defaultView: T,
   options: UsePublicMenuViewStateOptions = {},
-): [T, React.Dispatch<React.SetStateAction<T>>] {
+): [T, React.Dispatch<React.SetStateAction<T>>, PublicMenuViewNavigation] {
   const supportsSubCategory = options.supportsSubCategory ?? false;
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -129,6 +136,7 @@ export function usePublicMenuViewState<T extends PublicMenuUrlViewBase>(
   const [view, setView] = useState<T>(defaultView);
   const viewRef = useRef(view);
   const skipViewToUrlSync = useRef(false);
+  const urlSyncModeRef = useRef<UrlSyncMode>("push");
 
   viewRef.current = view;
 
@@ -153,13 +161,37 @@ export function usePublicMenuViewState<T extends PublicMenuUrlViewBase>(
     if (searchParamsEqual(desired, searchParams)) return;
 
     const query = desired.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    const url = query ? `${pathname}?${query}` : pathname;
+    const mode = urlSyncModeRef.current;
+    urlSyncModeRef.current = "push";
+
+    if (mode === "replace") {
+      router.replace(url, { scroll: false });
+      return;
+    }
+
+    router.push(url, { scroll: false });
   }, [view, pathname, router, searchParams, supportsSubCategory]);
 
-  const setViewStable = useCallback<React.Dispatch<React.SetStateAction<T>>>((value) => {
+  const setViewWithPush = useCallback<React.Dispatch<React.SetStateAction<T>>>((value) => {
+    urlSyncModeRef.current = "push";
     skipViewToUrlSync.current = false;
     setView(value);
   }, []);
 
-  return [view, setViewStable];
+  const replaceView = useCallback(
+    (nextView: PublicMenuUrlViewBase) => {
+      urlSyncModeRef.current = "replace";
+      skipViewToUrlSync.current = false;
+      setView(nextView as T);
+    },
+    [],
+  );
+
+  const goBack = useCallback(() => {
+    skipViewToUrlSync.current = true;
+    router.back();
+  }, [router]);
+
+  return [view, setViewWithPush, { replaceView, goBack }];
 }

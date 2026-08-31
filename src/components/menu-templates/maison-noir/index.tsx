@@ -36,7 +36,7 @@ export function MaisonNoirMenuTemplate({
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView] = usePublicMenuViewState<MaisonNoirView>({ type: "home" }, {
+  const [view, setView, { replaceView, goBack }] = usePublicMenuViewState<MaisonNoirView>({ type: "home" }, {
     supportsSubCategory: true,
   });
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
@@ -85,7 +85,14 @@ export function MaisonNoirMenuTemplate({
   const goHome = () => {
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "home" });
+    replaceView({ type: "home" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const backToCategories = () => {
+    setPinnedProduct(null);
+    feedback.syncProductState(null);
+    goBack();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -137,15 +144,7 @@ export function MaisonNoirMenuTemplate({
   const backFromProduct = () => {
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    if (view.type === "product" && view.categoryId != null) {
-      setView({
-        type: "category",
-        categoryId: view.categoryId,
-        subCategoryId: view.subCategoryId,
-      });
-    } else {
-      goHome();
-    }
+    goBack();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -165,7 +164,7 @@ export function MaisonNoirMenuTemplate({
           category={activeCategory}
           products={products}
           subCategoryId={activeSubCategoryId}
-          onBackToCategories={goHome}
+          onBackToCategories={backToCategories}
           onSelectSubCategory={selectSubCategory}
           onOpenProduct={openProduct}
         />

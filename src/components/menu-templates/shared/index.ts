@@ -95,7 +95,7 @@ export {
   parsePublicMenuViewFromSearchParams,
   usePublicMenuViewState,
 } from "./use-public-menu-url-state";
-export type { PublicMenuUrlViewBase } from "./use-public-menu-url-state";
+export type { PublicMenuUrlViewBase, PublicMenuViewNavigation } from "./use-public-menu-url-state";
 export { usePublicMenuDeepLinkProduct } from "./use-public-menu-deep-link-product";
 export {
   MenuProductFeedContext,
