@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import PaymentBadges from "@/components/PaymentBadges";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FooterThemeToggle } from "@/components/ThemeToggle";
 import { COMPANY } from "@/lib/company";
+import { Tx, useT } from "@/components/google-translate-provider";
 
 const LEGAL_LINKS = [
   { href: "/hakkimizda", label: "Hakkımızda" },
@@ -14,6 +17,8 @@ const LEGAL_LINKS = [
 ] as const;
 
 const Footer = () => {
+  const t = useT();
+
   return (
     <footer className="border-t border-border py-8 sm:py-10 md:py-12">
       <div className="container mx-auto w-full max-w-6xl space-y-8 sm:space-y-10 px-4 sm:px-6">
@@ -26,16 +31,16 @@ const Footer = () => {
               </span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs text-pretty">
-              Dinamik QR, dijital menü ve yapay zeka destekli işletme araçları.
+              <Tx>Dinamik QR, dijital menü ve yapay zeka destekli işletme araçları.</Tx>
             </p>
             <p className="text-sm text-muted-foreground">
-              © 2026 {COMPANY.productName}. Tüm hakları saklıdır.
+              © 2026 {COMPANY.productName}. <Tx>Tüm hakları saklıdır.</Tx>
             </p>
           </div>
 
           <div className="space-y-3">
             <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-              Yasal
+              <Tx>Yasal</Tx>
             </p>
             <nav className="flex flex-col gap-2">
               {LEGAL_LINKS.map((item) => (
@@ -44,7 +49,7 @@ const Footer = () => {
                   href={item.href}
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground py-0.5"
                 >
-                  {item.label}
+                  {t(item.label)}
                 </Link>
               ))}
             </nav>
@@ -52,7 +57,7 @@ const Footer = () => {
 
           <div className="space-y-3">
             <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-              İletişim
+              <Tx>İletişim</Tx>
             </p>
             <p className="text-sm font-medium text-foreground">{COMPANY.tradeName}</p>
             <div className="space-y-2.5">

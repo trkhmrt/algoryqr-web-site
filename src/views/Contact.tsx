@@ -10,16 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { COMPANY } from "@/lib/company";
+import { Tx, useT } from "@/components/google-translate-provider";
 
 const Contact = () => {
   const { toast } = useToast();
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", message: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim()) {
-      toast({ title: "Hata", description: "Lütfen zorunlu alanları doldurun.", variant: "destructive" });
+      toast({ title: t("Hata"), description: t("Lütfen zorunlu alanları doldurun."), variant: "destructive" });
       return;
     }
 
@@ -46,23 +48,23 @@ const Contact = () => {
           ? Object.values(data.fieldErrors)[0]
           : undefined;
         toast({
-          title: "Hata",
+          title: t("Hata"),
           description:
-            fieldMessage || data?.message || "Mesaj gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+            fieldMessage || data?.message || t("Mesaj gönderilemedi. Lütfen daha sonra tekrar deneyin."),
           variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: "Başarılı",
-        description: data?.message || "Mesajınız gönderildi. En kısa sürede size dönüş yapacağız.",
+        title: t("Başarılı"),
+        description: data?.message || t("Mesajınız gönderildi. En kısa sürede size dönüş yapacağız."),
       });
       setForm({ firstName: "", lastName: "", email: "", message: "" });
     } catch {
       toast({
-        title: "Hata",
-        description: "Mesaj gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+        title: t("Hata"),
+        description: t("Mesaj gönderilemedi. Lütfen daha sonra tekrar deneyin."),
         variant: "destructive",
       });
     } finally {
@@ -77,11 +79,14 @@ const Contact = () => {
     <LegalPageShell title="İletişim" eyebrow="Bize ulaşın">
       <div className="not-prose grid gap-6 md:grid-cols-5">
         <div className="glass glow-card space-y-4 rounded-2xl border border-border/60 p-6 md:col-span-2">
-          <p className="text-xs font-mono uppercase tracking-widest text-primary">Şirket</p>
+          <p className="text-xs font-mono uppercase tracking-widest text-primary">
+            <Tx>Şirket</Tx>
+          </p>
           <h2 className="text-xl font-semibold text-foreground">{COMPANY.tradeName}</h2>
           <p className="text-sm text-muted-foreground">
-            {COMPANY.productName} ürünü için destek ve satış sorularınızı e-posta veya telefon
-            ile iletebilirsiniz.
+            <Tx>
+              {`${COMPANY.productName} ürünü için destek ve satış sorularınızı e-posta veya telefon ile iletebilirsiniz.`}
+            </Tx>
           </p>
           <div className="space-y-3">
             <div className="flex items-start gap-3 text-sm">
@@ -109,10 +114,12 @@ const Contact = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">İsim</Label>
+                <Label htmlFor="firstName">
+                  <Tx>İsim</Tx>
+                </Label>
                 <Input
                   id="firstName"
-                  placeholder="Adınız"
+                  placeholder={t("Adınız")}
                   value={form.firstName}
                   onChange={update("firstName")}
                   disabled={pending}
@@ -120,10 +127,12 @@ const Contact = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Soyisim</Label>
+                <Label htmlFor="lastName">
+                  <Tx>Soyisim</Tx>
+                </Label>
                 <Input
                   id="lastName"
-                  placeholder="Soyadınız"
+                  placeholder={t("Soyadınız")}
                   value={form.lastName}
                   onChange={update("lastName")}
                   disabled={pending}
@@ -132,11 +141,13 @@ const Contact = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contactEmail">E-posta</Label>
-              <Input
-                id="contactEmail"
-                type="email"
-                placeholder="ornek@email.com"
+                <Label htmlFor="contactEmail">
+                  <Tx>E-posta</Tx>
+                </Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  placeholder={t("ornek@email.com")}
                 value={form.email}
                 onChange={update("email")}
                 disabled={pending}
@@ -144,10 +155,12 @@ const Contact = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="message">Mesaj (Opsiyonel)</Label>
-              <Textarea
-                id="message"
-                placeholder="Mesajınızı yazın..."
+                <Label htmlFor="message">
+                  <Tx>Mesaj (Opsiyonel)</Tx>
+                </Label>
+                <Textarea
+                  id="message"
+                  placeholder={t("Mesajınızı yazın...")}
                 rows={4}
                 value={form.message}
                 onChange={update("message")}
@@ -161,7 +174,7 @@ const Contact = () => {
               type="submit"
               disabled={pending}
             >
-              <Send className="h-4 w-4" /> {pending ? "Gönderiliyor..." : "Gönder"}
+              <Send className="h-4 w-4" /> {pending ? t("Gönderiliyor...") : t("Gönder")}
             </Button>
           </form>
         </div>

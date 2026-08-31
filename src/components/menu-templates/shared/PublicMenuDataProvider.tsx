@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, type ReactNode } from "react";
 
 import type { MainCategoryApiItem, MenuProductApiItem } from "@/lib/api";
 import { usePublicMenuCategories } from "@/hooks/public-menu/use-public-menu-categories";
@@ -13,12 +13,20 @@ import {
   type PublicMenuCategoriesInitialPage,
   type PublicMenuProductsInitialPage,
 } from "@/hooks/public-menu/types";
+import {
+  collectMenuContentTexts,
+  localizeCategories,
+  localizeProducts,
+} from "@/lib/menu-content-i18n";
+import { useGoogleTranslateOptional } from "@/components/google-translate-provider";
 
 import { MenuCategoryFeedContext, type MenuCategoryFeedValue } from "./MenuCategoryFeed";
 import {
   MenuProductFeedContext,
   type MenuProductFeedValue,
 } from "./use-public-menu-products";
+
+const EMPTY_DICT: Record<string, string> = {};
 
 export type PublicMenuDataProviderProps = {
   menuId: number;
@@ -87,6 +95,28 @@ export function PublicMenuDataProvider({
 
   const products = useMemo(() => flattenProductPages(productQuery.data), [productQuery.data]);
 
+  const i18n = useGoogleTranslateOptional();
+  const ensureTranslations = i18n?.ensureTranslations;
+  const dict = i18n?.dict ?? EMPTY_DICT;
+  const contentTexts = useMemo(
+    () => collectMenuContentTexts(products, categories),
+    [categories, products],
+  );
+
+  useEffect(() => {
+    void ensureTranslations?.(contentTexts);
+  }, [contentTexts, ensureTranslations]);
+
+  const localizedCategories = useMemo(
+    () => localizeCategories(categories, dict),
+    [categories, dict],
+  );
+
+  const localizedProducts = useMemo(
+    () => localizeProducts(products, dict),
+    [dict, products],
+  );
+
   usePublicMenuCategoryStats(menuId, categories);
 
   const fetchCategoryNextPage = useCallback(async () => {
@@ -99,13 +129,13 @@ export function PublicMenuDataProvider({
 
   const categoryFeedValue = useMemo<MenuCategoryFeedValue>(
     () => ({
-      categories,
+      categories: localizedCategories,
       hasNext: Boolean(categoryQuery.hasNextPage),
       isFetchingNextPage: categoryQuery.isFetchingNextPage,
       fetchNextPage: fetchCategoryNextPage,
     }),
     [
-      categories,
+      localizedCategories,
       categoryQuery.hasNextPage,
       categoryQuery.isFetchingNextPage,
       fetchCategoryNextPage,
@@ -114,7 +144,7 @@ export function PublicMenuDataProvider({
 
   const productFeedValue = useMemo<MenuProductFeedValue>(
     () => ({
-      products,
+      products: localizedProducts,
       hasNext: Boolean(productQuery.hasNextPage),
       isFetchingNextPage: productQuery.isFetchingNextPage,
       fetchNextPage: fetchProductNextPage,
@@ -123,7 +153,7 @@ export function PublicMenuDataProvider({
       fetchProductNextPage,
       productQuery.hasNextPage,
       productQuery.isFetchingNextPage,
-      products,
+      localizedProducts,
     ],
   );
 

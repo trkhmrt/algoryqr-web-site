@@ -1,6 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { Tx, useT } from "@/components/google-translate-provider";
 
 const marqueeItems = [
   "Dinamik QR",
@@ -15,19 +18,22 @@ const marqueeItems = [
   "Anlık Takip",
 ];
 
-const MarqueeContent = () => (
-  <>
-    {marqueeItems.map((item, i) => (
-      <span
-        key={i}
-        className="mx-4 sm:mx-6 shrink-0 whitespace-nowrap text-lg font-bold text-muted-foreground flex items-center gap-2 sm:gap-3"
-      >
-        <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-        {item}
-      </span>
-    ))}
-  </>
-);
+const MarqueeContent = () => {
+  const t = useT();
+  return (
+    <>
+      {marqueeItems.map((item, i) => (
+        <span
+          key={i}
+          className="mx-4 sm:mx-6 shrink-0 whitespace-nowrap text-lg font-bold text-muted-foreground flex items-center gap-2 sm:gap-3"
+        >
+          <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+          {t(item)}
+        </span>
+      ))}
+    </>
+  );
+};
 
 const HeroSection = () => {
   return (
@@ -36,21 +42,21 @@ const HeroSection = () => {
         <div className="grid grid-cols-1 items-center gap-10 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] sm:gap-8 md:gap-10 lg:gap-14 xl:gap-16">
           <div className="order-1 mx-auto w-full max-w-xl space-y-5 text-center sm:order-none sm:mx-0 sm:max-w-none sm:space-y-6 sm:text-left md:space-y-7 lg:space-y-8">
             <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground opacity-0 animate-fade-in">
-              QR · Dijital Menü · Yapay Zeka
+              <Tx>QR · Dijital Menü · Yapay Zeka</Tx>
             </p>
 
             <h1
               className="text-[clamp(2.25rem,7vw,4.5rem)] leading-[0.92] font-extrabold opacity-0 animate-fade-in break-words text-balance sm:mt-2"
               style={{ animationDelay: "0.1s" }}
             >
-              AlgoryQR ile menünüzü ve kampanyalarınızı akıllıca yönetin.
+              <Tx>AlgoryQR ile menünüzü ve kampanyalarınızı akıllıca yönetin.</Tx>
             </h1>
 
             <p
               className="mx-auto max-w-lg text-base text-muted-foreground leading-relaxed opacity-0 animate-fade-in text-pretty sm:mx-0 sm:text-lg"
               style={{ animationDelay: "0.2s" }}
             >
-              Dinamik QR kodlar ve dijital menü; Akıllı Özet, Akıllı Asistan ve Akıllı Raporlama ile içerik üretiminden performansa kadar tek panelde.
+              <Tx>Dinamik QR kodlar ve dijital menü; Akıllı Özet, Akıllı Asistan ve Akıllı Raporlama ile içerik üretiminden performansa kadar tek panelde.</Tx>
             </p>
 
             <div
@@ -59,12 +65,12 @@ const HeroSection = () => {
             >
               <Link href="/register" className="w-full min-[420px]:w-auto">
                 <Button variant="hero" size="lg" className="w-full min-[420px]:w-auto gap-2 min-h-11">
-                  Ücretsiz Başla <ArrowRight className="h-4 w-4" />
+                  <Tx>Ücretsiz Başla</Tx> <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <a href="#why-us" className="w-full min-[420px]:w-auto">
                 <Button variant="heroOutline" size="lg" className="w-full min-[420px]:w-auto min-h-11">
-                  Özellikleri Gör
+                  <Tx>Özellikleri Gör</Tx>
                 </Button>
               </a>
             </div>

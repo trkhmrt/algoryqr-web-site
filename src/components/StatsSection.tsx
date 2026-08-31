@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
+import { useT } from "@/components/google-translate-provider";
 
 const stats = [
   { value: "10M+", label: "Oluşturulan QR Kod" },
@@ -11,6 +12,7 @@ const stats = [
 ];
 
 const StatsSection = () => {
+  const t = useT();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
   const { scrollYProgress } = useScroll({
@@ -39,7 +41,7 @@ const StatsSection = () => {
               <p className="text-[44px] md:text-[56px] font-extrabold heading-tight tabular">
                 {stat.value}
               </p>
-              <p className="text-sm text-muted-foreground text-pretty px-1">{stat.label}</p>
+              <p className="text-sm text-muted-foreground text-pretty px-1">{t(stat.label)}</p>
             </motion.div>
           ))}
         </div>

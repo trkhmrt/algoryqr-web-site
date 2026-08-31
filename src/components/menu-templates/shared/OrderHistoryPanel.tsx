@@ -10,6 +10,7 @@ import {
 } from "@/lib/ordering-api";
 
 import { MenuPriceText, useMenuPriceDisplay } from "./menu-currency";
+import { Tx } from "@/components/google-translate-provider";
 
 type OrderHistoryPanelProps = {
   menuId: number;
@@ -62,7 +63,7 @@ function OrderHistoryDetail({ order }: { order: OrderResponse }) {
           <li key={`${item.productId}-${item.id ?? item.quantity}`} className="text-sm">
             <div className="flex justify-between gap-2">
               <span>
-                {item.quantity}× {item.productName || `#${item.productId}`}
+                {item.quantity}× <Tx>{item.productName || `#${item.productId}`}</Tx>
               </span>
               <span className="text-muted-foreground">
                 <MenuPriceText price={item.lineTotal ?? item.unitPrice} currency={currency} />

@@ -4,38 +4,53 @@ import Link from "next/link";
 
 import LegalPageShell from "@/components/LegalPageShell";
 import { COMPANY } from "@/lib/company";
+import { Tx } from "@/components/google-translate-provider";
 
 export default function AboutView() {
   return (
     <LegalPageShell title="Hakkımızda" eyebrow="AlgoryQR">
       <p>
-        <strong>{COMPANY.tradeName}</strong>, dijital işletme çözümleri geliştiren bir teknoloji
-        markasıdır. Ürünümüz <strong>{COMPANY.productName}</strong>; restoranlar, kafeler ve hizmet
-        işletmeleri için dinamik QR kod, dijital menü ve yapay zeka destekli araçlar (Akıllı Özet,
-        Akıllı Asistan, Akıllı Raporlama) sunar.
+        <Tx>{`${COMPANY.tradeName}, dijital işletme çözümleri geliştiren bir teknoloji markasıdır. Ürünümüz ${COMPANY.productName}; restoranlar, kafeler ve hizmet işletmeleri için dinamik QR kod, dijital menü ve yapay zeka destekli araçlar (Akıllı Özet, Akıllı Asistan, Akıllı Raporlama) sunar.`}</Tx>
       </p>
-      <h2>Ne sunuyoruz?</h2>
+      <h2>
+        <Tx>Ne sunuyoruz?</Tx>
+      </h2>
       <ul>
-        <li>Özelleştirilebilir dijital menü şablonları</li>
-        <li>Dinamik QR kod oluşturma ve yönetimi</li>
-        <li>Akıllı Özet ile yapay zeka destekli ürün açıklamaları</li>
-        <li>Akıllı Asistan ile menü üzerinden misafir desteği</li>
-        <li>Akıllı Raporlama ile ziyaret ve ürün analizleri</li>
-        <li>Paket ve abonelik tabanlı kullanım hakları</li>
+        <li>
+          <Tx>Özelleştirilebilir dijital menü şablonları</Tx>
+        </li>
+        <li>
+          <Tx>Dinamik QR kod oluşturma ve yönetimi</Tx>
+        </li>
+        <li>
+          <Tx>Akıllı Özet ile yapay zeka destekli ürün açıklamaları</Tx>
+        </li>
+        <li>
+          <Tx>Akıllı Asistan ile menü üzerinden misafir desteği</Tx>
+        </li>
+        <li>
+          <Tx>Akıllı Raporlama ile ziyaret ve ürün analizleri</Tx>
+        </li>
+        <li>
+          <Tx>Paket ve abonelik tabanlı kullanım hakları</Tx>
+        </li>
       </ul>
-      <h2>Hizmet modeli</h2>
+      <h2>
+        <Tx>Hizmet modeli</Tx>
+      </h2>
       <p>
-        {COMPANY.productName} tamamen dijital bir SaaS hizmetidir. Fiziksel ürün teslimatı
-        yapılmaz; satın alınan paketler hesap üzerinden anında aktif edilir.
+        <Tx>{`${COMPANY.productName} tamamen dijital bir SaaS hizmetidir. Fiziksel ürün teslimatı yapılmaz; satın alınan paketler hesap üzerinden anında aktif edilir.`}</Tx>
       </p>
-      <h2>İletişim</h2>
+      <h2>
+        <Tx>İletişim</Tx>
+      </h2>
       <p>
-        Ticaret unvanı: <strong>{COMPANY.tradeName}</strong>
+        <Tx>Ticaret unvanı:</Tx> <strong>{COMPANY.tradeName}</strong>
         <br />
-        E-posta:{" "}
+        <Tx>E-posta:</Tx>{" "}
         <Link href={COMPANY.emailMailto}>{COMPANY.email}</Link>
         <br />
-        Telefon:{" "}
+        <Tx>Telefon:</Tx>{" "}
         <Link href={COMPANY.phoneTel}>{COMPANY.phone}</Link>
       </p>
     </LegalPageShell>

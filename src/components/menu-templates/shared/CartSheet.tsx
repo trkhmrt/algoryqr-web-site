@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { MenuPriceText, useMenuPriceDisplay } from "./menu-currency";
 import { useMenuLocaleOptional } from "./menu-locale";
+import { Tx } from "@/components/google-translate-provider";
 import { OrderSuccessOverlay } from "./OrderSuccessOverlay";
 import { CampaignCartPreview } from "./CampaignCartPreview";
 import { useOrdering } from "./ordering-context";
@@ -73,7 +74,9 @@ export function CartSheet() {
                   className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{item.productName}</p>
+                    <p className="truncate text-sm font-medium">
+                      <Tx>{item.productName}</Tx>
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       <MenuPriceText price={item.unitPrice} currency={currency} />
                     </p>

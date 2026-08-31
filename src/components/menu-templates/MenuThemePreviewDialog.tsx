@@ -13,7 +13,7 @@ import {
   MENU_THEME_PREVIEW_MENU,
   MENU_THEME_PREVIEW_PRODUCTS,
 } from "./preview-data";
-import { MenuCurrencyProvider, MenuLocaleProvider, MenuProductFeed, PublicMenuThemeProvider } from "./shared";
+import { MenuCurrencyProvider, MenuProductFeed, PublicMenuThemeProvider } from "./shared";
 
 type MenuThemePreviewDialogProps = {
   themeId: string;
@@ -48,15 +48,13 @@ export function MenuThemePreviewDialog({
               productHasNext={false}
             >
               <PublicMenuThemeProvider themeId={themeId}>
-                <MenuLocaleProvider>
-                  <MenuCurrencyProvider>
-                    <Component
-                      menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
-                      products={MENU_THEME_PREVIEW_PRODUCTS}
-                      categories={MENU_THEME_PREVIEW_CATEGORIES}
-                    />
-                  </MenuCurrencyProvider>
-                </MenuLocaleProvider>
+                <MenuCurrencyProvider>
+                  <Component
+                    menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
+                    products={MENU_THEME_PREVIEW_PRODUCTS}
+                    categories={MENU_THEME_PREVIEW_CATEGORIES}
+                  />
+                </MenuCurrencyProvider>
               </PublicMenuThemeProvider>
             </MenuProductFeed>
           ) : null}

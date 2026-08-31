@@ -1,8 +1,13 @@
 "use client";
 
-import { type ComponentProps, Suspense } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 
 import { useMenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
+import {
+  collectMenuProfileTexts,
+  localizeMenuProfile,
+} from "@/lib/menu-content-i18n";
+import { useGoogleTranslateOptional } from "@/components/google-translate-provider";
 
 import { MenuThemeLayout } from "./MenuThemeLayout";
 import { MenuChefFab } from "./chef";
@@ -10,7 +15,7 @@ import { getMenuTemplate } from "./registry";
 import {
   CustomerAccountMenu,
   CampaignProductIdsProvider,
-  MenuLocaleProvider,
+  MenuCurrencyProvider,
   MenuProductNavigatorProvider,
   OrderingProvider,
   PublicMenuDataProvider,
@@ -20,8 +25,9 @@ import {
   useMenuProductFeed,
   useMenuCategoryFeed,
 } from "./shared";
-import { MenuCurrencyProvider } from "./shared/menu-currency";
 import type { MenuTemplateRendererProps } from "./types";
+
+const EMPTY_DICT: Record<string, string> = {};
 
 function MenuTemplateBody({
   menu,
@@ -46,11 +52,24 @@ function MenuTemplateBody({
   const { products } = useMenuProductFeed();
   const { categories } = useMenuCategoryFeed();
   const { Component } = getMenuTemplate(themeId);
+  const i18n = useGoogleTranslateOptional();
+  const ensureTranslations = i18n?.ensureTranslations;
+  const dict = i18n?.dict ?? EMPTY_DICT;
+  const profileTexts = useMemo(() => collectMenuProfileTexts(menu), [menu]);
+
+  useEffect(() => {
+    void ensureTranslations?.(profileTexts);
+  }, [ensureTranslations, profileTexts]);
+
+  const localizedMenu = useMemo(
+    () => localizeMenuProfile(menu, dict),
+    [dict, menu],
+  );
 
   return (
     <MenuThemeLayout themeId={themeId}>
       <Component
-        menu={menu}
+        menu={localizedMenu}
         products={products}
         categories={categories}
         analytics={analytics}
@@ -122,10 +141,8 @@ function MenuShell({
 
 export function MenuTemplateRenderer(props: MenuTemplateRendererProps) {
   return (
-    <MenuLocaleProvider>
-      <MenuCurrencyProvider>
-        <MenuShell {...props} />
-      </MenuCurrencyProvider>
-    </MenuLocaleProvider>
+    <MenuCurrencyProvider>
+      <MenuShell {...props} />
+    </MenuCurrencyProvider>
   );
 }
