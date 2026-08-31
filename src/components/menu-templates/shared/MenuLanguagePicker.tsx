@@ -9,7 +9,7 @@ import { MENU_LOCALES, useMenuLocale } from "./menu-locale";
 
 type MenuLanguagePickerProps = {
   className?: string;
-  variant?: "group" | "dropdown";
+  variant?: "group" | "dropdown" | "minimal";
 };
 
 export function MenuLanguagePicker({
@@ -36,6 +36,54 @@ export function MenuLanguagePicker({
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
+
+  if (variant === "minimal") {
+    return (
+      <div ref={rootRef} className={cn("relative", className)}>
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label="Dil seç"
+          onClick={() => setOpen((value) => !value)}
+          className="flex h-9 min-w-[1.75rem] items-center justify-center px-1 text-[0.625rem] font-normal uppercase tracking-[0.14em] text-[var(--lx-muted)] transition-colors hover:text-[var(--lx-fg)]"
+        >
+          {current.label}
+        </button>
+        {open ? (
+          <div
+            role="listbox"
+            aria-label="Diller"
+            className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[4.5rem] overflow-hidden rounded-lg border border-[var(--lx-border)] bg-[var(--lx-card)] p-0.5 shadow-lg"
+          >
+            {MENU_LOCALES.map((item) => {
+              const selected = item.code === locale;
+              return (
+                <button
+                  key={item.code}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    setLocale(item.code);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[0.625rem] font-normal uppercase tracking-[0.12em]",
+                    selected
+                      ? "bg-gradient-gold text-[var(--lx-primary-fg)]"
+                      : "lx-fg hover:bg-[color-mix(in_oklch,var(--lx-gold)_12%,transparent)]",
+                  )}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   if (variant === "dropdown") {
     return (

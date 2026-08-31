@@ -8,6 +8,7 @@ import {
   getPublicProductFacetsRequest,
   type MainCategoryApiItem,
 } from "@/lib/api";
+import { PUBLIC_MENU_STALE_TIME_MS } from "@/lib/public-menu-cache";
 
 import { publicMenuKeys } from "./keys";
 import type { PublicMenuCategoryStat } from "./types";
@@ -20,7 +21,7 @@ export function usePublicMenuCategoryStats(
     queries: categories.map((category) => ({
       queryKey: publicMenuKeys.categoryStats(menuId, category.id),
       queryFn: () => getPublicProductFacetsRequest(menuId, { mainCategoryId: category.id }),
-      staleTime: 5 * 60 * 1000,
+      staleTime: PUBLIC_MENU_STALE_TIME_MS,
       enabled: menuId > 0 && category.id > 0,
     })),
   });
@@ -36,7 +37,7 @@ export function usePublicMenuCategoryStats(
         });
         return (page.content ?? []).find((product) => product.imageUrl)?.imageUrl ?? null;
       },
-      staleTime: 5 * 60 * 1000,
+      staleTime: PUBLIC_MENU_STALE_TIME_MS,
       enabled: menuId > 0 && category.id > 0,
     })),
   });

@@ -3,6 +3,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { getPublicMenuProductsRequest } from "@/lib/api";
+import { PUBLIC_MENU_STALE_TIME_MS } from "@/lib/public-menu-cache";
 
 import { publicMenuKeys } from "./keys";
 import { toProductsInitialData, type PublicMenuProductsInitialPage } from "./types";
@@ -25,7 +26,7 @@ export function usePublicMenuProductsQuery({
     enabled: enabled && menuId > 0,
     initialData: toProductsInitialData(initial),
     initialPageParam: initial.page,
-    staleTime: 5 * 60 * 1000,
+    staleTime: PUBLIC_MENU_STALE_TIME_MS,
     queryFn: ({ pageParam }) =>
       getPublicMenuProductsRequest(menuId, pageParam as number, pageSize),
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),

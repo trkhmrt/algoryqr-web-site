@@ -11,7 +11,16 @@ import { MaisonNoirNavbar } from "./Navbar";
 
 type MenuChrome = Pick<
   MenuProfileApiItem,
-  "businessName" | "logoUrl" | "phone" | "email" | "address" | "qrId"
+  | "businessName"
+  | "logoUrl"
+  | "phone"
+  | "email"
+  | "address"
+  | "qrId"
+  | "menuId"
+  | "chefName"
+  | "chefDisplayName"
+  | "chefAvatarUrl"
 >;
 
 type MaisonNoirShellProps = {

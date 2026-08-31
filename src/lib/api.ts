@@ -902,9 +902,7 @@ export async function getPublicMenuProductsRequest(
       : { page: 0, size: 20, ...pageOrQuery };
   const params = new URLSearchParams();
   appendPublicProductParams(params, query);
-  const response = await fetch(`/api/menu/public/${encodeURIComponent(String(menuId))}/products?${params}`, {
-    cache: "no-store",
-  });
+  const response = await fetch(`/api/menu/public/${encodeURIComponent(String(menuId))}/products?${params}`);
   if (!response.ok) {
     throw new ApiError(response.status, "Ürünler yüklenemedi");
   }
@@ -924,7 +922,6 @@ export async function getPublicMenuCategoriesRequest(
   if (q?.trim()) params.set("q", q.trim());
   const response = await fetch(
     `/api/menu/public/${encodeURIComponent(String(menuId))}/categories?${params}`,
-    { cache: "no-store" },
   );
   if (!response.ok) {
     throw new ApiError(response.status, "Kategoriler yüklenemedi");
@@ -940,7 +937,6 @@ export async function getPublicProductFacetsRequest(
   appendPublicProductParams(params, query);
   const response = await fetch(
     `/api/menu/public/${encodeURIComponent(String(menuId))}/product-facets?${params}`,
-    { cache: "no-store" },
   );
   if (!response.ok) {
     throw new ApiError(response.status, "Ürün filtreleri yüklenemedi");

@@ -1,7 +1,9 @@
 import { MenuTemplateRenderer } from "@/components/menu-templates/MenuTemplateRenderer";
 import MenuUnavailableView from "@/components/menu-templates/MenuUnavailableView";
-import { fetchPublicMenu } from "@/lib/public-menu-fetch";
+import { fetchPublicMenu, PUBLIC_MENU_REVALIDATE_SECONDS } from "@/lib/public-menu-fetch";
 import { notFound } from "next/navigation";
+
+export const revalidate = PUBLIC_MENU_REVALIDATE_SECONDS;
 
 export default async function PublicMenuContentPage({
   params,

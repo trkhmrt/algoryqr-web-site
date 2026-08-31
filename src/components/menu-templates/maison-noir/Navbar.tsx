@@ -1,113 +1,503 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
+
+
+import { useEffect, useState } from "react";
+
+import { AnimatePresence, motion } from "framer-motion";
+
+import { ChevronDown, Menu, ShoppingBag, UserRound, X } from "lucide-react";
+
+
 
 import type { MenuProfileApiItem } from "@/lib/api";
+
+import { cn } from "@/lib/utils";
+
 import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
+
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
+
 import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
+
 import { useOrderingOptional } from "../shared/ordering-context";
 
+
+
+import { MaisonNoirChefNavButton } from "./ChefNavButton";
+
+
+
 type MaisonNoirNavbarProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "qrId">;
+
+  menu: Pick<
+
+    MenuProfileApiItem,
+
+    | "businessName"
+
+    | "logoUrl"
+
+    | "qrId"
+
+    | "menuId"
+
+    | "chefName"
+
+    | "chefDisplayName"
+
+    | "chefAvatarUrl"
+
+  >;
+
   onBrandClick?: () => void;
+
 };
 
+
+
+type DrawerSection = "account" | null;
+
+
+
 export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) {
+
   const { go } = usePublicMenuNavigation(menu.qrId);
+
   const ordering = useOrderingOptional();
+
   const account = useCustomerAccountUi();
+
   const [open, setOpen] = useState(false);
 
+  const [expanded, setExpanded] = useState<DrawerSection>(null);
+
+
+
+  useEffect(() => {
+
+    if (!open) {
+
+      setExpanded(null);
+
+      return;
+
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+
+      if (event.key === "Escape") setOpen(false);
+
+    };
+
+    document.body.style.overflow = "hidden";
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+
+      document.body.style.overflow = "";
+
+      document.removeEventListener("keydown", onKeyDown);
+
+    };
+
+  }, [open]);
+
+
+
+  const closeDrawer = () => setOpen(false);
+
+
+
+  const toggleSection = (section: DrawerSection) => {
+
+    setExpanded((current) => (current === section ? null : section));
+
+  };
+
+
+
   return (
-    <div className="sticky top-0 z-40">
-      <header className="mn-glass-nav sticky top-0 z-40 border-b">
-        <div className="relative mx-auto flex h-14 max-w-xl items-center justify-between px-6 sm:px-8">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex h-10 w-10 items-center justify-center text-[var(--mn-fg)]/80 transition-colors hover:text-[var(--mn-primary)]"
-            aria-label={open ? "Kapat" : "Menü"}
-          >
-            {open ? <X className="h-4 w-4" strokeWidth={1.25} /> : <Menu className="h-4 w-4" strokeWidth={1.25} />}
-          </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              onBrandClick?.();
-              go("landing");
-              setOpen(false);
-            }}
-            className="absolute left-1/2 max-w-[min(100%,200px)] -translate-x-1/2 mn-tracked text-[0.58rem] text-[var(--mn-muted)] transition-colors hover:text-[var(--mn-primary)]"
-          >
-            {menu.businessName}
-          </button>
+    <>
 
-          <div className="flex items-center gap-1">
-            <MenuLanguagePicker variant="dropdown" />
-            {ordering ? (
+      <div className="sticky top-0 z-40">
+
+        <header className="mn-glass-nav sticky top-0 z-40 border-b">
+
+          <div className="mx-auto grid h-12 max-w-xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-4 sm:gap-2 sm:px-6">
+
+            <div className="min-w-0 justify-self-start">
+
+              <MaisonNoirChefNavButton
+
+                menuId={menu.menuId}
+
+                chefName={menu.chefName}
+
+                chefDisplayName={menu.chefDisplayName}
+
+                chefAvatarUrl={menu.chefAvatarUrl}
+
+              />
+
+            </div>
+
+
+
+            <button
+
+              type="button"
+
+              onClick={() => {
+
+                onBrandClick?.();
+
+                go("landing");
+
+                closeDrawer();
+
+              }}
+
+              className="mn-type-brand max-w-[min(34vw,7.5rem)] truncate text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)] sm:max-w-[9rem]"
+
+            >
+
+              {menu.businessName}
+
+            </button>
+
+
+
+            <div className="flex items-center justify-end gap-0.5 justify-self-end">
+
+              <MenuLanguagePicker variant="minimal" />
+
               <button
+
                 type="button"
-                onClick={() => ordering.setCartOpen(true)}
-                className="relative flex h-10 w-10 items-center justify-center text-[var(--mn-fg)]/80 transition-colors hover:text-[var(--mn-primary)]"
-                aria-label="Sepet"
+
+                onClick={() => setOpen((value) => !value)}
+
+                className="flex h-9 w-9 items-center justify-center text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)]"
+
+                aria-label={open ? "Kapat" : "Menü"}
+
+                aria-expanded={open}
+
               >
-                <ShoppingBag className="h-4 w-4" strokeWidth={1.25} />
-                {ordering.cartCount > 0 ? (
-                  <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--mn-primary)] px-1 text-[10px] font-medium text-[var(--mn-primary-fg)]">
-                    {ordering.cartCount > 99 ? "99+" : ordering.cartCount}
-                  </span>
-                ) : null}
+
+                {open ? <X className="h-4 w-4" strokeWidth={1.25} /> : <Menu className="h-4 w-4" strokeWidth={1.25} />}
+
               </button>
-            ) : null}
+
+            </div>
+
           </div>
-        </div>
-      </header>
 
-      {open && account ? (
-        <div className="mn-glass-nav border-b border-[var(--mn-border)]/30 px-6 py-4 backdrop-blur-md sm:px-8">
-          <div className="mx-auto max-w-xl">
-            {account.profile ? (
-              <button
-                type="button"
-                onClick={() => {
-                  account.openAccount();
-                  setOpen(false);
-                }}
-                className="flex items-center gap-2 py-2 text-[0.65rem] text-[var(--mn-muted)] transition-colors hover:text-[var(--mn-primary)] mn-tracked"
-              >
-                <UserRound className="h-3 w-3" strokeWidth={1.25} />
-                HESABIM
-              </button>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    account.openAuth("login");
-                    setOpen(false);
-                  }}
-                  className="border border-[var(--mn-primary)] px-4 py-2.5 text-[0.58rem] text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)] mn-tracked"
-                >
-                  GİRİŞ YAP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    account.openAuth("register");
-                    setOpen(false);
-                  }}
-                  className="border border-[var(--mn-border)] px-4 py-2.5 text-[0.58rem] text-[var(--mn-muted)] transition-colors hover:border-[var(--mn-primary)] hover:text-[var(--mn-primary)] mn-tracked"
-                >
-                  KAYIT OL
-                </button>
+        </header>
+
+      </div>
+
+
+
+      <AnimatePresence>
+
+        {open ? (
+
+          <>
+
+            <motion.button
+
+              type="button"
+
+              initial={{ opacity: 0 }}
+
+              animate={{ opacity: 1 }}
+
+              exit={{ opacity: 0 }}
+
+              transition={{ duration: 0.22 }}
+
+              className="fixed inset-0 z-[45] bg-[var(--mn-bg)]/55 backdrop-blur-[2px]"
+
+              aria-label="Menüyü kapat"
+
+              onClick={closeDrawer}
+
+            />
+
+            <motion.nav
+
+              initial={{ y: "-100%", opacity: 0.6 }}
+
+              animate={{ y: 0, opacity: 1 }}
+
+              exit={{ y: "-100%", opacity: 0 }}
+
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+
+              className="mn-nav-drawer fixed inset-x-0 top-12 z-[46] mx-auto flex max-h-[50dvh] max-w-xl flex-col overflow-hidden border-b border-[var(--mn-border)]/40 shadow-[var(--mn-shadow)]"
+
+              aria-label="Menü paneli"
+
+            >
+
+              <div className="mn-glass-nav shrink-0 border-b border-[var(--mn-border)]/25 px-5 py-2.5 sm:px-7">
+
+                <p className="mn-type-eyebrow text-[var(--mn-muted)]">Menü</p>
+
               </div>
-            )}
-          </div>
-        </div>
-      ) : null}
-    </div>
+
+
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-1 sm:px-7">
+
+                {ordering ? (
+
+                  <DrawerRow
+
+                    icon={ShoppingBag}
+
+                    label="Sepet"
+
+                    badge={ordering.cartCount > 0 ? ordering.cartCount : undefined}
+
+                    onClick={() => {
+
+                      ordering.setCartOpen(true);
+
+                      closeDrawer();
+
+                    }}
+
+                  />
+
+                ) : null}
+
+
+
+                {account ? (
+
+                  <div className="border-b border-[var(--mn-border)]/25">
+
+                    <button
+
+                      type="button"
+
+                      onClick={() => toggleSection("account")}
+
+                      className="flex w-full items-center justify-between gap-3 py-3.5 text-left transition-colors hover:text-[var(--mn-primary)]"
+
+                    >
+
+                      <span className="flex items-center gap-2.5">
+
+                        <UserRound className="h-3.5 w-3.5 shrink-0" strokeWidth={1.25} />
+
+                        <span className="mn-type-label text-[var(--mn-fg)]">
+
+                          {account.profile ? "Hesabım" : "Hesap"}
+
+                        </span>
+
+                      </span>
+
+                      <ChevronDown
+
+                        className={cn(
+
+                          "h-3 w-3 text-[var(--mn-muted)] transition-transform duration-300",
+
+                          expanded === "account" && "rotate-180",
+
+                        )}
+
+                        strokeWidth={1.25}
+
+                      />
+
+                    </button>
+
+
+
+                    <AnimatePresence initial={false}>
+
+                      {expanded === "account" ? (
+
+                        <motion.div
+
+                          initial={{ height: 0, opacity: 0 }}
+
+                          animate={{ height: "auto", opacity: 1 }}
+
+                          exit={{ height: 0, opacity: 0 }}
+
+                          transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+
+                          className="overflow-hidden"
+
+                        >
+
+                          <div className="pb-3 pt-0.5">
+
+                            {account.profile ? (
+
+                              <button
+
+                                type="button"
+
+                                onClick={() => {
+
+                                  account.openAccount();
+
+                                  closeDrawer();
+
+                                }}
+
+                                className="mn-type-eyebrow w-full border border-[var(--mn-border)] px-3 py-2.5 text-[var(--mn-fg)] transition-colors hover:border-[var(--mn-primary)] hover:text-[var(--mn-primary)]"
+
+                              >
+
+                                Hesabımı aç
+
+                              </button>
+
+                            ) : (
+
+                              <div className="grid grid-cols-2 gap-2">
+
+                                <button
+
+                                  type="button"
+
+                                  onClick={() => {
+
+                                    account.openAuth("login");
+
+                                    closeDrawer();
+
+                                  }}
+
+                                  className="mn-type-eyebrow border border-[var(--mn-primary)] px-3 py-2.5 text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)]"
+
+                                >
+
+                                  Giriş
+
+                                </button>
+
+                                <button
+
+                                  type="button"
+
+                                  onClick={() => {
+
+                                    account.openAuth("register");
+
+                                    closeDrawer();
+
+                                  }}
+
+                                  className="mn-type-eyebrow border border-[var(--mn-border)] px-3 py-2.5 text-[var(--mn-fg)] transition-colors hover:border-[var(--mn-primary)] hover:text-[var(--mn-primary)]"
+
+                                >
+
+                                  Kayıt
+
+                                </button>
+
+                              </div>
+
+                            )}
+
+                          </div>
+
+                        </motion.div>
+
+                      ) : null}
+
+                    </AnimatePresence>
+
+                  </div>
+
+                ) : null}
+
+              </div>
+
+            </motion.nav>
+
+          </>
+
+        ) : null}
+
+      </AnimatePresence>
+
+    </>
+
   );
+
 }
+
+
+
+function DrawerRow({
+
+  icon: Icon,
+
+  label,
+
+  badge,
+
+  onClick,
+
+}: {
+
+  icon: typeof ShoppingBag;
+
+  label: string;
+
+  badge?: number;
+
+  onClick: () => void;
+
+}) {
+
+  return (
+
+    <button
+
+      type="button"
+
+      onClick={onClick}
+
+      className="flex w-full items-center justify-between gap-3 border-b border-[var(--mn-border)]/25 py-3.5 text-left transition-colors hover:text-[var(--mn-primary)]"
+
+    >
+
+      <span className="flex items-center gap-2.5">
+
+        <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.25} />
+
+        <span className="mn-type-label text-[var(--mn-fg)]">{label}</span>
+
+      </span>
+
+      {badge != null && badge > 0 ? (
+
+        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--mn-primary)] px-1 text-[9px] font-medium text-[var(--mn-primary-fg)]">
+
+          {badge > 99 ? "99+" : badge}
+
+        </span>
+
+      ) : null}
+
+    </button>
+
+  );
+
+}
+
+

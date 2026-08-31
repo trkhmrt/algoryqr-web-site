@@ -10,9 +10,10 @@ export const MAISON_NOIR_STYLES = `
 
   .maison-noir-menu {
     --mn-bg: oklch(0.14 0.004 60);
-    --mn-fg: oklch(0.93 0.008 80);
+    --mn-fg: oklch(0.99 0.002 90);
     --mn-surface: oklch(0.17 0.005 60);
-    --mn-muted: oklch(0.66 0.012 80);
+    --mn-muted: oklch(0.9 0.006 90);
+    --mn-subtle: oklch(0.78 0.01 88);
     --mn-border: oklch(0.32 0.012 80 / 45%);
     --mn-primary: oklch(0.78 0.09 84);
     --mn-primary-fg: oklch(0.14 0.004 60);
@@ -21,6 +22,19 @@ export const MAISON_NOIR_STYLES = `
     --mn-destructive: oklch(0.58 0.2 27);
     --mn-font: ${MAISON_NOIR_SANS};
     --mn-display: ${MAISON_NOIR_DISPLAY};
+    --mn-text-2xs: 0.625rem;
+    --mn-text-xs: 0.6875rem;
+    --mn-text-sm: 0.8125rem;
+    --mn-text-base: 0.875rem;
+    --mn-text-md: 0.9375rem;
+    --mn-text-lg: 1rem;
+    --mn-text-xl: 1.125rem;
+    --mn-leading-tight: 1.25;
+    --mn-leading-normal: 1.45;
+    --mn-leading-relaxed: 1.55;
+    --mn-tracking-eyebrow: 0.18em;
+    --mn-tracking-label: 0.1em;
+    --mn-tracking-brand: 0.14em;
     --mn-veil: linear-gradient(
       to top,
       oklch(0.14 0.004 60) 6%,
@@ -34,7 +48,7 @@ export const MAISON_NOIR_STYLES = `
     --lx-fg: var(--mn-fg);
     --lx-card: var(--mn-surface);
     --lx-card-fg: var(--mn-fg);
-    --lx-card-muted: oklch(0.93 0.008 80 / 0.62);
+    --lx-card-muted: oklch(0.99 0.002 90 / 0.82);
     --lx-muted: var(--mn-muted);
     --lx-border: var(--mn-border);
     --lx-gold: var(--mn-gold);
@@ -71,8 +85,80 @@ export const MAISON_NOIR_STYLES = `
   }
 
   .maison-noir-menu .mn-tracked {
-    letter-spacing: 0.42em;
+    letter-spacing: var(--mn-tracking-eyebrow);
     text-transform: uppercase;
+  }
+
+  .maison-noir-menu .mn-type-eyebrow {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-2xs);
+    font-weight: 400;
+    letter-spacing: var(--mn-tracking-eyebrow);
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+
+  .maison-noir-menu .mn-type-label {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-xs);
+    font-weight: 400;
+    letter-spacing: var(--mn-tracking-label);
+    line-height: 1.35;
+  }
+
+  .maison-noir-menu .mn-type-body {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-sm);
+    font-weight: 300;
+    line-height: var(--mn-leading-relaxed);
+  }
+
+  .maison-noir-menu .mn-type-body-strong {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-base);
+    font-weight: 400;
+    line-height: var(--mn-leading-normal);
+  }
+
+  .maison-noir-menu .mn-type-category {
+    font-family: var(--mn-display);
+    font-size: var(--mn-text-lg);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: var(--mn-leading-tight);
+  }
+
+  .maison-noir-menu .mn-type-product {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-md);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: var(--mn-leading-tight);
+  }
+
+  .maison-noir-menu .mn-type-price {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-sm);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .maison-noir-menu .mn-type-page-title {
+    font-family: var(--mn-display);
+    font-size: clamp(1.375rem, 4.8vw, 1.625rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .maison-noir-menu .mn-type-brand {
+    font-family: var(--mn-font);
+    font-size: var(--mn-text-2xs);
+    font-weight: 400;
+    letter-spacing: var(--mn-tracking-brand);
+    text-transform: uppercase;
+    line-height: 1.2;
   }
 
   .maison-noir-menu .mn-rise {
@@ -182,6 +268,66 @@ export const MAISON_NOIR_STYLES = `
     background: oklch(0.17 0.005 60 / 0.42);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+  }
+
+  .maison-noir-menu .mn-nav-drawer {
+    background: oklch(0.14 0.004 60 / 0.88);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+  }
+
+  @keyframes mn-rainbow-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes mn-chef-shimmer {
+    0%, 100% { opacity: 0.45; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.08); }
+  }
+
+  .maison-noir-menu .mn-chef-nav-btn__ring {
+    background: conic-gradient(
+      from 0deg,
+      #ff6b9d,
+      #ffc371,
+      #ffe259,
+      #43e97b,
+      #38f9d7,
+      #4facfe,
+      #a855f7,
+      #ff6b9d
+    );
+    animation: mn-rainbow-spin 3.5s linear infinite;
+  }
+
+  .maison-noir-menu .mn-chef-nav-btn__glow {
+    background: radial-gradient(circle, oklch(0.88 0.12 84 / 0.55), transparent 70%);
+    animation: mn-chef-shimmer 2.4s ease-in-out infinite;
+  }
+
+  .maison-noir-menu .mn-chef-nav-btn {
+    position: relative;
+  }
+
+  .maison-noir-menu .mn-chef-nav-btn--pill .mn-chef-nav-btn__ring,
+  .maison-noir-menu .mn-chef-nav-btn--pill .mn-chef-nav-btn__glow {
+    border-radius: 9999px;
+  }
+
+  .maison-noir-menu .mn-chef-nav-btn:focus-visible {
+    outline: 2px solid oklch(0.88 0.12 84 / 0.8);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .maison-noir-menu .mn-chef-nav-btn__ring {
+      animation: none;
+    }
+    .maison-noir-menu .mn-chef-nav-btn__glow {
+      animation: none;
+      opacity: 0.55;
+    }
   }
 
   .maison-noir-menu .text-muted-foreground { color: var(--mn-muted); }

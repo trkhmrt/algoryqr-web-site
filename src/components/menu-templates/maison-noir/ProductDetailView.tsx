@@ -67,30 +67,30 @@ export function MaisonNoirProductDetailView({
         <button
           type="button"
           onClick={onBack}
-          className="mn-tracked absolute left-8 top-8 text-[0.58rem] text-[var(--mn-fg)]/80 transition-colors hover:text-[var(--mn-primary)]"
+          className="mn-type-eyebrow absolute left-5 top-6 text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)] sm:left-7"
         >
           ← Menü
         </button>
-        <div className="absolute inset-x-0 bottom-0 px-8 pb-10 text-center">
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-8 text-center sm:px-7">
           {sectionLabel ? (
-            <p className="mn-tracked text-[0.55rem] text-[var(--mn-primary)]">
+            <p className="mn-type-eyebrow text-[var(--mn-primary)]">
               {sectionLabel}
               {sectionMark ? ` · ${sectionMark}` : ""}
             </p>
           ) : null}
-          <h1 className="mt-4 font-display text-5xl tracking-tight text-[var(--mn-fg)]">
+          <h1 className="mt-2 mn-type-page-title text-[var(--mn-fg)]">
             {product.name}
           </h1>
         </div>
       </div>
 
-      <div className="mx-auto max-w-xl px-8">
+      <div className="mx-auto max-w-xl px-5 sm:px-7">
         {crumbs.length > 0 ? (
-          <nav className="flex flex-wrap items-center justify-center gap-2 border-b border-[var(--mn-border)] py-4 text-[0.55rem] text-[var(--mn-muted)]">
+          <nav className="flex flex-wrap items-center justify-center gap-2 border-b border-[var(--mn-border)] py-3 mn-type-label text-[var(--mn-muted)]">
             <button
               type="button"
               onClick={onHome}
-              className="mn-tracked hover:text-[var(--mn-primary)]"
+              className="hover:text-[var(--mn-primary)]"
             >
               Menü
             </button>
@@ -100,7 +100,7 @@ export function MaisonNoirProductDetailView({
                 <button
                   type="button"
                   onClick={() => onSelectCategory(crumb)}
-                  className="mn-tracked hover:text-[var(--mn-primary)]"
+                  className="hover:text-[var(--mn-primary)]"
                 >
                   {crumb.name}
                 </button>
@@ -109,15 +109,15 @@ export function MaisonNoirProductDetailView({
           </nav>
         ) : null}
 
-        <div className="flex items-baseline justify-between border-b border-[var(--mn-border)] py-6">
-          <span className="mn-tracked text-[0.55rem] text-[var(--mn-muted)]">Fiyat</span>
+        <div className="flex items-baseline justify-between border-b border-[var(--mn-border)] py-4">
+          <span className="mn-type-eyebrow text-[var(--mn-muted)]">Fiyat</span>
           {price ? (
-            <span className="font-display text-2xl text-[var(--mn-primary)]">{price}</span>
+            <span className="mn-type-body-strong text-[var(--mn-primary)]">{price}</span>
           ) : null}
         </div>
 
         {product.description ? (
-          <p className="mt-8 font-display text-xl italic leading-relaxed text-[var(--mn-fg)]/90">
+          <p className="mt-6 mn-type-body-strong italic text-[var(--mn-fg)]">
             {product.description}
           </p>
         ) : null}
@@ -212,7 +212,7 @@ export function MaisonNoirProductDetailView({
         ) : null}
 
         <div className="mn-hairline mt-16" />
-        <p className="mt-6 text-center text-[0.6rem] tracking-[0.25em] text-[var(--mn-muted)]/60">
+        <p className="mt-6 text-center text-[0.6rem] tracking-[0.25em] text-[var(--mn-muted)]/80">
           ŞEFİN ÖNERİSİ ÜZERİNE UYARLAMA YAPILABİLİR
         </p>
       </div>
