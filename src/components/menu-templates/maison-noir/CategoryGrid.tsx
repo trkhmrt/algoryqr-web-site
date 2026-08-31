@@ -2,34 +2,61 @@
 
 import { useMemo } from "react";
 
+import { usePublicMenuCategoryStats } from "@/hooks/public-menu/use-public-menu-category-stats";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode } from "../types";
 
-import { countMaisonCategoryProducts } from "./category-utils";
 import { maisonNoirCategoryMark } from "./styles";
 
 type CategoryGridProps = {
+  menuId: number;
   categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   onSelectCategory: (category: TaxonomyNavNode) => void;
 };
 
 export function MaisonNoirCategoryGrid({
+  menuId,
   categories,
   products,
   onSelectCategory,
 }: CategoryGridProps) {
+  const mainCategories = useMemo(
+    () =>
+      categories
+        .filter((category) => category.kind === "main")
+        .map((category) => ({
+          id: category.mainCategoryId,
+          name: category.name,
+          sortOrder: category.sortOrder,
+          slug: "",
+          subs: (category.children ?? []).map((sub) => ({
+            id: sub.subCategoryId ?? sub.categoryId,
+            mainCategoryId: category.mainCategoryId,
+            slug: "",
+            name: sub.name,
+            sortOrder: sub.sortOrder,
+          })),
+        })),
+    [categories],
+  );
+
+  const stats = usePublicMenuCategoryStats(menuId, mainCategories);
+
   const tiles = useMemo(() => {
     return categories
+      .filter((category) => category.kind === "main")
       .map((category, index) => {
-        const categoryProducts = filterProductsByNavNode(products, category).filter(
+        const stat = stats.get(category.mainCategoryId);
+        const loadedProducts = filterProductsByNavNode(products, category).filter(
           (product) => product.available !== false,
         );
-        if (categoryProducts.length === 0) return null;
-
-        const coverImage = categoryProducts.find((product) => product.imageUrl)?.imageUrl ?? null;
-        const count = countMaisonCategoryProducts(products, category, null);
+        const coverImage =
+          stat?.coverImageUrl ??
+          loadedProducts.find((product) => product.imageUrl)?.imageUrl ??
+          null;
+        const count = stat?.productCount ?? loadedProducts.length;
 
         return {
           category,
@@ -37,14 +64,8 @@ export function MaisonNoirCategoryGrid({
           coverImage,
           count,
         };
-      })
-      .filter(Boolean) as Array<{
-      category: TaxonomyNavNode;
-      mark: string;
-      coverImage: string | null;
-      count: number;
-    }>;
-  }, [categories, products]);
+      });
+  }, [categories, products, stats]);
 
   if (tiles.length === 0) {
     return (

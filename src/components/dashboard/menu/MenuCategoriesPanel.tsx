@@ -418,11 +418,12 @@ export default function MenuCategoriesPanel({
     if (resolvedMenuId <= 0) return;
     setReordering(true);
     const previous = orderedCategories;
+    const previousIndexById = new Map(previous.map((main, index) => [main.id, index]));
     setOrderedCategories(next);
     try {
       await Promise.all(
         next.map((main, index) =>
-          main.sortOrder === index
+          previousIndexById.get(main.id) === index
             ? Promise.resolve()
             : updateMenuCategoryRequest(resolvedMenuId, main.id, { sortOrder: index }),
         ),
@@ -440,13 +441,15 @@ export default function MenuCategoriesPanel({
     if (resolvedMenuId <= 0) return;
     setReordering(true);
     const previous = orderedCategories;
+    const previousSubs = previous.find((main) => main.id === mainId)?.subs ?? [];
+    const previousIndexById = new Map(previousSubs.map((sub, index) => [sub.id, index]));
     setOrderedCategories((current) =>
       current.map((main) => (main.id === mainId ? { ...main, subs: nextSubs } : main)),
     );
     try {
       await Promise.all(
         nextSubs.map((sub, index) =>
-          sub.sortOrder === index
+          previousIndexById.get(sub.id) === index
             ? Promise.resolve()
             : updateMenuSubCategoryRequest(resolvedMenuId, sub.id, { sortOrder: index }),
         ),

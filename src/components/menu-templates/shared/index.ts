@@ -51,6 +51,7 @@ export { ContactPanel } from "./ContactPanel";
 export type { MenuLandingAction, MenuLandingPanel } from "./menu-landing";
 export { MenuProductFeed } from "./MenuProductFeed";
 export { MenuCategoryFeed, useMenuCategoryFeed } from "./MenuCategoryFeed";
+export { PublicMenuDataProvider } from "./PublicMenuDataProvider";
 export { MenuCategoryScrollSentinel } from "./MenuCategoryScrollSentinel";
 export { PublicMenuThemeProvider, usePublicMenuTheme } from "./public-menu-theme";
 export { MenuProductScrollSentinel } from "./MenuProductScrollSentinel";

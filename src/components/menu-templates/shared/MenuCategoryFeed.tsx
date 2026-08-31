@@ -20,6 +20,8 @@ export type MenuCategoryFeedValue = {
 
 const MenuCategoryFeedContext = createContext<MenuCategoryFeedValue | null>(null);
 
+export { MenuCategoryFeedContext };
+
 export function useMenuCategoryFeedState({
   initialCategories,
 }: {
