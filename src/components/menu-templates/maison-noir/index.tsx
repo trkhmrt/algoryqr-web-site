@@ -145,7 +145,6 @@ export function MaisonNoirMenuTemplate({
           categories={displayCategories}
           products={products}
           onSelectCategory={selectCategory}
-          onOpenProduct={openProduct}
         />
       ) : null}
 

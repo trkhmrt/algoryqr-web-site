@@ -14,6 +14,7 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
   const ordering = useOrderingOptional();
   const price = formatMaisonPrice(product.price);
   const unavailable = product.available === false;
+  const chefPick = product.chefRecommended && !unavailable;
 
   return (
     <li>
@@ -23,7 +24,7 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
           onClick={() => onOpen(product)}
           className="flex min-w-0 flex-1 items-start gap-4 text-left transition-opacity hover:opacity-80"
         >
-          <div className="h-16 w-16 shrink-0 overflow-hidden bg-[var(--mn-surface)]">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden bg-[var(--mn-surface)]">
             {product.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -41,10 +42,11 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
             )}
           </div>
           <div className="min-w-0 flex-1">
+            {chefPick ? (
+              <p className="mb-1 mn-type-eyebrow text-[var(--mn-primary)]">Şef önerisi</p>
+            ) : null}
             <div className="flex items-start justify-between gap-3">
-              <h3 className="mn-type-product text-[var(--mn-fg)]">
-                {product.name}
-              </h3>
+              <h3 className="mn-type-product text-[var(--mn-fg)]">{product.name}</h3>
               {price ? (
                 <span className="mn-type-price shrink-0 text-[var(--mn-primary)]">{price}</span>
               ) : null}
@@ -55,9 +57,7 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
               </p>
             ) : null}
             {unavailable ? (
-              <p className="mt-1.5 mn-type-eyebrow text-[var(--mn-muted)]">
-                Mevcut değil
-              </p>
+              <p className="mt-1.5 mn-type-eyebrow text-[var(--mn-muted)]">Mevcut değil</p>
             ) : null}
           </div>
         </button>
