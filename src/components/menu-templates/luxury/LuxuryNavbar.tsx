@@ -1,58 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { MenuProfileApiItem } from "@/lib/api";
+import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
 
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
 import { MenuBrandLogo } from "../shared/MenuBrandLogo";
 import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
-import { useMenuExperienceOptional } from "../shared/menu-experience";
-import type { MenuLandingAction } from "../shared/menu-landing";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 const NAV_ITEMS: Array<{
-  key: "landing" | MenuLandingAction;
+  key: "landing" | "menu";
   label: string;
 }> = [
   { key: "landing", label: "Ana sayfa" },
-  { key: "reservation", label: "Rezervasyon" },
   { key: "menu", label: "Menü" },
-  { key: "feedback", label: "Geri Bildirim" },
-  { key: "contact", label: "İletişim" },
 ];
 
 type LuxuryNavbarProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "qrId">;
   showNav?: boolean;
 };
 
-export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
-  const experience = useMenuExperienceOptional();
+function LuxuryNavbarInner({ menu, showNav = true }: LuxuryNavbarProps) {
+  const { active, go } = usePublicMenuNavigation(menu.qrId);
   const account = useCustomerAccountUi();
   const ordering = useOrderingOptional();
   const [open, setOpen] = useState(false);
 
-  const active: "landing" | MenuLandingAction | null = !experience
-    ? null
-    : experience.stage === "menu"
-      ? "menu"
-      : experience.welcomePanel;
-
-  const go = (key: "landing" | MenuLandingAction) => {
-    if (!experience) return;
-    if (key === "landing") experience.backToLandingHub();
-    else experience.selectWelcomeAction(key);
-    setOpen(false);
-  };
-
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--lx-border)] bg-[color-mix(in_srgb,var(--lx-bg)_96%,transparent)] backdrop-blur-md">
       <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        {/* Left: menu toggle or spacer */}
-        {showNav && experience ? (
+        {showNav ? (
           <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--lx-border)] lx-fg"
@@ -65,10 +47,11 @@ export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
           <div className="h-10 w-10" />
         )}
 
-        {/* Center: brand name (absolute for true centering) */}
         <button
           type="button"
-          onClick={() => (showNav && experience ? go("landing") : undefined)}
+          onClick={() => {
+            if (showNav) go("landing");
+          }}
           className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2"
         >
           <MenuBrandLogo logoUrl={menu.logoUrl} businessName={menu.businessName} size={28} className="shrink-0" />
@@ -77,7 +60,6 @@ export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
           </span>
         </button>
 
-        {/* Right: language picker + cart */}
         <div className="flex items-center gap-2">
           <MenuLanguagePicker variant="dropdown" />
           {ordering ? (
@@ -99,8 +81,7 @@ export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
           )}
         </div>
 
-        {/* Desktop nav (hidden on mobile) */}
-        {showNav && experience ? (
+        {showNav ? (
           <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
             {NAV_ITEMS.map((item) => (
               <button
@@ -121,7 +102,7 @@ export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
         ) : null}
       </div>
 
-      {showNav && experience && open ? (
+      {showNav && open ? (
         <div className="border-t border-[var(--lx-border)] px-4 py-3">
           <div className="mx-auto flex max-w-6xl flex-col gap-1">
             {account ? (
@@ -166,7 +147,10 @@ export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
               <button
                 key={item.key}
                 type="button"
-                onClick={() => go(item.key)}
+                onClick={() => {
+                  go(item.key);
+                  setOpen(false);
+                }}
                 className={cn(
                   "rounded-xl px-3 py-2.5 text-left text-sm font-medium lg:hidden",
                   active === item.key
@@ -181,5 +165,13 @@ export function LuxuryNavbar({ menu, showNav = true }: LuxuryNavbarProps) {
         </div>
       ) : null}
     </header>
+  );
+}
+
+export function LuxuryNavbar(props: LuxuryNavbarProps) {
+  return (
+    <Suspense fallback={null}>
+      <LuxuryNavbarInner {...props} />
+    </Suspense>
   );
 }

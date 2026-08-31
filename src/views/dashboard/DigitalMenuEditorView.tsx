@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
 import { DASHBOARD_BACK, DASHBOARD_HUB_GRID } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import { publicMenuContentPath } from "@/lib/public-menu-paths";
 
 type DigitalMenuEditorViewProps = {
   qrId: number;
@@ -64,7 +65,7 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const menuQuery = useMenuByQr(qrId, canUseDigitalMenu);
   const menuName = menuQuery.data?.businessName?.trim() || "";
-  const menuHref = `/menu/${qrId}`;
+  const menuHref = publicMenuContentPath(qrId);
 
   if (accessLoading) {
     return (

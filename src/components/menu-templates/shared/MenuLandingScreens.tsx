@@ -2,11 +2,13 @@
 
 import type { MenuProfileApiItem } from "@/lib/api";
 
+import type { PublicMenuLandingPanel } from "@/lib/public-menu-paths";
+
 import { ContactPanel } from "./ContactPanel";
 import { FeedbackForm } from "./FeedbackForm";
 import { MenuLandingHub } from "./MenuLandingHub";
 import { MenuLandingPanelShell } from "./MenuLandingPanelShell";
-import type { MenuLandingAction, MenuLandingPanel } from "./menu-landing";
+import type { MenuLandingAction } from "./menu-landing";
 import { ReservationForm } from "./ReservationForm";
 
 type FeedbackControl = {
@@ -19,8 +21,8 @@ type FeedbackControl = {
 
 type MenuLandingScreensProps = {
   menu: MenuProfileApiItem;
-  panel: Exclude<MenuLandingPanel, "menu">;
-  onSelect: (action: MenuLandingAction) => void;
+  panel: PublicMenuLandingPanel;
+  onSelect: (action: "landing" | MenuLandingAction) => void;
   onBackToLanding: () => void;
   feedback: FeedbackControl;
   hubClassName?: string;

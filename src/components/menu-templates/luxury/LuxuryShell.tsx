@@ -5,7 +5,7 @@ import type { MenuProfileApiItem } from "@/lib/api";
 import { LuxurySiteLayout } from "./LuxurySiteLayout";
 
 type LuxuryShellProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address" | "qrId">;
   children: ReactNode;
 };
 

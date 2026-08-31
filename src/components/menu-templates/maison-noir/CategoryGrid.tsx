@@ -80,7 +80,7 @@ export function MaisonNoirCategoryGrid({
           key={category.categoryId}
           type="button"
           onClick={() => onSelectCategory(category)}
-          className="group aspect-square overflow-hidden border border-[var(--mn-border)] bg-[var(--mn-surface)]/60 text-left transition-colors hover:border-[var(--mn-primary)]/50"
+          className="group aspect-square overflow-hidden border border-[var(--mn-border)]/50 bg-[var(--mn-surface)]/40 text-left backdrop-blur-sm transition-colors hover:border-[var(--mn-primary)]/50"
         >
           <div className="relative h-[58%] w-full overflow-hidden bg-[var(--mn-bg)]">
             {coverImage ? (

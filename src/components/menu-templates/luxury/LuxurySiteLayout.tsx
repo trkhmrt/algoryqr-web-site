@@ -10,7 +10,7 @@ import { LuxuryFooter } from "./LuxuryFooter";
 import { LuxuryNavbar } from "./LuxuryNavbar";
 
 type LuxurySiteLayoutProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address" | "qrId">;
   children: ReactNode;
   showNav?: boolean;
   contentClassName?: string;
