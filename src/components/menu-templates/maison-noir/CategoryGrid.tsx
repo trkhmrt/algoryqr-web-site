@@ -56,13 +56,11 @@ export function MaisonNoirCategoryGrid({
           stat?.coverImageUrl ??
           loadedProducts.find((product) => product.imageUrl)?.imageUrl ??
           null;
-        const count = stat?.productCount ?? loadedProducts.length;
 
         return {
           category,
           mark: maisonNoirCategoryMark(index),
           coverImage,
-          count,
         };
       });
   }, [categories, products, stats]);
@@ -75,7 +73,7 @@ export function MaisonNoirCategoryGrid({
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {tiles.map(({ category, mark, coverImage, count }) => (
+      {tiles.map(({ category, mark, coverImage }) => (
         <button
           key={category.categoryId}
           type="button"
@@ -98,11 +96,10 @@ export function MaisonNoirCategoryGrid({
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--mn-bg)]/90 via-[var(--mn-bg)]/20 to-transparent" />
           </div>
-          <div className="flex h-[42%] flex-col justify-center px-2.5 py-2">
-            <p className="line-clamp-2 mn-type-category text-[var(--mn-fg)]">
+          <div className="flex h-[42%] items-center px-3 py-2">
+            <p className="line-clamp-2 font-display text-[1.1875rem] leading-tight tracking-[-0.01em] text-[var(--mn-fg)] sm:text-[1.375rem]">
               {category.name}
             </p>
-            <p className="mt-0.5 mn-type-label text-[var(--mn-muted)]">{count} ürün</p>
           </div>
         </button>
       ))}

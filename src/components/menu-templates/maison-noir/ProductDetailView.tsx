@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
@@ -8,180 +9,119 @@ import { resolveProductNavCategory } from "../types";
 import { DenseNutritionStrip } from "../shared/dense";
 import { useMenuLocaleOptional } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
-import { formatMaisonPrice, getBreadcrumbs } from "./category-utils";
-import { maisonNoirCategoryMark } from "./styles";
+import { formatServesPeopleLabel } from "../shared/serves-people";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 
 type ProductDetailViewProps = {
   product: MenuProductApiItem;
   categories: TaxonomyNavNode[];
   onBack: () => void;
-  onHome: () => void;
-  onSelectCategory: (category: TaxonomyNavNode) => void;
 };
 
 export function MaisonNoirProductDetailView({
   product,
   categories,
   onBack,
-  onHome,
-  onSelectCategory,
 }: ProductDetailViewProps) {
-  const price = formatMaisonPrice(product.price);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const leafCategory = resolveProductNavCategory(categories, product);
-  const crumbs = leafCategory != null ? getBreadcrumbs(categories, leafCategory.categoryId) : [];
-  const sectionLabel = leafCategory?.name ?? product.mainCategoryName ?? product.subCategoryName;
-  const sectionMark =
-    leafCategory != null
-      ? maisonNoirCategoryMark(
-          Math.max(
-            0,
-            categories.findIndex((c) => c.categoryId === crumbs[0]?.categoryId),
-          ),
-        )
-      : null;
+  const categoryLabel =
+    leafCategory?.name ?? product.subCategoryName ?? product.mainCategoryName ?? null;
   const ordering = useOrderingOptional();
   const locale = useMenuLocaleOptional();
   const [busy, setBusy] = useState(false);
   const unavailable = product.available === false;
+  const chefPick = product.chefRecommended && !unavailable;
   const tags = product.tags ?? [];
   const allergens = product.allergens ?? [];
+  const tagSummary = tags.map((tag) => tag.name);
+  const allergenSummary = allergens.map((allergen) => allergen.name);
+  const servesLabel = formatServesPeopleLabel(
+    product.servesPeopleMin,
+    product.servesPeopleMax,
+  );
+  const hasMetaSummary =
+    tagSummary.length > 0 || allergenSummary.length > 0 || Boolean(servesLabel);
 
   return (
     <div className="min-h-[60vh] pb-8">
-      <div className="relative">
-        <div className="h-[58vh] w-full overflow-hidden bg-[var(--mn-surface)]">
-          {product.imageUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center font-display text-5xl text-[var(--mn-primary)]/30">
-              ◆
+      <div className="sticky top-12 z-30 border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-xl items-start gap-2.5 px-5 py-2 sm:px-7">
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--mn-border)] text-[var(--mn-fg)] transition-colors hover:border-[var(--mn-primary)]/50 hover:text-[var(--mn-primary)]"
+            aria-label="Geri"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+          <div className="min-w-0 flex-1">
+            {chefPick ? (
+              <p className="mb-0.5 mn-type-eyebrow text-[var(--mn-primary)]">Şef önerisi</p>
+            ) : null}
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="min-w-0 mn-type-product text-[var(--mn-fg)]">{product.name}</h1>
+              {price ? (
+                <span className="mn-type-price shrink-0 text-[var(--mn-primary)]">{price}</span>
+              ) : null}
             </div>
-          )}
-        </div>
-        <div className="mn-veil absolute inset-0" />
-        <button
-          type="button"
-          onClick={onBack}
-          className="mn-type-eyebrow absolute left-5 top-6 text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)] sm:left-7"
-        >
-          ← Menü
-        </button>
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-8 text-center sm:px-7">
-          {sectionLabel ? (
-            <p className="mn-type-eyebrow text-[var(--mn-primary)]">
-              {sectionLabel}
-              {sectionMark ? ` · ${sectionMark}` : ""}
-            </p>
-          ) : null}
-          <h1 className="mt-2 mn-type-page-title text-[var(--mn-fg)]">
-            {product.name}
-          </h1>
+            {categoryLabel ? (
+              <p className="mt-0.5 truncate mn-type-label text-[var(--mn-muted)]">
+                {categoryLabel}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-xl px-5 sm:px-7">
-        {crumbs.length > 0 ? (
-          <nav className="flex flex-wrap items-center justify-center gap-2 border-b border-[var(--mn-border)] py-3 mn-type-label text-[var(--mn-muted)]">
-            <button
-              type="button"
-              onClick={onHome}
-              className="hover:text-[var(--mn-primary)]"
-            >
-              Menü
-            </button>
-            {crumbs.map((crumb) => (
-              <span key={crumb.categoryId} className="inline-flex items-center gap-2">
-                <span aria-hidden>·</span>
-                <button
-                  type="button"
-                  onClick={() => onSelectCategory(crumb)}
-                  className="hover:text-[var(--mn-primary)]"
-                >
-                  {crumb.name}
-                </button>
-              </span>
-            ))}
-          </nav>
+        {product.imageUrl ? (
+          <div className="mt-4 overflow-hidden bg-[var(--mn-surface)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="mx-auto aspect-[16/10] max-h-[200px] w-full object-cover"
+            />
+          </div>
         ) : null}
-
-        <div className="flex items-baseline justify-between border-b border-[var(--mn-border)] py-4">
-          <span className="mn-type-eyebrow text-[var(--mn-muted)]">Fiyat</span>
-          {price ? (
-            <span className="mn-type-body-strong text-[var(--mn-primary)]">{price}</span>
-          ) : null}
-        </div>
 
         {product.description ? (
-          <p className="mt-6 mn-type-body-strong italic text-[var(--mn-fg)]">
-            {product.description}
-          </p>
+          <p className="mt-4 mn-type-body text-[var(--mn-muted)]">{product.description}</p>
         ) : null}
 
-        {tags.length > 0 ? (
-          <section className="mt-12">
-            <h2 className="mn-tracked text-[0.55rem] text-[var(--mn-primary)]">Kompozisyon</h2>
-            <ul className="mt-5 space-y-3">
-              {tags.map((tag) => (
-                <li
-                  key={tag.id}
-                  className="flex items-center gap-4 text-sm text-[var(--mn-muted)]"
-                >
-                  <span className="h-px w-6 bg-[var(--mn-primary)]/60" />
-                  {tag.name}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {(sectionLabel || product.chefRecommended) && (
-          <div className="mt-12 grid grid-cols-2 gap-px bg-[var(--mn-border)]">
-            {sectionLabel ? (
-              <div className="bg-[var(--mn-bg)] p-6">
-                <h2 className="mn-tracked text-[0.5rem] text-[var(--mn-muted)]">Kategori</h2>
-                <p className="mt-3 font-display text-lg leading-snug text-[var(--mn-fg)]">
-                  {sectionLabel}
-                </p>
-              </div>
+        {hasMetaSummary ? (
+          <div className="mt-4 space-y-1.5 border-t border-[var(--mn-border)] pt-4">
+            {tagSummary.length > 0 ? (
+              <p className="mn-type-label leading-relaxed text-[var(--mn-muted)]">
+                <span className="text-[var(--mn-subtle)]">İçerik · </span>
+                {tagSummary.join(" · ")}
+              </p>
             ) : null}
-            {product.chefRecommended ? (
-              <div className="bg-[var(--mn-bg)] p-6">
-                <h2 className="mn-tracked text-[0.5rem] text-[var(--mn-muted)]">Seçki</h2>
-                <p className="mt-3 font-display text-lg leading-snug text-[var(--mn-fg)]">
-                  Şef önerisi
-                </p>
-              </div>
-            ) : (
-              <div className="bg-[var(--mn-bg)] p-6">
-                <h2 className="mn-tracked text-[0.5rem] text-[var(--mn-muted)]">Servis</h2>
-                <p className="mt-3 font-display text-lg leading-snug text-[var(--mn-fg)]">
-                  {[product.servesPeopleMin, product.servesPeopleMax]
-                    .filter((v) => v != null)
-                    .join("–") || "Tek porsiyon"}
-                </p>
-              </div>
-            )}
+            {allergenSummary.length > 0 ? (
+              <p className="mn-type-label leading-relaxed text-[var(--mn-muted)]">
+                <span className="text-[var(--mn-subtle)]">Alerjen · </span>
+                {allergenSummary.join(" · ")}
+              </p>
+            ) : null}
+            {servesLabel ? (
+              <p className="mn-type-label leading-relaxed text-[var(--mn-muted)]">
+                <span className="text-[var(--mn-subtle)]">Servis · </span>
+                {servesLabel}
+              </p>
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         {product.nutrition ? (
-          <div className="mt-10">
-            <DenseNutritionStrip nutrition={product.nutrition} />
+          <div className="mt-4 border-t border-[var(--mn-border)] pt-4">
+            <DenseNutritionStrip
+              nutrition={product.nutrition}
+              itemClassName="border border-[var(--mn-border)] bg-[var(--mn-surface)]/35"
+              labelClassName="text-[var(--mn-muted)]"
+              valueClassName="text-[var(--mn-fg)]"
+            />
           </div>
-        ) : null}
-
-        {allergens.length > 0 ? (
-          <section className="mt-12">
-            <h2 className="mn-tracked text-[0.55rem] text-[var(--mn-muted)]">Alerjenler</h2>
-            <p className="mt-4 text-sm text-[var(--mn-muted)]">
-              {allergens.map((a) => a.name).join(" · ")}
-            </p>
-          </section>
         ) : null}
 
         {ordering && !unavailable ? (
@@ -197,7 +137,7 @@ export function MaisonNoirProductDetailView({
                 setBusy(false);
               }
             }}
-            className="mt-12 block w-full border border-[var(--mn-primary)]/60 py-5 transition-colors duration-500 hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)] disabled:opacity-50"
+            className="mt-8 block w-full border border-[var(--mn-primary)]/60 py-4 transition-colors duration-500 hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)] disabled:opacity-50"
           >
             <span className="mn-tracked text-[0.62rem]">
               {busy ? "…" : (locale?.t.addToOrder ?? "Siparişe Ekle")}
@@ -206,15 +146,10 @@ export function MaisonNoirProductDetailView({
         ) : null}
 
         {unavailable ? (
-          <p className="mt-10 text-center text-sm text-[var(--mn-muted)]">
+          <p className="mt-8 text-center mn-type-body text-[var(--mn-muted)]">
             Bu ürün şu an mevcut değil.
           </p>
         ) : null}
-
-        <div className="mn-hairline mt-16" />
-        <p className="mt-6 text-center text-[0.6rem] tracking-[0.25em] text-[var(--mn-muted)]/80">
-          ŞEFİN ÖNERİSİ ÜZERİNE UYARLAMA YAPILABİLİR
-        </p>
       </div>
     </div>
   );

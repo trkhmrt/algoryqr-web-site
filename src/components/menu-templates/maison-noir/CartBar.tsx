@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 
-import { formatMaisonPrice } from "./category-utils";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 export function MaisonNoirCartBar() {
@@ -12,7 +12,10 @@ export function MaisonNoirCartBar() {
     return null;
   }
 
-  const totalLabel = formatMaisonPrice(ordering.cartTotal);
+  const totalLabel = useMenuPriceDisplay(
+    ordering.cartTotal,
+    ordering.localItems[0]?.currency ?? ordering.cart?.currency ?? "TRY",
+  );
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-6 pb-[max(1rem,env(safe-area-inset-bottom))]">

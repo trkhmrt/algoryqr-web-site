@@ -26,8 +26,8 @@ export function MaisonNoirSubcategorySlider({
   const showReset = activeSubCategoryId != null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <div className="space-y-2">
+      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-0.5 scrollbar-none">
         <SubcategoryChip
           active={activeSubCategoryId == null}
           label="Tümü"

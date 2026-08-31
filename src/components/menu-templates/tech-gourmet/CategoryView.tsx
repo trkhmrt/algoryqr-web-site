@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { formatMenuPrice } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 
 type CategoryViewProps = {
@@ -106,7 +106,7 @@ function CategoryProductCard({
   index: number;
   onOpen: (product: MenuProductApiItem) => void;
 }) {
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const isUnavailable = product.available === false;
 
   return (

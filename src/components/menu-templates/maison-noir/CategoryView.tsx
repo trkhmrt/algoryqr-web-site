@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
@@ -55,47 +56,44 @@ export function MaisonNoirCategoryView({
   );
 
   const hasMoreLocal = sortedProducts.length > visibleLimit;
-  const activeSubName =
-    subCategoryId != null
-      ? category.children.find((child) => child.categoryId === subCategoryId)?.name
-      : null;
+  const hasSubcategories = (category.children ?? []).length > 0;
 
   return (
     <main className="mx-auto min-h-[60vh] max-w-xl pb-8">
-      <div className="sticky top-12 z-30 border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/95 px-5 py-3 backdrop-blur-md sm:px-7">
-        <button
-          type="button"
-          onClick={onBackToCategories}
-          className="mn-type-label text-[var(--mn-muted)] underline underline-offset-2 transition-colors hover:text-[var(--mn-primary)]"
-        >
-          ← Kategorilere dön
-        </button>
-
-        <header className="mt-3 text-center">
-          <h1 className="mn-type-page-title text-[var(--mn-fg)]">
-            {category.name}
-          </h1>
-          {activeSubName ? (
-            <p className="mt-1.5 mn-type-label text-[var(--mn-primary)]">{activeSubName}</p>
-          ) : null}
-          <div className="mn-hairline mx-auto mt-3 w-20" />
-          <p className="mt-2 mn-type-label text-[var(--mn-muted)]">
+      <div className="sticky top-12 z-30 border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-xl items-center justify-between gap-3 px-5 py-2 sm:px-7">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onBackToCategories}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--mn-border)] text-[var(--mn-fg)] transition-colors hover:border-[var(--mn-primary)]/50 hover:text-[var(--mn-primary)]"
+              aria-label="Kategorilere dön"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+            <h1 className="truncate font-display text-[1.125rem] leading-tight text-[var(--mn-fg)]">
+              {category.name}
+            </h1>
+          </div>
+          <span className="shrink-0 rounded-full border border-[var(--mn-border)] bg-[var(--mn-surface)]/70 px-2.5 py-1 mn-type-label text-[var(--mn-muted)]">
             {filteredProducts.length} ürün
-          </p>
-        </header>
-
-        <div className="mt-4">
-          <MaisonNoirSubcategorySlider
-            parentCategory={category}
-            products={products}
-            activeSubCategoryId={subCategoryId}
-            onSelectSubCategory={onSelectSubCategory}
-            onResetFilter={() => onSelectSubCategory(null)}
-          />
+          </span>
         </div>
+
+        {hasSubcategories ? (
+          <div className="px-4 pb-2 sm:px-6">
+            <MaisonNoirSubcategorySlider
+              parentCategory={category}
+              products={products}
+              activeSubCategoryId={subCategoryId}
+              onSelectSubCategory={onSelectSubCategory}
+              onResetFilter={() => onSelectSubCategory(null)}
+            />
+          </div>
+        ) : null}
       </div>
 
-      <div className="px-5 pt-6 sm:px-7">
+      <div className="px-5 pt-4 sm:px-7">
         {displayedProducts.length === 0 ? (
           <p className="py-12 text-center mn-type-body text-[var(--mn-muted)]">
             Bu filtrede ürün bulunmuyor.

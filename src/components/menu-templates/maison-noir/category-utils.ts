@@ -98,9 +98,3 @@ export function pickChefRecommendedProducts(
 ): MenuProductApiItem[] {
   return products.filter((product) => product.chefRecommended && product.available !== false);
 }
-
-export function formatMaisonPrice(price?: number | string) {
-  const amount = typeof price === "string" ? parseFloat(price) : price;
-  if (amount == null || !Number.isFinite(amount)) return "";
-  return amount.toLocaleString("tr-TR", { maximumFractionDigits: 0 });
-}

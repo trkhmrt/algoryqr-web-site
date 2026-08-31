@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { formatMenuPrice } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { filterProductsForCategory } from "./category-utils";
@@ -76,7 +76,7 @@ function FeaturedProductCard({
   product: MenuProductApiItem;
   onOpen: (product: MenuProductApiItem) => void;
 }) {
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const unavailable = product.available === false;
 
   return (
@@ -114,7 +114,7 @@ function CompactProductCard({
   product: MenuProductApiItem;
   onOpen: (product: MenuProductApiItem) => void;
 }) {
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const unavailable = product.available === false;
 
   return (

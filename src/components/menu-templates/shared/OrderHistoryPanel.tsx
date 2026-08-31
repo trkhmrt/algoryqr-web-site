@@ -8,7 +8,8 @@ import {
   getCustomerOrders,
   type OrderResponse,
 } from "@/lib/ordering-api";
-import { formatMenuPrice } from "../types";
+
+import { MenuPriceText, useMenuPriceDisplay } from "./menu-currency";
 
 type OrderHistoryPanelProps = {
   menuId: number;
@@ -40,6 +41,76 @@ function formatWhen(value?: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function OrderHistoryDetail({ order }: { order: OrderResponse }) {
+  const currency = order.currency || "TRY";
+  const totalLabel = useMenuPriceDisplay(order.totalAmount ?? undefined, currency);
+
+  return (
+    <div className="rounded-lg border border-border px-3 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Sipariş #{order.id}</p>
+        <span className="text-xs text-muted-foreground">{statusLabel(order.status)}</span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {order.tableName ? `${order.tableName} · ` : ""}
+        {formatWhen(order.submittedAt || order.createdAt)}
+      </p>
+      <ul className="mt-3 space-y-2">
+        {(order.items ?? []).map((item) => (
+          <li key={`${item.productId}-${item.id ?? item.quantity}`} className="text-sm">
+            <div className="flex justify-between gap-2">
+              <span>
+                {item.quantity}× {item.productName || `#${item.productId}`}
+              </span>
+              <span className="text-muted-foreground">
+                <MenuPriceText price={item.lineTotal ?? item.unitPrice} currency={currency} />
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex justify-between border-t border-border pt-2 text-sm font-medium">
+        <span>Toplam</span>
+        <span>{totalLabel}</span>
+      </div>
+      {order.note ? (
+        <p className="mt-2 text-xs text-muted-foreground">Not: {order.note}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function OrderHistoryListItem({
+  order,
+  onOpen,
+}: {
+  order: OrderResponse;
+  onOpen: (orderId: number) => void;
+}) {
+  const totalLabel = useMenuPriceDisplay(order.totalAmount ?? undefined, order.currency || "TRY");
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onOpen(order.id)}
+        className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2.5 text-left hover:bg-muted/40"
+      >
+        <div>
+          <p className="text-sm font-medium">#{order.id}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatWhen(order.submittedAt || order.createdAt)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm">{totalLabel}</p>
+          <p className="text-xs text-muted-foreground">{statusLabel(order.status)}</p>
+        </div>
+      </button>
+    </li>
+  );
 }
 
 export function OrderHistoryPanel({ menuId, onBack }: OrderHistoryPanelProps) {
@@ -102,37 +173,7 @@ export function OrderHistoryPanel({ menuId, onBack }: OrderHistoryPanelProps) {
         >
           <ArrowLeft className="h-4 w-4" /> Listeye dön
         </button>
-        <div className="rounded-lg border border-border px-3 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium">Sipariş #{selected.id}</p>
-            <span className="text-xs text-muted-foreground">{statusLabel(selected.status)}</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {selected.tableName ? `${selected.tableName} · ` : ""}
-            {formatWhen(selected.submittedAt || selected.createdAt)}
-          </p>
-          <ul className="mt-3 space-y-2">
-            {(selected.items ?? []).map((item) => (
-              <li key={`${item.productId}-${item.id ?? item.quantity}`} className="text-sm">
-                <div className="flex justify-between gap-2">
-                  <span>
-                    {item.quantity}× {item.productName || `#${item.productId}`}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {formatMenuPrice(item.lineTotal ?? item.unitPrice, selected.currency || "TRY")}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3 flex justify-between border-t border-border pt-2 text-sm font-medium">
-            <span>Toplam</span>
-            <span>{formatMenuPrice(selected.totalAmount ?? undefined, selected.currency || "TRY")}</span>
-          </div>
-          {selected.note ? (
-            <p className="mt-2 text-xs text-muted-foreground">Not: {selected.note}</p>
-          ) : null}
-        </div>
+        <OrderHistoryDetail order={selected} />
       </div>
     );
   }
@@ -158,26 +199,7 @@ export function OrderHistoryPanel({ menuId, onBack }: OrderHistoryPanelProps) {
       ) : (
         <ul className="space-y-2">
           {orders.map((order) => (
-            <li key={order.id}>
-              <button
-                type="button"
-                onClick={() => void openDetail(order.id)}
-                className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2.5 text-left hover:bg-muted/40"
-              >
-                <div>
-                  <p className="text-sm font-medium">#{order.id}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatWhen(order.submittedAt || order.createdAt)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm">
-                    {formatMenuPrice(order.totalAmount ?? undefined, order.currency || "TRY")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{statusLabel(order.status)}</p>
-                </div>
-              </button>
-            </li>
+            <OrderHistoryListItem key={order.id} order={order} onOpen={(id) => void openDetail(id)} />
           ))}
         </ul>
       )}

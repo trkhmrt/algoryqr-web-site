@@ -168,8 +168,6 @@ export function MaisonNoirMenuTemplate({
           product={selectedProduct}
           categories={displayCategories}
           onBack={backFromProduct}
-          onHome={goHome}
-          onSelectCategory={selectCategory}
         />
       ) : null}
 

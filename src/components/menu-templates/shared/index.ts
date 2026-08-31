@@ -21,6 +21,14 @@ export {
   useMenuLocaleOptional,
 } from "./menu-locale";
 export type { MenuLocaleCode } from "./menu-locale";
+export {
+  MenuCurrencyProvider,
+  useMenuCurrency,
+  useMenuCurrencyOptional,
+  useMenuPriceDisplay,
+  useMenuPriceDisplayOptional,
+  MenuPriceText,
+} from "./menu-currency";
 export { OrderHistoryPanel } from "./OrderHistoryPanel";
 export { OrderingProvider, useOrdering, useOrderingOptional } from "./ordering-context";
 export { SharedMenuChrome } from "./SharedMenuChrome";

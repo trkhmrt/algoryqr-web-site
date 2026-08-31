@@ -3,6 +3,8 @@
 
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -19,6 +21,7 @@ import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
 
 import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
+import { publicMenuContentPath } from "@/lib/public-menu-paths";
 
 import { useOrderingOptional } from "../shared/ordering-context";
 
@@ -61,8 +64,9 @@ type DrawerSection = "account" | null;
 
 
 export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) {
-
+  const pathname = usePathname();
   const { go } = usePublicMenuNavigation(menu.qrId);
+  const contentPath = publicMenuContentPath(menu.qrId);
 
   const ordering = useOrderingOptional();
 
@@ -125,52 +129,32 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
       <div className="sticky top-0 z-40">
 
         <header className="mn-glass-nav sticky top-0 z-40 border-b">
-
-          <div className="mx-auto grid h-12 max-w-xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 px-4 sm:gap-2 sm:px-6">
-
-            <div className="min-w-0 justify-self-start">
-
+          <div className="relative mx-auto flex h-12 max-w-xl items-center justify-between px-4 sm:px-6">
+            <div className="relative z-10 min-w-0 shrink-0">
               <MaisonNoirChefNavButton
-
                 menuId={menu.menuId}
-
                 chefName={menu.chefName}
-
                 chefDisplayName={menu.chefDisplayName}
-
                 chefAvatarUrl={menu.chefAvatarUrl}
-
               />
-
             </div>
 
-
-
-            <button
-
-              type="button"
-
-              onClick={() => {
-
+            <Link
+              href={contentPath}
+              onClick={(event) => {
                 onBrandClick?.();
-
-                go("landing");
-
                 closeDrawer();
-
+                if (pathname === contentPath) {
+                  event.preventDefault();
+                  go("landing");
+                }
               }}
-
-              className="mn-type-brand max-w-[min(34vw,7.5rem)] truncate text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)] sm:max-w-[9rem]"
-
+              className="pointer-events-auto absolute left-1/2 top-1/2 z-20 max-w-[min(52vw,12rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center mn-type-brand text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)]"
             >
-
               {menu.businessName}
+            </Link>
 
-            </button>
-
-
-
-            <div className="flex items-center justify-end gap-0.5 justify-self-end">
+            <div className="relative z-10 flex shrink-0 items-center justify-end gap-0.5">
 
               <MenuLanguagePicker variant="minimal" />
 
