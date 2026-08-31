@@ -590,6 +590,7 @@ export interface MainCategoryApiItem {
   slug: string;
   name: string;
   sortOrder: number;
+  imageUrl?: string | null;
   subs: SubCategoryApiItem[];
 }
 

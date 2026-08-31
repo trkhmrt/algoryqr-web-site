@@ -120,6 +120,7 @@ export type TaxonomyNavNode = {
   kind: "main" | "sub";
   mainCategoryId: number;
   subCategoryId: number | null;
+  imageUrl?: string | null;
   children: TaxonomyNavNode[];
 };
 
@@ -134,6 +135,7 @@ export function taxonomyAsNavTree(mains: MainCategoryApiItem[] = []): TaxonomyNa
       kind: "main" as const,
       mainCategoryId: main.id,
       subCategoryId: null,
+      imageUrl: main.imageUrl ?? null,
       children: (main.subs ?? []).map((sub) => ({
         categoryId: sub.id,
         name: sub.name,

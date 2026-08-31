@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, ChevronRight, GripVertical, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
+import { CategoryCoverField } from "@/components/dashboard/menu/CategoryCoverField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -206,6 +207,7 @@ function SortableSubRow({
 
 function SortableMainBlock({
   main,
+  menuId,
   expanded,
   busy,
   dragDisabled,
@@ -216,8 +218,10 @@ function SortableMainBlock({
   onRenameSub,
   onDeleteSub,
   onAddProduct,
+  onCoverChange,
 }: {
   main: MainCategoryApiItem;
+  menuId: number;
   expanded: boolean;
   busy: boolean;
   dragDisabled: boolean;
@@ -228,6 +232,7 @@ function SortableMainBlock({
   onRenameSub: (sub: SubCategoryApiItem) => void;
   onDeleteSub: (sub: SubCategoryApiItem) => void;
   onAddProduct?: (subCategoryId: number) => void;
+  onCoverChange: (categoryId: number, imageUrl: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `main-${main.id}`,
@@ -245,6 +250,14 @@ function SortableMainBlock({
     >
       <div className="flex items-center gap-1 px-2 py-2 sm:px-3">
         <DragHandle attributes={attributes} listeners={listeners} disabled={dragDisabled || busy} />
+        <CategoryCoverField
+          menuId={menuId}
+          categoryId={main.id}
+          value={main.imageUrl}
+          disabled={busy || menuId <= 0}
+          compact
+          onChange={(imageUrl) => onCoverChange(main.id, imageUrl)}
+        />
         <button
           type="button"
           className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-muted/40"
@@ -587,6 +600,13 @@ export default function MenuCategoriesPanel({
     }
   };
 
+  const handleCoverChange = (categoryId: number, imageUrl: string | null) => {
+    setOrderedCategories((current) =>
+      current.map((main) => (main.id === categoryId ? { ...main, imageUrl } : main)),
+    );
+    void refresh();
+  };
+
   const busy = saving || deleting || reordering;
 
   return (
@@ -639,6 +659,7 @@ export default function MenuCategoriesPanel({
                 <SortableMainBlock
                   key={main.id}
                   main={main}
+                  menuId={resolvedMenuId}
                   expanded={expandAllFromSearch || expandedIds.has(main.id)}
                   busy={busy}
                   dragDisabled={dragDisabled}
@@ -649,6 +670,7 @@ export default function MenuCategoriesPanel({
                   onRenameSub={(sub) => openNameDialog({ kind: "rename-sub", sub })}
                   onDeleteSub={(sub) => setDeleteTarget({ kind: "sub", id: sub.id, name: sub.name })}
                   onAddProduct={onAddProduct}
+                  onCoverChange={handleCoverChange}
                 />
               ))}
             </div>

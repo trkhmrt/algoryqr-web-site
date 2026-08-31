@@ -31,6 +31,7 @@ export function MaisonNoirCategoryGrid({
           name: category.name,
           sortOrder: category.sortOrder,
           slug: "",
+          imageUrl: category.imageUrl ?? null,
           subs: (category.children ?? []).map((sub) => ({
             id: sub.subCategoryId ?? sub.categoryId,
             mainCategoryId: category.mainCategoryId,
