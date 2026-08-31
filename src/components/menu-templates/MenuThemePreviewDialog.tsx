@@ -13,7 +13,7 @@ import {
   MENU_THEME_PREVIEW_MENU,
   MENU_THEME_PREVIEW_PRODUCTS,
 } from "./preview-data";
-import { MenuExperienceProvider, MenuLocaleProvider, MenuProductFeed, PublicMenuThemeProvider } from "./shared";
+import { MenuLocaleProvider, MenuProductFeed, PublicMenuThemeProvider } from "./shared";
 
 type MenuThemePreviewDialogProps = {
   themeId: string;
@@ -49,13 +49,11 @@ export function MenuThemePreviewDialog({
             >
               <PublicMenuThemeProvider themeId={themeId}>
                 <MenuLocaleProvider>
-                  <MenuExperienceProvider initialStage="menu">
-                    <Component
-                      menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
-                      products={MENU_THEME_PREVIEW_PRODUCTS}
-                      categories={MENU_THEME_PREVIEW_CATEGORIES}
-                    />
-                  </MenuExperienceProvider>
+                  <Component
+                    menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
+                    products={MENU_THEME_PREVIEW_PRODUCTS}
+                    categories={MENU_THEME_PREVIEW_CATEGORIES}
+                  />
                 </MenuLocaleProvider>
               </PublicMenuThemeProvider>
             </MenuProductFeed>

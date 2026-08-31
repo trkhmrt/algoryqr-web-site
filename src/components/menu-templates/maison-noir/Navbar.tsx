@@ -6,23 +6,23 @@ import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
 import type { MenuProfileApiItem } from "@/lib/api";
 import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
-import { useMenuExperienceOptional } from "../shared/menu-experience";
+import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 type MaisonNoirNavbarProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "qrId">;
   onBrandClick?: () => void;
 };
 
 export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) {
-  const experience = useMenuExperienceOptional();
+  const { go } = usePublicMenuNavigation(menu.qrId);
   const ordering = useOrderingOptional();
   const account = useCustomerAccountUi();
   const [open, setOpen] = useState(false);
 
   return (
     <div className="sticky top-0 z-40">
-      <header className="border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/90 backdrop-blur-md">
+      <header className="mn-glass-nav sticky top-0 z-40 border-b">
         <div className="relative mx-auto flex h-14 max-w-xl items-center justify-between px-6 sm:px-8">
           <button
             type="button"
@@ -37,7 +37,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
             type="button"
             onClick={() => {
               onBrandClick?.();
-              experience?.backToLandingHub();
+              go("landing");
               setOpen(false);
             }}
             className="absolute left-1/2 max-w-[min(100%,200px)] -translate-x-1/2 mn-tracked text-[0.58rem] text-[var(--mn-muted)] transition-colors hover:text-[var(--mn-primary)]"
@@ -67,7 +67,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
       </header>
 
       {open && account ? (
-        <div className="border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/90 px-6 py-4 backdrop-blur-md sm:px-8">
+        <div className="mn-glass-nav border-b border-[var(--mn-border)]/30 px-6 py-4 backdrop-blur-md sm:px-8">
           <div className="mx-auto max-w-xl">
             {account.profile ? (
               <button

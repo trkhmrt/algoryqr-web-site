@@ -24,6 +24,7 @@ export type { MenuLocaleCode } from "./menu-locale";
 export { OrderHistoryPanel } from "./OrderHistoryPanel";
 export { OrderingProvider, useOrdering, useOrderingOptional } from "./ordering-context";
 export { SharedMenuChrome } from "./SharedMenuChrome";
+export { MenuAtmosphereBackdrop } from "./MenuAtmosphereBackdrop";
 export { MenuHomeLink } from "./MenuHomeLink";
 export {
   DenseCategoryGrid,
@@ -40,9 +41,6 @@ export { MenuPartySizeControl } from "./MenuPartySizeControl";
 export { MenuRatingControl } from "./MenuRatingControl";
 export { FeedbackForm } from "./FeedbackForm";
 export { useMenuFeedback } from "./use-menu-feedback";
-export { MenuExperienceProvider, useMenuExperience, useMenuExperienceOptional } from "./menu-experience";
-export type { MenuExperienceStage, MenuWelcomePanel } from "./menu-experience";
-export { MenuWelcomeStage } from "./MenuWelcomeStage";
 export { MenuLandingHub } from "./MenuLandingHub";
 export { MenuLandingPanelShell } from "./MenuLandingPanelShell";
 export { MenuLandingScreens } from "./MenuLandingScreens";

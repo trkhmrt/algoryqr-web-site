@@ -9,7 +9,7 @@ import { CleverDishScribeFooter } from "./Footer";
 import { CleverDishScribeNavbar } from "./Navbar";
 
 type CleverDishScribeShellProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address" | "qrId">;
   children: ReactNode;
 };
 

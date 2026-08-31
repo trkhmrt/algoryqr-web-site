@@ -5,10 +5,12 @@ import { useMemo } from "react";
 import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
+import { usePublicMenuTheme } from "../shared/public-menu-theme";
 
 import { pickChefRecommendedProducts } from "./category-utils";
 import { MaisonNoirCategoryGrid } from "./CategoryGrid";
 import { MaisonNoirChefRecommendations } from "./ChefRecommendations";
+import { MaisonNoirMenuHeroIntro } from "./MenuHeroIntro";
 
 type HomeViewProps = {
   menu: MenuProfileApiItem;
@@ -25,27 +27,27 @@ export function MaisonNoirHomeView({
   onSelectCategory,
   onOpenProduct,
 }: HomeViewProps) {
+  const theme = usePublicMenuTheme();
   const chefRecommended = useMemo(
     () => pickChefRecommendedProducts(products),
     [products],
   );
 
-  const title = menu.slogan?.trim() || "Akşam Menüsü";
-
   return (
-    <main className="mx-auto min-h-[60vh] max-w-xl px-8 pb-8 pt-10">
-      <header className="text-center">
-        <h1 className="font-display text-5xl tracking-tight text-[var(--mn-fg)]">{title}</h1>
-        <div className="mn-hairline mx-auto mt-6 w-24" />
-      </header>
+    <main className="mx-auto min-h-[60vh] max-w-xl pb-10">
+      <MaisonNoirMenuHeroIntro menu={menu} defaultSlogan={theme.defaultSlogan} />
 
-      <div className="mt-12 space-y-12">
-        <MaisonNoirChefRecommendations
-          products={chefRecommended}
-          onOpenProduct={onOpenProduct}
-        />
+      <div className="space-y-10 px-8">
+        {chefRecommended.length > 0 ? (
+          <section className="mn-rise mn-section-panel rounded-none px-4 py-5" style={{ animationDelay: "200ms" }}>
+            <MaisonNoirChefRecommendations
+              products={chefRecommended}
+              onOpenProduct={onOpenProduct}
+            />
+          </section>
+        ) : null}
 
-        <section>
+        <section className="mn-rise" style={{ animationDelay: "280ms" }}>
           <h2 className="text-xs uppercase tracking-[0.28em] text-[var(--mn-primary)]">
             Kategoriler
           </h2>

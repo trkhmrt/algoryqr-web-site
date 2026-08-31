@@ -43,7 +43,7 @@ type MenuLandingHubProps = {
   businessName: string;
   slogan?: string | null;
   logoUrl?: string | null;
-  onSelect: (action: MenuLandingAction) => void;
+  onSelect: (action: "landing" | MenuLandingAction) => void;
   className?: string;
   cardClassName?: string;
   titleClassName?: string;

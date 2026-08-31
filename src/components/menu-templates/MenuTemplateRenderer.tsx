@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentProps, Suspense, useEffect } from "react";
+import { type ComponentProps, Suspense } from "react";
 
 import { useMenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
 
@@ -9,32 +9,18 @@ import { MenuChefFab } from "./chef";
 import { getMenuTemplate } from "./registry";
 import {
   CustomerAccountMenu,
-  MenuExperienceProvider,
   CampaignProductIdsProvider,
   MenuLocaleProvider,
   MenuProductNavigatorProvider,
-  MenuWelcomeStage,
   OrderingProvider,
   PublicMenuDataProvider,
   PublicMenuThemeProvider,
   SharedMenuChrome,
-  useMenuExperience,
-  useMenuExperienceOptional,
   useMenuLocale,
   useMenuProductFeed,
   useMenuCategoryFeed,
 } from "./shared";
 import type { MenuTemplateRendererProps } from "./types";
-
-function gateStorageKey(identifier: string) {
-  return `algory_menu_entry_done:${identifier}`;
-}
-
-function MenuChefFabGate(props: ComponentProps<typeof MenuChefFab>) {
-  const experience = useMenuExperienceOptional();
-  if (experience?.stage !== "menu") return null;
-  return <MenuChefFab {...props} />;
-}
 
 function MenuTemplateBody({
   menu,
@@ -58,12 +44,7 @@ function MenuTemplateBody({
 }) {
   const { products } = useMenuProductFeed();
   const { categories } = useMenuCategoryFeed();
-  const { stage } = useMenuExperience();
   const { Component } = getMenuTemplate(themeId);
-
-  if (stage !== "menu") {
-    return <MenuWelcomeStage menu={menu} />;
-  }
 
   return (
     <MenuThemeLayout themeId={themeId}>
@@ -88,20 +69,11 @@ function MenuShell({
   productHasNext = false,
   categoryPage = 0,
   categorySize = 6,
-  categoryTotalElements,
   categoryHasNext = false,
 }: MenuTemplateRendererProps) {
   const analytics = useMenuVisitAnalytics(menu.menuId);
   const qrIdentifier = identifier ?? String(menu.qrId);
   const { dir } = useMenuLocale();
-
-  useEffect(() => {
-    try {
-      window.sessionStorage.setItem(gateStorageKey(qrIdentifier), "1");
-    } catch {
-      /* ignore */
-    }
-  }, [qrIdentifier]);
 
   return (
     <PublicMenuThemeProvider themeId={themeId}>
@@ -117,30 +89,28 @@ function MenuShell({
           productSize={productSize}
           productHasNext={productHasNext}
         >
-            <MenuProductNavigatorProvider>
-              <Suspense fallback={null}>
-                <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
-                  <CampaignProductIdsProvider identifier={qrIdentifier}>
-                    <MenuExperienceProvider>
-                      <CustomerAccountMenu menuId={menu.menuId}>
-                        <MenuTemplateBody
-                          menu={menu}
-                          themeId={themeId}
-                          analytics={analytics}
-                        />
-                        <SharedMenuChrome menuId={menu.menuId} />
-                        <MenuChefFabGate
-                          menuId={menu.menuId}
-                          chefName={menu.chefName}
-                          chefDisplayName={menu.chefDisplayName}
-                          chefAvatarUrl={menu.chefAvatarUrl}
-                        />
-                      </CustomerAccountMenu>
-                    </MenuExperienceProvider>
-                  </CampaignProductIdsProvider>
-                </OrderingProvider>
-              </Suspense>
-            </MenuProductNavigatorProvider>
+          <MenuProductNavigatorProvider>
+            <Suspense fallback={null}>
+              <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
+                <CampaignProductIdsProvider identifier={qrIdentifier}>
+                  <CustomerAccountMenu menuId={menu.menuId}>
+                    <MenuTemplateBody
+                      menu={menu}
+                      themeId={themeId}
+                      analytics={analytics}
+                    />
+                    <SharedMenuChrome menuId={menu.menuId} />
+                    <MenuChefFab
+                      menuId={menu.menuId}
+                      chefName={menu.chefName}
+                      chefDisplayName={menu.chefDisplayName}
+                      chefAvatarUrl={menu.chefAvatarUrl}
+                    />
+                  </CustomerAccountMenu>
+                </CampaignProductIdsProvider>
+              </OrderingProvider>
+            </Suspense>
+          </MenuProductNavigatorProvider>
         </PublicMenuDataProvider>
       </div>
     </PublicMenuThemeProvider>

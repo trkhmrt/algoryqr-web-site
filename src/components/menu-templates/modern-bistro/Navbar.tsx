@@ -7,15 +7,15 @@ import type { MenuProfileApiItem } from "@/lib/api";
 import { MenuBrandLogo } from "../shared/MenuBrandLogo";
 import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
-import { useMenuExperienceOptional } from "../shared/menu-experience";
+import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 type ModernBistroNavbarProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "qrId">;
 };
 
 export function ModernBistroNavbar({ menu }: ModernBistroNavbarProps) {
-  const experience = useMenuExperienceOptional();
+  const { go } = usePublicMenuNavigation(menu.qrId);
   const ordering = useOrderingOptional();
   const account = useCustomerAccountUi();
   const [open, setOpen] = useState(false);
@@ -36,7 +36,7 @@ export function ModernBistroNavbar({ menu }: ModernBistroNavbarProps) {
           <button
             type="button"
             onClick={() => {
-              experience?.backToLandingHub();
+              go("landing");
               setOpen(false);
             }}
             className="absolute left-1/2 flex max-w-[min(100%,220px)] -translate-x-1/2 items-center gap-2"

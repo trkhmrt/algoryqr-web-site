@@ -8,7 +8,7 @@ import { TechGourmetNavbar } from "./Navbar";
 import { TechGourmetFooter } from "./Footer";
 
 type TechGourmetShellProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "phone" | "email" | "address" | "qrId">;
   children: ReactNode;
 };
 
