@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { MapPin, Phone } from "lucide-react";
 
 import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
+import { usePublicMenuCategoryStats } from "@/hooks/public-menu/use-public-menu-category-stats";
 import type { MenuNavCategory, TaxonomyNavNode } from "../types";
 import { findCategoryById, flattenNavCategories } from "../types";
 import {
@@ -61,19 +62,46 @@ export function LuxuryHomeView({
 
   const slogan = menu.slogan?.trim() || theme.defaultSlogan;
 
+  const mainCategoriesForStats = useMemo(
+    () =>
+      categories
+        .filter((category) => category.kind === "main")
+        .map((category) => ({
+          id: category.mainCategoryId,
+          name: category.name,
+          sortOrder: category.sortOrder,
+          slug: "",
+          imageUrl: category.imageUrl ?? null,
+          subs: (category.children ?? []).map((sub) => ({
+            id: sub.subCategoryId ?? sub.categoryId,
+            mainCategoryId: category.mainCategoryId,
+            slug: "",
+            name: sub.name,
+            sortOrder: sub.sortOrder,
+          })),
+        })),
+    [categories],
+  );
+
+  const categoryStats = usePublicMenuCategoryStats(menu.menuId, mainCategoriesForStats);
+
   const categoryGridItems = useMemo(
     () =>
       categories.map((cat, index) => ({
         id: cat.categoryId,
         name: cat.name,
         productCount: countProductsForCategory(products, cat),
+        imageUrl:
+          cat.kind === "main"
+            ? categoryStats.get(cat.mainCategoryId)?.coverImageUrl ?? undefined
+            : undefined,
         mark: theme.categoryMarks[index % theme.categoryMarks.length],
         subtitle:
           (cat.children?.length ?? 0) > 0
             ? `${cat.children!.length} alt`
             : undefined,
       })),
-    [categories, products, theme.categoryMarks],
+    [categories, products, theme.categoryMarks, categoryStats],
   );
 
   const isLuxury = theme.id === "luxury";

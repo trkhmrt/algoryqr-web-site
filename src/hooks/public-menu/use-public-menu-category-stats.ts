@@ -38,7 +38,7 @@ export function usePublicMenuCategoryStats(
         return (page.content ?? []).find((product) => product.imageUrl)?.imageUrl ?? null;
       },
       staleTime: PUBLIC_MENU_STALE_TIME_MS,
-      enabled: menuId > 0 && category.id > 0,
+      enabled: menuId > 0 && category.id > 0 && !category.imageUrl,
     })),
   });
 
@@ -47,7 +47,7 @@ export function usePublicMenuCategoryStats(
     categories.forEach((category, index) => {
       stats.set(category.id, {
         productCount: facetQueries[index]?.data?.totalMatching ?? 0,
-        coverImageUrl: coverQueries[index]?.data ?? null,
+        coverImageUrl: category.imageUrl ?? coverQueries[index]?.data ?? null,
       });
     });
     return stats;
