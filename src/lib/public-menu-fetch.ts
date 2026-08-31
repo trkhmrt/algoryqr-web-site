@@ -1,10 +1,7 @@
 import type { PublicMenuApiResponse } from "@/lib/api";
-import { PUBLIC_MENU_REVALIDATE_SECONDS } from "@/lib/public-menu-cache";
 import { fetchCachedPublicMenuUpstream } from "@/lib/public-menu-server-cache";
 
 const MENU_OWNER_PACKAGE_INACTIVE = "MENU_OWNER_PACKAGE_INACTIVE";
-
-export { PUBLIC_MENU_REVALIDATE_SECONDS };
 
 export type PublicMenuFetchResult =
   | { status: "ok"; data: PublicMenuApiResponse }
