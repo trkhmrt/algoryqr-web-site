@@ -41,12 +41,20 @@ export function MaisonNoirCategoryView({
     [products, category, subCategoryId],
   );
 
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((left, right) => {
+      const leftChef = left.chefRecommended && left.available !== false ? 1 : 0;
+      const rightChef = right.chefRecommended && right.available !== false ? 1 : 0;
+      return rightChef - leftChef;
+    });
+  }, [filteredProducts]);
+
   const displayedProducts = useMemo(
-    () => filteredProducts.slice(0, visibleLimit),
-    [filteredProducts, visibleLimit],
+    () => sortedProducts.slice(0, visibleLimit),
+    [sortedProducts, visibleLimit],
   );
 
-  const hasMoreLocal = filteredProducts.length > visibleLimit;
+  const hasMoreLocal = sortedProducts.length > visibleLimit;
   const activeSubName =
     subCategoryId != null
       ? category.children.find((child) => child.categoryId === subCategoryId)?.name

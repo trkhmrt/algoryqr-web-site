@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 
-import { RainbowBeamButton } from "@/components/dashboard/RainbowBeamButton";
 import {
   resolveChefAvatarSrc,
   resolveChefDisplayName,
@@ -82,12 +82,17 @@ export function MaisonNoirChefNavButton({
           onClose={() => setOpen(false)}
         />
       ) : null}
-      <RainbowBeamButton
-        label="Akıllı Şefe Sor"
-        prominent={false}
-        className="max-w-[min(46vw,9.75rem)]"
+      <button
+        type="button"
         onClick={openChat}
-      />
+        className="mn-ai-ask-btn group"
+        aria-label="Bana sor"
+      >
+        <span className="mn-ai-ask-btn__inner">
+          <Sparkles className="mn-ai-ask-btn__spark h-3 w-3 shrink-0" strokeWidth={1.75} />
+          <span className="truncate">Bana sor</span>
+        </span>
+      </button>
     </>
   );
 }
