@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 
-import { formatMenuPrice } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 export function CleverDishScribeCartBar() {
@@ -12,7 +12,8 @@ export function CleverDishScribeCartBar() {
     return null;
   }
 
-  const totalLabel = formatMenuPrice(ordering.cartTotal, "TRY");
+  const currency = ordering.localItems[0]?.currency ?? ordering.cart?.currency ?? "TRY";
+  const totalLabel = useMenuPriceDisplay(ordering.cartTotal, currency);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

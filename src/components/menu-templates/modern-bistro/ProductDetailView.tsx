@@ -5,7 +5,8 @@ import { useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { formatMenuPrice, resolveProductNavCategory } from "../types";
+import { resolveProductNavCategory } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { DenseNutritionStrip } from "../shared/dense";
 import { useMenuLocaleOptional } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
@@ -26,7 +27,7 @@ export function ModernBistroProductDetailView({
   onHome,
   onSelectCategory,
 }: ProductDetailViewProps) {
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const leafCategory = resolveProductNavCategory(categories, product);
   const crumbs = leafCategory != null ? getBreadcrumbs(categories, leafCategory.categoryId) : [];
   const ordering = useOrderingOptional();

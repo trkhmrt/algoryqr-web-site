@@ -5,7 +5,7 @@ import { Loader2, Plus } from "lucide-react";
 
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import type { ChefProductItem } from "@/lib/chef/parse-chef-query";
-import { formatMenuPrice } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import {
   chefItemToMenuProduct,
   useMenuLocaleOptional,
@@ -24,7 +24,7 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
   const navigator = useMenuProductNavigatorOptional();
   const ordering = useOrderingOptional();
   const locale = useMenuLocaleOptional();
-  const priceLabel = formatMenuPrice(item.price ?? undefined, item.currency || "TRY");
+  const priceLabel = useMenuPriceDisplay(item.price ?? undefined, item.currency || "TRY");
   const [actionOpen, setActionOpen] = useState(false);
   const [addBusy, setAddBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);

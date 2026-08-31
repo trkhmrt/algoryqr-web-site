@@ -8,8 +8,8 @@ import type { TaxonomyNavNode } from "../types";
 import {
   filterProductsByNavNode,
   flattenNavCategories,
-  formatMenuPrice,
 } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
@@ -238,7 +238,7 @@ function FeaturedProductCard({
   product: MenuProductApiItem;
   onOpen: (product: MenuProductApiItem) => void;
 }) {
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const unavailable = product.available === false;
   const ordering = useOrderingOptional();
 
@@ -281,7 +281,7 @@ function CompactProductCard({
   product: MenuProductApiItem;
   onOpen: (product: MenuProductApiItem) => void;
 }) {
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const unavailable = product.available === false;
   const ordering = useOrderingOptional();
 

@@ -10,7 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { formatMenuPrice } from "../types";
+import { MenuPriceText, useMenuPriceDisplay } from "./menu-currency";
 import { useMenuLocaleOptional } from "./menu-locale";
 import { OrderSuccessOverlay } from "./OrderSuccessOverlay";
 import { CampaignCartPreview } from "./CampaignCartPreview";
@@ -39,6 +39,7 @@ export function CartSheet() {
   const [successId, setSuccessId] = useState<number | null>(null);
   const theme = usePublicMenuTheme();
   const currency = cart?.currency || localItems[0]?.currency || "TRY";
+  const totalLabel = useMenuPriceDisplay(cartTotal, currency);
 
   const dismissSuccess = useCallback(() => {
     setSuccessId(null);
@@ -74,7 +75,7 @@ export function CartSheet() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{item.productName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatMenuPrice(item.unitPrice, currency)}
+                      <MenuPriceText price={item.unitPrice} currency={currency} />
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -123,7 +124,7 @@ export function CartSheet() {
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Toplam</span>
-            <span className="font-semibold">{formatMenuPrice(cartTotal, currency)}</span>
+            <span className="font-semibold">{totalLabel}</span>
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}

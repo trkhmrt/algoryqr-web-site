@@ -1,10 +1,11 @@
 import type { TrendyolGoConnectionStatus } from "@/lib/trendyol-go-api";
 
-export const TGO_SOFT_CARD_CLASS =
-  "rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card";
+import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
+
+export const TGO_SOFT_CARD_CLASS = DASHBOARD_SURFACE;
 
 export const TGO_SOFT_FIELD_CLASS =
-  "rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-3 py-2.5 dark:border-border dark:bg-background";
+  "rounded-xl border border-border bg-muted px-3 py-2.5";
 
 export function formatTrendyolGoDateTime(value?: string | null): string {
   if (!value) return "—";

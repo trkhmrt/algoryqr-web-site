@@ -1,6 +1,8 @@
+"use client";
+
 import type { MenuProductApiItem } from "@/lib/api";
 
-import { formatMenuPrice } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { formatServesPeopleLabel } from "../shared/serves-people";
 
 type ItemRowProps = {
@@ -9,7 +11,7 @@ type ItemRowProps = {
 };
 
 export function ItemRow({ item, onOpen }: ItemRowProps) {
-  const price = formatMenuPrice(item.price, item.currency);
+  const price = useMenuPriceDisplay(item.price, item.currency);
   const servesLabel = formatServesPeopleLabel(item.servesPeopleMin, item.servesPeopleMax);
 
   return (

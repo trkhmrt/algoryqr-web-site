@@ -20,6 +20,7 @@ import {
   useMenuProductFeed,
   useMenuCategoryFeed,
 } from "./shared";
+import { MenuCurrencyProvider } from "./shared/menu-currency";
 import type { MenuTemplateRendererProps } from "./types";
 
 function MenuTemplateBody({
@@ -122,7 +123,9 @@ function MenuShell({
 export function MenuTemplateRenderer(props: MenuTemplateRendererProps) {
   return (
     <MenuLocaleProvider>
-      <MenuShell {...props} />
+      <MenuCurrencyProvider>
+        <MenuShell {...props} />
+      </MenuCurrencyProvider>
     </MenuLocaleProvider>
   );
 }

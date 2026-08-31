@@ -7,8 +7,8 @@ import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import {
   flattenNavCategories,
-  formatMenuPrice,
 } from "../types";
+import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
@@ -215,7 +215,7 @@ function TechProductCard({
 }) {
   const ordering = useOrderingOptional();
   const [busy, setBusy] = useState(false);
-  const price = formatMenuPrice(product.price, product.currency);
+  const price = useMenuPriceDisplay(product.price, product.currency);
   const isUnavailable = product.available === false;
 
   return (

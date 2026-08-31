@@ -6,7 +6,7 @@ import { ImageIcon, Loader2, Plus } from "lucide-react";
 import type { MenuProductApiItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { formatMenuPrice } from "../../types";
+import { useMenuPriceDisplay } from "../menu-currency";
 import { useOrderingOptional } from "../ordering-context";
 import { DenseMetaChips } from "./DenseMetaChips";
 
@@ -40,7 +40,7 @@ export function DenseProductRow({
   imagePlaceholderClassName,
 }: DenseProductRowProps) {
   const ordering = useOrderingOptional();
-  const price = formatMenuPrice(item.price, item.currency);
+  const price = useMenuPriceDisplay(item.price, item.currency);
   const isCard = variant === "card";
   const isUnavailable = item.available === false;
   const canAdd = ordering && !isUnavailable;
