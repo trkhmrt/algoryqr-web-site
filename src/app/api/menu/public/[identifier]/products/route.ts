@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 
 import {
-  PUBLIC_MENU_REVALIDATE_SECONDS,
   publicMenuCachedJson,
   readPublicMenuUpstreamJson,
   searchParamsFromRequest,
 } from "@/lib/public-menu-server-cache";
-
-export const revalidate = PUBLIC_MENU_REVALIDATE_SECONDS;
 
 export async function GET(req: Request, context: { params: Promise<{ identifier: string }> }) {
   try {
