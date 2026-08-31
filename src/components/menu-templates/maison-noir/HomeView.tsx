@@ -51,6 +51,7 @@ export function MaisonNoirHomeView({
           </h2>
           <div className="mt-5">
             <MaisonNoirCategoryGrid
+              menuId={menu.menuId}
               categories={categories}
               products={products}
               onSelectCategory={onSelectCategory}

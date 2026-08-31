@@ -658,6 +658,16 @@ export interface MenuProductPageApiResponse {
   hasNext: boolean;
 }
 
+export interface MenuCategoryPageApiResponse {
+  content: MainCategoryApiItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  q?: string | null;
+}
+
 export interface MenuProductRequestBody {
   name: string;
   description?: string;
@@ -899,6 +909,27 @@ export async function getPublicMenuProductsRequest(
     throw new ApiError(response.status, "Ürünler yüklenemedi");
   }
   return response.json() as Promise<MenuProductPageApiResponse>;
+}
+
+export async function getPublicMenuCategoriesRequest(
+  menuId: number | string,
+  page = 0,
+  size = 50,
+  q?: string,
+): Promise<MenuCategoryPageApiResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  if (q?.trim()) params.set("q", q.trim());
+  const response = await fetch(
+    `/api/menu/public/${encodeURIComponent(String(menuId))}/categories?${params}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, "Kategoriler yüklenemedi");
+  }
+  return response.json() as Promise<MenuCategoryPageApiResponse>;
 }
 
 export async function getPublicProductFacetsRequest(

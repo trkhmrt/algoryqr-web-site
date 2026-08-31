@@ -68,12 +68,10 @@ export function CleverDishScribeHomeView({
         },
       ];
     }
-    return roots
-      .map((category, index) => {
+    return roots.map((category, index) => {
         const sectionProducts = filterProductsByNavNode(products, category).filter(
           (p) => p.available !== false,
         );
-        if (sectionProducts.length === 0) return null;
         return {
           key: String(category.categoryId),
           title: category.name,
@@ -81,14 +79,7 @@ export function CleverDishScribeHomeView({
           products: sectionProducts,
           compact: sectionProducts.length >= 4,
         };
-      })
-      .filter(Boolean) as Array<{
-      key: string;
-      title: string;
-      mark: string;
-      products: MenuProductApiItem[];
-      compact: boolean;
-    }>;
+      });
   }, [categories, products, searchQuery, activeCategoryId]);
 
   const showFeatured =

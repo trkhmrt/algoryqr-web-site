@@ -9,14 +9,13 @@ import { MenuChefFab } from "./chef";
 import { getMenuTemplate } from "./registry";
 import {
   CustomerAccountMenu,
-  MenuCategoryFeed,
   MenuExperienceProvider,
   CampaignProductIdsProvider,
   MenuLocaleProvider,
-  MenuProductFeed,
   MenuProductNavigatorProvider,
   MenuWelcomeStage,
   OrderingProvider,
+  PublicMenuDataProvider,
   PublicMenuThemeProvider,
   SharedMenuChrome,
   useMenuExperience,
@@ -107,20 +106,17 @@ function MenuShell({
   return (
     <PublicMenuThemeProvider themeId={themeId}>
       <div dir={dir}>
-        <MenuProductFeed
+        <PublicMenuDataProvider
           menuId={menu.menuId}
+          initialCategories={categories}
           initialProducts={products}
+          categoryPage={categoryPage}
+          categorySize={categorySize}
+          categoryHasNext={categoryHasNext}
           productPage={productPage}
           productSize={productSize}
           productHasNext={productHasNext}
         >
-          <MenuCategoryFeed
-            initialCategories={categories}
-            categoryPage={categoryPage}
-            categorySize={categorySize}
-            categoryHasNext={categoryHasNext}
-            categoryTotalElements={categoryTotalElements}
-          >
             <MenuProductNavigatorProvider>
               <Suspense fallback={null}>
                 <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
@@ -145,8 +141,7 @@ function MenuShell({
                 </OrderingProvider>
               </Suspense>
             </MenuProductNavigatorProvider>
-          </MenuCategoryFeed>
-        </MenuProductFeed>
+        </PublicMenuDataProvider>
       </div>
     </PublicMenuThemeProvider>
   );
