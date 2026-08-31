@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { cn } from "@/lib/utils";
+import { SiteLanguagePicker } from "@/components/SiteLanguagePicker";
+import { Tx } from "@/components/google-translate-provider";
 
 interface NavbarProps {
   initialUser?: StoredUser | null;
@@ -44,7 +46,7 @@ function PanelLoginLink({
         className,
       )}
     >
-      Panele Giriş Yap
+      <Tx>Panele Giriş Yap</Tx>
     </Link>
   );
 }
@@ -74,7 +76,9 @@ function UserAvatarMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>Hesabım</DropdownMenuLabel>
+        <DropdownMenuLabel>
+          <Tx>Hesabım</Tx>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onNavigate("/dashboard/genel-bakis")}>
           <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -82,7 +86,7 @@ function UserAvatarMenu({
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onLogout} className="text-destructive focus:text-destructive">
           <LogOut className="h-4 w-4 mr-2" />
-          Çıkış Yap
+          <Tx>Çıkış Yap</Tx>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -131,18 +135,19 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
-          <a href="/#why-us" className={navLinkClassName}>
-            Neden biz
-          </a>
-          <a href="/#pricing" className={navLinkClassName}>
-            Fiyatlandırma
-          </a>
+          <Link href="/#why-us" className={navLinkClassName}>
+            <Tx>Neden biz</Tx>
+          </Link>
+          <Link href="/#pricing" className={navLinkClassName}>
+            <Tx>Fiyatlandırma</Tx>
+          </Link>
           <Link href="/contact" className={navLinkClassName}>
-            İletişim
+            <Tx>İletişim</Tx>
           </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-2">
+          <SiteLanguagePicker />
           {user ? (
             <UserAvatarMenu
               userInitials={userInitials}
@@ -155,6 +160,7 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
         </div>
 
         <div className="flex md:hidden items-center gap-2 sm:gap-3">
+          <SiteLanguagePicker />
           {user ? (
             <UserAvatarMenu
               userInitials={userInitials}
@@ -178,14 +184,14 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
 
       {open && (
         <div className="md:hidden glass border-t border-border px-4 sm:px-6 pb-4 pt-2 flex flex-col gap-1 max-h-[min(70vh,calc(100dvh-3.5rem))] overflow-y-auto">
-          <a href="/#why-us" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
-            Neden biz
-          </a>
-          <a href="/#pricing" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
-            Fiyatlandırma
-          </a>
+          <Link href="/#why-us" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
+            <Tx>Neden biz</Tx>
+          </Link>
+          <Link href="/#pricing" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
+            <Tx>Fiyatlandırma</Tx>
+          </Link>
           <Link href="/contact" onClick={() => setOpen(false)} className={cn(navLinkClassName, "py-2.5")}>
-            İletişim
+            <Tx>İletişim</Tx>
           </Link>
           {user ? (
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
@@ -203,7 +209,7 @@ const Navbar = ({ initialUser = null }: NavbarProps) => {
                   logout();
                 }}
               >
-                Çıkış Yap
+                <Tx>Çıkış Yap</Tx>
               </Button>
             </div>
           ) : null}

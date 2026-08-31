@@ -7,6 +7,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SiteVisitTracker } from "@/components/SiteVisitTracker";
+import { DocumentLocale } from "@/components/DocumentLocale";
+import { GoogleTranslateProvider } from "@/components/google-translate-provider";
+import { MenuLocaleProvider } from "@/components/menu-templates/shared/menu-locale";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -18,12 +21,17 @@ export default function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <TooltipProvider>
-          <SiteVisitTracker />
-          {children}
-          <Toaster />
-          <Sonner />
-        </TooltipProvider>
+        <MenuLocaleProvider>
+          <GoogleTranslateProvider>
+            <DocumentLocale />
+            <TooltipProvider>
+              <SiteVisitTracker />
+              {children}
+              <Toaster />
+              <Sonner />
+            </TooltipProvider>
+          </GoogleTranslateProvider>
+        </MenuLocaleProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

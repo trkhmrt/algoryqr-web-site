@@ -231,7 +231,12 @@ export function MenuLocaleProvider({ children }: MenuLocaleProviderProps) {
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (isLocale(stored)) setLocaleState(stored);
+      if (isLocale(stored)) {
+        setLocaleState(stored);
+        return;
+      }
+      const nav = window.navigator.language.slice(0, 2).toLowerCase();
+      if (isLocale(nav)) setLocaleState(nav);
     } catch {
       /* ignore */
     }

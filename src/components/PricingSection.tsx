@@ -23,17 +23,19 @@ import {
 } from "@/lib/package-display";
 import { buildRegisterTrialUrl, buildTrialStartUrl } from "@/lib/trial-flow";
 import { cn } from "@/lib/utils";
+import { Tx, useT } from "@/components/google-translate-provider";
 
 interface PricingSectionProps {
   initialUser?: StoredUser | null;
 }
 
 function ComparisonCellValue({ value }: { value: string }) {
+  const t = useT();
   if (value === "Var") {
     return (
       <span
         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600"
-        aria-label="Var"
+        aria-label={t("Var")}
       >
         <Check className="h-3 w-3 text-white" strokeWidth={3} />
       </span>
@@ -43,13 +45,13 @@ function ComparisonCellValue({ value }: { value: string }) {
     return (
       <span
         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600"
-        aria-label="Yok"
+        aria-label={t("Yok")}
       >
         <X className="h-3 w-3 text-white" strokeWidth={3} />
       </span>
     );
   }
-  return <span className="text-sm text-muted-foreground">{value}</span>;
+  return <span className="text-sm text-muted-foreground">{t(value)}</span>;
 }
 
 function BillingPeriodSwitch({
@@ -59,6 +61,7 @@ function BillingPeriodSwitch({
   billingPeriod: BillingPeriod;
   onChange: (period: BillingPeriod) => void;
 }) {
+  const t = useT();
   const yearly = billingPeriod === "YEARLY";
 
   return (
@@ -70,13 +73,13 @@ function BillingPeriodSwitch({
           !yearly ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        Aylık
+        {t("Aylık")}
       </Label>
       <Switch
         id="homepage-billing-period-switch"
         checked={yearly}
         onCheckedChange={(checked) => onChange(checked ? "YEARLY" : "MONTHLY")}
-        aria-label="Aylık ve yıllık fiyat arasında geçiş yap"
+        aria-label={t("Aylık ve yıllık fiyat arasında geçiş yap")}
       />
       <Label
         htmlFor="homepage-billing-period-switch"
@@ -85,7 +88,7 @@ function BillingPeriodSwitch({
           yearly ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        Yıllık
+        {t("Yıllık")}
       </Label>
     </div>
   );
@@ -127,6 +130,7 @@ function packageCtaLabel(pkg: PlanPackageApiItem): string {
 }
 
 const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
+  const t = useT();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("MONTHLY");
@@ -158,13 +162,13 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
           className="text-center mb-10 sm:mb-14 md:mb-16 space-y-3 sm:space-y-4"
         >
           <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-            Fiyatlandırma
+            <Tx>Fiyatlandırma</Tx>
           </p>
           <h2 className="sr-heading text-3xl leading-[1.05] sm:text-5xl text-balance">
-            İşletmenize uygun paketi seçin
+            <Tx>İşletmenize uygun paketi seçin</Tx>
           </h2>
           <p className="section-desc max-w-lg mx-auto text-pretty">
-            Tüm planları karşılaştırın. Ücretsiz başlayın veya ihtiyacınıza göre yükseltin.
+            <Tx>Tüm planları karşılaştırın. Ücretsiz başlayın veya ihtiyacınıza göre yükseltin.</Tx>
           </p>
         </motion.div>
 
@@ -172,10 +176,12 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
           <PackageComparisonSkeleton cardCount={3} />
         ) : packagesQuery.isError ? (
           <p className="text-center text-sm text-muted-foreground">
-            Paketler yüklenemedi. Lütfen daha sonra tekrar deneyin.
+            <Tx>Paketler yüklenemedi. Lütfen daha sonra tekrar deneyin.</Tx>
           </p>
         ) : packages.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">Şu an listelenecek paket bulunamadı.</p>
+          <p className="text-center text-sm text-muted-foreground">
+            <Tx>Şu an listelenecek paket bulunamadı.</Tx>
+          </p>
         ) : (
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -210,15 +216,15 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold text-foreground sm:text-lg">{pkg.name}</h3>
+                          <h3 className="text-base font-semibold text-foreground sm:text-lg">{t(pkg.name)}</h3>
                           {isPopular ? (
                             <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
-                              Popüler
+                              <Tx>Popüler</Tx>
                             </span>
                           ) : null}
                         </div>
                         {subtitle ? (
-                          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{subtitle}</p>
+                          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{t(subtitle)}</p>
                         ) : null}
                       </div>
                     </div>
@@ -230,7 +236,7 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
                         <li key={`${pkg.id}-${row.id}`} className="flex items-start gap-2 sm:gap-2.5">
                           <ComparisonCellValue value={row.values[String(pkg.id)] ?? "—"} />
                           <span className="inline-flex min-w-0 flex-1 items-center gap-1 text-xs text-foreground sm:gap-1.5 sm:text-sm">
-                            <span className="leading-snug">{row.label}</span>
+                            <span className="leading-snug">{t(row.label)}</span>
                             {row.productCode ? (
                               <FeatureHintByProduct productCode={row.productCode} size="sm" />
                             ) : null}
@@ -243,7 +249,7 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
                       {isTrial ? (
                         <TrialFadeButton
                           href={packageCtaHref(pkg, isLoggedIn)}
-                          label={packageCtaLabel(pkg)}
+                          label={t(packageCtaLabel(pkg))}
                         />
                       ) : (
                         <Button
@@ -253,7 +259,7 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
                           asChild
                         >
                           <Link href={packageCtaHref(pkg, isLoggedIn)}>
-                            {packageCtaLabel(pkg)}
+                            {t(packageCtaLabel(pkg))}
                             <ArrowRight className="h-4 w-4 shrink-0" />
                           </Link>
                         </Button>

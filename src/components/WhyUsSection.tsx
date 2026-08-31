@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { Reveal } from "@/components/site/Reveal";
 import { DetailExploreLink } from "@/components/site/DetailExploreLink";
 import { VioletBeamCard } from "@/components/site/VioletBeamCard";
+import { Tx, useT } from "@/components/google-translate-provider";
 
 const SMART_CHEF = {
   eyebrow: "Yapay zeka asistanı",
@@ -38,6 +39,8 @@ const HIGHLIGHTS = [
 ];
 
 const WhyUsSection = () => {
+  const t = useT();
+
   return (
     <section id="why-us" className="relative py-[clamp(3.5rem,8vw,8rem)]">
       <div
@@ -48,15 +51,16 @@ const WhyUsSection = () => {
       <div className="container relative mx-auto w-full max-w-6xl px-4 sm:px-6">
         <Reveal className="mb-12 max-w-4xl sm:mb-16">
           <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-            Neden biz
+            <Tx>Neden biz</Tx>
           </p>
           <h2 className="heading mt-5 text-[clamp(2.75rem,6.5vw,4.75rem)] font-extrabold leading-[0.98] tracking-[-0.04em] text-balance">
-            Yeni nesil{" "}
-            <span className="font-light text-muted-foreground">QR menü deneyimi</span>
+            <Tx>Yeni nesil</Tx>{" "}
+            <span className="font-light text-muted-foreground">
+              <Tx>QR menü deneyimi</Tx>
+            </span>
           </h2>
           <p className="section-desc-lg mt-6 max-w-3xl text-pretty">
-            AlgoryQR, işletmenizin hızla yayına çıkmasını, güvenle büyümesini ve veriye dayalı karar
-            almasını sağlar.
+            <Tx>AlgoryQR, işletmenizin hızla yayına çıkmasını, güvenle büyümesini ve veriye dayalı karar almasını sağlar.</Tx>
           </p>
         </Reveal>
 
@@ -67,7 +71,7 @@ const WhyUsSection = () => {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={SMART_CHEF.screenshot}
-                alt={SMART_CHEF.screenshotAlt}
+                alt={t(SMART_CHEF.screenshotAlt)}
                 loading="lazy"
                 decoding="async"
                 width={430}
@@ -78,16 +82,16 @@ const WhyUsSection = () => {
 
             <div className="flex flex-col justify-center lg:py-4">
               <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-                {SMART_CHEF.eyebrow}
+                {t(SMART_CHEF.eyebrow)}
               </p>
               <h3 className="heading mt-5 text-[clamp(2.5rem,5vw,3.75rem)] font-extrabold leading-[1] tracking-[-0.04em]">
-                {SMART_CHEF.title}
+                {t(SMART_CHEF.title)}
               </h3>
               <p className="section-desc-lg mt-6 max-w-lg text-pretty">
-                {SMART_CHEF.text}
+                {t(SMART_CHEF.text)}
               </p>
               <DetailExploreLink href="/akilli-sef" className="mt-10">
-                Detaylı incele
+                <Tx>Detaylı incele</Tx>
               </DetailExploreLink>
             </div>
             </div>
@@ -100,7 +104,7 @@ const WhyUsSection = () => {
               <div className="group flex h-full flex-col rounded-3xl border border-border bg-card/50 p-8 transition-colors hover:border-foreground/15 sm:p-10">
                 {"eyebrow" in item && item.eyebrow ? (
                   <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {item.eyebrow}
+                    {t(item.eyebrow)}
                   </p>
                 ) : null}
                 <h3
@@ -114,17 +118,17 @@ const WhyUsSection = () => {
                       aria-hidden
                     />
                   ) : null}
-                  {item.title}
+                  {t(item.title)}
                 </h3>
                 <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                  {item.text}
+                  {t(item.text)}
                 </p>
                 <div className="mt-10 grid flex-1 place-items-center">
                   {item.imageVariant === "screenshot" ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={item.img}
-                      alt={item.alt}
+                      alt={t(item.alt)}
                       loading="lazy"
                       decoding="async"
                       width={472}
@@ -135,7 +139,7 @@ const WhyUsSection = () => {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={item.img}
-                      alt={item.alt}
+                      alt={t(item.alt)}
                       loading="lazy"
                       decoding="async"
                       width={1024}
@@ -146,7 +150,7 @@ const WhyUsSection = () => {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={item.img}
-                      alt={item.alt}
+                      alt={t(item.alt)}
                       loading="lazy"
                       decoding="async"
                       width={1024}
