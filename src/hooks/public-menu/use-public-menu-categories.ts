@@ -3,7 +3,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { getPublicMenuCategoriesRequest } from "@/lib/api";
-import { PUBLIC_MENU_STALE_TIME_MS } from "@/lib/public-menu-cache";
+import { PUBLIC_MENU_CATEGORIES_STALE_TIME_MS } from "@/lib/public-menu-cache";
 
 import { publicMenuKeys } from "./keys";
 import { toCategoriesInitialData, type PublicMenuCategoriesInitialPage } from "./types";
@@ -26,7 +26,7 @@ export function usePublicMenuCategories({
     enabled: enabled && menuId > 0,
     initialData: toCategoriesInitialData(initial),
     initialPageParam: initial.page,
-    staleTime: PUBLIC_MENU_STALE_TIME_MS,
+    staleTime: PUBLIC_MENU_CATEGORIES_STALE_TIME_MS,
     queryFn: ({ pageParam }) =>
       getPublicMenuCategoriesRequest(menuId, pageParam as number, pageSize),
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),

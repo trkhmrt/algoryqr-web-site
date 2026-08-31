@@ -69,7 +69,7 @@ function MenuShell({
   productSize = 20,
   productHasNext = false,
   categoryPage = 0,
-  categorySize = 6,
+  categorySize = 50,
   categoryHasNext = false,
 }: MenuTemplateRendererProps) {
   const analytics = useMenuVisitAnalytics(menu.menuId);

@@ -55,6 +55,7 @@ import {
 } from "@/lib/api";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { invalidateMenuCategories, useMenuCategories } from "@/hooks/use-menu-categories";
+import { publicMenuKeys } from "@/hooks/public-menu/keys";
 import { useMenuByQr } from "@/hooks/use-menu-by-qr";
 import { cn } from "@/lib/utils";
 
@@ -605,6 +606,10 @@ export default function MenuCategoriesPanel({
       current.map((main) => (main.id === categoryId ? { ...main, imageUrl } : main)),
     );
     void refresh();
+    void queryClient.invalidateQueries({ queryKey: publicMenuKeys.categories(resolvedMenuId) });
+    void queryClient.invalidateQueries({
+      queryKey: publicMenuKeys.categoryCover(resolvedMenuId, categoryId),
+    });
   };
 
   const busy = saving || deleting || reordering;

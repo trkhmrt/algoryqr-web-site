@@ -32,7 +32,7 @@ export default async function PublicMenuContentPage({
       productTotalElements={result.data.productTotalElements ?? result.data.products.length}
       productHasNext={result.data.productHasNext ?? false}
       categoryPage={result.data.categoryPage ?? 0}
-      categorySize={result.data.categorySize ?? 6}
+      categorySize={result.data.categorySize ?? 50}
       categoryTotalElements={result.data.categoryTotalElements}
       categoryHasNext={result.data.categoryHasNext ?? false}
     />
