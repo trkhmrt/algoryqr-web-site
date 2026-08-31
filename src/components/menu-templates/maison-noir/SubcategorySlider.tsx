@@ -50,7 +50,7 @@ export function MaisonNoirSubcategorySlider({
         <button
           type="button"
           onClick={onResetFilter}
-          className="text-xs text-[var(--mn-primary)] underline underline-offset-2 transition-colors hover:text-[var(--mn-fg)]"
+          className="mn-type-label text-[var(--mn-primary)] underline underline-offset-2 transition-colors hover:text-[var(--mn-fg)]"
         >
           Alt kategori filtresini sıfırla
         </button>
@@ -74,7 +74,7 @@ function SubcategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 snap-start border px-3 py-2 text-xs transition-colors ${
+      className={`shrink-0 snap-start border px-2.5 py-1.5 mn-type-label transition-colors ${
         active
           ? "border-[var(--mn-primary)] bg-[var(--mn-primary)] text-[var(--mn-primary-fg)]"
           : "border-[var(--mn-border)] bg-[var(--mn-surface)]/60 text-[var(--mn-fg)] hover:border-[var(--mn-primary)]/50"

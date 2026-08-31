@@ -54,29 +54,29 @@ export function MaisonNoirCategoryView({
 
   return (
     <main className="mx-auto min-h-[60vh] max-w-xl pb-8">
-      <div className="sticky top-14 z-30 border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/95 px-8 py-4 backdrop-blur-md">
+      <div className="sticky top-12 z-30 border-b border-[var(--mn-border)] bg-[var(--mn-bg)]/95 px-5 py-3 backdrop-blur-md sm:px-7">
         <button
           type="button"
           onClick={onBackToCategories}
-          className="text-xs text-[var(--mn-muted)] underline underline-offset-2 transition-colors hover:text-[var(--mn-primary)]"
+          className="mn-type-label text-[var(--mn-muted)] underline underline-offset-2 transition-colors hover:text-[var(--mn-primary)]"
         >
           ← Kategorilere dön
         </button>
 
-        <header className="mt-4 text-center">
-          <h1 className="font-display text-4xl tracking-tight text-[var(--mn-fg)]">
+        <header className="mt-3 text-center">
+          <h1 className="mn-type-page-title text-[var(--mn-fg)]">
             {category.name}
           </h1>
           {activeSubName ? (
-            <p className="mt-2 text-sm text-[var(--mn-primary)]">{activeSubName}</p>
+            <p className="mt-1.5 mn-type-label text-[var(--mn-primary)]">{activeSubName}</p>
           ) : null}
-          <div className="mn-hairline mx-auto mt-4 w-24" />
-          <p className="mt-3 text-xs text-[var(--mn-muted)]">
+          <div className="mn-hairline mx-auto mt-3 w-20" />
+          <p className="mt-2 mn-type-label text-[var(--mn-muted)]">
             {filteredProducts.length} ürün
           </p>
         </header>
 
-        <div className="mt-5">
+        <div className="mt-4">
           <MaisonNoirSubcategorySlider
             parentCategory={category}
             products={products}
@@ -87,9 +87,9 @@ export function MaisonNoirCategoryView({
         </div>
       </div>
 
-      <div className="px-8 pt-8">
+      <div className="px-5 pt-6 sm:px-7">
         {displayedProducts.length === 0 ? (
-          <p className="py-16 text-center text-sm text-[var(--mn-muted)]">
+          <p className="py-12 text-center mn-type-body text-[var(--mn-muted)]">
             Bu filtrede ürün bulunmuyor.
           </p>
         ) : (
@@ -110,13 +110,13 @@ export function MaisonNoirCategoryView({
             onClick={() =>
               setVisibleLimit((current) => current + MAISON_CATEGORY_PRODUCT_PAGE_SIZE)
             }
-            className="mt-8 block w-full border border-[var(--mn-primary)]/60 py-4 text-xs uppercase tracking-[0.28em] text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)]"
+            className="mt-6 block w-full border border-[var(--mn-primary)]/60 py-3 mn-type-eyebrow text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)]"
           >
             Daha fazla göster
           </button>
         ) : null}
 
-        <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-6 text-xs text-[var(--mn-muted)]" />
+        <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-4 mn-type-label text-[var(--mn-muted)]" />
       </div>
     </main>
   );

@@ -1,8 +1,10 @@
 import type { PublicMenuApiResponse } from "@/lib/api";
-import { API_BASE_URL } from "@/lib/config";
-import axios from "axios";
+import { PUBLIC_MENU_REVALIDATE_SECONDS } from "@/lib/public-menu-cache";
+import { fetchCachedPublicMenuUpstream } from "@/lib/public-menu-server-cache";
 
 const MENU_OWNER_PACKAGE_INACTIVE = "MENU_OWNER_PACKAGE_INACTIVE";
+
+export { PUBLIC_MENU_REVALIDATE_SECONDS };
 
 export type PublicMenuFetchResult =
   | { status: "ok"; data: PublicMenuApiResponse }
@@ -14,18 +16,24 @@ export async function fetchPublicMenu(identifier: string): Promise<PublicMenuFet
     return { status: "not_found" };
   }
 
-  const path = `${API_BASE_URL}/menu/public/id/${identifier}`;
-
   try {
-    const response = await axios.get<PublicMenuApiResponse>(path, { timeout: 15_000 });
-    return { status: "ok", data: response.data };
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 403) {
-      const code = (error.response.data as { code?: string } | undefined)?.code;
-      if (code === MENU_OWNER_PACKAGE_INACTIVE || code == null) {
+    const response = await fetchCachedPublicMenuUpstream(`/menu/public/id/${identifier}`);
+
+    if (response.status === 403) {
+      const body = (await response.json().catch(() => ({}))) as { code?: string };
+      if (body.code === MENU_OWNER_PACKAGE_INACTIVE || body.code == null) {
         return { status: "package_inactive" };
       }
+      return { status: "not_found" };
     }
+
+    if (!response.ok) {
+      return { status: "not_found" };
+    }
+
+    const data = (await response.json()) as PublicMenuApiResponse;
+    return { status: "ok", data };
+  } catch {
     return { status: "not_found" };
   }
 }

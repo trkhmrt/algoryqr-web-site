@@ -1,0 +1,5 @@
+export const PUBLIC_MENU_REVALIDATE_SECONDS = 600;
+
+export const PUBLIC_MENU_STALE_TIME_MS = PUBLIC_MENU_REVALIDATE_SECONDS * 1000;
+
+export const PUBLIC_MENU_CACHE_CONTROL = `public, s-maxage=${PUBLIC_MENU_REVALIDATE_SECONDS}, stale-while-revalidate=120`;

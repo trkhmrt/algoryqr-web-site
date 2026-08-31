@@ -100,12 +100,14 @@ function MenuShell({
                       analytics={analytics}
                     />
                     <SharedMenuChrome menuId={menu.menuId} />
-                    <MenuChefFab
-                      menuId={menu.menuId}
-                      chefName={menu.chefName}
-                      chefDisplayName={menu.chefDisplayName}
-                      chefAvatarUrl={menu.chefAvatarUrl}
-                    />
+                    {themeId !== "maison-noir" ? (
+                      <MenuChefFab
+                        menuId={menu.menuId}
+                        chefName={menu.chefName}
+                        chefDisplayName={menu.chefDisplayName}
+                        chefAvatarUrl={menu.chefAvatarUrl}
+                      />
+                    ) : null}
                   </CustomerAccountMenu>
                 </CampaignProductIdsProvider>
               </OrderingProvider>
