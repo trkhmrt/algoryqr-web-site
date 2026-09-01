@@ -13,7 +13,10 @@ import {
 import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
+  useMenuProductFeed,
   useMenuFeedback,
+  useMenuLocale,
+  useLocalizedMenuProduct,
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
@@ -23,12 +26,6 @@ import { MaisonNoirCategoryView } from "./CategoryView";
 import { MaisonNoirHomeView } from "./HomeView";
 import { MaisonNoirProductDetailView } from "./ProductDetailView";
 import { MaisonNoirShell } from "./Shell";
-
-const EMPTY_FALLBACK = {
-  missingCategory: "Kategori bulunamadı.",
-  missingProduct: "Ürün bulunamadı.",
-  backToMenu: "Menüye dön",
-} as const;
 
 export function MaisonNoirMenuTemplate({
   menu,
@@ -40,6 +37,7 @@ export function MaisonNoirMenuTemplate({
     supportsSubCategory: true,
   });
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
+  const localizedPinnedProduct = useLocalizedMenuProduct(pinnedProduct);
 
   usePublicMenuDeepLinkProduct({
     menuId: menu.menuId,
@@ -56,9 +54,11 @@ export function MaisonNoirMenuTemplate({
   );
 
   const categoryFeed = useMenuCategoryFeed();
+  const productFeed = useMenuProductFeed();
   const taxonomySource =
     categoryFeed.categories.length > 0 ? categoryFeed.categories : categories;
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
+  const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
 
   const activeCategoryId =
     view.type === "category"
@@ -79,8 +79,8 @@ export function MaisonNoirMenuTemplate({
 
   const selectedProduct = useMemo(() => {
     if (view.type !== "product") return null;
-    return resolveSelectedProduct(products, view.productId, pinnedProduct);
-  }, [view, products, pinnedProduct]);
+    return resolveSelectedProduct(displayProducts, view.productId, localizedPinnedProduct);
+  }, [view, displayProducts, localizedPinnedProduct]);
 
   const goHome = () => {
     setPinnedProduct(null);
@@ -154,7 +154,7 @@ export function MaisonNoirMenuTemplate({
         <MaisonNoirHomeView
           menu={menu}
           categories={displayCategories}
-          products={products}
+          products={displayProducts}
           onSelectCategory={selectCategory}
         />
       ) : null}
@@ -162,7 +162,7 @@ export function MaisonNoirMenuTemplate({
       {view.type === "category" && activeCategory ? (
         <MaisonNoirCategoryView
           category={activeCategory}
-          products={products}
+          products={displayProducts}
           subCategoryId={activeSubCategoryId}
           onBackToCategories={backToCategories}
           onSelectSubCategory={selectSubCategory}
@@ -171,7 +171,7 @@ export function MaisonNoirMenuTemplate({
       ) : null}
 
       {view.type === "category" && !activeCategory ? (
-        <MissingState message={EMPTY_FALLBACK.missingCategory} onHome={goHome} />
+        <MissingState type="category" onHome={goHome} />
       ) : null}
 
       {view.type === "product" && selectedProduct ? (
@@ -183,13 +183,16 @@ export function MaisonNoirMenuTemplate({
       ) : null}
 
       {view.type === "product" && !selectedProduct ? (
-        <MissingState message={EMPTY_FALLBACK.missingProduct} onHome={goHome} />
+        <MissingState type="product" onHome={goHome} />
       ) : null}
     </MaisonNoirShell>
   );
 }
 
-function MissingState({ message, onHome }: { message: string; onHome: () => void }) {
+function MissingState({ type, onHome }: { type: "category" | "product"; onHome: () => void }) {
+  const { t } = useMenuLocale();
+  const message = type === "category" ? t.missingCategory : t.missingProduct;
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-6 text-center text-sm text-[var(--mn-muted)]">
       <div>
@@ -199,7 +202,7 @@ function MissingState({ message, onHome }: { message: string; onHome: () => void
           onClick={onHome}
           className="mt-4 text-xs text-[var(--mn-primary)] underline underline-offset-2"
         >
-          {EMPTY_FALLBACK.backToMenu}
+          {t.backToMenu}
         </button>
       </div>
     </div>

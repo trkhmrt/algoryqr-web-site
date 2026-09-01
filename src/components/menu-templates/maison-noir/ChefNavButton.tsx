@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 
-import { useTranslatedText } from "@/components/google-translate-provider";
 import {
   resolveChefAvatarSrc,
   resolveChefDisplayName,
 } from "@/lib/chef/chef-identity";
 
 import { MenuChefChat } from "../chef/MenuChefChat";
+import { useMenuLocale } from "../shared/menu-locale";
 
 type MaisonNoirChefNavButtonProps = {
   menuId: number;
@@ -26,7 +26,8 @@ export function MaisonNoirChefNavButton({
 }: MaisonNoirChefNavButtonProps) {
   const [open, setOpen] = useState(false);
   const [chatMounted, setChatMounted] = useState(false);
-  const askChefLabel = useTranslatedText("Bana sor");
+  const { t } = useMenuLocale();
+  const askChefLabel = t.askChef;
   const displayName = resolveChefDisplayName(chefDisplayName, chefName);
   const avatarSrc = resolveChefAvatarSrc(chefAvatarUrl);
 

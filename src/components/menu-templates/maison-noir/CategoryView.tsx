@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
@@ -25,6 +25,11 @@ type CategoryViewProps = {
   onOpenProduct: (product: MenuProductApiItem) => void;
 };
 
+type VisibleLimitState = {
+  key: string;
+  limit: number;
+};
+
 export function MaisonNoirCategoryView({
   category,
   products,
@@ -34,11 +39,15 @@ export function MaisonNoirCategoryView({
   onOpenProduct,
 }: CategoryViewProps) {
   const { t } = useMenuLocale();
-  const [visibleLimit, setVisibleLimit] = useState(MAISON_CATEGORY_PRODUCT_PAGE_SIZE);
-
-  useEffect(() => {
-    setVisibleLimit(MAISON_CATEGORY_PRODUCT_PAGE_SIZE);
-  }, [category.categoryId, subCategoryId]);
+  const visibleLimitKey = `${category.categoryId}:${subCategoryId ?? "all"}`;
+  const [visibleLimitState, setVisibleLimitState] = useState<VisibleLimitState>({
+    key: visibleLimitKey,
+    limit: MAISON_CATEGORY_PRODUCT_PAGE_SIZE,
+  });
+  const visibleLimit =
+    visibleLimitState.key === visibleLimitKey
+      ? visibleLimitState.limit
+      : MAISON_CATEGORY_PRODUCT_PAGE_SIZE;
 
   const filteredProducts = useMemo(
     () => filterMaisonCategoryProducts(products, category, subCategoryId),
@@ -79,7 +88,7 @@ export function MaisonNoirCategoryView({
             </h1>
           </div>
           <span className="shrink-0 rounded-full border border-[var(--mn-border)] bg-[var(--mn-surface)]/70 px-2.5 py-1 mn-type-label text-[var(--mn-muted)]">
-            {filteredProducts.length} ürün
+            {filteredProducts.length} {t.productCount}
           </span>
         </div>
 
@@ -99,7 +108,7 @@ export function MaisonNoirCategoryView({
       <div className="px-5 pt-4 sm:px-7">
         {displayedProducts.length === 0 ? (
           <p className="py-12 text-center mn-type-body text-[var(--mn-muted)]">
-            Bu filtrede ürün bulunmuyor.
+            {t.noCategoryProducts}
           </p>
         ) : (
           <ul className="divide-y divide-[var(--mn-border)]">
@@ -117,11 +126,17 @@ export function MaisonNoirCategoryView({
           <button
             type="button"
             onClick={() =>
-              setVisibleLimit((current) => current + MAISON_CATEGORY_PRODUCT_PAGE_SIZE)
+              setVisibleLimitState((current) => ({
+                key: visibleLimitKey,
+                limit:
+                  (current.key === visibleLimitKey
+                    ? current.limit
+                    : MAISON_CATEGORY_PRODUCT_PAGE_SIZE) + MAISON_CATEGORY_PRODUCT_PAGE_SIZE,
+              }))
             }
             className="mt-6 block w-full border border-[var(--mn-primary)]/60 py-3 mn-type-eyebrow text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)]"
           >
-            Daha fazla göster
+            {t.showMore}
           </button>
         ) : null}
 

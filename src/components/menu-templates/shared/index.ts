@@ -91,6 +91,7 @@ export {
 } from "./use-chef-open-product";
 export { useMenuTemplateNav } from "./use-menu-template-nav";
 export type { MenuTemplateView } from "./use-menu-template-nav";
+export { useLocalizedMenuProduct } from "./use-localized-menu-product";
 export {
   parsePublicMenuViewFromSearchParams,
   usePublicMenuViewState,

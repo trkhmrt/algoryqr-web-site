@@ -3,10 +3,12 @@
 import { ArrowRight } from "lucide-react";
 
 import { useMenuPriceDisplay } from "../shared/menu-currency";
+import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 export function MaisonNoirCartBar() {
   const ordering = useOrderingOptional();
+  const { t } = useMenuLocale();
 
   if (!ordering || ordering.cartCount <= 0) {
     return null;
@@ -25,7 +27,7 @@ export function MaisonNoirCartBar() {
         className="pointer-events-auto flex w-full max-w-xl items-center justify-between gap-3 border border-[var(--mn-primary)]/60 bg-[var(--mn-bg)] px-5 py-4 text-[var(--mn-fg)] shadow-[var(--mn-shadow)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)]"
       >
         <span className="mn-tracked text-[0.58rem]">
-          Sepet · {ordering.cartCount}
+          {t.cart} · {ordering.cartCount}
         </span>
         <span className="flex items-center gap-2 font-display text-lg">
           {totalLabel}

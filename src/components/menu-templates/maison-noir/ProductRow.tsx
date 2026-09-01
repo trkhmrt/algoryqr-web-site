@@ -4,6 +4,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 
 import { useOrderingOptional } from "../shared/ordering-context";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
+import { useMenuLocale } from "../shared/menu-locale";
 
 type ProductRowProps = {
   product: MenuProductApiItem;
@@ -12,6 +13,7 @@ type ProductRowProps = {
 
 export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
   const ordering = useOrderingOptional();
+  const { t } = useMenuLocale();
   const price = useMenuPriceDisplay(product.price, product.currency);
   const unavailable = product.available === false;
   const chefPick = product.chefRecommended && !unavailable;
@@ -48,7 +50,7 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
           className="min-w-0 text-left transition-opacity hover:opacity-80"
         >
           {chefPick ? (
-            <p className="mb-1 mn-type-eyebrow text-[var(--mn-primary)]">Şef önerisi</p>
+            <p className="mb-1 mn-type-eyebrow text-[var(--mn-primary)]">{t.chefRecommended}</p>
           ) : null}
           <h3 className="mn-type-product text-[var(--mn-fg)]">{product.name}</h3>
           {product.description ? (
@@ -57,7 +59,9 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
             </p>
           ) : null}
           {unavailable ? (
-            <p className="mt-1.5 mn-type-eyebrow text-[var(--mn-muted)]">Mevcut değil</p>
+            <p className="mt-1.5 mn-type-eyebrow text-[var(--mn-muted)]">
+              {t.productUnavailable}
+            </p>
           ) : null}
         </button>
 
@@ -76,7 +80,7 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
               disabled={ordering.loading}
               className="inline-flex min-h-8 min-w-[3.5rem] items-center justify-center border border-[var(--mn-primary)]/50 px-2.5 mn-type-eyebrow text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)] disabled:opacity-50"
             >
-              Ekle
+              {t.addToCart}
             </button>
           ) : null}
         </div>
