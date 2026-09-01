@@ -31,6 +31,7 @@ import {
   useMenuCategoryFeed,
 } from "./shared";
 import type { MenuTemplateRendererProps } from "./types";
+import { GoogleTranslateProvider } from "@/components/google-translate-provider";
 
 const EMPTY_DICT: Record<string, string> = {};
 
@@ -157,7 +158,9 @@ export function MenuTemplateRenderer(props: MenuTemplateRendererProps) {
   return (
     <MenuLocaleProvider scopeKey={scopeKey} defaultLocale={guestDefaults.locale}>
       <MenuCurrencyProvider scopeKey={scopeKey} defaultCurrency={guestDefaults.currency}>
-        <MenuShell {...props} />
+        <GoogleTranslateProvider>
+          <MenuShell {...props} />
+        </GoogleTranslateProvider>
       </MenuCurrencyProvider>
     </MenuLocaleProvider>
   );
