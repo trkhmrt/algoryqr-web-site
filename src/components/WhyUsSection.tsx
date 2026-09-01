@@ -1,165 +1,110 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { QrCode, Sparkles } from "lucide-react";
 
 import { Reveal } from "@/components/site/Reveal";
-import { DetailExploreLink } from "@/components/site/DetailExploreLink";
-import { VioletBeamCard } from "@/components/site/VioletBeamCard";
+import { cn } from "@/lib/utils";
 import { Tx, useT } from "@/components/google-translate-provider";
 
-const SMART_CHEF = {
-  eyebrow: "Yapay zeka asistanı",
-  title: "Akıllı Şef",
-  text: "Misafirleriniz menüde soru sorsun; yapay zeka tercihlerine göre ürün önersin. Sıcak içecekten tatlıya, sohbet akışında görsel kartlarla doğrudan siparişe yönlendirin.",
-  screenshot: "/images/akilli-sef-screenshot.png",
-  screenshotAlt: "Akıllı Şef menü asistanı — misafir sohbeti ve ürün öneri kartları",
+type FeatureItem = {
+  id: string;
+  title: string;
+  eyebrow: string;
+  text: string;
+  aiIcon?: boolean;
+  qrIcon?: boolean;
+  bentoClass: string;
 };
 
-const HIGHLIGHTS = [
+const FEATURES: FeatureItem[] = [
+  {
+    id: "digital-menu",
+    title: "Dijital Menü & QR",
+    eyebrow: "Temel ürün",
+    text: "Hazır şablonlarla menünüzü yayınlayın. Tek QR ile fiyat ve ürün güncellemelerini anında yansıtın; yeniden baskı gerekmez.",
+    qrIcon: true,
+    bentoClass: "md:col-span-2 lg:col-span-2 lg:row-span-2",
+  },
+  {
+    id: "akilli-sef",
+    title: "Akıllı Şef",
+    eyebrow: "Yapay zeka asistanı",
+    text: "Misafirler menüde soru sorar, her dilde yanıt alır ve görsel kartlarla siparişe yönlendirilir. Dijital menünüze gömülü çalışır; ek kurulum gerekmez.",
+    aiIcon: true,
+    bentoClass: "md:col-span-2 lg:col-span-2",
+  },
   {
     id: "akilli-ozet",
     title: "Akıllı Özet",
     eyebrow: "Yapay zeka asistanı",
     text: "Ürün adı, kategori ve etiketlerinize göre yapay zeka destekli açıklama üretin; metin doğrudan menünüze yazılır.",
-    img: "/images/akilli-ozet-card.png",
-    alt: "Akıllı Özet — yapay zeka ile üretilen ürün açıklaması",
-    imageVariant: "screenshot" as const,
     aiIcon: true,
+    bentoClass: "lg:col-span-1",
   },
   {
     id: "akilli-raporlama",
     title: "Akıllı Raporlama",
     eyebrow: "Yapay zeka analizi",
-    text: "Menü ziyaretlerinizi, ürün ilgisini ve müşteri puanlarını yapay zeka yorumlar; funnel, yoğun saatler ve aksiyon önerileriyle PDF rapor sunar.",
-    img: "/images/akilli-raporlama-card.png",
-    alt: "Akıllı Raporlama — yapay zeka ile üretilen menü analiz raporu",
-    imageVariant: "screenshot" as const,
+    text: "Ziyaret, ürün ilgisi ve müşteri puanlarını yapay zeka yorumlar; funnel, yoğun saatler ve aksiyon önerileriyle PDF rapor sunar.",
     aiIcon: true,
+    bentoClass: "lg:col-span-1",
   },
 ];
+
+function FeatureCard({ item, t }: { item: FeatureItem; t: (text: string) => string }) {
+  return (
+    <div className="flex h-full flex-col rounded-2xl border border-border/40 bg-white/95 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors hover:border-border/70 dark:bg-card/95 sm:p-8">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {t(item.eyebrow)}
+      </p>
+      <h3 className="mt-3 flex items-center gap-2 text-[clamp(1.35rem,2.5vw,1.75rem)] font-extrabold leading-[1.1] tracking-[-0.03em]">
+        {item.qrIcon ? (
+          <QrCode className="h-[0.9em] w-[0.9em] shrink-0 text-primary" aria-hidden />
+        ) : null}
+        {item.aiIcon ? (
+          <Sparkles className="h-[0.9em] w-[0.9em] shrink-0 text-primary" aria-hidden />
+        ) : null}
+        {t(item.title)}
+      </h3>
+      <p className="mt-4 flex-1 text-sm leading-relaxed text-muted-foreground sm:text-base">
+        {t(item.text)}
+      </p>
+    </div>
+  );
+}
 
 const WhyUsSection = () => {
   const t = useT();
 
   return (
-    <section id="why-us" className="relative py-[clamp(3.5rem,8vw,8rem)]">
+    <section id="why-us" className="relative scroll-mt-14 py-[clamp(3.5rem,8vw,8rem)] sm:scroll-mt-16">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--primary)/0.1),transparent_65%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--primary)/0.08),transparent_65%)]"
         aria-hidden
       />
 
       <div className="container relative mx-auto w-full max-w-6xl px-4 sm:px-6">
-        <Reveal className="mb-12 max-w-4xl sm:mb-16">
+        <Reveal className="mb-10 max-w-3xl sm:mb-12">
           <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-            <Tx>Neden biz</Tx>
+            <Tx>Platform özellikleri</Tx>
           </p>
-          <h2 className="heading mt-5 text-[clamp(2.75rem,6.5vw,4.75rem)] font-extrabold leading-[0.98] tracking-[-0.04em] text-balance">
-            <Tx>Yeni nesil</Tx>{" "}
+          <h2 className="heading mt-5 text-[clamp(2.25rem,5.5vw,3.75rem)] font-extrabold leading-[0.98] tracking-[-0.04em] text-balance">
+            <Tx>Menüden rapora</Tx>{" "}
             <span className="font-light text-muted-foreground">
-              <Tx>QR menü deneyimi</Tx>
+              <Tx>tek çözüm</Tx>
             </span>
           </h2>
-          <p className="section-desc-lg mt-6 max-w-3xl text-pretty">
-            <Tx>AlgoryQR, işletmenizin hızla yayına çıkmasını, güvenle büyümesini ve veriye dayalı karar almasını sağlar.</Tx>
+          <p className="section-desc-lg mt-5 max-w-2xl text-pretty">
+            <Tx>
+              Dijital menü, yapay zeka asistanı, içerik üretimi ve raporlama — hepsi tek panelde.
+            </Tx>
           </p>
         </Reveal>
 
-        <Reveal className="mb-4" as="article">
-          <VioletBeamCard>
-            <div className="grid gap-10 p-6 sm:p-10 lg:grid-cols-2 lg:items-center lg:gap-12 lg:p-12">
-            <div className="flex items-center justify-center lg:justify-start">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={SMART_CHEF.screenshot}
-                alt={t(SMART_CHEF.screenshotAlt)}
-                loading="lazy"
-                decoding="async"
-                width={430}
-                height={932}
-                className="h-auto w-full max-w-[min(100%,280px)] rounded-[1.75rem] object-cover shadow-[0_24px_56px_-16px_rgba(0,0,0,0.28)] ring-1 ring-border/70 sm:max-w-[300px] lg:max-w-[320px]"
-              />
-            </div>
-
-            <div className="flex flex-col justify-center lg:py-4">
-              <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-                {t(SMART_CHEF.eyebrow)}
-              </p>
-              <h3 className="heading mt-5 text-[clamp(2.5rem,5vw,3.75rem)] font-extrabold leading-[1] tracking-[-0.04em]">
-                {t(SMART_CHEF.title)}
-              </h3>
-              <p className="section-desc-lg mt-6 max-w-lg text-pretty">
-                {t(SMART_CHEF.text)}
-              </p>
-              <DetailExploreLink href="/akilli-sef" className="mt-10">
-                <Tx>Detaylı incele</Tx>
-              </DetailExploreLink>
-            </div>
-            </div>
-          </VioletBeamCard>
-        </Reveal>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {HIGHLIGHTS.map((item, i) => (
-            <Reveal key={item.id} delay={(i + 1) * 110} as="article" className="min-w-0">
-              <div className="group flex h-full flex-col rounded-3xl border border-border bg-card/50 p-8 transition-colors hover:border-foreground/15 sm:p-10">
-                {"eyebrow" in item && item.eyebrow ? (
-                  <p className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {t(item.eyebrow)}
-                  </p>
-                ) : null}
-                <h3
-                  className={`flex items-center gap-2.5 text-[clamp(1.75rem,3vw,2.25rem)] font-extrabold leading-[1.08] tracking-[-0.03em] ${
-                    "eyebrow" in item && item.eyebrow ? "mt-3" : ""
-                  }`}
-                >
-                  {"aiIcon" in item && item.aiIcon ? (
-                    <Sparkles
-                      className="h-[0.95em] w-[0.95em] shrink-0 text-primary"
-                      aria-hidden
-                    />
-                  ) : null}
-                  {t(item.title)}
-                </h3>
-                <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                  {t(item.text)}
-                </p>
-                <div className="mt-10 grid flex-1 place-items-center">
-                  {item.imageVariant === "screenshot" ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={item.img}
-                      alt={t(item.alt)}
-                      loading="lazy"
-                      decoding="async"
-                      width={472}
-                      height={369}
-                      className="h-auto w-full max-w-[min(100%,380px)] rounded-2xl shadow-[0_20px_48px_-14px_rgba(0,0,0,0.22)] ring-1 ring-border/70 transition-transform duration-700 ease-out group-hover:-translate-y-1"
-                    />
-                  ) : item.imageVariant === "wide-illustration" ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={item.img}
-                      alt={t(item.alt)}
-                      loading="lazy"
-                      decoding="async"
-                      width={1024}
-                      height={1024}
-                      className="h-auto w-full max-w-[min(100%,440px)] transition-transform duration-700 ease-out group-hover:-translate-y-1.5"
-                    />
-                  ) : (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={item.img}
-                      alt={t(item.alt)}
-                      loading="lazy"
-                      decoding="async"
-                      width={1024}
-                      height={1024}
-                      className="w-56 max-w-full transition-transform duration-700 ease-out group-hover:-translate-y-1.5 sm:w-64"
-                    />
-                  )}
-                </div>
-              </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
+          {FEATURES.map((item, i) => (
+            <Reveal key={item.id} delay={(i + 1) * 60} as="article" className={cn("min-w-0", item.bentoClass)}>
+              <FeatureCard item={item} t={t} />
             </Reveal>
           ))}
         </div>

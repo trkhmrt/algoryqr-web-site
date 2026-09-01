@@ -2,10 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 
+import { useMenuPriceDisplayOptional } from "@/components/menu-templates/shared/menu-currency";
+import { useT } from "@/components/google-translate-provider";
 import {
-  formatPackagePrice,
-  formatYearlySavingsBadge,
-  formatYearlySavingsLabel,
   resolveYearlySavingsPercent,
   type PackagePricing,
 } from "@/lib/package-display";
@@ -22,11 +21,28 @@ export function AnimatedPackagePrice({
   currency,
   size = "default",
 }: AnimatedPackagePriceProps) {
+  const t = useT();
   const compact = size === "compact";
-  const amountLabel = formatPackagePrice(pricing.amount, currency);
+  const amountConverted = useMenuPriceDisplayOptional(pricing.amount, currency);
+  const compareConverted = useMenuPriceDisplayOptional(pricing.compareAmount ?? null, currency);
+  const savingsConverted = useMenuPriceDisplayOptional(pricing.yearlySavings ?? null, currency);
+
+  const amountLabel =
+    !Number.isFinite(pricing.amount) || pricing.amount === 0 ? t("Ücretsiz") : amountConverted;
   const compareLabel =
-    pricing.compareAmount != null ? formatPackagePrice(pricing.compareAmount, currency) : null;
+    pricing.compareAmount != null && pricing.compareAmount > 0 ? compareConverted : null;
   const hasSavings = pricing.yearlySavings != null && pricing.yearlySavings > 0;
+  const savingsPercent = resolveYearlySavingsPercent(pricing);
+  const savingsBadge =
+    hasSavings && pricing.yearlySavings != null
+      ? savingsPercent != null && savingsPercent > 0
+        ? t(`%${savingsPercent} indirim ile ${savingsConverted} tasarruf`)
+        : t(`${savingsConverted} tasarruf`)
+      : null;
+  const savingsTitle =
+    hasSavings && pricing.yearlySavings != null
+      ? t(`Aylık ödemeye göre ${savingsConverted} tasarruf`)
+      : null;
 
   return (
     <div
@@ -98,7 +114,7 @@ export function AnimatedPackagePrice({
           </div>
 
           <div className={cn("flex shrink-0 items-center", compact ? "h-5 sm:h-6" : "h-6")}>
-            {hasSavings ? (
+            {hasSavings && savingsBadge ? (
               <span
                 className={cn(
                   "inline-flex max-w-full truncate rounded-full bg-emerald-500/10 font-medium leading-none text-emerald-600 dark:text-emerald-400",
@@ -106,13 +122,9 @@ export function AnimatedPackagePrice({
                     ? "px-1.5 py-0.5 text-[10px] sm:px-2 sm:text-[11px]"
                     : "px-2 py-0.5 text-[11px]",
                 )}
-                title={formatYearlySavingsLabel(pricing.yearlySavings!, currency)}
+                title={savingsTitle ?? undefined}
               >
-                {formatYearlySavingsBadge(
-                  pricing.yearlySavings!,
-                  currency,
-                  resolveYearlySavingsPercent(pricing),
-                )}
+                {savingsBadge}
               </span>
             ) : null}
           </div>

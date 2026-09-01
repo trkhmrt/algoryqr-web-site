@@ -1,8 +1,11 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
+import HowItWorksSection from "@/components/HowItWorksSection";
+import SmartChefCompareSection from "@/components/SmartChefCompareSection";
+import MenuComplianceSection from "@/components/MenuComplianceSection";
+import GlobalMenuSection from "@/components/GlobalMenuSection";
+import SmartSummarySection from "@/components/SmartSummarySection";
 import WhyUsSection from "@/components/WhyUsSection";
-import AnimatedBeam from "@/components/AnimatedBeam";
-import StatsSection from "@/components/StatsSection";
 import PricingSection from "@/components/PricingSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import FaqSection from "@/components/FaqSection";
@@ -20,9 +23,12 @@ const Index = ({ initialUser = null }: IndexProps) => {
       <Navbar initialUser={initialUser} />
       <main className="w-full">
         <HeroSection />
+        <HowItWorksSection />
+        <SmartChefCompareSection />
+        <MenuComplianceSection />
+        <GlobalMenuSection />
+        <SmartSummarySection />
         <WhyUsSection />
-        <AnimatedBeam />
-        <StatsSection />
         <PricingSection initialUser={initialUser} />
         <TestimonialsSection />
         <FaqSection />
