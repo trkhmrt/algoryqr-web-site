@@ -1,18 +1,22 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
-import { isCardVerificationConversation, resolveCardVerificationReturnPath } from "@/lib/card-verification";
+import {
+  getCardVerificationStatus,
+  isCardVerificationConversation,
+  resolveCardVerificationReturnPath,
+} from "@/lib/card-verification";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { abandonPendingPaymentAttempt } from "@/lib/purchase-fulfillment";
 
 function resolvePaymentRedirect(status: string | null): "success" | "failed" | "unknown" {
   const normalized = status?.trim().toLowerCase() ?? "";
-  if (normalized === "success" || normalized === "successful") return "success";
+  if (normalized === "success" || normalized === "successful" || normalized === "refunded") return "success";
   if (normalized === "failed" || normalized === "failure") return "failed";
   return "unknown";
 }
@@ -22,9 +26,46 @@ function PaymentResultContent() {
   const router = useRouter();
   const conversationId = searchParams.get("conversationId");
   const cardVerification = isCardVerificationConversation(conversationId);
+  const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
+  const [verificationTimedOut, setVerificationTimedOut] = useState(false);
   const payment = resolvePaymentRedirect(
-    cardVerification ? searchParams.get("verification") ?? searchParams.get("status") : searchParams.get("status"),
+    cardVerification && verificationStatus
+      ? verificationStatus
+      : cardVerification
+        ? null
+        : searchParams.get("status"),
   );
+
+  useEffect(() => {
+    if (!cardVerification || !conversationId) return;
+
+    let active = true;
+    let timer: number | undefined;
+    const startedAt = Date.now();
+
+    const poll = async () => {
+      try {
+        const response = await getCardVerificationStatus(conversationId);
+        if (!active) return;
+        setVerificationStatus(response.status);
+        if (response.status.trim().toUpperCase() !== "INITIATED") return;
+      } catch {
+        // PayTR callback processing may briefly race with the browser redirect.
+      }
+
+      if (active && Date.now() - startedAt < 90_000) {
+        timer = window.setTimeout(() => void poll(), 2_000);
+      } else if (active) {
+        setVerificationTimedOut(true);
+      }
+    };
+
+    void poll();
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [cardVerification, conversationId]);
 
   const redirectTarget = useMemo(() => {
     if (cardVerification) {
@@ -44,12 +85,16 @@ function PaymentResultContent() {
       void abandonPendingPaymentAttempt({ cancelIfPending: true });
     }
 
+    if (cardVerification && !verificationTimedOut && payment !== "success" && payment !== "failed") {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       router.replace(redirectTarget);
-    }, 2500);
+    }, cardVerification ? 300 : 2500);
 
     return () => window.clearTimeout(timer);
-  }, [cardVerification, payment, redirectTarget, router]);
+  }, [cardVerification, payment, redirectTarget, router, verificationTimedOut]);
 
   const isSuccess = payment === "success";
   const isFailed = payment === "failed";
@@ -75,6 +120,8 @@ function PaymentResultContent() {
                 ? "Kart doğrulama başarılı"
                 : isFailed
                   ? "Kart doğrulama başarısız"
+                : verificationTimedOut
+                  ? "Kart doğrulama sonucu gecikiyor"
                   : "Kart doğrulama sonucu alınıyor"
               : isSuccess
                 ? "Ödeme başarılı"
@@ -88,7 +135,9 @@ function PaymentResultContent() {
                 ? "Kartınız kaydediliyor. Kayıtlı kartlar sayfasına yönlendiriliyorsunuz…"
                 : isFailed
                   ? "Kart doğrulanamadı. Kayıtlı kartlar sayfasına yönlendiriliyorsunuz…"
-                  : "Lütfen bekleyin…"
+                  : verificationTimedOut
+                    ? "PayTR bildirimi henüz ulaşmadı. Kayıtlı kartlar sayfasından tekrar kontrol edebilirsiniz."
+                    : "PayTR bildirimi bekleniyor…"
               : isSuccess
                 ? "Paketiniz kısa süre içinde hesabınıza tanımlanacak. Abonelik sayfasına yönlendiriliyorsunuz…"
                 : isFailed
