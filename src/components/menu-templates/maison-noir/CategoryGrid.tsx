@@ -7,6 +7,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode } from "../types";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
+import { useMenuLocale } from "../shared/menu-locale";
 
 import { maisonNoirCategoryMark } from "./styles";
 
@@ -23,6 +24,7 @@ export function MaisonNoirCategoryGrid({
   products,
   onSelectCategory,
 }: CategoryGridProps) {
+  const { t } = useMenuLocale();
   const mainCategories = useMemo(
     () =>
       categories
@@ -69,7 +71,7 @@ export function MaisonNoirCategoryGrid({
 
   if (tiles.length === 0) {
     return (
-      <p className="py-16 text-center mn-type-body text-[var(--mn-muted)]">Kategori bulunamadı.</p>
+      <p className="py-16 text-center mn-type-body text-[var(--mn-muted)]">{t.noCategoriesFound}</p>
     );
   }
 

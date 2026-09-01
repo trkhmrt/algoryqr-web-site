@@ -1,7 +1,21 @@
 "use client";
 
-import { Tx } from "@/components/google-translate-provider";
+import { useEffect } from "react";
+
+import {
+  useGoogleTranslateOptional,
+  useTranslatedText,
+} from "@/components/google-translate-provider";
 
 export function MenuCategoryName({ name }: { name: string }) {
-  return <Tx>{name}</Tx>;
+  const i18n = useGoogleTranslateOptional();
+  const translated = useTranslatedText(name);
+
+  useEffect(() => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    void i18n?.ensureTranslations([trimmed]);
+  }, [i18n, name]);
+
+  return <>{translated}</>;
 }

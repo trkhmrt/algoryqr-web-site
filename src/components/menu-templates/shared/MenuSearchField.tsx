@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils";
 
+import { useMenuLocaleOptional } from "./menu-locale";
+
 export type MenuSearchFieldProps = {
   value: string;
   onChange: (value: string) => void;
@@ -15,16 +17,20 @@ export type MenuSearchFieldProps = {
 export function MenuSearchField({
   value,
   onChange,
-  placeholder = "Ürün ara…",
+  placeholder,
   className,
   inputClassName,
   clearButtonClassName,
   id = "menu-search",
 }: MenuSearchFieldProps) {
+  const locale = useMenuLocaleOptional();
+  const t = locale?.t;
+  const resolvedPlaceholder = placeholder ?? t?.searchProducts ?? "Ürün ara…";
+
   return (
     <div className={cn("relative w-full", className)}>
       <label htmlFor={id} className="sr-only">
-        Ürün ara
+        {resolvedPlaceholder}
       </label>
       <svg
         aria-hidden
@@ -42,7 +48,7 @@ export function MenuSearchField({
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         autoComplete="off"
         className={cn(
           "w-full rounded-xl border border-current/15 bg-transparent py-2.5 pl-10 pr-10 text-sm outline-none transition placeholder:opacity-50 focus:border-current/40",
@@ -57,9 +63,9 @@ export function MenuSearchField({
             "absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs opacity-70 hover:opacity-100",
             clearButtonClassName,
           )}
-          aria-label="Aramayı temizle"
+          aria-label={t?.clearSearch ?? "Aramayı temizle"}
         >
-          Temizle
+          {t?.clearSearch ?? "Temizle"}
         </button>
       ) : null}
     </div>

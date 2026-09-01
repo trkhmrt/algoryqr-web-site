@@ -14,6 +14,7 @@ import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { Tx } from "@/components/google-translate-provider";
 import { pickFeaturedProducts } from "./category-utils";
@@ -36,6 +37,7 @@ export function CleverDishScribeHomeView({
   onSearchChange,
   onOpenProduct,
 }: HomeViewProps) {
+  const { t } = useMenuLocale();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const flatCategories = useMemo(() => flattenNavCategories(categories), [categories]);
 
@@ -63,7 +65,7 @@ export function CleverDishScribeHomeView({
       return [
         {
           key: "all",
-          title: "Menü",
+          title: t.menuTitle,
           mark: "🔥",
           products: available,
           compact: available.length > 4,
@@ -98,7 +100,7 @@ export function CleverDishScribeHomeView({
             type="search"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Menüde ara..."
+            placeholder={t.searchMenu}
             className="cds-enter w-full rounded-full border border-[var(--cds-border)] bg-[var(--cds-surface)] px-4 py-2 text-sm text-[var(--cds-fg)] outline-none transition-shadow placeholder:text-[var(--cds-muted)] focus:border-[var(--cds-accent)] focus:ring-2 focus:ring-[var(--cds-accent)]/15"
           />
 
@@ -108,7 +110,7 @@ export function CleverDishScribeHomeView({
                 active={activeCategoryId == null}
                 onClick={() => setActiveCategoryId(null)}
               >
-                Tümü
+                {t.all}
               </CategoryPill>
               {flatCategories.map((cat) => (
                 <CategoryPill
@@ -126,7 +128,7 @@ export function CleverDishScribeHomeView({
 
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-5 sm:px-6 sm:py-6">
         {filteredProducts.length === 0 ? (
-          <div className="py-20 text-center text-sm text-[var(--cds-muted)]">Ürün bulunamadı.</div>
+          <div className="py-20 text-center text-sm text-[var(--cds-muted)]">{t.noProductsFound}</div>
         ) : searchQuery.trim() || activeCategoryId != null ? (
           <ProductSection
             title={searchQuery.trim() ? "Arama sonuçları" : undefined}

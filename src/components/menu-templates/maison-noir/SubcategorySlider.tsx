@@ -1,7 +1,11 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
+import { useMenuLocale } from "../shared/menu-locale";
 
 import { countMaisonSubcategoryProducts } from "./category-utils";
 
@@ -20,6 +24,7 @@ export function MaisonNoirSubcategorySlider({
   onSelectSubCategory,
   onResetFilter,
 }: SubcategorySliderProps) {
+  const { t } = useMenuLocale();
   const subcategories = parentCategory.children ?? [];
   if (subcategories.length === 0) return null;
 
@@ -30,7 +35,7 @@ export function MaisonNoirSubcategorySlider({
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-0.5 scrollbar-none">
         <SubcategoryChip
           active={activeSubCategoryId == null}
-          label="Tümü"
+          label={t.all}
           onClick={() => onSelectSubCategory(null)}
         />
         {subcategories.map((sub) => {
@@ -39,7 +44,7 @@ export function MaisonNoirSubcategorySlider({
             <SubcategoryChip
               key={sub.categoryId}
               active={activeSubCategoryId === sub.categoryId}
-              label={sub.name}
+              label={<MenuCategoryName name={sub.name} />}
               count={count}
               onClick={() => onSelectSubCategory(sub.categoryId)}
             />
@@ -52,7 +57,7 @@ export function MaisonNoirSubcategorySlider({
           onClick={onResetFilter}
           className="mn-type-label text-[var(--mn-primary)] underline underline-offset-2 transition-colors hover:text-[var(--mn-fg)]"
         >
-          Alt kategori filtresini sıfırla
+          {t.resetSubcategoryFilter}
         </button>
       ) : null}
     </div>
@@ -66,7 +71,7 @@ function SubcategoryChip({
   onClick,
 }: {
   active: boolean;
-  label: string;
+  label: ReactNode;
   count?: number;
   onClick: () => void;
 }) {

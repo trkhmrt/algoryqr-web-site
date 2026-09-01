@@ -83,6 +83,35 @@ export type MenuStrings = {
   back: string;
   productUnavailable: string;
   chefRecommended: string;
+  categories: string;
+  popular: string;
+  all: string;
+  searchMenu: string;
+  searchProducts: string;
+  backToCategories: string;
+  noCategoriesFound: string;
+  noCategoryProducts: string;
+  noPopularProducts: string;
+  noSearchCategories: string;
+  resetSubcategoryFilter: string;
+  cartNotePlaceholder: string;
+  myCart: string;
+  productCount: string;
+  decreaseQty: string;
+  increaseQty: string;
+  whatsapp: string;
+  askChef: string;
+  missingCategory: string;
+  missingProduct: string;
+  backToMenu: string;
+  clearSearch: string;
+  cartEmpty: string;
+  cartNote: string;
+  total: string;
+  tableLabel: string;
+  tableOrder: string;
+  noProductsFound: string;
+  menuTitle: string;
 };
 
 
@@ -145,6 +174,36 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     back: "Geri",
     productUnavailable: "Bu ürün şu an mevcut değil.",
     chefRecommended: "Şef önerisi",
+    categories: "Kategoriler",
+    popular: "Popüler",
+    all: "Tümü",
+    searchMenu: "Menüde ara...",
+    searchProducts: "Ürün ara...",
+    backToCategories: "Kategorilere dön",
+    noCategoriesFound: "Kategori bulunamadı.",
+    noCategoryProducts: "Bu kategoride ürün bulunamadı.",
+    noPopularProducts:
+      "Henüz popüler ürün yok. Yukarıdan bir kategori seçerek menüye göz atabilirsiniz.",
+    noSearchCategories: "Aramanızla eşleşen kategori bulunamadı.",
+    resetSubcategoryFilter: "Alt kategori filtresini sıfırla",
+    cartNotePlaceholder: "Örn. az pişmiş, sos ayrı",
+    myCart: "Sepetim",
+    productCount: "ürün",
+    decreaseQty: "Azalt",
+    increaseQty: "Artır",
+    whatsapp: "WhatsApp",
+    askChef: "Bana sor",
+    missingCategory: "Kategori bulunamadı.",
+    missingProduct: "Ürün bulunamadı.",
+    backToMenu: "Menüye dön",
+    clearSearch: "Aramayı temizle",
+    cartEmpty: "Sepetiniz boş.",
+    cartNote: "Not",
+    total: "Toplam",
+    tableLabel: "Masa",
+    tableOrder: "Masa siparişi",
+    noProductsFound: "Ürün bulunamadı.",
+    menuTitle: "Menü",
   },
   en: {
     welcomeTitle: "Welcome",
@@ -204,6 +263,35 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     back: "Back",
     productUnavailable: "This item is currently unavailable.",
     chefRecommended: "Chef's pick",
+    categories: "Categories",
+    popular: "Popular",
+    all: "All",
+    searchMenu: "Search menu...",
+    searchProducts: "Search products...",
+    backToCategories: "Back to categories",
+    noCategoriesFound: "No categories found.",
+    noCategoryProducts: "No products in this category.",
+    noPopularProducts: "No popular items yet. Browse a category above.",
+    noSearchCategories: "No categories match your search.",
+    resetSubcategoryFilter: "Clear subcategory filter",
+    cartNotePlaceholder: "E.g. medium rare, sauce on the side",
+    myCart: "My cart",
+    productCount: "items",
+    decreaseQty: "Decrease",
+    increaseQty: "Increase",
+    whatsapp: "WhatsApp",
+    askChef: "Ask me",
+    missingCategory: "Category not found.",
+    missingProduct: "Product not found.",
+    backToMenu: "Back to menu",
+    clearSearch: "Clear search",
+    cartEmpty: "Your cart is empty.",
+    cartNote: "Note",
+    total: "Total",
+    tableLabel: "Table",
+    tableOrder: "Table order",
+    noProductsFound: "No products found.",
+    menuTitle: "Menu",
   },
   ru: {
     welcomeTitle: "Добро пожаловать",
@@ -263,6 +351,35 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     back: "Назад",
     productUnavailable: "Этот продукт сейчас недоступен.",
     chefRecommended: "Рекомендация шефа",
+    categories: "Категории",
+    popular: "Популярное",
+    all: "Все",
+    searchMenu: "Поиск в меню...",
+    searchProducts: "Поиск продуктов...",
+    backToCategories: "Назад к категориям",
+    noCategoriesFound: "Категории не найдены.",
+    noCategoryProducts: "В этой категории нет продуктов.",
+    noPopularProducts: "Популярных блюд пока нет. Выберите категорию выше.",
+    noSearchCategories: "Нет категорий по вашему запросу.",
+    resetSubcategoryFilter: "Сбросить фильтр подкатегории",
+    cartNotePlaceholder: "Напр. medium rare, соус отдельно",
+    myCart: "Моя корзина",
+    productCount: "тов.",
+    decreaseQty: "Уменьшить",
+    increaseQty: "Увеличить",
+    whatsapp: "WhatsApp",
+    askChef: "Спросить",
+    missingCategory: "Категория не найдена.",
+    missingProduct: "Продукт не найден.",
+    backToMenu: "В меню",
+    clearSearch: "Очистить поиск",
+    cartEmpty: "Корзина пуста.",
+    cartNote: "Примечание",
+    total: "Итого",
+    tableLabel: "Стол",
+    tableOrder: "Заказ со стола",
+    noProductsFound: "Продукты не найдены.",
+    menuTitle: "Меню",
   },
   ar: {
     welcomeTitle: "مرحباً",
@@ -322,6 +439,35 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     back: "رجوع",
     productUnavailable: "هذا المنتج غير متوفر حالياً.",
     chefRecommended: "اختيار الشيف",
+    categories: "الفئات",
+    popular: "الأكثر شعبية",
+    all: "الكل",
+    searchMenu: "ابحث في القائمة...",
+    searchProducts: "ابحث عن المنتجات...",
+    backToCategories: "العودة إلى الفئات",
+    noCategoriesFound: "لم يتم العثور على فئات.",
+    noCategoryProducts: "لا توجد منتجات في هذه الفئة.",
+    noPopularProducts: "لا توجد عناصر شائعة بعد. تصفح فئة من الأعلى.",
+    noSearchCategories: "لا توجد فئات تطابق بحثك.",
+    resetSubcategoryFilter: "إزالة فلتر الفئة الفرعية",
+    cartNotePlaceholder: "مثال: متوسط الاستواء، الصلصة منفصلة",
+    myCart: "سلتي",
+    productCount: "منتج",
+    decreaseQty: "تقليل",
+    increaseQty: "زيادة",
+    whatsapp: "واتساب",
+    askChef: "اسألني",
+    missingCategory: "الفئة غير موجودة.",
+    missingProduct: "المنتج غير موجود.",
+    backToMenu: "العودة إلى القائمة",
+    clearSearch: "مسح البحث",
+    cartEmpty: "سلتك فارغة.",
+    cartNote: "ملاحظة",
+    total: "الإجمالي",
+    tableLabel: "طاولة",
+    tableOrder: "طلب الطاولة",
+    noProductsFound: "لم يتم العثور على منتجات.",
+    menuTitle: "القائمة",
   },
 };
 

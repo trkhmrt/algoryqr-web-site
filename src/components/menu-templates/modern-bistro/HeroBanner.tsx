@@ -82,7 +82,7 @@ export function ModernBistroHeroBanner({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50"
-                aria-label="WhatsApp"
+                aria-label={t.whatsapp}
               >
                 <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
               </a>

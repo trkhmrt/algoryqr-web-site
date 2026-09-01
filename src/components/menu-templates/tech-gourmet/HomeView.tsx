@@ -12,6 +12,7 @@ import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { Tx } from "@/components/google-translate-provider";
 import { techGourmetCategoryMark } from "./styles";
@@ -35,6 +36,7 @@ export function TechGourmetHomeView({
   onSelectCategory,
   onOpenProduct,
 }: HomeViewProps) {
+  const { t } = useMenuLocale();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
 
   const flatCategories = useMemo(() => flattenNavCategories(categories), [categories]);
@@ -111,7 +113,7 @@ export function TechGourmetHomeView({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="ÜRÜN ARA..."
+              placeholder={t.searchProducts}
               className="w-full py-2 pl-3 pr-4 text-sm outline-none"
               style={{
                 backgroundColor: "var(--tg-surface-container)",
