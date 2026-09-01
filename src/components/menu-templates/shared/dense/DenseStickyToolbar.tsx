@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 import type { MenuNavCategory } from "../../types";
 import { MenuCategoryRail } from "../MenuCategoryRail";
+import { useMenuLocaleOptional } from "../menu-locale";
 
 type DenseStickyToolbarProps = {
   searchQuery: string;
@@ -29,7 +30,7 @@ type DenseStickyToolbarProps = {
 export function DenseStickyToolbar({
   searchQuery,
   onSearchChange,
-  searchPlaceholder = "Ürün ara…",
+  searchPlaceholder,
   className,
   innerClassName,
   searchClassName,
@@ -43,6 +44,9 @@ export function DenseStickyToolbar({
   extra,
   subFilters,
 }: DenseStickyToolbarProps) {
+  const locale = useMenuLocaleOptional();
+  const resolvedPlaceholder = searchPlaceholder ?? locale?.t.searchProducts ?? "Ürün ara…";
+
   return (
     <div className={cn("sticky top-0 z-30 backdrop-blur-xl", className)}>
       <div className={cn("px-4 py-2", innerClassName)}>
@@ -56,7 +60,7 @@ export function DenseStickyToolbar({
           <input
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={resolvedPlaceholder}
             className={cn(
               "w-full rounded-xl border py-2.5 pl-10 pr-3 text-sm focus:outline-none focus:ring-2",
               searchClassName,

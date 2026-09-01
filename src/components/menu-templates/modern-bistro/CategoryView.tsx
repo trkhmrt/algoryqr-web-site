@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { useMenuLocale } from "../shared/menu-locale";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
 
 import {
@@ -32,6 +33,7 @@ export function ModernBistroCategoryView({
   onSelectSubCategory,
   onOpenProduct,
 }: CategoryViewProps) {
+  const { t } = useMenuLocale();
   const [visibleLimit, setVisibleLimit] = useState(MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function ModernBistroCategoryView({
               type="button"
               onClick={onBackToCategories}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] text-[var(--mb-fg)] transition-colors hover:bg-[var(--mb-muted-surface)]"
-              aria-label="Kategorilere dön"
+              aria-label={t.backToCategories}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>

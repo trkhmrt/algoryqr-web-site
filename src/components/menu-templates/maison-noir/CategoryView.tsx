@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { useMenuLocale } from "../shared/menu-locale";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
 
 import {
@@ -32,6 +33,7 @@ export function MaisonNoirCategoryView({
   onSelectSubCategory,
   onOpenProduct,
 }: CategoryViewProps) {
+  const { t } = useMenuLocale();
   const [visibleLimit, setVisibleLimit] = useState(MAISON_CATEGORY_PRODUCT_PAGE_SIZE);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function MaisonNoirCategoryView({
               type="button"
               onClick={onBackToCategories}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--mn-border)] text-[var(--mn-fg)] transition-colors hover:border-[var(--mn-primary)]/50 hover:text-[var(--mn-primary)]"
-              aria-label="Kategorilere dön"
+              aria-label={t.backToCategories}
             >
               <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
             </button>

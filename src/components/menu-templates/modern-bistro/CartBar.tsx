@@ -3,10 +3,12 @@
 import { ArrowRight } from "lucide-react";
 
 import { useMenuPriceDisplay } from "../shared/menu-currency";
+import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 export function ModernBistroCartBar() {
   const ordering = useOrderingOptional();
+  const { t } = useMenuLocale();
 
   if (!ordering || ordering.cartCount <= 0) {
     return null;
@@ -23,7 +25,7 @@ export function ModernBistroCartBar() {
         className="pointer-events-auto flex w-full max-w-xl items-center justify-between gap-3 rounded-2xl bg-[var(--mb-primary)] px-4 py-3.5 text-[var(--mb-primary-fg)] shadow-[var(--mb-shadow)] transition-transform active:scale-[0.99]"
       >
         <span className="text-sm font-medium">
-          Sepetim • {ordering.cartCount} ürün
+          {t.myCart} • {ordering.cartCount} {t.productCount}
         </span>
         <span className="flex items-center gap-2 text-sm font-semibold">
           {totalLabel}

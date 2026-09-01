@@ -7,8 +7,8 @@ import { usePublicMenuCategoryStats } from "@/hooks/public-menu/use-public-menu-
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode } from "../types";
-import { Tx } from "@/components/google-translate-provider";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
+import { useMenuLocale } from "../shared/menu-locale";
 import { cn } from "@/lib/utils";
 
 import {
@@ -44,6 +44,7 @@ export function ModernBistroCategoryRail({
   searchQuery,
   onSelectTab,
 }: ModernBistroCategoryRailProps) {
+  const { t } = useMenuLocale();
   const mainCategories = useMemo(
     () =>
       categories
@@ -70,7 +71,7 @@ export function ModernBistroCategoryRail({
 
   const items = useMemo(() => {
     const normalized = searchQuery.trim().toLocaleLowerCase("tr");
-    const popularLabel = "Popüler";
+    const popularLabel = t.popular;
     const popularMatches =
       !normalized || popularLabel.toLocaleLowerCase("tr").includes(normalized);
 
@@ -113,13 +114,11 @@ export function ModernBistroCategoryRail({
       },
       ...categoryItems,
     ];
-  }, [categories, popularPreview, products, searchQuery, stats]);
+  }, [categories, popularPreview, products, searchQuery, stats, t.popular]);
 
   if (items.length === 0) {
     return (
-      <p className="py-3 text-center text-sm text-[var(--mb-muted)]">
-        Aramanızla eşleşen kategori bulunamadı.
-      </p>
+      <p className="py-3 text-center text-sm text-[var(--mb-muted)]">{t.noSearchCategories}</p>
     );
   }
 
@@ -170,7 +169,7 @@ export function ModernBistroCategoryRail({
               ) : null}
             </span>
             <span className="mt-1 line-clamp-2 w-full px-0.5 text-[15px] font-bold leading-snug text-[var(--mb-fg)]">
-              {item.showStar ? <Tx>Popüler</Tx> : <MenuCategoryName name={item.label} />}
+              {item.showStar ? t.popular : <MenuCategoryName name={item.label} />}
             </span>
           </button>
         );

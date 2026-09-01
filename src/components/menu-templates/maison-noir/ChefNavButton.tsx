@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 
+import { useTranslatedText } from "@/components/google-translate-provider";
 import {
   resolveChefAvatarSrc,
   resolveChefDisplayName,
@@ -25,6 +26,7 @@ export function MaisonNoirChefNavButton({
 }: MaisonNoirChefNavButtonProps) {
   const [open, setOpen] = useState(false);
   const [chatMounted, setChatMounted] = useState(false);
+  const askChefLabel = useTranslatedText("Bana sor");
   const displayName = resolveChefDisplayName(chefDisplayName, chefName);
   const avatarSrc = resolveChefAvatarSrc(chefAvatarUrl);
 
@@ -86,11 +88,11 @@ export function MaisonNoirChefNavButton({
         type="button"
         onClick={openChat}
         className="mn-ai-ask-btn group"
-        aria-label="Bana sor"
+        aria-label={askChefLabel}
       >
         <span className="mn-ai-ask-btn__inner">
           <Sparkles className="mn-ai-ask-btn__spark h-3 w-3 shrink-0" strokeWidth={1.75} />
-          <span className="truncate">Bana sor</span>
+          <span className="truncate">{askChefLabel}</span>
         </span>
       </button>
     </>

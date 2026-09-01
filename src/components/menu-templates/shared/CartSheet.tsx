@@ -60,12 +60,12 @@ export function CartSheet() {
           <SheetHeader className="text-left">
             <SheetTitle>{t?.cart || "Sepet"}</SheetTitle>
             <SheetDescription>
-              {tableName ? `Masa: ${tableName}` : t?.cart || "Masa siparişi"}
+              {tableName ? `${t?.tableLabel ?? "Masa"}: ${tableName}` : t?.tableOrder ?? "Masa siparişi"}
             </SheetDescription>
           </SheetHeader>
 
           {localItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sepetiniz boş.</p>
+            <p className="text-sm text-muted-foreground">{t?.cartEmpty ?? "Sepetiniz boş."}</p>
           ) : (
             <ul className="space-y-3">
               {localItems.map((item) => (
@@ -86,7 +86,7 @@ export function CartSheet() {
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded-md border border-border"
                       onClick={() => void updateQty(item.productId, item.quantity - 1)}
-                      aria-label="Azalt"
+                      aria-label={t?.decreaseQty ?? "Azalt"}
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
@@ -95,7 +95,7 @@ export function CartSheet() {
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded-md border border-border"
                       onClick={() => void updateQty(item.productId, item.quantity + 1)}
-                      aria-label="Artır"
+                      aria-label={t?.increaseQty ?? "Artır"}
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </button>
@@ -114,19 +114,21 @@ export function CartSheet() {
           />
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Not</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              {t?.cartNote ?? "Not"}
+            </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               maxLength={1000}
-              placeholder="Örn. az pişmiş, sos ayrı"
+              placeholder={t?.cartNotePlaceholder ?? "Örn. az pişmiş, sos ayrı"}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Toplam</span>
+            <span className="text-muted-foreground">{t?.total ?? "Toplam"}</span>
             <span className="font-semibold">{totalLabel}</span>
           </div>
 

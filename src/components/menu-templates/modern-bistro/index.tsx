@@ -14,6 +14,7 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  useMenuLocale,
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
@@ -28,18 +29,13 @@ import { ModernBistroHomeView } from "./HomeView";
 import { ModernBistroProductDetailView } from "./ProductDetailView";
 import { ModernBistroShell } from "./Shell";
 
-const EMPTY_FALLBACK = {
-  missingCategory: "Kategori bulunamadı.",
-  missingProduct: "Ürün bulunamadı.",
-  backToMenu: "Menüye dön",
-} as const;
-
 export function ModernBistroMenuTemplate({
   menu,
   products,
   categories = [],
   analytics,
 }: MenuTemplateProps) {
+  const { t } = useMenuLocale();
   const [view, setView, { replaceView, goBack }] = usePublicMenuViewState<ModernBistroView>(
     { type: "home" },
     { supportsSubCategory: true },
@@ -186,7 +182,7 @@ export function ModernBistroMenuTemplate({
       ) : null}
 
       {view.type === "category" && !activeCategory ? (
-        <MissingState message={EMPTY_FALLBACK.missingCategory} onHome={goHome} />
+        <MissingState message={t.missingCategory} onHome={goHome} />
       ) : null}
 
       {view.type === "product" && selectedProduct ? (
@@ -198,7 +194,7 @@ export function ModernBistroMenuTemplate({
       ) : null}
 
       {view.type === "product" && !selectedProduct ? (
-        <MissingState message={EMPTY_FALLBACK.missingProduct} onHome={goHome} />
+        <MissingState message={t.missingProduct} onHome={goHome} />
       ) : null}
     </ModernBistroShell>
   );
@@ -210,7 +206,7 @@ function MissingState({ message, onHome }: { message: string; onHome: () => void
       <div>
         <p>{message}</p>
         <button type="button" onClick={onHome} className="mt-4 underline">
-          {EMPTY_FALLBACK.backToMenu}
+          {t.backToMenu}
         </button>
       </div>
     </div>

@@ -16,6 +16,7 @@ import {
   MenuCategoryScrollSentinel,
   MenuProductScrollSentinel,
   searchMenuProducts,
+  useMenuLocale,
 } from "../shared";
 import {
   countProductsForCategory,
@@ -54,6 +55,7 @@ export function LuxuryHomeView({
   feedbackControl,
 }: HomeViewProps) {
   const theme = usePublicMenuTheme();
+  const { t } = useMenuLocale();
   const popular = useMemo(() => popularProducts(products), [products]);
   const searchResults = useMemo(
     () => (searchQuery.trim() ? searchMenuProducts(products, searchQuery) : []),
@@ -219,7 +221,7 @@ export function LuxuryHomeView({
       <DenseStickyToolbar
         searchQuery={searchQuery}
         onSearchChange={onSearchChange}
-        searchPlaceholder="Yemek, malzeme veya kategori ara..."
+        searchPlaceholder={t.searchMenu}
         className="relative z-10 border-b border-[var(--lx-border)] bg-[color-mix(in_oklch,var(--lx-bg)_88%,transparent)]"
         innerClassName="mx-auto max-w-6xl px-4 py-3 sm:px-6 lg:px-8"
         searchClassName="border-[var(--lx-border)] bg-[color-mix(in_oklch,var(--lx-card)_70%,transparent)] lx-fg placeholder:text-[var(--lx-muted)] focus:border-[color-mix(in_oklch,var(--lx-gold)_60%,transparent)] focus:ring-[color-mix(in_oklch,var(--lx-gold)_20%,transparent)]"
@@ -297,7 +299,7 @@ export function LuxuryHomeView({
 
             <section>
               <h2 className="mb-3 font-display text-lg font-semibold lx-fg">
-                Kategoriler
+                {t.categories}
               </h2>
               {categories.length > 0 ? (
                 <>

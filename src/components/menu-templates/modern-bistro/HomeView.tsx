@@ -81,7 +81,7 @@ export function ModernBistroHomeView({
       <main className="mx-auto max-w-xl px-4 py-5 sm:px-6">
         {showPopularEmpty ? (
           <div className="mb-5 rounded-2xl border border-dashed border-[var(--mb-border)] bg-[var(--mb-surface)] px-4 py-5 text-center text-sm text-[var(--mb-muted)]">
-            Henüz popüler ürün yok. Yukarıdan bir kategori seçerek menüye göz atabilirsiniz.
+            {t.noPopularProducts}
           </div>
         ) : null}
 
@@ -89,7 +89,7 @@ export function ModernBistroHomeView({
           <ModernBistroHomeProductList products={visibleProducts} onOpenProduct={onOpenProduct} />
         ) : activeTab.type === "category" ? (
           <p className="py-16 text-center text-sm text-[var(--mb-muted)]">
-            Bu kategoride ürün bulunamadı.
+            {t.noCategoryProducts}
           </p>
         ) : null}
 
