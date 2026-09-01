@@ -126,7 +126,7 @@ function MenuShell({
                       analytics={analytics}
                     />
                     <SharedMenuChrome menuId={menu.menuId} />
-                    {themeId !== "maison-noir" ? (
+                    {themeId !== "maison-noir" && themeId !== "modern-bistro" ? (
                       <MenuChefFab
                         menuId={menu.menuId}
                         chefName={menu.chefName}

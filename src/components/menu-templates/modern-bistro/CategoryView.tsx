@@ -12,7 +12,7 @@ import {
   filterModernBistroCategoryProducts,
   MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE,
 } from "./category-utils";
-import { ModernBistroProductRow } from "./ProductRow";
+import { ModernBistroProductCard } from "./ProductCard";
 import { ModernBistroSubcategorySlider } from "./SubcategorySlider";
 
 type CategoryViewProps = {
@@ -61,13 +61,13 @@ export function ModernBistroCategoryView({
 
   return (
     <main className="mx-auto min-h-[60vh] max-w-xl pb-8">
-      <div className="sticky top-14 z-30 border-b border-[var(--mb-border)] bg-[var(--mb-bg)]/95 backdrop-blur-md">
+      <div className="sticky top-12 z-30 border-b border-[var(--mb-border)] bg-[var(--mb-surface)]">
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
               onClick={onBackToCategories}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] text-[var(--mb-fg)] transition-colors hover:bg-[#f3f4f6]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] text-[var(--mb-fg)] transition-colors hover:bg-[var(--mb-muted-surface)]"
               aria-label="Kategorilere dön"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -100,15 +100,15 @@ export function ModernBistroCategoryView({
             Bu filtrede ürün bulunmuyor.
           </p>
         ) : (
-          <ul className="divide-y divide-[var(--mb-border)]">
+          <div className="grid grid-cols-1 gap-4">
             {displayedProducts.map((product) => (
-              <ModernBistroProductRow
+              <ModernBistroProductCard
                 key={product.productId}
                 product={product}
                 onOpen={onOpenProduct}
               />
             ))}
-          </ul>
+          </div>
         )}
 
         {hasMoreLocal ? (

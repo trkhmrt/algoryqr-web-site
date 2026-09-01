@@ -25,7 +25,7 @@ export const MENU_LOCALES: MenuLocaleOption[] = [
   { code: "ar", label: "AR", dir: "rtl" },
 ];
 
-type MenuStrings = {
+export type MenuStrings = {
   welcomeTitle: string;
   welcomeSubtitle: string;
   login: string;
@@ -59,6 +59,30 @@ type MenuStrings = {
   waiterLoginTitle: string;
   waiterLoginDescription: string;
   username: string;
+  searchCategories: string;
+  poweredBy: string;
+  language: string;
+  currency: string;
+  languageAndCurrency: string;
+  selectLanguageAndCurrency: string;
+  menuPanel: string;
+  closeMenu: string;
+  openMenu: string;
+  bonAppetit: string;
+  nutritionValues: string;
+  allergenInfo: string;
+  transparencyTitle: string;
+  transparencySubtitle: string;
+  energy: string;
+  protein: string;
+  fat: string;
+  carbs: string;
+  fiber: string;
+  salt: string;
+  addToCart: string;
+  back: string;
+  productUnavailable: string;
+  chefRecommended: string;
 };
 
 
@@ -97,6 +121,30 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     waiterLoginTitle: "Garson girişi",
     waiterLoginDescription: "Kullanıcı adı ve şifrenizle giriş yapın.",
     username: "Kullanıcı adı",
+    searchCategories: "Kategori ara...",
+    poweredBy: "Powered by AlgoryQR",
+    language: "Dil",
+    currency: "Kur",
+    languageAndCurrency: "Dil ve kur",
+    selectLanguageAndCurrency: "Dil ve kur seç",
+    menuPanel: "Menü",
+    closeMenu: "Kapat",
+    openMenu: "Menü",
+    bonAppetit: "Afiyet olsun!",
+    nutritionValues: "Besin Değerleri",
+    allergenInfo: "Alerjen Bilgisi",
+    transparencyTitle: "Bilgilendirme şeffaflığı",
+    transparencySubtitle: "İçindekiler ve alerjen bilgileri",
+    energy: "Enerji",
+    protein: "Protein",
+    fat: "Yağ",
+    carbs: "Karbonhidrat",
+    fiber: "Lif",
+    salt: "Tuz",
+    addToCart: "Sepete Ekle",
+    back: "Geri",
+    productUnavailable: "Bu ürün şu an mevcut değil.",
+    chefRecommended: "Şef önerisi",
   },
   en: {
     welcomeTitle: "Welcome",
@@ -132,6 +180,30 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     waiterLoginTitle: "Waiter login",
     waiterLoginDescription: "Sign in with your username and password.",
     username: "Username",
+    searchCategories: "Search categories...",
+    poweredBy: "Powered by AlgoryQR",
+    language: "Language",
+    currency: "Currency",
+    languageAndCurrency: "Language & currency",
+    selectLanguageAndCurrency: "Select language and currency",
+    menuPanel: "Menu",
+    closeMenu: "Close",
+    openMenu: "Menu",
+    bonAppetit: "Enjoy your meal!",
+    nutritionValues: "Nutrition Facts",
+    allergenInfo: "Allergen Information",
+    transparencyTitle: "Information transparency",
+    transparencySubtitle: "Ingredients and allergen details",
+    energy: "Energy",
+    protein: "Protein",
+    fat: "Fat",
+    carbs: "Carbs",
+    fiber: "Fiber",
+    salt: "Salt",
+    addToCart: "Add to Cart",
+    back: "Back",
+    productUnavailable: "This item is currently unavailable.",
+    chefRecommended: "Chef's pick",
   },
   ru: {
     welcomeTitle: "Добро пожаловать",
@@ -167,6 +239,30 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     waiterLoginTitle: "Вход официанта",
     waiterLoginDescription: "Войдите с именем пользователя и паролем.",
     username: "Имя пользователя",
+    searchCategories: "Поиск категорий...",
+    poweredBy: "Powered by AlgoryQR",
+    language: "Язык",
+    currency: "Валюта",
+    languageAndCurrency: "Язык и валюта",
+    selectLanguageAndCurrency: "Выберите язык и валюту",
+    menuPanel: "Меню",
+    closeMenu: "Закрыть",
+    openMenu: "Меню",
+    bonAppetit: "Приятного аппетита!",
+    nutritionValues: "Пищевая ценность",
+    allergenInfo: "Информация об аллергенах",
+    transparencyTitle: "Прозрачность информации",
+    transparencySubtitle: "Состав и данные об аллергенах",
+    energy: "Энергия",
+    protein: "Белки",
+    fat: "Жиры",
+    carbs: "Углеводы",
+    fiber: "Клетчатка",
+    salt: "Соль",
+    addToCart: "В корзину",
+    back: "Назад",
+    productUnavailable: "Этот продукт сейчас недоступен.",
+    chefRecommended: "Рекомендация шефа",
   },
   ar: {
     welcomeTitle: "مرحباً",
@@ -202,6 +298,30 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     waiterLoginTitle: "دخول النادل",
     waiterLoginDescription: "سجّل الدخول باسم المستخدم وكلمة المرور.",
     username: "اسم المستخدم",
+    searchCategories: "البحث في الفئات...",
+    poweredBy: "Powered by AlgoryQR",
+    language: "اللغة",
+    currency: "العملة",
+    languageAndCurrency: "اللغة والعملة",
+    selectLanguageAndCurrency: "اختر اللغة والعملة",
+    menuPanel: "القائمة",
+    closeMenu: "إغلاق",
+    openMenu: "القائمة",
+    bonAppetit: "بالهناء والشفاء!",
+    nutritionValues: "القيم الغذائية",
+    allergenInfo: "معلومات مسببات الحساسية",
+    transparencyTitle: "شفافية المعلومات",
+    transparencySubtitle: "المكونات ومعلومات مسببات الحساسية",
+    energy: "الطاقة",
+    protein: "البروتين",
+    fat: "الدهون",
+    carbs: "الكربohydrates",
+    fiber: "الألياف",
+    salt: "الملح",
+    addToCart: "أضف إلى السلة",
+    back: "رجوع",
+    productUnavailable: "هذا المنتج غير متوفر حالياً.",
+    chefRecommended: "اختيار الشيف",
   },
 };
 

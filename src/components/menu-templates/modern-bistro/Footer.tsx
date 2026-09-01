@@ -1,15 +1,18 @@
 "use client";
 
 import type { MenuProfileApiItem } from "@/lib/api";
+import { useMenuLocale } from "../shared/menu-locale";
 
 type ModernBistroFooterProps = {
   menu: Pick<MenuProfileApiItem, "businessName" | "phone" | "email" | "address">;
 };
 
 export function ModernBistroFooter({ menu }: ModernBistroFooterProps) {
+  const { t } = useMenuLocale();
+
   return (
     <footer className="mt-auto border-t border-[var(--mb-border)] bg-[var(--mb-surface)] px-4 py-6 sm:px-6">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium text-[var(--mb-muted)]">{menu.businessName}</p>
           {(menu.phone || menu.address) && (
@@ -18,7 +21,7 @@ export function ModernBistroFooter({ menu }: ModernBistroFooterProps) {
             </p>
           )}
         </div>
-        <p className="text-[11px] text-[var(--mb-muted)]">Powered by AlgoryQR</p>
+        <p className="text-[11px] text-[var(--mb-muted)]">{t.poweredBy}</p>
       </div>
     </footer>
   );

@@ -20,7 +20,7 @@ export function ModernBistroCartBar() {
       <button
         type="button"
         onClick={() => ordering.setCartOpen(true)}
-        className="pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3 rounded-2xl bg-[var(--mb-primary)] px-4 py-3.5 text-[var(--mb-primary-fg)] shadow-[var(--mb-shadow)] transition-transform active:scale-[0.99]"
+        className="pointer-events-auto flex w-full max-w-xl items-center justify-between gap-3 rounded-2xl bg-[var(--mb-primary)] px-4 py-3.5 text-[var(--mb-primary-fg)] shadow-[var(--mb-shadow)] transition-transform active:scale-[0.99]"
       >
         <span className="text-sm font-medium">
           Sepetim • {ordering.cartCount} ürün

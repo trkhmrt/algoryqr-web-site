@@ -95,7 +95,7 @@ export function ModernBistroCategoryList({
           onClick={() => onSelectCategory(category)}
           className="group flex w-full overflow-hidden rounded-2xl border border-[var(--mb-border)] bg-[var(--mb-surface)] text-left shadow-[0_8px_24px_rgba(17,17,17,0.04)] transition hover:border-[var(--mb-primary)]/30"
         >
-          <div className="relative h-24 w-28 shrink-0 overflow-hidden bg-[#f3f4f6] sm:h-28 sm:w-32">
+          <div className="relative h-24 w-28 shrink-0 overflow-hidden bg-[var(--mb-muted-surface)] sm:h-28 sm:w-32">
             {coverImage ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img

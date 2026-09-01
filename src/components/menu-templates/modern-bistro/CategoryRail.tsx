@@ -134,7 +134,7 @@ export function ModernBistroCategoryRail({
   };
 
   return (
-    <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="-mx-1 flex items-start gap-3 overflow-x-auto px-1 py-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {items.map((item) => {
         const active = isActive(item.tab);
         return (
@@ -143,13 +143,13 @@ export function ModernBistroCategoryRail({
             type="button"
             onClick={() => onSelectTab(item.tab)}
             className={cn(
-              "flex w-[5.5rem] shrink-0 flex-col items-center gap-2 rounded-2xl px-1.5 py-2 text-center transition",
+              "flex w-[7.75rem] shrink-0 flex-col rounded-2xl bg-[var(--mb-surface)] p-1 text-center shadow-[var(--mb-card-shadow)] transition",
               active
-                ? "bg-[color-mix(in_oklch,var(--mb-primary)_10%,white)] ring-2 ring-[var(--mb-primary)]"
-                : "bg-[var(--mb-surface)] ring-1 ring-[var(--mb-border)]",
+                ? "border-2 border-[var(--mb-primary)]"
+                : "border-2 border-[var(--mb-border)]",
             )}
           >
-            <span className="relative block h-14 w-14 overflow-hidden rounded-full bg-[#f3f4f6]">
+            <span className="relative aspect-square w-full overflow-hidden rounded-lg bg-[var(--mb-muted-surface)]">
               {item.imageUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -159,17 +159,17 @@ export function ModernBistroCategoryRail({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="flex h-full w-full items-center justify-center text-lg opacity-50">
+                <span className="flex h-full w-full items-center justify-center text-2xl opacity-40">
                   {item.mark}
                 </span>
               )}
               {item.showStar ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--mb-primary)] text-white shadow-sm">
+                <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--mb-primary)] text-[var(--mb-primary-fg)] shadow-sm">
                   <Star className="h-3 w-3 fill-current" strokeWidth={0} />
                 </span>
               ) : null}
             </span>
-            <span className="line-clamp-2 min-h-[2rem] text-[11px] font-semibold leading-tight text-[var(--mb-fg)]">
+            <span className="mt-1 line-clamp-2 w-full px-0.5 text-[15px] font-bold leading-snug text-[var(--mb-fg)]">
               {item.showStar ? <Tx>Popüler</Tx> : <MenuCategoryName name={item.label} />}
             </span>
           </button>

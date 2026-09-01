@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
+import { Search } from "lucide-react";
 
 import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { useMenuLocale } from "../shared/menu-locale";
 
 import {
   MODERN_BISTRO_POPULAR_TAB,
@@ -15,7 +17,6 @@ import {
 } from "./category-utils";
 import { ModernBistroCategoryRail } from "./CategoryRail";
 import { ModernBistroHomeProductList } from "./HomeProductList";
-import { ModernBistroLocaleCurrencyBar } from "./LocaleCurrencyBar";
 
 type HomeViewProps = {
   menu: MenuProfileApiItem;
@@ -38,6 +39,7 @@ export function ModernBistroHomeView({
   onSelectTab,
   onOpenProduct,
 }: HomeViewProps) {
+  const { t } = useMenuLocale();
   const visibleProducts = useMemo(
     () => modernBistroHomeProducts(products, categories, activeTab),
     [activeTab, categories, products],
@@ -48,25 +50,32 @@ export function ModernBistroHomeView({
 
   return (
     <div>
-      <div className="sticky top-14 z-30 border-b border-[var(--mb-border)] bg-[var(--mb-bg)]/95 backdrop-blur-md">
-        <div className="mx-auto max-w-xl space-y-3 px-4 py-3 sm:px-6">
+      <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--mb-muted)]"
+            strokeWidth={2}
+            aria-hidden
+          />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Kategori ara..."
-            className="w-full rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] px-4 py-2.5 text-sm text-[var(--mb-fg)] outline-none transition-shadow placeholder:text-[var(--mb-muted)] focus:border-[var(--mb-primary)] focus:ring-2 focus:ring-[var(--mb-primary)]/10"
-          />
-          <ModernBistroLocaleCurrencyBar />
-          <ModernBistroCategoryRail
-            menuId={menu.menuId}
-            categories={categories}
-            products={products}
-            activeTab={activeTab}
-            searchQuery={searchQuery}
-            onSelectTab={onSelectTab}
+            placeholder={t.searchCategories}
+            className="w-full rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] py-2.5 pl-10 pr-4 text-sm text-[var(--mb-fg)] outline-none transition-shadow placeholder:text-[var(--mb-muted)] focus:border-[var(--mb-primary)] focus:ring-2 focus:ring-[var(--mb-primary)]/10"
           />
         </div>
+      </div>
+
+      <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">
+        <ModernBistroCategoryRail
+          menuId={menu.menuId}
+          categories={categories}
+          products={products}
+          activeTab={activeTab}
+          searchQuery={searchQuery}
+          onSelectTab={onSelectTab}
+        />
       </div>
 
       <main className="mx-auto max-w-xl px-4 py-5 sm:px-6">

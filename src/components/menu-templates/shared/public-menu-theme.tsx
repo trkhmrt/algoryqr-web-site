@@ -187,7 +187,7 @@ const MODERN_BISTRO_CHROME: PublicMenuThemeChrome = {
   reservationBackgroundUrl: MODERN_BISTRO_HERO_IMAGE,
   contactBackgroundUrl: MODERN_BISTRO_HERO_IMAGE,
   feedbackBackgroundUrl: MODERN_BISTRO_HERO_IMAGE,
-  loadingBg: "#fafafa",
+  loadingBg: "#162128",
   categoryMarks: MODERN_BISTRO_CATEGORY_MARKS,
 };
 
