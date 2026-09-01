@@ -81,7 +81,7 @@ export function ModernBistroProductCard({ product, onOpen }: ModernBistroProduct
           ) : null}
           {unavailable ? (
             <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--mb-muted)]">
-              Mevcut değil
+              {locale?.t.productUnavailable ?? "Mevcut değil"}
             </p>
           ) : null}
         </button>

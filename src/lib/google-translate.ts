@@ -6,6 +6,7 @@ export const TRANSLATE_TARGETS = ["en", "ru", "ar"] as const;
 // to a general-purpose translator (for example, Turkish "makarna").
 const FOOD_TRANSLATION_GLOSSARY: Record<string, string> = {
   makarna: "pasta",
+  makarnalar: "Pasta",
   kek: "cake",
 };
 

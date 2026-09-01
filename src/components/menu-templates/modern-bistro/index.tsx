@@ -13,8 +13,10 @@ import {
 import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
+  useMenuProductFeed,
   useMenuFeedback,
   useMenuLocale,
+  useLocalizedMenuProduct,
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
@@ -45,6 +47,7 @@ export function ModernBistroMenuTemplate({
     type: MODERN_BISTRO_POPULAR_TAB,
   });
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
+  const localizedPinnedProduct = useLocalizedMenuProduct(pinnedProduct);
 
   usePublicMenuDeepLinkProduct({
     menuId: menu.menuId,
@@ -61,9 +64,11 @@ export function ModernBistroMenuTemplate({
   );
 
   const categoryFeed = useMenuCategoryFeed();
+  const productFeed = useMenuProductFeed();
   const taxonomySource =
     categoryFeed.categories.length > 0 ? categoryFeed.categories : categories;
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
+  const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
 
   const activeCategoryId =
     view.type === "category"
@@ -84,8 +89,8 @@ export function ModernBistroMenuTemplate({
 
   const selectedProduct = useMemo(() => {
     if (view.type !== "product") return null;
-    return resolveSelectedProduct(products, view.productId, pinnedProduct);
-  }, [view, products, pinnedProduct]);
+    return resolveSelectedProduct(displayProducts, view.productId, localizedPinnedProduct);
+  }, [view, displayProducts, localizedPinnedProduct]);
 
   const goHome = () => {
     setSearchQuery("");
@@ -153,7 +158,7 @@ export function ModernBistroMenuTemplate({
         <ModernBistroHomeView
           menu={menu}
           categories={displayCategories}
-          products={products}
+          products={displayProducts}
           searchQuery={searchQuery}
           activeTab={homeTab}
           onSearchChange={setSearchQuery}
@@ -173,7 +178,7 @@ export function ModernBistroMenuTemplate({
       {view.type === "category" && activeCategory ? (
         <ModernBistroCategoryView
           category={activeCategory}
-          products={products}
+          products={displayProducts}
           subCategoryId={activeSubCategoryId}
           onBackToCategories={backToCategories}
           onSelectSubCategory={selectSubCategory}
