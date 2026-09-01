@@ -15,6 +15,7 @@ import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { Tx } from "@/components/google-translate-provider";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { techGourmetCategoryMark } from "./styles";
 
 type HomeViewProps = {
@@ -163,7 +164,7 @@ export function TechGourmetHomeView({
                     border: `1px solid ${activeCategoryId === cat.categoryId ? "var(--tg-primary)" : "var(--tg-outline-variant)"}`,
                   }}
                 >
-                  {techGourmetCategoryMark(i)} {cat.name.toUpperCase()}
+                  {techGourmetCategoryMark(i)} <MenuCategoryName name={cat.name} />
                 </button>
               ))}
             </div>
