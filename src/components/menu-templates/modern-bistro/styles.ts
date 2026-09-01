@@ -164,6 +164,7 @@ export const MODERN_BISTRO_STYLES = `
 `;
 
 export const MODERN_BISTRO_HERO_IMAGE = "/menu-templates/modern-bistro/hero-banner.png";
+export const MODERN_BISTRO_BRAND_AVATAR = "/menu-templates/modern-bistro/brand-avatar.png";
 
 export const MODERN_BISTRO_CATEGORY_MARKS = [
   "🔥",
