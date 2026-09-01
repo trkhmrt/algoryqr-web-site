@@ -2,7 +2,7 @@
 
 
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,6 +17,7 @@ import type { MenuProfileApiItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
+import { useMenuLocale } from "../shared/menu-locale";
 
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
 
@@ -69,6 +70,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
   const contentPath = publicMenuContentPath(menu.qrId);
 
   const ordering = useOrderingOptional();
+  const { t } = useMenuLocale();
 
   const account = useCustomerAccountUi();
 
@@ -78,19 +80,17 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
 
 
+  const closeDrawer = useCallback(() => {
+    setExpanded(null);
+    setOpen(false);
+  }, []);
+
   useEffect(() => {
-
-    if (!open) {
-
-      setExpanded(null);
-
-      return;
-
-    }
+    if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
 
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closeDrawer();
 
     };
 
@@ -106,11 +106,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
     };
 
-  }, [open]);
-
-
-
-  const closeDrawer = () => setOpen(false);
+  }, [closeDrawer, open]);
 
 
 
@@ -162,11 +158,17 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
                 type="button"
 
-                onClick={() => setOpen((value) => !value)}
+                onClick={() => {
+                  if (open) {
+                    closeDrawer();
+                    return;
+                  }
+                  setOpen(true);
+                }}
 
                 className="flex h-9 w-9 items-center justify-center text-[var(--mn-fg)] transition-colors hover:text-[var(--mn-primary)]"
 
-                aria-label={open ? "Kapat" : "Menü"}
+                aria-label={open ? t.closeMenu : t.openMenu}
 
                 aria-expanded={open}
 
@@ -206,7 +208,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
               className="fixed inset-0 z-[45] bg-[var(--mn-bg)]/55 backdrop-blur-[2px]"
 
-              aria-label="Menüyü kapat"
+              aria-label={t.closeMenu}
 
               onClick={closeDrawer}
 
@@ -224,13 +226,13 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
               className="mn-nav-drawer fixed inset-x-0 top-12 z-[46] mx-auto flex max-h-[50dvh] max-w-xl flex-col overflow-hidden border-b border-[var(--mn-border)]/40 shadow-[var(--mn-shadow)]"
 
-              aria-label="Menü paneli"
+              aria-label={t.menuPanel}
 
             >
 
               <div className="mn-glass-nav shrink-0 border-b border-[var(--mn-border)]/25 px-5 py-2.5 sm:px-7">
 
-                <p className="mn-type-eyebrow text-[var(--mn-muted)]">Menü</p>
+                <p className="mn-type-eyebrow text-[var(--mn-muted)]">{t.menuPanel}</p>
 
               </div>
 
@@ -244,7 +246,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
                     icon={ShoppingBag}
 
-                    label="Sepet"
+                    label={t.cart}
 
                     badge={ordering.cartCount > 0 ? ordering.cartCount : undefined}
 
@@ -282,7 +284,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
                         <span className="mn-type-label text-[var(--mn-fg)]">
 
-                          {account.profile ? "Hesabım" : "Hesap"}
+                          {t.account}
 
                         </span>
 
@@ -344,7 +346,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
                               >
 
-                                Hesabımı aç
+                                {t.account}
 
                               </button>
 
@@ -368,7 +370,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
                                 >
 
-                                  Giriş
+                                  {t.login}
 
                                 </button>
 
@@ -388,7 +390,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
 
                                 >
 
-                                  Kayıt
+                                  {t.register}
 
                                 </button>
 

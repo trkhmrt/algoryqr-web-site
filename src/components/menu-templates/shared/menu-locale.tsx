@@ -112,6 +112,9 @@ export type MenuStrings = {
   tableOrder: string;
   noProductsFound: string;
   menuTitle: string;
+  showMore: string;
+  contentLabel: string;
+  servingLabel: string;
 };
 
 
@@ -204,6 +207,9 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     tableOrder: "Masa siparişi",
     noProductsFound: "Ürün bulunamadı.",
     menuTitle: "Menü",
+    showMore: "Daha fazla göster",
+    contentLabel: "İçerik",
+    servingLabel: "Servis",
   },
   en: {
     welcomeTitle: "Welcome",
@@ -292,6 +298,9 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     tableOrder: "Table order",
     noProductsFound: "No products found.",
     menuTitle: "Menu",
+    showMore: "Show more",
+    contentLabel: "Content",
+    servingLabel: "Serving",
   },
   ru: {
     welcomeTitle: "Добро пожаловать",
@@ -380,6 +389,9 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     tableOrder: "Заказ со стола",
     noProductsFound: "Продукты не найдены.",
     menuTitle: "Меню",
+    showMore: "Показать ещё",
+    contentLabel: "Состав",
+    servingLabel: "Подача",
   },
   ar: {
     welcomeTitle: "مرحباً",
@@ -468,6 +480,9 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     tableOrder: "طلب الطاولة",
     noProductsFound: "لم يتم العثور على منتجات.",
     menuTitle: "القائمة",
+    showMore: "عرض المزيد",
+    contentLabel: "المحتوى",
+    servingLabel: "التقديم",
   },
 };
 

@@ -7,8 +7,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { resolveProductNavCategory } from "../types";
 import { DenseNutritionStrip } from "../shared/dense";
-import { useMenuLocaleOptional } from "../shared/menu-locale";
-import { Tx } from "@/components/google-translate-provider";
+import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { formatServesPeopleLabel } from "../shared/serves-people";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
@@ -29,7 +28,7 @@ export function MaisonNoirProductDetailView({
   const categoryLabel =
     leafCategory?.name ?? product.subCategoryName ?? product.mainCategoryName ?? null;
   const ordering = useOrderingOptional();
-  const locale = useMenuLocaleOptional();
+  const { t } = useMenuLocale();
   const [busy, setBusy] = useState(false);
   const unavailable = product.available === false;
   const chefPick = product.chefRecommended && !unavailable;
@@ -52,13 +51,15 @@ export function MaisonNoirProductDetailView({
             type="button"
             onClick={onBack}
             className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--mn-border)] text-[var(--mn-fg)] transition-colors hover:border-[var(--mn-primary)]/50 hover:text-[var(--mn-primary)]"
-            aria-label="Geri"
+            aria-label={t.back}
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
           </button>
           <div className="min-w-0 flex-1">
             {chefPick ? (
-              <p className="mb-0.5 mn-type-eyebrow text-[var(--mn-primary)]">Şef önerisi</p>
+              <p className="mb-0.5 mn-type-eyebrow text-[var(--mn-primary)]">
+                {t.chefRecommended}
+              </p>
             ) : null}
             <div className="flex items-start justify-between gap-3">
               <h1 className="min-w-0 mn-type-product text-[var(--mn-fg)]">{product.name}</h1>
@@ -68,7 +69,7 @@ export function MaisonNoirProductDetailView({
             </div>
             {categoryLabel ? (
               <p className="mt-0.5 truncate mn-type-label text-[var(--mn-muted)]">
-                <Tx>{categoryLabel}</Tx>
+                {categoryLabel}
               </p>
             ) : null}
           </div>
@@ -95,19 +96,19 @@ export function MaisonNoirProductDetailView({
           <div className="mt-4 space-y-1.5 border-t border-[var(--mn-border)] pt-4">
             {tagSummary.length > 0 ? (
               <p className="mn-type-label leading-relaxed text-[var(--mn-muted)]">
-                <span className="text-[var(--mn-subtle)]">İçerik · </span>
+                <span className="text-[var(--mn-subtle)]">{t.contentLabel} · </span>
                 {tagSummary.join(" · ")}
               </p>
             ) : null}
             {allergenSummary.length > 0 ? (
               <p className="mn-type-label leading-relaxed text-[var(--mn-muted)]">
-                <span className="text-[var(--mn-subtle)]">Alerjen · </span>
+                <span className="text-[var(--mn-subtle)]">{t.allergenInfo} · </span>
                 {allergenSummary.join(" · ")}
               </p>
             ) : null}
             {servesLabel ? (
               <p className="mn-type-label leading-relaxed text-[var(--mn-muted)]">
-                <span className="text-[var(--mn-subtle)]">Servis · </span>
+                <span className="text-[var(--mn-subtle)]">{t.servingLabel} · </span>
                 {servesLabel}
               </p>
             ) : null}
@@ -141,14 +142,14 @@ export function MaisonNoirProductDetailView({
             className="mt-8 block w-full border border-[var(--mn-primary)]/60 py-4 transition-colors duration-500 hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)] disabled:opacity-50"
           >
             <span className="mn-tracked text-[0.62rem]">
-              {busy ? "…" : (locale?.t.addToOrder ?? "Siparişe Ekle")}
+              {busy ? "..." : t.addToOrder}
             </span>
           </button>
         ) : null}
 
         {unavailable ? (
           <p className="mt-8 text-center mn-type-body text-[var(--mn-muted)]">
-            Bu ürün şu an mevcut değil.
+            {t.productUnavailable}
           </p>
         ) : null}
       </div>
