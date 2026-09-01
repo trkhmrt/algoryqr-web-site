@@ -5,6 +5,7 @@ import {
   TRANSLATE_SOURCE,
   TRANSLATE_MAX_TEXTS_PER_REQUEST,
   chunkTexts,
+  applyTranslationGlossary,
   isTranslateTarget,
   uniqueTexts,
   zipTranslations,
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
   for (const text of texts) {
     const cached = readCache(target, text);
     if (cached != null) {
-      translations[text] = cached;
+      translations[text] = applyTranslationGlossary(target, text, cached);
     } else {
       missing.push(text);
     }
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
     for (const chunk of chunkTexts(missing)) {
       const chunkResult = await translateChunk(apiKey, target, chunk);
       for (const [source, value] of Object.entries(chunkResult)) {
-        translations[source] = value;
+        translations[source] = applyTranslationGlossary(target, source, value);
         writeCache(target, source, value);
       }
     }
