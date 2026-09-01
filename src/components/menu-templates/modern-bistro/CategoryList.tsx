@@ -7,6 +7,7 @@ import { usePublicMenuCategoryStats } from "@/hooks/public-menu/use-public-menu-
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode } from "../types";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 
 import { modernBistroCategoryMark } from "./styles";
 
@@ -112,7 +113,7 @@ export function ModernBistroCategoryList({
           <div className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-base font-semibold text-[var(--mb-fg)] sm:text-lg">
-                {category.name}
+                <MenuCategoryName name={category.name} />
               </p>
               <p className="mt-0.5 text-xs text-[var(--mb-muted)]">{productCount} ürün</p>
             </div>

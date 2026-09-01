@@ -62,33 +62,50 @@ function formatPriceWithRates(
 
 type MenuCurrencyProviderProps = {
   children: ReactNode;
+  scopeKey?: string;
+  defaultCurrency?: MenuDisplayCurrency;
 };
 
-export function MenuCurrencyProvider({ children }: MenuCurrencyProviderProps) {
-  const [displayCurrency, setDisplayCurrencyState] = useState<MenuDisplayCurrency>("TRY");
+function currencyStorageKey(scopeKey?: string): string {
+  return scopeKey ? `${STORAGE_KEY}:${scopeKey}` : STORAGE_KEY;
+}
+
+export function MenuCurrencyProvider({
+  children,
+  scopeKey,
+  defaultCurrency = "TRY",
+}: MenuCurrencyProviderProps) {
+  const [displayCurrency, setDisplayCurrencyState] = useState<MenuDisplayCurrency>(defaultCurrency);
   const [rates, setRates] = useState<Record<string, number> | null>(null);
   const [ratesLoading, setRatesLoading] = useState(false);
   const fetchPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const stored = window.localStorage.getItem(currencyStorageKey(scopeKey));
       if (stored && isMenuDisplayCurrency(stored)) {
         setDisplayCurrencyState(stored);
+        return;
+      }
+      if (defaultCurrency) {
+        setDisplayCurrencyState(defaultCurrency);
       }
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [defaultCurrency, scopeKey]);
 
-  const setDisplayCurrency = useCallback((currency: MenuDisplayCurrency) => {
-    setDisplayCurrencyState(currency);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, currency);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const setDisplayCurrency = useCallback(
+    (currency: MenuDisplayCurrency) => {
+      setDisplayCurrencyState(currency);
+      try {
+        window.localStorage.setItem(currencyStorageKey(scopeKey), currency);
+      } catch {
+        /* ignore */
+      }
+    },
+    [scopeKey],
+  );
 
   const ensureRates = useCallback(async () => {
     if (rates != null) return;

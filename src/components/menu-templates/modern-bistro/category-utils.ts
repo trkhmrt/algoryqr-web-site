@@ -92,3 +92,50 @@ export function countModernBistroSubcategoryProducts(
 ): number {
   return listAvailableProducts(filterProductsForCategory(products, subCategory)).length;
 }
+
+export const MODERN_BISTRO_POPULAR_TAB = "popular" as const;
+
+export type ModernBistroHomeTab =
+  | { type: typeof MODERN_BISTRO_POPULAR_TAB }
+  | { type: "category"; categoryId: number };
+
+function parseRatingCount(product: MenuProductApiItem): number {
+  const raw = product.ratingCount;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim()) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+export function modernBistroPopularProducts(products: MenuProductApiItem[]): MenuProductApiItem[] {
+  const available = listAvailableProducts(products);
+  const chefPicks = available.filter((product) => product.chefRecommended);
+  if (chefPicks.length > 0) {
+    return [...chefPicks].sort((left, right) => left.sortOrder - right.sortOrder);
+  }
+
+  const rated = available
+    .filter((product) => parseRatingCount(product) > 0)
+    .sort((left, right) => parseRatingCount(right) - parseRatingCount(left));
+  if (rated.length > 0) return rated;
+
+  const withImage = available.filter((product) => product.imageUrl);
+  if (withImage.length > 0) return withImage;
+
+  return available;
+}
+
+export function modernBistroHomeProducts(
+  products: MenuProductApiItem[],
+  categories: TaxonomyNavNode[],
+  tab: ModernBistroHomeTab,
+): MenuProductApiItem[] {
+  if (tab.type === MODERN_BISTRO_POPULAR_TAB) {
+    return modernBistroPopularProducts(products);
+  }
+  const category = findCategoryById(categories, tab.categoryId);
+  if (!category) return [];
+  return filterModernBistroCategoryProducts(products, category, null);
+}

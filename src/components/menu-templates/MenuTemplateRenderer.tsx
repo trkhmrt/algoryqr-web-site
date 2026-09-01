@@ -7,7 +7,10 @@ import {
   collectMenuProfileTexts,
   localizeMenuProfile,
 } from "@/lib/menu-content-i18n";
-import { useGoogleTranslateOptional } from "@/components/google-translate-provider";
+import {
+  menuGuestScopeKey,
+  resolveMenuGuestDefaults,
+} from "@/lib/menu-guest-defaults";
 
 import { MenuThemeLayout } from "./MenuThemeLayout";
 import { MenuChefFab } from "./chef";
@@ -16,6 +19,7 @@ import {
   CustomerAccountMenu,
   CampaignProductIdsProvider,
   MenuCurrencyProvider,
+  MenuLocaleProvider,
   MenuProductNavigatorProvider,
   OrderingProvider,
   PublicMenuDataProvider,
@@ -54,6 +58,7 @@ function MenuTemplateBody({
   const { Component } = getMenuTemplate(themeId);
   const i18n = useGoogleTranslateOptional();
   const ensureTranslations = i18n?.ensureTranslations;
+  const translate = i18n?.translate;
   const dict = i18n?.dict ?? EMPTY_DICT;
   const profileTexts = useMemo(() => collectMenuProfileTexts(menu), [menu]);
 
@@ -62,8 +67,8 @@ function MenuTemplateBody({
   }, [ensureTranslations, profileTexts]);
 
   const localizedMenu = useMemo(
-    () => localizeMenuProfile(menu, dict),
-    [dict, menu],
+    () => localizeMenuProfile(menu, dict, translate),
+    [dict, menu, translate],
   );
 
   return (
@@ -140,9 +145,19 @@ function MenuShell({
 }
 
 export function MenuTemplateRenderer(props: MenuTemplateRendererProps) {
+  const guestDefaults = resolveMenuGuestDefaults({
+    menuId: props.menu.menuId,
+    qrId: props.menu.qrId,
+    businessName: props.menu.businessName,
+    identifier: props.identifier,
+  });
+  const scopeKey = menuGuestScopeKey(props.menu.menuId);
+
   return (
-    <MenuCurrencyProvider>
-      <MenuShell {...props} />
-    </MenuCurrencyProvider>
+    <MenuLocaleProvider scopeKey={scopeKey} defaultLocale={guestDefaults.locale}>
+      <MenuCurrencyProvider scopeKey={scopeKey} defaultCurrency={guestDefaults.currency}>
+        <MenuShell {...props} />
+      </MenuCurrencyProvider>
+    </MenuLocaleProvider>
   );
 }

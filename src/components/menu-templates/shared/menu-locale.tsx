@@ -223,16 +223,30 @@ function isLocale(value: string | null | undefined): value is MenuLocaleCode {
 
 type MenuLocaleProviderProps = {
   children: ReactNode;
+  scopeKey?: string;
+  defaultLocale?: MenuLocaleCode;
 };
 
-export function MenuLocaleProvider({ children }: MenuLocaleProviderProps) {
-  const [locale, setLocaleState] = useState<MenuLocaleCode>("tr");
+function localeStorageKey(scopeKey?: string): string {
+  return scopeKey ? `${STORAGE_KEY}:${scopeKey}` : STORAGE_KEY;
+}
+
+export function MenuLocaleProvider({
+  children,
+  scopeKey,
+  defaultLocale,
+}: MenuLocaleProviderProps) {
+  const [locale, setLocaleState] = useState<MenuLocaleCode>(defaultLocale ?? "tr");
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const stored = window.localStorage.getItem(localeStorageKey(scopeKey));
       if (isLocale(stored)) {
         setLocaleState(stored);
+        return;
+      }
+      if (defaultLocale) {
+        setLocaleState(defaultLocale);
         return;
       }
       const nav = window.navigator.language.slice(0, 2).toLowerCase();
@@ -240,16 +254,19 @@ export function MenuLocaleProvider({ children }: MenuLocaleProviderProps) {
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [defaultLocale, scopeKey]);
 
-  const setLocale = useCallback((code: MenuLocaleCode) => {
-    setLocaleState(code);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, code);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const setLocale = useCallback(
+    (code: MenuLocaleCode) => {
+      setLocaleState(code);
+      try {
+        window.localStorage.setItem(localeStorageKey(scopeKey), code);
+      } catch {
+        /* ignore */
+      }
+    },
+    [scopeKey],
+  );
 
   const option = MENU_LOCALES.find((item) => item.code === locale) ?? MENU_LOCALES[0];
   const value = useMemo<MenuLocaleContextValue>(

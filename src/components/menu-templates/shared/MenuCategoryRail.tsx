@@ -2,6 +2,8 @@
 
 import { cn } from "@/lib/utils";
 
+import { Tx } from "@/components/google-translate-provider";
+
 import type { MenuNavCategory } from "../types";
 
 export type MenuCategoryRailProps = {
@@ -53,7 +55,13 @@ export function MenuCategoryRail({
             }
             aria-current={isActive ? "true" : undefined}
           >
-            {category.depth > 0 ? `· ${category.name}` : category.name}
+            {category.depth > 0 ? (
+              <>
+                · <Tx>{category.name}</Tx>
+              </>
+            ) : (
+              <Tx>{category.name}</Tx>
+            )}
           </button>
         );
       })}
