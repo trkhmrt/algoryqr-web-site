@@ -116,6 +116,13 @@ export type MenuStrings = {
   showMore: string;
   contentLabel: string;
   servingLabel: string;
+  orderReceived: string;
+  waiterApprovalPending: string;
+  orderConfirmed: string;
+  produceReward: string;
+  rewardAddedToAccount: string;
+  rewardLoginToClaim: string;
+  done: string;
 };
 
 
@@ -212,6 +219,13 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     showMore: "Daha fazla göster",
     contentLabel: "İçerik",
     servingLabel: "Servis",
+    orderReceived: "Siparişiniz alındı",
+    waiterApprovalPending: "Garson onayı bekleniyor…",
+    orderConfirmed: "Sipariş onaylandı.",
+    produceReward: "Ödül Üret",
+    rewardAddedToAccount: "Ödül hesabınıza eklendi.",
+    rewardLoginToClaim: "QR okutarak giriş yapın, hak tanımlansın.",
+    done: "Tamam",
   },
   en: {
     welcomeTitle: "Welcome",
@@ -304,6 +318,13 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     showMore: "Show more",
     contentLabel: "Content",
     servingLabel: "Serving",
+    orderReceived: "Your order has been received",
+    waiterApprovalPending: "Waiting for waiter confirmation…",
+    orderConfirmed: "Order confirmed.",
+    produceReward: "Generate reward",
+    rewardAddedToAccount: "The reward was added to your account.",
+    rewardLoginToClaim: "Scan the QR code and sign in to claim your reward.",
+    done: "Done",
   },
   ru: {
     welcomeTitle: "Добро пожаловать",
@@ -396,6 +417,13 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     showMore: "Показать ещё",
     contentLabel: "Состав",
     servingLabel: "Подача",
+    orderReceived: "Ваш заказ принят",
+    waiterApprovalPending: "Ожидание подтверждения официанта…",
+    orderConfirmed: "Заказ подтверждён.",
+    produceReward: "Получить награду",
+    rewardAddedToAccount: "Награда добавлена в ваш аккаунт.",
+    rewardLoginToClaim: "Отсканируйте QR-код и войдите, чтобы получить награду.",
+    done: "Готово",
   },
   ar: {
     welcomeTitle: "مرحباً",
@@ -488,6 +516,13 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     showMore: "عرض المزيد",
     contentLabel: "المحتوى",
     servingLabel: "التقديم",
+    orderReceived: "تم استلام طلبك",
+    waiterApprovalPending: "بانتظار تأكيد النادل…",
+    orderConfirmed: "تم تأكيد الطلب.",
+    produceReward: "إنشاء المكافأة",
+    rewardAddedToAccount: "تمت إضافة المكافأة إلى حسابك.",
+    rewardLoginToClaim: "امسح رمز QR وسجّل الدخول لاستلام مكافأتك.",
+    done: "تم",
   },
 };
 
