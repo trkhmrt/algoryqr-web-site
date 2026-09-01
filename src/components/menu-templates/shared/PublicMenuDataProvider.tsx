@@ -97,6 +97,7 @@ export function PublicMenuDataProvider({
 
   const i18n = useGoogleTranslateOptional();
   const ensureTranslations = i18n?.ensureTranslations;
+  const translate = i18n?.translate;
   const dict = i18n?.dict ?? EMPTY_DICT;
   const contentTexts = useMemo(
     () => collectMenuContentTexts(products, categories),
@@ -108,13 +109,13 @@ export function PublicMenuDataProvider({
   }, [contentTexts, ensureTranslations]);
 
   const localizedCategories = useMemo(
-    () => localizeCategories(categories, dict),
-    [categories, dict],
+    () => localizeCategories(categories, dict, translate),
+    [categories, dict, translate],
   );
 
   const localizedProducts = useMemo(
-    () => localizeProducts(products, dict),
-    [dict, products],
+    () => localizeProducts(products, dict, translate),
+    [dict, products, translate],
   );
 
   usePublicMenuCategoryStats(menuId, categories);

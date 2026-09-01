@@ -74,4 +74,10 @@ describe("localize overlay", () => {
     const [localized] = localizeProducts([product], {});
     expect(localized.name).toBe("Mercimek çorbası");
   });
+
+  it("falls back to translate when dict misses", () => {
+    const translate = (text: string) => (text === "Çorbalar" ? "Soups" : text);
+    const [localized] = localizeCategories([category], {}, translate);
+    expect(localized.name).toBe("Soups");
+  });
 });

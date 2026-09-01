@@ -6,6 +6,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 
 type CategoryViewProps = {
   category: TaxonomyNavNode;
@@ -60,7 +61,7 @@ export function TechGourmetCategoryView({
               letterSpacing: "-0.04em",
             }}
           >
-            {category.name}
+            <MenuCategoryName name={category.name} />
           </h2>
         </div>
       </div>

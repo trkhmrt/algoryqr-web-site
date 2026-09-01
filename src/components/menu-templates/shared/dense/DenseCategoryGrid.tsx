@@ -2,6 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 
+import { Tx } from "@/components/google-translate-provider";
 import { cn } from "@/lib/utils";
 
 export type DenseCategoryGridItem = {
@@ -68,7 +69,7 @@ export function DenseCategoryGrid({
           <div className="flex flex-1 items-center justify-between gap-1 p-2.5">
             <div className="min-w-0">
               <p className={cn("truncate text-sm font-semibold leading-tight", titleClassName)}>
-                {category.name}
+                <Tx>{category.name}</Tx>
               </p>
               <p className={cn("mt-0.5 text-[10px] uppercase tracking-wider", metaClassName)}>
                 {category.productCount} ürün

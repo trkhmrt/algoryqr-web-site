@@ -19,6 +19,10 @@ import {
   useRegisterChefOpenProduct,
 } from "../shared";
 import type { ModernBistroView } from "./category-utils";
+import {
+  MODERN_BISTRO_POPULAR_TAB,
+  type ModernBistroHomeTab,
+} from "./category-utils";
 import { ModernBistroCategoryView } from "./CategoryView";
 import { ModernBistroHomeView } from "./HomeView";
 import { ModernBistroProductDetailView } from "./ProductDetailView";
@@ -41,6 +45,9 @@ export function ModernBistroMenuTemplate({
     { supportsSubCategory: true },
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [homeTab, setHomeTab] = useState<ModernBistroHomeTab>({
+    type: MODERN_BISTRO_POPULAR_TAB,
+  });
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
 
   usePublicMenuDeepLinkProduct({
@@ -86,6 +93,7 @@ export function ModernBistroMenuTemplate({
 
   const goHome = () => {
     setSearchQuery("");
+    setHomeTab({ type: MODERN_BISTRO_POPULAR_TAB });
     setPinnedProduct(null);
     feedback.syncProductState(null);
     replaceView({ type: "home" });
@@ -96,15 +104,6 @@ export function ModernBistroMenuTemplate({
     setPinnedProduct(null);
     feedback.syncProductState(null);
     goBack();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const selectCategory = (category: TaxonomyNavNode) => {
-    setSearchQuery("");
-    setPinnedProduct(null);
-    feedback.syncProductState(null);
-    setView({ type: "category", categoryId: category.categoryId, subCategoryId: null });
-    analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -160,8 +159,18 @@ export function ModernBistroMenuTemplate({
           categories={displayCategories}
           products={products}
           searchQuery={searchQuery}
+          activeTab={homeTab}
           onSearchChange={setSearchQuery}
-          onSelectCategory={selectCategory}
+          onSelectTab={(tab) => {
+            setHomeTab(tab);
+            if (tab.type === "category") {
+              const category = findCategoryById(displayCategories, tab.categoryId);
+              if (category) {
+                analytics?.trackCategoryView(trackIdForNavNode(category));
+              }
+            }
+          }}
+          onOpenProduct={openProduct}
         />
       ) : null}
 

@@ -12,8 +12,10 @@ import {
 import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useOrderingOptional } from "../shared/ordering-context";
+import { Tx } from "@/components/google-translate-provider";
 import { pickFeaturedProducts } from "./category-utils";
 import { cleverDishScribeCategoryMark } from "./styles";
 
@@ -114,7 +116,7 @@ export function CleverDishScribeHomeView({
                   active={activeCategoryId === cat.categoryId}
                   onClick={() => setActiveCategoryId(cat.categoryId)}
                 >
-                  {cat.name}
+                  <MenuCategoryName name={cat.name} />
                 </CategoryPill>
               ))}
             </div>
@@ -211,7 +213,7 @@ function ProductSection({
       {title ? (
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold tracking-tight text-[var(--cds-fg)]">
           {mark ? <span aria-hidden>{mark}</span> : null}
-          {title}
+          {title ? <Tx>{title}</Tx> : null}
         </h2>
       ) : null}
       {compact ? (

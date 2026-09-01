@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { DenseProductRow, MenuProductScrollSentinel } from "../shared";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 import {
   countProductsForCategory,
   filterProductsForCategory,
@@ -110,21 +111,23 @@ export function LuxuryCategoryView({
             <span key={c.categoryId} className="flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
               {i === crumbs.length - 1 ? (
-                <span className="lx-fg">{c.name}</span>
+                <span className="lx-fg">
+                  <MenuCategoryName name={c.name} />
+                </span>
               ) : (
                 <button
                   type="button"
                   onClick={() => onSelectCategory(c)}
                   className="hover:text-[var(--lx-fg)]"
                 >
-                  {c.name}
+                  <MenuCategoryName name={c.name} />
                 </button>
               )}
             </span>
           ))}
         </nav>
         <h1 className="mt-2 font-display text-2xl font-semibold text-gradient-gold">
-          {category.name}
+          <MenuCategoryName name={category.name} />
         </h1>
         <p className="mt-1 text-[10px] uppercase tracking-widest lx-muted">
           {items.length} tabak
@@ -146,7 +149,7 @@ export function LuxuryCategoryView({
                     onClick={() => onSelectCategory(child)}
                     className="rounded-full border border-[var(--lx-border)] bg-[color-mix(in_oklch,var(--lx-card)_60%,transparent)] px-3 py-1.5 text-xs lx-fg"
                   >
-                    {child.name}
+                    <MenuCategoryName name={child.name} />
                     <span className="ml-1 lx-muted">({count})</span>
                   </button>
                 );

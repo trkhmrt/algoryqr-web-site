@@ -13,6 +13,7 @@ import { searchMenuProducts } from "../shared/search-products";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useOrderingOptional } from "../shared/ordering-context";
+import { Tx } from "@/components/google-translate-provider";
 import { techGourmetCategoryMark } from "./styles";
 
 type HomeViewProps = {
@@ -290,7 +291,7 @@ function TechProductCard({
                 className="mb-1 text-xs uppercase"
                 style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-fg-variant)", letterSpacing: "0.08em" }}
               >
-                {product.subCategoryName || product.mainCategoryName}
+                <Tx>{product.subCategoryName || product.mainCategoryName}</Tx>
               </p>
             )}
             <h3

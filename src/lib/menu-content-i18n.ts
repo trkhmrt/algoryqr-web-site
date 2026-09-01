@@ -1,6 +1,19 @@
 import type { MainCategoryApiItem, MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 
-import { lookupTranslation, uniqueTexts } from "./google-translate";
+import { uniqueTexts } from "./google-translate";
+
+export type MenuContentTranslateFn = (text: string) => string;
+
+function resolveLocalizedText(
+  dict: Record<string, string>,
+  value: string,
+  translate?: MenuContentTranslateFn,
+): string {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  if (dict[trimmed] != null) return dict[trimmed];
+  return translate ? translate(value) : value;
+}
 
 function addText(bucket: string[], value?: string | null) {
   if (value == null) return;
@@ -41,40 +54,39 @@ export function collectMenuContentTexts(
   return uniqueTexts(texts);
 }
 
-function localized(dict: Record<string, string>, value: string): string {
-  return lookupTranslation(dict, value);
-}
-
 function localizedOptional(
   dict: Record<string, string>,
-  value?: string | null,
+  value: string | null | undefined,
+  translate?: MenuContentTranslateFn,
 ): string | undefined {
   if (value == null) return undefined;
   if (!value.trim()) return value;
-  return localized(dict, value);
+  return resolveLocalizedText(dict, value, translate);
 }
 
 export function localizeMenuProfile(
   menu: MenuProfileApiItem,
   dict: Record<string, string>,
+  translate?: MenuContentTranslateFn,
 ): MenuProfileApiItem {
   return {
     ...menu,
-    businessName: localized(dict, menu.businessName),
-    slogan: localizedOptional(dict, menu.slogan) ?? menu.slogan,
+    businessName: resolveLocalizedText(dict, menu.businessName, translate),
+    slogan: localizedOptional(dict, menu.slogan, translate) ?? menu.slogan,
   };
 }
 
 export function localizeCategories(
   categories: MainCategoryApiItem[],
   dict: Record<string, string>,
+  translate?: MenuContentTranslateFn,
 ): MainCategoryApiItem[] {
   return categories.map((category) => ({
     ...category,
-    name: localized(dict, category.name),
+    name: resolveLocalizedText(dict, category.name, translate),
     subs: (category.subs ?? []).map((sub) => ({
       ...sub,
-      name: localized(dict, sub.name),
+      name: resolveLocalizedText(dict, sub.name, translate),
     })),
   }));
 }
@@ -82,17 +94,23 @@ export function localizeCategories(
 export function localizeProducts(
   products: MenuProductApiItem[],
   dict: Record<string, string>,
+  translate?: MenuContentTranslateFn,
 ): MenuProductApiItem[] {
   return products.map((product) => ({
     ...product,
-    name: localized(dict, product.name),
-    description: localizedOptional(dict, product.description) ?? product.description,
-    subCategoryName: localizedOptional(dict, product.subCategoryName) ?? product.subCategoryName,
-    mainCategoryName: localizedOptional(dict, product.mainCategoryName) ?? product.mainCategoryName,
-    tags: product.tags?.map((tag) => ({ ...tag, name: localized(dict, tag.name) })),
+    name: resolveLocalizedText(dict, product.name, translate),
+    description: localizedOptional(dict, product.description, translate) ?? product.description,
+    subCategoryName:
+      localizedOptional(dict, product.subCategoryName, translate) ?? product.subCategoryName,
+    mainCategoryName:
+      localizedOptional(dict, product.mainCategoryName, translate) ?? product.mainCategoryName,
+    tags: product.tags?.map((tag) => ({
+      ...tag,
+      name: resolveLocalizedText(dict, tag.name, translate),
+    })),
     allergens: product.allergens?.map((allergen) => ({
       ...allergen,
-      name: localized(dict, allergen.name),
+      name: resolveLocalizedText(dict, allergen.name, translate),
     })),
   }));
 }

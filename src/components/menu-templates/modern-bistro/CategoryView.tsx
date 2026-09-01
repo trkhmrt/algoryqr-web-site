@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 
 import {
   filterModernBistroCategoryProducts,
@@ -72,7 +73,7 @@ export function ModernBistroCategoryView({
               <ChevronLeft className="h-4 w-4" />
             </button>
             <h1 className="truncate text-lg font-bold tracking-tight text-[var(--mb-fg)]">
-              {category.name}
+              <MenuCategoryName name={category.name} />
             </h1>
           </div>
           <span className="shrink-0 rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] px-2.5 py-1 text-xs text-[var(--mb-muted)]">

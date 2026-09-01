@@ -7,6 +7,7 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { filterProductsForCategory } from "./category-utils";
 
@@ -39,7 +40,7 @@ export function CleverDishScribeCategoryView({
             Menüye dön
           </button>
           <h1 className="cds-enter text-2xl font-bold tracking-tight text-[var(--cds-fg)]">
-            {category.name}
+            <MenuCategoryName name={category.name} />
           </h1>
           <p className="mt-1 text-sm text-[var(--cds-muted)]">{categoryProducts.length} ürün</p>
         </div>

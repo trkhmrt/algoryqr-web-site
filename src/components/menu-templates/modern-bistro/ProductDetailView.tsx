@@ -8,6 +8,7 @@ import type { TaxonomyNavNode } from "../types";
 import { resolveProductNavCategory } from "../types";
 import { DenseNutritionStrip } from "../shared/dense";
 import { useMenuLocaleOptional } from "../shared/menu-locale";
+import { Tx } from "@/components/google-translate-provider";
 import { useOrderingOptional } from "../shared/ordering-context";
 import { formatServesPeopleLabel } from "../shared/serves-people";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
@@ -70,7 +71,9 @@ export function ModernBistroProductDetailView({
               ) : null}
             </div>
             {categoryLabel ? (
-              <p className="mt-0.5 truncate text-xs text-[var(--mb-muted)]">{categoryLabel}</p>
+              <p className="mt-0.5 truncate text-xs text-[var(--mb-muted)]">
+                <Tx>{categoryLabel}</Tx>
+              </p>
             ) : null}
           </div>
         </div>

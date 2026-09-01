@@ -13,7 +13,13 @@ import {
   MENU_THEME_PREVIEW_MENU,
   MENU_THEME_PREVIEW_PRODUCTS,
 } from "./preview-data";
-import { MenuCurrencyProvider, MenuProductFeed, PublicMenuThemeProvider } from "./shared";
+import {
+  MenuCurrencyProvider,
+  PublicMenuDataProvider,
+  PublicMenuThemeProvider,
+  useMenuCategoryFeed,
+  useMenuProductFeed,
+} from "./shared";
 
 type MenuThemePreviewDialogProps = {
   themeId: string;
@@ -22,14 +28,26 @@ type MenuThemePreviewDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+function MenuThemePreviewBody({ themeId }: { themeId: string }) {
+  const { Component } = getMenuTemplate(themeId);
+  const { products } = useMenuProductFeed();
+  const { categories } = useMenuCategoryFeed();
+
+  return (
+    <Component
+      menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
+      products={products}
+      categories={categories}
+    />
+  );
+}
+
 export function MenuThemePreviewDialog({
   themeId,
   themeName,
   open,
   onOpenChange,
 }: MenuThemePreviewDialogProps) {
-  const { Component } = getMenuTemplate(themeId);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] w-[min(100vw-2rem,448px)] max-w-md flex-col gap-3 overflow-hidden p-4 sm:rounded-xl">
@@ -41,22 +59,18 @@ export function MenuThemePreviewDialog({
         </DialogHeader>
         <div className="relative isolate h-[min(70vh,720px)] overflow-y-auto overscroll-contain rounded-[1.75rem] border border-border shadow-inner [transform:translateZ(0)]">
           {open ? (
-            <MenuProductFeed
+            <PublicMenuDataProvider
               key={themeId}
               menuId={MENU_THEME_PREVIEW_MENU.menuId}
+              initialCategories={MENU_THEME_PREVIEW_CATEGORIES}
               initialProducts={MENU_THEME_PREVIEW_PRODUCTS}
-              productHasNext={false}
             >
               <PublicMenuThemeProvider themeId={themeId}>
                 <MenuCurrencyProvider>
-                  <Component
-                    menu={{ ...MENU_THEME_PREVIEW_MENU, themeId }}
-                    products={MENU_THEME_PREVIEW_PRODUCTS}
-                    categories={MENU_THEME_PREVIEW_CATEGORIES}
-                  />
+                  <MenuThemePreviewBody themeId={themeId} />
                 </MenuCurrencyProvider>
               </PublicMenuThemeProvider>
-            </MenuProductFeed>
+            </PublicMenuDataProvider>
           ) : null}
         </div>
       </DialogContent>

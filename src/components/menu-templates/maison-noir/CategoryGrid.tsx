@@ -6,6 +6,7 @@ import { usePublicMenuCategoryStats } from "@/hooks/public-menu/use-public-menu-
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode } from "../types";
+import { MenuCategoryName } from "../shared/MenuCategoryName";
 
 import { maisonNoirCategoryMark } from "./styles";
 
@@ -99,7 +100,7 @@ export function MaisonNoirCategoryGrid({
           </div>
           <div className="flex h-[42%] items-center px-3 py-2">
             <p className="line-clamp-2 font-display text-[1.1875rem] leading-tight tracking-[-0.01em] text-[var(--mn-fg)] sm:text-[1.375rem]">
-              {category.name}
+              <MenuCategoryName name={category.name} />
             </p>
           </div>
         </button>
