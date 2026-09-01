@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
+import { useTranslatedText } from "@/components/google-translate-provider";
 import {
   resolveChefAvatarSrc,
   resolveChefDisplayName,
@@ -25,6 +26,7 @@ export function MenuChefFab({
 }: MenuChefFabProps) {
   const [open, setOpen] = useState(false);
   const [chatMounted, setChatMounted] = useState(false);
+  const consultChefLabel = useTranslatedText("Şefe danış");
   const displayName = resolveChefDisplayName(chefDisplayName, chefName);
   const avatarSrc = resolveChefAvatarSrc(chefAvatarUrl);
 
@@ -87,7 +89,7 @@ export function MenuChefFab({
         animate={{ opacity: open ? 0 : 1 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         className="pointer-events-auto fixed bottom-24 right-4 z-[65] flex items-center gap-3 rounded-full border border-neutral-800 bg-neutral-950 py-2.5 pl-2.5 pr-5 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] transition hover:scale-[1.03] hover:bg-neutral-900 active:scale-[0.98] lg:right-[max(1rem,calc((100%-28rem)/2+1rem))] disabled:pointer-events-none disabled:hover:scale-100"
-        aria-label={`${displayName} ile danış`}
+        aria-label={`${displayName} ile ${consultChefLabel.toLocaleLowerCase()}`}
         aria-hidden={open}
         tabIndex={open ? -1 : 0}
         disabled={open}
@@ -114,7 +116,7 @@ export function MenuChefFab({
             {displayName}
           </span>
           <span className="text-[11px] font-medium leading-none tracking-[0.01em] text-white/55">
-            Şefe danış
+            {consultChefLabel}
           </span>
         </span>
       </motion.button>
