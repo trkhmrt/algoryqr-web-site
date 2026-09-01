@@ -79,6 +79,7 @@ export type MenuStrings = {
   carbs: string;
   fiber: string;
   salt: string;
+  calories: string;
   addToCart: string;
   back: string;
   productUnavailable: string;
@@ -173,6 +174,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     carbs: "Karbonhidrat",
     fiber: "Lif",
     salt: "Tuz",
+    calories: "Kalori",
     addToCart: "Sepete Ekle",
     back: "Geri",
     productUnavailable: "Bu ürün şu an mevcut değil.",
@@ -265,6 +267,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     carbs: "Carbs",
     fiber: "Fiber",
     salt: "Salt",
+    calories: "Calories",
     addToCart: "Add to Cart",
     back: "Back",
     productUnavailable: "This item is currently unavailable.",
@@ -356,6 +359,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     carbs: "Углеводы",
     fiber: "Клетчатка",
     salt: "Соль",
+    calories: "Калории",
     addToCart: "В корзину",
     back: "Назад",
     productUnavailable: "Этот продукт сейчас недоступен.",
@@ -447,6 +451,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     carbs: "الكربohydrates",
     fiber: "الألياف",
     salt: "الملح",
+    calories: "السعرات",
     addToCart: "أضف إلى السلة",
     back: "رجوع",
     productUnavailable: "هذا المنتج غير متوفر حالياً.",
