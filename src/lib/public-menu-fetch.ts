@@ -1,5 +1,5 @@
 import type { PublicMenuApiResponse } from "@/lib/api";
-import { fetchCachedPublicMenuUpstream } from "@/lib/public-menu-server-cache";
+import { buildPublicMenuUpstreamUrl } from "@/lib/public-menu-server-cache";
 
 const MENU_OWNER_PACKAGE_INACTIVE = "MENU_OWNER_PACKAGE_INACTIVE";
 
@@ -14,7 +14,11 @@ export async function fetchPublicMenu(identifier: string): Promise<PublicMenuFet
   }
 
   try {
-    const response = await fetchCachedPublicMenuUpstream(`/menu/public/id/${identifier}`);
+    // The menu profile includes the active theme. Do not serve a stale ISR
+    // snapshot after the owner changes the theme in the dashboard.
+    const response = await fetch(buildPublicMenuUpstreamUrl(`/menu/public/id/${identifier}`), {
+      cache: "no-store",
+    });
 
     if (response.status === 403) {
       const body = (await response.json().catch(() => ({}))) as { code?: string };

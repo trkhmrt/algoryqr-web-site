@@ -3,7 +3,7 @@ import MenuUnavailableView from "@/components/menu-templates/MenuUnavailableView
 import { fetchPublicMenu } from "@/lib/public-menu-fetch";
 import { notFound } from "next/navigation";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 export default async function PublicMenuContentPage({
   params,

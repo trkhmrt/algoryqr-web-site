@@ -23,7 +23,6 @@ function addText(bucket: string[], value?: string | null) {
 
 export function collectMenuProfileTexts(menu: MenuProfileApiItem): string[] {
   const texts: string[] = [];
-  addText(texts, menu.businessName);
   addText(texts, menu.slogan);
   return uniqueTexts(texts);
 }
@@ -71,7 +70,7 @@ export function localizeMenuProfile(
 ): MenuProfileApiItem {
   return {
     ...menu,
-    businessName: resolveLocalizedText(dict, menu.businessName, translate),
+    businessName: menu.businessName,
     slogan: localizedOptional(dict, menu.slogan, translate) ?? menu.slogan,
   };
 }
