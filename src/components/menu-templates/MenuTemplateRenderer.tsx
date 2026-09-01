@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo } from "react";
 
+import { useGoogleTranslateOptional } from "@/components/google-translate-provider";
 import { useMenuVisitAnalytics } from "@/hooks/use-menu-visit-analytics";
 import {
   collectMenuProfileTexts,

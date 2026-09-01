@@ -291,7 +291,7 @@ function TechProductCard({
                 className="mb-1 text-xs uppercase"
                 style={{ fontFamily: "var(--tg-font-mono)", color: "var(--tg-fg-variant)", letterSpacing: "0.08em" }}
               >
-                <Tx>{product.subCategoryName || product.mainCategoryName}</Tx>
+                <Tx>{String(product.subCategoryName || product.mainCategoryName)}</Tx>
               </p>
             )}
             <h3

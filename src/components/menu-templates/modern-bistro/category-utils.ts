@@ -102,10 +102,6 @@ export type ModernBistroHomeTab =
 function parseRatingCount(product: MenuProductApiItem): number {
   const raw = product.ratingCount;
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  if (typeof raw === "string" && raw.trim()) {
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed)) return parsed;
-  }
   return 0;
 }
 
