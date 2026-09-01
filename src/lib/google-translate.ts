@@ -2,6 +2,13 @@ export const TRANSLATE_SOURCE = "tr";
 
 export const TRANSLATE_TARGETS = ["en", "ru", "ar"] as const;
 
+// Food names need a small glossary because isolated words can be ambiguous
+// to a general-purpose translator (for example, Turkish "makarna").
+const FOOD_TRANSLATION_GLOSSARY: Record<string, string> = {
+  makarna: "pasta",
+  kek: "cake",
+};
+
 export type TranslateTarget = (typeof TRANSLATE_TARGETS)[number];
 
 export const GOOGLE_TRANSLATE_CHUNK_SIZE = 128;
@@ -42,6 +49,15 @@ export function lookupTranslation(dict: Record<string, string>, text: string): s
   const trimmed = text.trim();
   if (!trimmed) return text;
   return dict[trimmed] ?? text;
+}
+
+export function applyTranslationGlossary(
+  target: TranslateTarget,
+  source: string,
+  translated: string,
+): string {
+  if (target !== "en") return translated;
+  return FOOD_TRANSLATION_GLOSSARY[source.trim().toLocaleLowerCase("tr-TR")] ?? translated;
 }
 
 export type GoogleTranslatePayload = {
