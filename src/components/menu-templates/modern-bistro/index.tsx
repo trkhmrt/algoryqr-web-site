@@ -24,13 +24,22 @@ import { ModernBistroHomeView } from "./HomeView";
 import { ModernBistroProductDetailView } from "./ProductDetailView";
 import { ModernBistroShell } from "./Shell";
 
+const EMPTY_FALLBACK = {
+  missingCategory: "Kategori bulunamadı.",
+  missingProduct: "Ürün bulunamadı.",
+  backToMenu: "Menüye dön",
+} as const;
+
 export function ModernBistroMenuTemplate({
   menu,
   products,
   categories = [],
   analytics,
 }: MenuTemplateProps) {
-  const [view, setView, { replaceView, goBack }] = usePublicMenuViewState<ModernBistroView>({ type: "home" });
+  const [view, setView, { replaceView, goBack }] = usePublicMenuViewState<ModernBistroView>(
+    { type: "home" },
+    { supportsSubCategory: true },
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
 
@@ -60,6 +69,13 @@ export function ModernBistroMenuTemplate({
         ? view.categoryId
         : null;
 
+  const activeSubCategoryId =
+    view.type === "category"
+      ? view.subCategoryId
+      : view.type === "product"
+        ? view.subCategoryId
+        : null;
+
   const activeCategory =
     activeCategoryId != null ? findCategoryById(displayCategories, activeCategoryId) : null;
 
@@ -76,8 +92,7 @@ export function ModernBistroMenuTemplate({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const leaveCategory = () => {
-    setSearchQuery("");
+  const backToCategories = () => {
     setPinnedProduct(null);
     feedback.syncProductState(null);
     goBack();
@@ -88,20 +103,36 @@ export function ModernBistroMenuTemplate({
     setSearchQuery("");
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "category", categoryId: category.categoryId });
+    setView({ type: "category", categoryId: category.categoryId, subCategoryId: null });
     analytics?.trackCategoryView(trackIdForNavNode(category));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const selectSubCategory = (subCategoryId: number | null) => {
+    if (view.type !== "category") return;
+    setView({ type: "category", categoryId: view.categoryId, subCategoryId });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
     const categoryId = productCategory?.categoryId ?? activeCategoryId;
+    const subCategoryId =
+      view.type === "category"
+        ? view.subCategoryId
+        : view.type === "product"
+          ? view.subCategoryId
+          : productCategory?.kind === "sub"
+            ? productCategory.categoryId
+            : null;
+
     setPinnedProduct(product);
     feedback.syncProductState(product);
     setView({
       type: "product",
       productId: product.productId,
       categoryId,
+      subCategoryId,
     });
     analytics?.trackProductView(
       product.productId,
@@ -131,7 +162,6 @@ export function ModernBistroMenuTemplate({
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSelectCategory={selectCategory}
-          onOpenProduct={openProduct}
         />
       ) : null}
 
@@ -139,20 +169,15 @@ export function ModernBistroMenuTemplate({
         <ModernBistroCategoryView
           category={activeCategory}
           products={products}
-          onHome={leaveCategory}
+          subCategoryId={activeSubCategoryId}
+          onBackToCategories={backToCategories}
+          onSelectSubCategory={selectSubCategory}
           onOpenProduct={openProduct}
         />
       ) : null}
 
       {view.type === "category" && !activeCategory ? (
-        <div className="flex min-h-[60vh] items-center justify-center px-6 text-center text-sm text-[var(--mb-muted)]">
-          <div>
-            <p>Kategori bulunamadı.</p>
-            <button type="button" onClick={goHome} className="mt-4 underline">
-              Menüye dön
-            </button>
-          </div>
-        </div>
+        <MissingState message={EMPTY_FALLBACK.missingCategory} onHome={goHome} />
       ) : null}
 
       {view.type === "product" && selectedProduct ? (
@@ -160,21 +185,25 @@ export function ModernBistroMenuTemplate({
           product={selectedProduct}
           categories={displayCategories}
           onBack={backFromProduct}
-          onHome={goHome}
-          onSelectCategory={selectCategory}
         />
       ) : null}
 
       {view.type === "product" && !selectedProduct ? (
-        <div className="flex min-h-[60vh] items-center justify-center px-6 text-center text-sm text-[var(--mb-muted)]">
-          <div>
-            <p>Ürün bulunamadı.</p>
-            <button type="button" onClick={goHome} className="mt-4 underline">
-              Menüye dön
-            </button>
-          </div>
-        </div>
+        <MissingState message={EMPTY_FALLBACK.missingProduct} onHome={goHome} />
       ) : null}
     </ModernBistroShell>
+  );
+}
+
+function MissingState({ message, onHome }: { message: string; onHome: () => void }) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center px-6 text-center text-sm text-[var(--mb-muted)]">
+      <div>
+        <p>{message}</p>
+        <button type="button" onClick={onHome} className="mt-4 underline">
+          {EMPTY_FALLBACK.backToMenu}
+        </button>
+      </div>
+    </div>
   );
 }

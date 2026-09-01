@@ -1,180 +1,129 @@
 "use client";
 
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
-import { useOrderingOptional } from "../shared/ordering-context";
-import { filterProductsForCategory } from "./category-utils";
+
+import {
+  filterModernBistroCategoryProducts,
+  MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE,
+} from "./category-utils";
+import { ModernBistroProductRow } from "./ProductRow";
+import { ModernBistroSubcategorySlider } from "./SubcategorySlider";
 
 type CategoryViewProps = {
   category: TaxonomyNavNode;
   products: MenuProductApiItem[];
-  onHome: () => void;
+  subCategoryId: number | null;
+  onBackToCategories: () => void;
+  onSelectSubCategory: (subCategoryId: number | null) => void;
   onOpenProduct: (product: MenuProductApiItem) => void;
 };
 
 export function ModernBistroCategoryView({
   category,
   products,
-  onHome,
+  subCategoryId,
+  onBackToCategories,
+  onSelectSubCategory,
   onOpenProduct,
 }: CategoryViewProps) {
-  const categoryProducts = filterProductsForCategory(products, category);
-  const compact = categoryProducts.length >= 4;
+  const [visibleLimit, setVisibleLimit] = useState(MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleLimit(MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE);
+  }, [category.categoryId, subCategoryId]);
+
+  const filteredProducts = useMemo(
+    () => filterModernBistroCategoryProducts(products, category, subCategoryId),
+    [products, category, subCategoryId],
+  );
+
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((left, right) => {
+      const leftChef = left.chefRecommended && left.available !== false ? 1 : 0;
+      const rightChef = right.chefRecommended && right.available !== false ? 1 : 0;
+      return rightChef - leftChef;
+    });
+  }, [filteredProducts]);
+
+  const displayedProducts = useMemo(
+    () => sortedProducts.slice(0, visibleLimit),
+    [sortedProducts, visibleLimit],
+  );
+
+  const hasMoreLocal = sortedProducts.length > visibleLimit;
+  const hasSubcategories = (category.children ?? []).length > 0;
 
   return (
-    <div>
-      <div className="border-b border-[var(--mb-border)] bg-[var(--mb-surface)] px-4 py-5 sm:px-6">
-        <div className="mx-auto max-w-6xl">
-          <button
-            type="button"
-            onClick={onHome}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-[var(--mb-muted)] transition-colors hover:text-[var(--mb-fg)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Menüye dön
-          </button>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--mb-fg)]">{category.name}</h1>
-          <p className="mt-1 text-sm text-[var(--mb-muted)]">{categoryProducts.length} ürün</p>
+    <main className="mx-auto min-h-[60vh] max-w-xl pb-8">
+      <div className="sticky top-14 z-30 border-b border-[var(--mb-border)] bg-[var(--mb-bg)]/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onBackToCategories}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] text-[var(--mb-fg)] transition-colors hover:bg-[#f3f4f6]"
+              aria-label="Kategorilere dön"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <h1 className="truncate text-lg font-bold tracking-tight text-[var(--mb-fg)]">
+              {category.name}
+            </h1>
+          </div>
+          <span className="shrink-0 rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] px-2.5 py-1 text-xs text-[var(--mb-muted)]">
+            {filteredProducts.length} ürün
+          </span>
         </div>
+
+        {hasSubcategories ? (
+          <div className="px-4 pb-2.5 sm:px-6">
+            <ModernBistroSubcategorySlider
+              parentCategory={category}
+              products={products}
+              activeSubCategoryId={subCategoryId}
+              onSelectSubCategory={onSelectSubCategory}
+              onResetFilter={() => onSelectSubCategory(null)}
+            />
+          </div>
+        ) : null}
       </div>
 
-      <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6">
-        {categoryProducts.length === 0 ? (
-          <div className="py-20 text-center text-sm text-[var(--mb-muted)]">
-            Bu kategoride ürün bulunmuyor.
-          </div>
-        ) : compact ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {categoryProducts.map((product) => (
-              <CompactProductCard key={product.productId} product={product} onOpen={onOpenProduct} />
-            ))}
-          </div>
+      <div className="px-4 pt-4 sm:px-6">
+        {displayedProducts.length === 0 ? (
+          <p className="py-12 text-center text-sm text-[var(--mb-muted)]">
+            Bu filtrede ürün bulunmuyor.
+          </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {categoryProducts.map((product) => (
-              <FeaturedProductCard key={product.productId} product={product} onOpen={onOpenProduct} />
+          <ul className="divide-y divide-[var(--mb-border)]">
+            {displayedProducts.map((product) => (
+              <ModernBistroProductRow
+                key={product.productId}
+                product={product}
+                onOpen={onOpenProduct}
+              />
             ))}
-          </div>
+          </ul>
         )}
-        <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-6" />
-      </main>
-    </div>
-  );
-}
 
-function FeaturedProductCard({
-  product,
-  onOpen,
-}: {
-  product: MenuProductApiItem;
-  onOpen: (product: MenuProductApiItem) => void;
-}) {
-  const price = useMenuPriceDisplay(product.price, product.currency);
-  const unavailable = product.available === false;
+        {hasMoreLocal ? (
+          <button
+            type="button"
+            onClick={() =>
+              setVisibleLimit((current) => current + MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE)
+            }
+            className="mt-6 block w-full rounded-2xl border border-[var(--mb-border)] py-3 text-sm font-medium text-[var(--mb-fg)] transition-colors hover:bg-[var(--mb-surface)]"
+          >
+            Daha fazla göster
+          </button>
+        ) : null}
 
-  return (
-    <article className="overflow-hidden rounded-2xl border border-[var(--mb-border)] bg-[var(--mb-surface)] shadow-[0_8px_24px_rgba(17,17,17,0.06)]">
-      <button type="button" onClick={() => onOpen(product)} className="block w-full text-left">
-        <div className="aspect-[4/3] overflow-hidden bg-[#f3f4f6]">
-          {product.imageUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-3xl opacity-30">🍽️</div>
-          )}
-        </div>
-        <div className="space-y-1.5 p-4">
-          <h3 className="text-base font-semibold text-[var(--mb-fg)]">{product.name}</h3>
-          {product.description ? (
-            <p className="line-clamp-2 text-sm leading-relaxed text-[var(--mb-muted)]">
-              {product.description}
-            </p>
-          ) : null}
-          {price ? <p className="text-sm font-semibold text-[var(--mb-fg)]">{price}</p> : null}
-        </div>
-      </button>
-      {!unavailable ? (
-        <div className="flex justify-end px-4 pb-4">
-          <AddButton product={product} />
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function CompactProductCard({
-  product,
-  onOpen,
-}: {
-  product: MenuProductApiItem;
-  onOpen: (product: MenuProductApiItem) => void;
-}) {
-  const price = useMenuPriceDisplay(product.price, product.currency);
-  const unavailable = product.available === false;
-
-  return (
-    <article className="overflow-hidden rounded-2xl border border-[var(--mb-border)] bg-[var(--mb-surface)]">
-      <button type="button" onClick={() => onOpen(product)} className="block w-full text-left">
-        <div className="aspect-square overflow-hidden bg-[#f3f4f6]">
-          {product.imageUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-2xl opacity-30">🍽️</div>
-          )}
-        </div>
-        <div className="space-y-1 p-3">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--mb-fg)]">
-            {product.name}
-          </h3>
-          {price ? <p className="text-sm font-medium text-[var(--mb-accent)]">{price}</p> : null}
-        </div>
-      </button>
-      {!unavailable ? (
-        <div className="flex justify-end px-3 pb-3">
-          <AddButton product={product} small />
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function AddButton({
-  product,
-  small,
-}: {
-  product: MenuProductApiItem;
-  small?: boolean;
-}) {
-  const ordering = useOrderingOptional();
-  const [busy, setBusy] = useState(false);
-
-  if (!ordering) return null;
-
-  return (
-    <button
-      type="button"
-      disabled={busy || ordering.loading}
-      onClick={async (event) => {
-        event.stopPropagation();
-        setBusy(true);
-        try {
-          await ordering.addProduct(product, 1);
-        } finally {
-          setBusy(false);
-        }
-      }}
-      className={`inline-flex items-center justify-center rounded-full bg-[var(--mb-primary)] text-[var(--mb-primary-fg)] transition-opacity disabled:opacity-50 ${
-        small ? "h-8 w-8" : "h-9 w-9"
-      }`}
-      aria-label="Sepete ekle"
-    >
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-    </button>
+        <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-4 text-xs text-[var(--mb-muted)]" />
+      </div>
+    </main>
   );
 }

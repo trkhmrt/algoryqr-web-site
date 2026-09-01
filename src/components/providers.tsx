@@ -10,6 +10,7 @@ import { SiteVisitTracker } from "@/components/SiteVisitTracker";
 import { DocumentLocale } from "@/components/DocumentLocale";
 import { GoogleTranslateProvider } from "@/components/google-translate-provider";
 import { MenuLocaleProvider } from "@/components/menu-templates/shared/menu-locale";
+import { MenuCurrencyProvider } from "@/components/menu-templates/shared/menu-currency";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -22,15 +23,17 @@ export default function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <MenuLocaleProvider>
-          <GoogleTranslateProvider>
-            <DocumentLocale />
-            <TooltipProvider>
-              <SiteVisitTracker />
-              {children}
-              <Toaster />
-              <Sonner />
-            </TooltipProvider>
-          </GoogleTranslateProvider>
+          <MenuCurrencyProvider>
+            <GoogleTranslateProvider>
+              <DocumentLocale />
+              <TooltipProvider>
+                <SiteVisitTracker />
+                {children}
+                <Toaster />
+                <Sonner />
+              </TooltipProvider>
+            </GoogleTranslateProvider>
+          </MenuCurrencyProvider>
         </MenuLocaleProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -153,7 +153,7 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
   const isLoading = packagesQuery.isLoading || (packagesQuery.isFetching && packages.length === 0);
 
   return (
-    <section id="pricing" ref={ref} className="py-[clamp(3.5rem,8vw,8rem)] relative">
+    <section id="pricing" ref={ref} className="relative scroll-mt-14 sm:scroll-mt-16 py-[clamp(3.5rem,8vw,8rem)]">
       <div className="container mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

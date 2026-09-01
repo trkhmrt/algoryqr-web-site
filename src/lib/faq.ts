@@ -25,6 +25,16 @@ export const FAQ_ITEMS = [
       "Yazdırmadan sonra hedef içeriği değiştirebileceğiniz QR kodlardır. Menü güncellemesi veya kampanya değişikliğinde yeni baskı gerekmez.",
   },
   {
+    question: "Menüde besin değeri ve alerjen bilgisi zorunlu mu?",
+    answer:
+      "Tarım ve Orman Bakanlığı'nın getirdiği düzenlemeye göre menülerde kalori, protein, yağ, karbonhidrat gibi besin değerleri ile alerjen bilgisi sunulması zorunludur. 1 Temmuz 2026'da ulusal zincir işletmeler için yürürlüğe giren yükümlülük kademeli olarak genişler. AlgoryQR dijital menünüzde bu alanları tanımlayıp QR ile misafirlerinize gösterebilirsiniz.",
+  },
+  {
+    question: "Menüyü farklı dillerde ve para birimlerinde gösterebilir miyim?",
+    answer:
+      "Evet. AlgoryQR dijital menünüzde misafirler kendi dilinde menüyü okuyabilir ve fiyatları TRY, EUR, USD gibi para birimlerinde görebilir. Turist bölgeleri ve uluslararası misafir ağırlayan işletmeler için ayrı menü baskısına gerek kalmaz.",
+  },
+  {
     question: "Ücretsiz başlayabilir miyim?",
     answer:
       "Evet. Hesap oluşturup uygun paketi seçerek başlayabilirsiniz. Kredi kartı zorunlu değildir; ihtiyaç duydukça planınızı yükseltebilirsiniz.",
