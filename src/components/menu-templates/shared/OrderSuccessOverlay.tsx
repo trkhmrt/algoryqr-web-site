@@ -9,6 +9,7 @@ import { getOrder } from "@/lib/ordering-api";
 import { produceCampaignReward, type ProduceRewardResponse } from "@/lib/public-campaign-api";
 
 import { usePublicMenuTheme } from "./public-menu-theme";
+import { useMenuLocale } from "./menu-locale";
 
 type OrderSuccessOverlayProps = {
   orderId: number;
@@ -28,6 +29,7 @@ export function OrderSuccessOverlay({
   onDone,
 }: OrderSuccessOverlayProps) {
   const theme = usePublicMenuTheme();
+  const { t } = useMenuLocale();
   const [status, setStatus] = useState<string>("SUBMITTED");
   const [campaignHint, setCampaignHint] = useState<string | null>(null);
   const [rewardEligible, setRewardEligible] = useState(false);
@@ -127,19 +129,19 @@ export function OrderSuccessOverlay({
         </motion.div>
 
         <p className="mt-5 font-display text-2xl font-semibold text-gradient-gold">
-          Siparişiniz alındı
+          {t.orderReceived}
         </p>
         <p className="mt-2 text-sm lx-muted">#{orderId}</p>
 
         {status === "SUBMITTED" ? (
           <p className="mt-3 flex items-center justify-center gap-2 text-sm lx-muted">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Garson onayı bekleniyor…
+            {t.waiterApprovalPending}
           </p>
         ) : null}
 
         {status === "CONFIRMED" ? (
-          <p className="mt-3 text-sm text-emerald-600">Sipariş onaylandı.</p>
+          <p className="mt-3 text-sm text-emerald-600">{t.orderConfirmed}</p>
         ) : null}
 
         {campaignHint ? (
@@ -155,7 +157,7 @@ export function OrderSuccessOverlay({
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-gradient-gold px-5 text-sm font-semibold text-[var(--lx-primary-fg)] disabled:opacity-60"
             >
               {producing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Ödül Üret
+              {t.produceReward}
             </button>
             {produceError ? <p className="text-xs text-red-500">{produceError}</p> : null}
           </div>
@@ -166,8 +168,8 @@ export function OrderSuccessOverlay({
             <p className="text-sm lx-muted">
               {produceResult.message ??
                 (produceResult.autoAssigned
-                  ? "Ödül hesabınıza eklendi."
-                  : "QR okutarak giriş yapın, hak tanımlansın.")}
+                  ? t.rewardAddedToAccount
+                  : t.rewardLoginToClaim)}
             </p>
             {!produceResult.autoAssigned && claimUrl ? (
               <>
@@ -193,7 +195,7 @@ export function OrderSuccessOverlay({
           onClick={onDone}
           className="mt-6 inline-flex h-10 items-center justify-center rounded-full border border-[var(--lx-border)] px-5 text-sm font-medium lx-fg"
         >
-          Tamam
+          {t.done}
         </button>
       </motion.div>
     </motion.div>,

@@ -28,7 +28,7 @@ export function MaisonNoirProductDetailView({
   const categoryLabel =
     leafCategory?.name ?? product.subCategoryName ?? product.mainCategoryName ?? null;
   const ordering = useOrderingOptional();
-  const { t } = useMenuLocale();
+  const { locale, t } = useMenuLocale();
   const [busy, setBusy] = useState(false);
   const unavailable = product.available === false;
   const chefPick = product.chefRecommended && !unavailable;
@@ -39,6 +39,7 @@ export function MaisonNoirProductDetailView({
   const servesLabel = formatServesPeopleLabel(
     product.servesPeopleMin,
     product.servesPeopleMax,
+    locale,
   );
   const hasMetaSummary =
     tagSummary.length > 0 || allergenSummary.length > 0 || Boolean(servesLabel);

@@ -1,14 +1,22 @@
+import type { MenuLocaleCode } from "./menu-locale";
+
 export function formatServesPeopleLabel(
   min?: number | null,
   max?: number | null,
+  locale: MenuLocaleCode = "tr",
 ): string | null {
   if (min == null || max == null || min < 1 || max < min) {
     return null;
   }
+  const suffix =
+    locale === "en" ? (min === max ? "serving" : "servings") :
+    locale === "ru" ? "порц." :
+    locale === "ar" ? "حصص" :
+    "kişilik";
   if (min === max) {
-    return `${min} kişilik`;
+    return `${min} ${suffix}`;
   }
-  return `${min}–${max} kişilik`;
+  return `${min}–${max} ${suffix}`;
 }
 
 export function productMatchesServesPeople(

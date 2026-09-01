@@ -2,6 +2,7 @@
 
 import type { NutritionFacts } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useMenuLocale } from "../menu-locale";
 
 import { formatNutritionValue } from "./format-nutrition";
 
@@ -20,11 +21,12 @@ export function DenseNutritionStrip({
   labelClassName,
   valueClassName,
 }: DenseNutritionStripProps) {
+  const { t } = useMenuLocale();
   const items = [
-    { key: "kcal", label: "Kalori", value: formatNutritionValue(nutrition?.energyKcal), unit: "kcal" },
-    { key: "protein", label: "Protein", value: formatNutritionValue(nutrition?.protein), unit: "g" },
-    { key: "carbs", label: "Karb", value: formatNutritionValue(nutrition?.carbohydrate), unit: "g" },
-    { key: "fat", label: "Yağ", value: formatNutritionValue(nutrition?.fat), unit: "g" },
+    { key: "kcal", label: t.calories, value: formatNutritionValue(nutrition?.energyKcal), unit: "kcal" },
+    { key: "protein", label: t.protein, value: formatNutritionValue(nutrition?.protein), unit: "g" },
+    { key: "carbs", label: t.carbs, value: formatNutritionValue(nutrition?.carbohydrate), unit: "g" },
+    { key: "fat", label: t.fat, value: formatNutritionValue(nutrition?.fat), unit: "g" },
   ].filter((item) => item.value);
 
   if (items.length === 0) return null;
