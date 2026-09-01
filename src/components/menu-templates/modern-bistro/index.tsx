@@ -152,7 +152,7 @@ export function ModernBistroMenuTemplate({
   };
 
   return (
-    <ModernBistroShell menu={menu}>
+    <ModernBistroShell menu={menu} onBrandClick={goHome}>
       {view.type === "home" ? (
         <ModernBistroHomeView
           menu={menu}

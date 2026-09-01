@@ -20,6 +20,8 @@ type PanelProps = {
   currencyItemClass: (selected: boolean) => string;
   sectionLabelClass: string;
   dividerClass: string;
+  languageLabel: string;
+  currencyLabel: string;
 };
 
 function LocaleCurrencyPanel({
@@ -28,13 +30,15 @@ function LocaleCurrencyPanel({
   currencyItemClass,
   sectionLabelClass,
   dividerClass,
+  languageLabel,
+  currencyLabel,
 }: PanelProps) {
   const { locale, setLocale } = useMenuLocale();
   const { displayCurrency, setDisplayCurrency } = useMenuCurrency();
 
   return (
     <>
-      <p className={sectionLabelClass}>Dil</p>
+      <p className={sectionLabelClass}>{languageLabel}</p>
       {MENU_LOCALES.map((item) => {
         const selected = item.code === locale;
         return (
@@ -54,7 +58,7 @@ function LocaleCurrencyPanel({
         );
       })}
       <div className={dividerClass} />
-      <p className={sectionLabelClass}>Kur</p>
+      <p className={sectionLabelClass}>{currencyLabel}</p>
       {MENU_DISPLAY_CURRENCIES.map((code) => {
         const selected = code === displayCurrency;
         return (
@@ -137,7 +141,7 @@ export function MenuLanguagePicker({
   className,
   variant = "group",
 }: MenuLanguagePickerProps) {
-  const { locale, setLocale } = useMenuLocale();
+  const { locale, setLocale, t } = useMenuLocale();
   const { displayCurrency } = useMenuCurrency();
   const current = MENU_LOCALES.find((item) => item.code === locale) ?? MENU_LOCALES[0];
   const { open, setOpen, rootRef } = usePickerOpenState();
@@ -145,31 +149,37 @@ export function MenuLanguagePicker({
   const close = () => setOpen(false);
   const toggle = () => setOpen((value) => !value);
 
+  const itemBaseClass =
+    variant === "minimal"
+      ? "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[0.75rem] font-medium uppercase tracking-[0.12em]"
+      : "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[0.625rem] font-normal uppercase tracking-[0.12em]";
+
+  const itemSelectedClass =
+    "bg-[var(--lx-gold)] font-semibold text-[var(--lx-primary-fg)]";
+
+  const itemIdleClass =
+    "text-[var(--lx-fg)] hover:bg-[color-mix(in_oklch,var(--lx-gold)_12%,transparent)]";
+
   const panelProps: PanelProps = {
     onSelect: close,
+    languageLabel: t.language,
+    currencyLabel: t.currency,
     sectionLabelClass:
       variant === "minimal"
-        ? "px-2.5 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.14em] text-[var(--lx-muted)]"
+        ? "px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[var(--lx-muted)]"
         : "px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-[var(--lx-muted)]",
-    dividerClass:
-      variant === "minimal"
-        ? "my-1 border-t border-[var(--lx-border)]"
-        : "my-1 border-t border-[var(--lx-border)]",
+    dividerClass: "my-1 border-t border-[var(--lx-border)]",
     languageItemClass: (selected) =>
       cn(
-        "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[0.625rem] font-normal uppercase tracking-[0.12em]",
+        itemBaseClass,
         variant === "dropdown" && "rounded-lg px-3 py-2 text-xs font-semibold tracking-wide",
-        selected
-          ? "bg-gradient-gold text-[var(--lx-primary-fg)]"
-          : "lx-fg hover:bg-[color-mix(in_oklch,var(--lx-gold)_12%,transparent)]",
+        selected ? itemSelectedClass : itemIdleClass,
       ),
     currencyItemClass: (selected) =>
       cn(
-        "flex w-full items-center rounded-md px-2.5 py-1.5 text-left text-[0.625rem] font-normal uppercase tracking-[0.12em]",
+        itemBaseClass,
         variant === "dropdown" && "rounded-lg px-3 py-2 text-xs font-semibold tracking-wide",
-        selected
-          ? "bg-gradient-gold text-[var(--lx-primary-fg)]"
-          : "lx-fg hover:bg-[color-mix(in_oklch,var(--lx-gold)_12%,transparent)]",
+        selected ? itemSelectedClass : itemIdleClass,
       ),
   };
 
@@ -180,16 +190,16 @@ export function MenuLanguagePicker({
         open={open}
         setOpen={setOpen}
         rootRef={rootRef}
-        listLabel="Dil ve kur"
-        panelClassName="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[5.5rem] overflow-hidden rounded-lg border border-[var(--lx-border)] bg-[var(--lx-card)] p-0.5 shadow-lg"
+        listLabel={t.languageAndCurrency}
+        panelClassName="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[6.5rem] overflow-hidden rounded-lg border border-[var(--lx-border)] bg-[var(--lx-card)] p-1 shadow-lg"
         trigger={
           <button
             type="button"
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-label="Dil ve kur seç"
+            aria-label={t.selectLanguageAndCurrency}
             onClick={toggle}
-            className="flex h-9 min-w-[3.25rem] items-center justify-center gap-1 whitespace-nowrap px-1.5 text-[0.625rem] font-normal uppercase tracking-[0.14em] text-[var(--lx-muted)] transition-colors hover:text-[var(--lx-fg)]"
+            className="flex h-9 min-w-[3.25rem] items-center justify-center gap-1 whitespace-nowrap px-1.5 text-[0.75rem] font-medium uppercase tracking-[0.14em] text-[var(--lx-muted)] transition-colors hover:text-[var(--lx-fg)]"
           >
             <span>{current.label}</span>
             <span aria-hidden className="opacity-40">
@@ -211,7 +221,7 @@ export function MenuLanguagePicker({
         open={open}
         setOpen={setOpen}
         rootRef={rootRef}
-        listLabel="Dil ve kur"
+        listLabel={t.languageAndCurrency}
         panelClassName="absolute right-0 top-[calc(100%+6px)] z-50 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--lx-border)] bg-[var(--lx-card)] p-1 shadow-xl"
         trigger={
           <button
@@ -219,15 +229,15 @@ export function MenuLanguagePicker({
             aria-haspopup="listbox"
             aria-expanded={open}
             onClick={toggle}
-            aria-label="Dil ve kur seç"
-            className="flex h-10 min-w-10 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[var(--lx-border)] px-2.5 text-xs font-semibold tracking-wide lx-fg"
+            aria-label={t.selectLanguageAndCurrency}
+            className="flex h-10 min-w-10 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[var(--lx-border)] px-2.5 text-xs font-semibold tracking-wide text-[var(--lx-fg)]"
           >
             <span>{current.label}</span>
-            <span aria-hidden className="lx-muted opacity-70">
+            <span aria-hidden className="text-[var(--lx-muted)] opacity-70">
               |
             </span>
             <span>{displayCurrency}</span>
-            <ChevronDown className={cn("h-3.5 w-3.5 lx-muted transition", open && "rotate-180")} />
+            <ChevronDown className={cn("h-3.5 w-3.5 text-[var(--lx-muted)] transition", open && "rotate-180")} />
           </button>
         }
       >
@@ -243,7 +253,7 @@ export function MenuLanguagePicker({
         "flex flex-col items-center justify-center gap-2 rounded-full border border-border/70 bg-background/80 p-2 shadow-sm backdrop-blur"
       }
       role="group"
-      aria-label="Dil ve kur"
+      aria-label={t.languageAndCurrency}
     >
       <div className="flex items-center gap-1.5">
         {MENU_LOCALES.map((item) => {

@@ -74,10 +74,10 @@ function SubcategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 snap-start rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
         active
-          ? "bg-[var(--mb-primary)] text-[var(--mb-primary-fg)]"
-          : "border border-[var(--mb-border)] bg-[var(--mb-surface)] text-[var(--mb-fg)] hover:bg-[#f3f4f6]"
+          ? "bg-[var(--mb-primary)] text-[var(--mb-primary-fg)] shadow-sm"
+          : "border border-[var(--mb-primary)] bg-transparent text-[var(--mb-primary)] hover:bg-[var(--mb-cta-soft)]"
       }`}
     >
       {label}
