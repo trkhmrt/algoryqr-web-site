@@ -67,6 +67,7 @@ export default function PackagePurchaseView({
   const packages = useActivePackages();
   const addresses = useBillingAddresses();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("MONTHLY");
+  const [recurringConsent, setRecurringConsent] = useState(false);
   const [billingAddressId, setBillingAddressId] = useState<number | null>(null);
   const [creatingAddress, setCreatingAddress] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -170,7 +171,7 @@ export default function PackagePurchaseView({
     const checkout = checkoutSchema.safeParse({
       billingPeriod,
       billingAddressId,
-      recurringConsent: false,
+      recurringConsent,
     });
     if (!checkout.success) {
       onNotify("warning", checkout.error.issues[0]?.message ?? "Ödeme seçimlerini kontrol edin.");
@@ -188,7 +189,7 @@ export default function PackagePurchaseView({
         billingPeriod,
         billingAddressId,
         identityNumber: resolveIdentityNumber(selectedAddress?.tckn, selectedAddress?.vkn),
-        recurringConsent: false,
+        recurringConsent,
       };
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", payload);
       if (!Number.isSafeInteger(response.data.purchaseId) || response.data.purchaseId <= 0) {
@@ -378,6 +379,22 @@ export default function PackagePurchaseView({
               </p>
             </div>
 
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-primary"
+                checked={recurringConsent}
+                onChange={(event) => setRecurringConsent(event.target.checked)}
+              />
+              <span className="text-sm">
+                Düzenli ödeme için kart bilgilerimin saklanmasını istiyorum.
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  İşlemden sonra kartınızı PayTR üzerinden güvenli biçimde ekleyerek otomatik yenilemeyi
+                  etkinleştirebilirsiniz. Kart bilgileri AlgoryQR sunucularında saklanmaz.
+                </span>
+              </span>
+            </label>
+
             <div className="rounded-xl border border-border bg-muted p-3 text-xs text-muted-foreground">
               <p>
                 Bu ödeme: bugün · Dönem bitişi:{" "}
@@ -385,7 +402,7 @@ export default function PackagePurchaseView({
               </p>
               <p className="mt-1">
                 {billingPeriod === "YEARLY" ? "Yıllık" : "Aylık"} tutar: {priceLabel}. Otomatik yenileme
-                açık değildir; isterseniz abonelik ayarlarından sonradan aktif edebilirsiniz.
+                {recurringConsent ? "onayı verildi; kart ekleme adımından sonra aktif edilir." : "açık değildir; isterseniz abonelik ayarlarından sonradan aktif edebilirsiniz."}
               </p>
               <Link
                 href={DASHBOARD_ROUTES.accountSubscription}

@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, MailCheck, Sparkles } from "lucide-react";
 
-import { CardVerificationPanel } from "@/components/dashboard/CardVerificationPanel";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
@@ -14,10 +13,10 @@ import {
   invalidateDigitalMenuTrial,
   invalidatePaymentMethods,
   startTrialRequest,
-  usePaymentMethods,
   useTrialStatus,
 } from "@/hooks/use-commerce";
 import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { ApiError } from "@/lib/api";
 import { isActivePaidPurchase } from "@/lib/product-access";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
@@ -30,7 +29,6 @@ import {
   readPersistedTrialPackage,
   readTrialPackageFromSearch,
   resolveTrialPackageId,
-  buildTrialStartUrl,
 } from "@/lib/trial-flow";
 
 const REDIRECT_DELAY_MS = 4000;
@@ -52,11 +50,20 @@ export default function TrialStartView() {
   const trialStatus = useTrialStatus();
   const subscription = useSubscription();
   const packagesQuery = useActivePackages();
-  const paymentMethods = usePaymentMethods();
-  const hasCard = (paymentMethods.data?.length ?? 0) > 0;
   const verification = searchParams.get("verification");
 
   const [phase, setPhase] = useState<HubPhase>("loading");
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const [emailCode, setEmailCode] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getSiteSameOriginAxios()
+      .get<{ verified: boolean }>("/account/email-verification/status")
+      .then(({ data }) => setEmailVerified(data.verified))
+      .catch(() => setEmailVerified(null));
+  }, []);
 
   const packages = useMemo(
     () => filterCatalogPackages(packagesQuery.data ?? []),
@@ -87,7 +94,7 @@ export default function TrialStartView() {
 
   useEffect(() => {
     if (handledRef.current) return;
-    if (trialStatus.isLoading || subscription.isLoading || packagesQuery.isLoading || paymentMethods.isLoading) {
+    if (trialStatus.isLoading || subscription.isLoading || packagesQuery.isLoading || emailVerified === null) {
       return;
     }
 
@@ -137,7 +144,7 @@ export default function TrialStartView() {
     packageId,
     packagesQuery.isError,
     packagesQuery.isLoading,
-    paymentMethods.isLoading,
+    emailVerified,
     router,
     subscription.isLoading,
     trialStatus.data?.status,
@@ -146,7 +153,7 @@ export default function TrialStartView() {
   ]);
 
   const handleStartTrial = async () => {
-    if (packageId == null || phase !== "confirm") return;
+    if (packageId == null || phase !== "confirm" || emailVerified !== true) return;
     setPhase("starting");
     try {
       const started = await startTrialRequest(packageId);
@@ -176,6 +183,33 @@ export default function TrialStartView() {
     }
   };
 
+  const sendVerificationCode = async () => {
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      await getSiteSameOriginAxios().post("/account/email-verification/request-code", {});
+      notify("info", "Doğrulama kodu e-posta adresinize gönderildi.");
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "Kod gönderilemedi.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const verifyEmail = async () => {
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      await getSiteSameOriginAxios().post("/account/email-verification/verify", { code: emailCode });
+      setEmailVerified(true);
+      notify("info", "E-posta adresiniz doğrulandı.");
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "Kod doğrulanamadı.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   if (phase === "loading" || phase === "blocked") {
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col gap-6 animate-fade-in">
@@ -192,7 +226,7 @@ export default function TrialStartView() {
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 animate-fade-in">
       <DashboardPageHeader
         title="Ultimate'i 30 gün ücretsiz başlat"
-        hint={`${trialPackage?.name ?? "Ultimate"} paketini 30 gün ücretsiz kullanın. Kart zorunludur; deneme bitince kayıtlı karttan çekim yapılır.`}
+          hint={`${trialPackage?.name ?? "Ultimate"} paketini 30 gün ücretsiz kullanın. Deneme için kart zorunlu değildir.`}
       />
 
       <div className={`${DASHBOARD_PANEL} border-primary/35 bg-gradient-to-b from-primary/12 via-primary/6 to-transparent`}>
@@ -205,15 +239,24 @@ export default function TrialStartView() {
         </p>
       </div>
 
-      {hasCard ? null : (
-        <CardVerificationPanel returnPath={buildTrialStartUrl(packageCode)} />
+      {emailVerified !== true && (
+        <div className={`${DASHBOARD_PANEL} space-y-3`}>
+          <div className="flex items-center gap-2 font-medium"><MailCheck className="h-4 w-4" /> E-posta doğrulaması gerekli</div>
+          <p className="text-xs text-muted-foreground">Denemeyi başlatmak için e-posta adresinize gelen 6 haneli kodu girin.</p>
+          <div className="flex gap-2">
+            <input className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm" value={emailCode} onChange={(event) => setEmailCode(event.target.value)} placeholder="6 haneli kod" maxLength={6} />
+            <Button variant="outline" onClick={() => void verifyEmail()} disabled={emailSending || emailCode.length !== 6}>Doğrula</Button>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => void sendVerificationCode()} disabled={emailSending}>Kodu tekrar gönder</Button>
+          {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+        </div>
       )}
 
       <Button
         variant="hero"
         size="lg"
         className="w-full gap-2"
-        disabled={phase === "starting" || !hasCard}
+        disabled={phase === "starting" || emailVerified !== true}
         onClick={() => void handleStartTrial()}
       >
         {phase === "starting" ? (
