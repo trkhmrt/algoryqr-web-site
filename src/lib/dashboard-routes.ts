@@ -64,6 +64,8 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/dijital-menu/restaurant-layout?qr=${qrId}`,
   integrations: "/dashboard/entegrasyonlar",
   yemekSepeti: "/dashboard/entegrasyonlar/yemek-sepeti",
+  uberEats: "/dashboard/uber-eats",
+  uberEatsPending: "/dashboard/uber-eats/onay-bekleyen",
   trendyolGo: "/dashboard/trendyol-go",
   trendyolGoProducts: "/dashboard/trendyol-go/urunler",
   trendyolGoOrders: "/dashboard/trendyol-go/siparisler",
@@ -356,9 +358,22 @@ export function buildDashboardBreadcrumbs(
 
   if (isIntegrationsSectionActive(pathname)) {
     crumbs.push({ label: "Entegrasyonlar", href: DASHBOARD_ROUTES.integrations });
-    if (pathname !== DASHBOARD_ROUTES.integrations) {
-      crumbs.push({ label: currentLabel ?? "Entegrasyon" });
+    if (pathname === DASHBOARD_ROUTES.integrations) {
+      return crumbs;
     }
+    if (
+      pathname === DASHBOARD_ROUTES.uberEats ||
+      pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`)
+    ) {
+      crumbs.push({ label: "Uber Eats", href: DASHBOARD_ROUTES.uberEats });
+      if (pathname === DASHBOARD_ROUTES.uberEatsPending) {
+        crumbs.push({ label: "Onay bekleyen" });
+      } else if (pathname !== DASHBOARD_ROUTES.uberEats) {
+        crumbs.push({ label: currentLabel ?? "Uber Eats" });
+      }
+      return crumbs;
+    }
+    crumbs.push({ label: currentLabel ?? "Entegrasyon" });
     return crumbs;
   }
 
@@ -545,6 +560,8 @@ export function isIntegrationsSectionActive(pathname: string): boolean {
   return (
     pathname === DASHBOARD_ROUTES.integrations ||
     pathname.startsWith(`${DASHBOARD_ROUTES.integrations}/`) ||
+    pathname === DASHBOARD_ROUTES.uberEats ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`) ||
     pathname === DASHBOARD_ROUTES.trendyolGo ||
     pathname.startsWith(`${DASHBOARD_ROUTES.trendyolGo}/`)
   );

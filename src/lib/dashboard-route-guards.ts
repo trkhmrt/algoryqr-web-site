@@ -65,4 +65,6 @@ export const ROUTE_SCOPES: Partial<Record<string, ProductScope>> = {
   [DASHBOARD_ROUTES.trendyolGo]: "QR_MENU_OWNER",
   [DASHBOARD_ROUTES.trendyolGoProducts]: "QR_MENU_OWNER",
   [DASHBOARD_ROUTES.trendyolGoOrders]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.uberEats]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.uberEatsPending]: "QR_MENU_OWNER",
 };

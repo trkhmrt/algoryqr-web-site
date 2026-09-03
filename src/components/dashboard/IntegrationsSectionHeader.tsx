@@ -16,7 +16,7 @@ export function IntegrationsSectionHeader({
           <UberEatsWordmarkSvg className="text-2xl sm:text-3xl" />
         </h1>
         <p className="text-sm text-muted-foreground">
-          Trendyol Go Yemek hesabınızdaki ürünleri görün ve siparişleri takip edin.
+          Menü senkronu, onay akışı ve sipariş yönetimini buradan yönetin.
         </p>
       </div>
       {pageTitle ? (

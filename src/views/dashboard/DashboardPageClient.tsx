@@ -43,6 +43,8 @@ import ReservationsView from "@/views/dashboard/ReservationsView";
 import TrendyolGoHubView from "@/views/dashboard/TrendyolGoHubView";
 import TrendyolGoOrdersView from "@/views/dashboard/TrendyolGoOrdersView";
 import TrendyolGoProductsView from "@/views/dashboard/TrendyolGoProductsView";
+import UberEatsHubView from "@/views/dashboard/UberEatsHubView";
+import UberEatsPendingView from "@/views/dashboard/UberEatsPendingView";
 import IntegrationsHubView from "@/views/dashboard/IntegrationsHubView";
 import YemekSepetiHubView from "@/views/dashboard/YemekSepetiHubView";
 import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
@@ -250,6 +252,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (pathname === DASHBOARD_ROUTES.yemekSepeti) {
     return <YemekSepetiHubView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.uberEats) {
+    return <UberEatsHubView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.uberEatsPending) {
+    return <UberEatsPendingView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.trendyolGo) {
