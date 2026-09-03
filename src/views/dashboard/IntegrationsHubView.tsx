@@ -30,7 +30,7 @@ export default function IntegrationsHubView() {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
-          href={DASHBOARD_ROUTES.trendyolGo}
+          href={DASHBOARD_ROUTES.uberEats}
           aria-label="Uber Eats"
           className={`group flex min-h-[10rem] items-center justify-center ${DASHBOARD_TILE} sm:p-8`}
         >
