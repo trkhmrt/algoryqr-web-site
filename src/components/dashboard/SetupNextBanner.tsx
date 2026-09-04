@@ -13,10 +13,10 @@ import { isActivePaidPurchase } from "@/lib/product-access";
 
 export function SetupNextBanner() {
   const pathname = usePathname();
-  const { data: accessProfile } = useAccessProfile();
+  const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
   const showMenus = hasScope(accessProfile, "QR_MENU_OWNER");
-  const cards = usePaymentMethods();
-  const trial = useTrialStatus();
+  const cards = usePaymentMethods({ enabled: !accessLoading });
+  const trial = useTrialStatus(!accessLoading);
   const subscription = useSubscription();
   const hasActiveSubscription = isActivePaidPurchase(subscription.data?.activePurchase ?? null);
   const stats = useOverviewOpsStats({
@@ -24,9 +24,18 @@ export function SetupNextBanner() {
     reservations: false,
     menus: showMenus,
   });
-  if (cards.isLoading || stats.loading || trial.isLoading || subscription.isLoading || cards.isError) {
+
+  if (
+    accessLoading ||
+    cards.isLoading ||
+    stats.loading ||
+    trial.isLoading ||
+    subscription.isLoading ||
+    cards.isError
+  ) {
     return null;
   }
+
   const steps = buildSetupSteps({
     hasCard: (cards.data?.length ?? 0) > 0,
     canOperate: trial.data?.status === "ACTIVE" || showMenus || hasActiveSubscription,

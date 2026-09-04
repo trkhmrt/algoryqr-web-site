@@ -15,7 +15,8 @@ export type CatalogProductCode =
   | "SMART_ASSISTANT"
   | "SMART_SUMMARY"
   | "CUSTOM_DESIGN"
-  | "WAITER_PANEL";
+  | "WAITER_PANEL"
+  | "AI_MENU_IMPORT";
 
 const PRODUCT_CODE_ALIASES: Record<string, CatalogProductCode> = {
   QR_CREATE: "QR_CREATE",
@@ -29,6 +30,7 @@ const PRODUCT_CODE_ALIASES: Record<string, CatalogProductCode> = {
   SMART_SUMMARY: "SMART_SUMMARY",
   CUSTOM_DESIGN: "CUSTOM_DESIGN",
   WAITER_PANEL: "WAITER_PANEL",
+  AI_MENU_IMPORT: "AI_MENU_IMPORT",
 };
 
 export const PRODUCT_HINTS: Record<CatalogProductCode, FeatureHintContent> = {
@@ -76,6 +78,11 @@ export const PRODUCT_HINTS: Record<CatalogProductCode, FeatureHintContent> = {
     title: "Garson paneli nedir?",
     description:
       "Garsonların masa, sipariş ve adisyon süreçlerini yönettiği panel erişimi. Sipariş cirosu ve satış raporları bu modül üzerinden takip edilir.",
+  },
+  AI_MENU_IMPORT: {
+    title: "AI menü import nedir?",
+    description:
+      "Menü fotoğraflarından ürünleri yapay zeka ile çıkarır; açıklama ve besin değerlerini üretir. Taslakları inceleyip onayladıktan sonra menünüze eklenir. Yalnızca Ultimate paket.",
   },
 };
 

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Calculator,
+  CalendarDays,
   Megaphone,
   Menu,
   MonitorSmartphone,
@@ -37,6 +38,7 @@ const NAV_ICONS = {
   digitalMenu: DigitalMenuIcon,
   uberEats: UtensilsCrossed,
   orderPanel: MonitorSmartphone,
+  reservations: CalendarDays,
   reports: TrendingUp,
   accounting: Calculator,
   menuUsers: Users,

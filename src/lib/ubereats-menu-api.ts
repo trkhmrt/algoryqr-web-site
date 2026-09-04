@@ -1,6 +1,6 @@
 import { api } from "@/lib/api/client";
 
-export type PublishTarget = "INTERNAL_MENU";
+export type PublishTarget = "INTERNAL_MENU" | "UBEREATS";
 
 export type IntegrationPendingProduct = {
   id: string;
@@ -47,6 +47,20 @@ export async function importMenuFromUberEats(menuId: number) {
     `/integrations/menus/${menuId}/import-from-ubereats`,
   );
   return data;
+}
+
+export async function exportMenuToUberEats(menuId: number) {
+  const { data } = await api.post<IntegrationJobAccepted>(
+    `/integrations/menus/${menuId}/export-to-ubereats`,
+  );
+  return data;
+}
+
+export function defaultPublishTargets(product: IntegrationPendingProduct): PublishTarget[] {
+  if (product.source === "INTERNAL") {
+    return ["UBEREATS"];
+  }
+  return ["INTERNAL_MENU"];
 }
 
 export async function listPendingProducts(

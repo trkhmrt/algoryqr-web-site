@@ -18,10 +18,7 @@ import { resolveDigitalMenuMenusHref } from "@/lib/dashboard-menu-context";
 import {
   DASHBOARD_HUB_GRID,
   DASHBOARD_ICON_WELL,
-  DASHBOARD_TILE,
   DASHBOARD_TILE_ROW,
-  DASHBOARD_TYPE_KPI,
-  DASHBOARD_TYPE_META,
 } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
@@ -118,28 +115,40 @@ export function OverviewShortcutGrid({
 
 export function OverviewStatCard({
   href,
+  icon: Icon,
   label,
   value,
-  hint,
-  badgeCount = 0,
+  detail,
+  accent,
 }: {
   href: string;
+  icon: LucideIcon;
   label: string;
   value: number;
-  hint: string;
-  badgeCount?: number;
+  detail?: string;
+  accent?: string;
 }) {
   return (
     <Link
       href={href}
-      className={DASHBOARD_TILE}
+      className="rounded-2xl border border-[#e5e7eb] bg-white text-card-foreground shadow-none transition-colors hover:bg-muted/40 dark:border-border dark:bg-card"
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className={`${DASHBOARD_TYPE_META} font-semibold uppercase tracking-wider`}>{label}</p>
-        <NavBadge count={badgeCount} className="ml-0" />
+      <div className="flex flex-col gap-1.5 p-3.5 sm:gap-3 sm:p-5">
+        <div className="flex items-center gap-2">
+          <Icon
+            className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+            style={accent ? { color: accent } : undefined}
+            aria-hidden
+          />
+          <p className="text-xs font-semibold leading-tight text-muted-foreground sm:text-sm sm:text-foreground">
+            {label}
+          </p>
+        </div>
+        <p className="text-base font-semibold tracking-tight tabular-nums text-foreground sm:text-lg">
+          {value.toLocaleString("tr-TR")}
+        </p>
+        {detail ? <p className="truncate text-[11px] text-muted-foreground sm:text-xs">{detail}</p> : null}
       </div>
-      <p className={`mt-2 ${DASHBOARD_TYPE_KPI}`}>{value}</p>
-      <p className={`mt-1 ${DASHBOARD_TYPE_META}`}>{hint}</p>
     </Link>
   );
 }

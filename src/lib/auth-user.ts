@@ -26,7 +26,8 @@ export type ProductCode =
   | "SMART_REPORTING"
   | "CUSTOM_DESIGN"
   | "QR_AGENT"
-  | "QR_ANALYTICS";
+  | "QR_ANALYTICS"
+  | "AI_MENU_IMPORT";
 
 export type ProductScope =
   | "QR_CREATE_OWNER"
@@ -38,7 +39,8 @@ export type ProductScope =
   | "SMART_SUMMARY_OWNER"
   | "SMART_REPORTING_OWNER"
   | "CUSTOM_DESIGN_OWNER"
-  | "QR_ANALYTICS_OWNER";
+  | "QR_ANALYTICS_OWNER"
+  | "AI_MENU_IMPORT_OWNER";
 
 export type AuthProvider = "GOOGLE" | "BASIC";
 
@@ -62,6 +64,7 @@ const KNOWN_PRODUCT_CODES = new Set<string>([
   "CUSTOM_DESIGN",
   "QR_AGENT",
   "QR_ANALYTICS",
+  "AI_MENU_IMPORT",
 ]);
 
 const KNOWN_PRODUCT_SCOPES = new Set<string>([
@@ -75,6 +78,7 @@ const KNOWN_PRODUCT_SCOPES = new Set<string>([
   "SMART_REPORTING_OWNER",
   "CUSTOM_DESIGN_OWNER",
   "QR_ANALYTICS_OWNER",
+  "AI_MENU_IMPORT_OWNER",
 ]);
 
 const PACKAGE_CODES = new Set<string>([

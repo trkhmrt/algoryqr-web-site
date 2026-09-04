@@ -32,14 +32,26 @@ import { UBER_EATS_SOFT_CARD_CLASS } from "@/lib/ubereats-ui";
 import {
   approvePendingProduct,
   bulkApprovePendingProducts,
+  defaultPublishTargets,
   listPendingProducts,
   productField,
   productPrice,
   rejectPendingProduct,
   updatePendingProduct,
   type IntegrationPendingProduct,
+  type PublishTarget,
 } from "@/lib/ubereats-menu-api";
 import { cn } from "@/lib/utils";
+
+function publishTargetLabel(targets: PublishTarget[]): string {
+  if (targets.includes("UBEREATS") && targets.includes("INTERNAL_MENU")) {
+    return "Menü + Uber Eats";
+  }
+  if (targets.includes("UBEREATS")) {
+    return "Uber Eats";
+  }
+  return "Kendi menüm";
+}
 
 export default function UberEatsPendingView() {
   const { notify } = useDashboardBanners();
@@ -86,8 +98,12 @@ export default function UberEatsPendingView() {
   };
 
   const approveMutation = useMutation({
-    mutationFn: (productId: string) =>
-      approvePendingProduct(selectedMenuId as number, productId),
+    mutationFn: (product: IntegrationPendingProduct) =>
+      approvePendingProduct(
+        selectedMenuId as number,
+        product.id,
+        defaultPublishTargets(product),
+      ),
     onSuccess: async () => {
       setSelectedIds([]);
       await invalidate();
@@ -99,7 +115,20 @@ export default function UberEatsPendingView() {
   });
 
   const bulkMutation = useMutation({
-    mutationFn: () => bulkApprovePendingProducts(selectedMenuId as number, selectedIds),
+    mutationFn: async () => {
+      const selected = products.filter((product) => selectedIds.includes(product.id));
+      const byTarget = new Map<string, string[]>();
+      for (const product of selected) {
+        const key = defaultPublishTargets(product).join(",");
+        const ids = byTarget.get(key) ?? [];
+        ids.push(product.id);
+        byTarget.set(key, ids);
+      }
+      for (const [key, ids] of byTarget) {
+        const targets = key.split(",") as PublishTarget[];
+        await bulkApprovePendingProducts(selectedMenuId as number, ids, targets);
+      }
+    },
     onSuccess: async () => {
       setSelectedIds([]);
       await invalidate();
@@ -144,7 +173,9 @@ export default function UberEatsPendingView() {
     },
   });
 
-  const targetSummary = "Kendi menüm";
+  const targetSummary = publishTargetLabel(
+    products[0] ? defaultPublishTargets(products[0]) : ["INTERNAL_MENU"],
+  );
 
   if (accessLoading || menusQuery.loading) {
     return (
@@ -170,9 +201,9 @@ export default function UberEatsPendingView() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <IntegrationsSectionHeader
-          brandDescription="İçe aktarılan ürünleri inceleyip kendi menünüze yazın."
+          brandDescription="İçe veya dışa aktarım ürünlerini inceleyip hedefe yazın."
           pageTitle="Onay bekleyen ürünler"
-          pageDescription="AI eşleştirmelerini inceleyip onaylayın"
+          pageDescription="Import → menü, export → Uber Eats"
         />
         <div className="flex shrink-0 lg:pt-8">
           <Button asChild variant="outline">
@@ -324,7 +355,7 @@ export default function UberEatsPendingView() {
                         type="button"
                         size="sm"
                         disabled={approveMutation.isPending}
-                        onClick={() => approveMutation.mutate(product.id)}
+                        onClick={() => approveMutation.mutate(product)}
                       >
                         Onayla
                       </Button>

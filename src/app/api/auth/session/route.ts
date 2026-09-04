@@ -47,6 +47,7 @@ function normalizeProductCode(value: string): ProductCode | null {
     "CUSTOM_DESIGN",
     "QR_AGENT",
     "QR_ANALYTICS",
+    "AI_MENU_IMPORT",
   ] as const;
   if ((known as readonly string[]).includes(value)) return value as ProductCode;
   if (value === "SMART_REPORTING") return "SMART_REPORTING";
@@ -67,6 +68,7 @@ function normalizeProductScope(value: string): ProductScope | null {
     "SMART_REPORTING_OWNER",
     "CUSTOM_DESIGN_OWNER",
     "QR_ANALYTICS_OWNER",
+    "AI_MENU_IMPORT_OWNER",
   ] as const;
   if ((known as readonly string[]).includes(value)) return value as ProductScope;
   return null;

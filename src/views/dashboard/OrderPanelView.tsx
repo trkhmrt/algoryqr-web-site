@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Bell, Check, Copy, ExternalLink } from "lucide-react";
+import { Bell, Check, Copy, ExternalLink } from "lucide-react";
 
 import { DashboardHubTile } from "@/components/dashboard/DashboardHubTile";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
@@ -9,23 +9,6 @@ import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { DASHBOARD_HUB_GRID, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-
-const HUB_ITEMS = [
-  {
-    key: "orders",
-    title: "Sipariş Yönetimi",
-    description: "Bekleyen siparişleri onayla veya reddet",
-    icon: Bell,
-    href: DASHBOARD_ROUTES.waiter,
-  },
-  {
-    key: "reports",
-    title: "Sipariş Raporları",
-    description: "Personel performansı ve onaylanan siparişler",
-    icon: BarChart3,
-    href: DASHBOARD_ROUTES.orderPanelReports,
-  },
-] as const;
 
 export default function OrderPanelView() {
   const { notify } = useDashboardBanners();
@@ -76,15 +59,12 @@ export default function OrderPanelView() {
       </div>
 
       <div className={DASHBOARD_HUB_GRID}>
-        {HUB_ITEMS.map((item) => (
-          <DashboardHubTile
-            key={item.key}
-            title={item.title}
-            description={item.description}
-            icon={item.icon}
-            href={item.href}
-          />
-        ))}
+        <DashboardHubTile
+          title="Sipariş Yönetimi"
+          description="Bekleyen siparişleri onayla veya reddet"
+          icon={Bell}
+          href={DASHBOARD_ROUTES.waiter}
+        />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ describe("product-hints", () => {
     expect(getProductHint("CUSTOM_DESIGN")?.title).toContain("Özel tasarım");
     expect(getProductHint("WAITER_PANEL")?.description).toContain("Garson");
     expect(getProductHint("QR_BRANCH")?.title).toContain("Şube");
+    expect(getProductHint("AI_MENU_IMPORT")?.title).toContain("AI menü");
     expect(getProductHintByCode("SMART_REPORTING")).toEqual(PRODUCT_HINTS.SMART_REPORTING);
   });
 

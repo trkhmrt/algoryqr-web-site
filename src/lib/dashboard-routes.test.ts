@@ -19,14 +19,6 @@ describe("dashboard report routes", () => {
     );
   });
 
-  it("builds branch order report urls", () => {
-    expect(DASHBOARD_ROUTES.orderPanelReportsForBranch(4)).toBe(
-      "/dashboard/siparis-paneli/raporlar?branch=4",
-    );
-    expect(DASHBOARD_ROUTES.orderPanelReportsForBranch(4, 12)).toBe(
-      "/dashboard/siparis-paneli/raporlar?branch=4&qr=12",
-    );
-  });
 });
 
 describe("integrations routes", () => {

@@ -19,5 +19,5 @@ export function resolveDigitalMenuMenusHref(qrId?: number | null): string {
   const resolved = qrId ?? readStoredMenuQrId();
   return resolved != null
     ? DASHBOARD_ROUTES.digitalMenuEdit(resolved)
-    : DASHBOARD_ROUTES.digitalMenuMenus;
+    : DASHBOARD_ROUTES.digitalMenu;
 }

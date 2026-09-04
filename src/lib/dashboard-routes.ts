@@ -9,6 +9,11 @@ export const DASHBOARD_ROUTES = {
   digitalMenuMenus: "/dashboard/dijital-menu/menuler",
   digitalMenuProducts: "/dashboard/dijital-menu/urunler",
   digitalMenuProductCreate: "/dashboard/dijital-menu/urunler/yeni",
+  digitalMenuAiImport: "/dashboard/dijital-menu/urunler/ai-import",
+  digitalMenuAiImportFor: (qrId?: number | string | null) => {
+    if (qrId == null || qrId === "") return "/dashboard/dijital-menu/urunler/ai-import";
+    return `/dashboard/dijital-menu/urunler/ai-import?qr=${qrId}`;
+  },
   digitalMenuProductCreateFor: (
     qrId?: number | string | null,
     subCategoryId?: number | string | null,
@@ -56,9 +61,9 @@ export const DASHBOARD_ROUTES = {
   feedback: "/dashboard/dijital-menu/geri-bildirimler",
   feedbackForQr: (qrId: number | string) =>
     `/dashboard/dijital-menu/geri-bildirimler?qr=${qrId}`,
-  reservations: "/dashboard/dijital-menu/rezervasyonlar",
+  reservations: "/dashboard/rezervasyonlar",
   reservationsForQr: (qrId: number | string) =>
-    `/dashboard/dijital-menu/rezervasyonlar?qr=${qrId}`,
+    `/dashboard/rezervasyonlar?qr=${qrId}`,
   restaurantLayout: "/dashboard/dijital-menu/restaurant-layout",
   restaurantLayoutForQr: (qrId: number | string) =>
     `/dashboard/dijital-menu/restaurant-layout?qr=${qrId}`,
@@ -71,18 +76,6 @@ export const DASHBOARD_ROUTES = {
   uberEatsMenuSync: "/dashboard/uber-eats/menu-senkron",
   reportsHub: "/dashboard/raporlar",
   orderPanel: "/dashboard/siparis-paneli",
-  orderPanelReports: "/dashboard/siparis-paneli/raporlar",
-  orderPanelReportsForQr: (qrId: number | string) =>
-    `/dashboard/siparis-paneli/raporlar?qr=${qrId}`,
-  orderPanelReportsForBranch: (
-    branchId: number | string,
-    qrId?: number | string | null,
-  ) => {
-    const params = new URLSearchParams();
-    params.set("branch", String(branchId));
-    if (qrId != null && qrId !== "") params.set("qr", String(qrId));
-    return `/dashboard/siparis-paneli/raporlar?${params.toString()}`;
-  },
   muhasebe: "/dashboard/muhasebe",
   waiter: "/dashboard/garson",
   waiterForQr: (qrId: number | string) =>
@@ -139,6 +132,7 @@ export type DashboardNavKey =
   | "digitalMenu"
   | "uberEats"
   | "orderPanel"
+  | "reservations"
   | "reports"
   | "accounting"
   | "menuUsers"
@@ -164,7 +158,7 @@ export type DashboardNavGroup = {
 
 export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   { id: "main", label: "", items: ["overview"] },
-  { id: "operations", label: "Operasyon", items: ["orderPanel"] },
+  { id: "operations", label: "Operasyon", items: ["orderPanel", "reservations"] },
   { id: "menu", label: "Menü", items: ["digitalMenu", "campaigns", "qrCodes"] },
   { id: "integrations", label: "Entegrasyonlar", items: ["uberEats"] },
   { id: "reports", label: "Raporlar", items: ["reports"] },
@@ -239,6 +233,13 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     href: DASHBOARD_ROUTES.waiter,
     requiredScope: "WAITER_PANEL_OWNER",
     badgeKey: "pendingOrders",
+  },
+  {
+    key: "reservations",
+    label: "Rezervasyonlar",
+    mobileLabel: "Rezervasyon",
+    href: DASHBOARD_ROUTES.reservations,
+    requiredScope: "QR_MENU_OWNER",
   },
   {
     key: "reports",
@@ -330,14 +331,15 @@ export function buildDashboardBreadcrumbs(
     return crumbs;
   }
 
+  if (isReservationsSectionActive(pathname)) {
+    crumbs.push({ label: "Rezervasyonlar" });
+    return crumbs;
+  }
+
   if (isReportsSectionActive(pathname) || pathname === DASHBOARD_ROUTES.reportsHub) {
     crumbs.push({ label: "Raporlar", href: DASHBOARD_ROUTES.reportsHub });
     if (pathname === DASHBOARD_ROUTES.reportsHub) {
       crumbs[crumbs.length - 1] = { label: "Raporlar" };
-      return crumbs;
-    }
-    if (pathname === DASHBOARD_ROUTES.orderPanelReports) {
-      crumbs.push({ label: "Sipariş Raporları" });
       return crumbs;
     }
     if (pathname === DASHBOARD_ROUTES.analytics || pathname === DASHBOARD_ROUTES.analyticsLegacy) {
@@ -386,19 +388,24 @@ export function buildDashboardBreadcrumbs(
     return crumbs;
   }
 
-  if (isDigitalMenuSectionActive(pathname) || isReservationsSectionActive(pathname)) {
+  if (isDigitalMenuSectionActive(pathname)) {
     crumbs.push({ label: "Menü & Şubeler", href: DASHBOARD_ROUTES.digitalMenu });
     if (pathname === DASHBOARD_ROUTES.digitalMenu) {
       crumbs[crumbs.length - 1] = { label: "Menü & Şubeler" };
       return crumbs;
     }
     if (pathname === DASHBOARD_ROUTES.digitalMenuMenus) {
-      crumbs.push({ label: "Menüler" });
+      crumbs.push({ label: "Şubeler" });
       return crumbs;
     }
     if (pathname === DASHBOARD_ROUTES.digitalMenuProductCreate) {
       crumbs.push({ label: "Ürünler", href: DASHBOARD_ROUTES.digitalMenuProducts });
       crumbs.push({ label: "Yeni ürün" });
+      return crumbs;
+    }
+    if (pathname === DASHBOARD_ROUTES.digitalMenuAiImport) {
+      crumbs.push({ label: "Ürünler", href: DASHBOARD_ROUTES.digitalMenuProducts });
+      crumbs.push({ label: "AI ile ekle" });
       return crumbs;
     }
     if (pathname.startsWith(`${DASHBOARD_ROUTES.digitalMenuProducts}/`)) {
@@ -420,10 +427,6 @@ export function buildDashboardBreadcrumbs(
     }
     if (pathname === DASHBOARD_ROUTES.restaurantLayout) {
       crumbs.push({ label: "Restoran düzeni" });
-      return crumbs;
-    }
-    if (pathname === DASHBOARD_ROUTES.reservations) {
-      crumbs.push({ label: "Rezervasyonlar" });
       return crumbs;
     }
     if (pathname === DASHBOARD_ROUTES.digitalMenuCreate) {
@@ -522,6 +525,9 @@ export function isDashboardNavActive(pathname: string, href: string): boolean {
   if (href === DASHBOARD_ROUTES.waiter) {
     return isOrderPanelSectionActive(pathname);
   }
+  if (href === DASHBOARD_ROUTES.reservations) {
+    return isReservationsSectionActive(pathname);
+  }
   if (href === DASHBOARD_ROUTES.reportsHub) {
     return isReportsSectionActive(pathname);
   }
@@ -544,9 +550,7 @@ export function isReportsSectionActive(pathname: string): boolean {
     pathname.startsWith(`${DASHBOARD_ROUTES.analytics}/`) ||
     pathname === DASHBOARD_ROUTES.analyticsLegacy ||
     pathname === DASHBOARD_ROUTES.smartReports ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.smartReports}/`) ||
-    pathname === DASHBOARD_ROUTES.orderPanelReports ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.orderPanelReports}/`)
+    pathname.startsWith(`${DASHBOARD_ROUTES.smartReports}/`)
   );
 }
 
@@ -582,12 +586,15 @@ export function isUberEatsSectionActive(pathname: string): boolean {
 }
 
 export function isDigitalMenuSectionActive(pathname: string): boolean {
-  if (isReportsSectionActive(pathname) || isOrderPanelSectionActive(pathname)) {
+  if (
+    isReportsSectionActive(pathname) ||
+    isOrderPanelSectionActive(pathname) ||
+    isReservationsSectionActive(pathname)
+  ) {
     return false;
   }
   return (
     pathname === DASHBOARD_ROUTES.digitalMenu ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.digitalMenu}/`) ||
-    isReservationsSectionActive(pathname)
+    pathname.startsWith(`${DASHBOARD_ROUTES.digitalMenu}/`)
   );
 }

@@ -190,21 +190,31 @@ export default function MenuProductsPanel({
             />
           </div>
         </div>
-        <Button
-          size="sm"
-          className="w-full shrink-0 gap-1.5 sm:w-auto"
-          onClick={() =>
-            router.push(
-              DASHBOARD_ROUTES.digitalMenuProductCreateFor(
-                qrId,
-                filterCategoryId === "all" ? null : filterCategoryId,
-              ),
-            )
-          }
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Ürün Ekle
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Button
+            size="sm"
+            className="w-full shrink-0 gap-1.5 sm:w-auto"
+            onClick={() =>
+              router.push(
+                DASHBOARD_ROUTES.digitalMenuProductCreateFor(
+                  qrId,
+                  filterCategoryId === "all" ? null : filterCategoryId,
+                ),
+              )
+            }
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Ürün Ekle
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full shrink-0 gap-1.5 sm:w-auto"
+            onClick={() => router.push(DASHBOARD_ROUTES.digitalMenuAiImportFor(qrId))}
+          >
+            AI ile ekle
+          </Button>
+        </div>
       </div>
 
       {loading ? (
