@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Pencil } from "lucide-react";
 
@@ -38,14 +38,8 @@ import {
   rejectPendingProduct,
   updatePendingProduct,
   type IntegrationPendingProduct,
-  type PublishTarget,
 } from "@/lib/ubereats-menu-api";
 import { cn } from "@/lib/utils";
-
-const TARGET_OPTIONS: { value: PublishTarget; label: string }[] = [
-  { value: "INTERNAL_MENU", label: "Kendi menüm" },
-  { value: "UBEREATS", label: "Uber Eats" },
-];
 
 export default function UberEatsPendingView() {
   const { notify } = useDashboardBanners();
@@ -57,7 +51,6 @@ export default function UberEatsPendingView() {
   const selectedMenuId = menuId ?? menus[0]?.menuId ?? null;
   const [page, setPage] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [targets, setTargets] = useState<PublishTarget[]>(["INTERNAL_MENU"]);
   const [editing, setEditing] = useState<IntegrationPendingProduct | null>(null);
   const [rejecting, setRejecting] = useState<IntegrationPendingProduct | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -94,7 +87,7 @@ export default function UberEatsPendingView() {
 
   const approveMutation = useMutation({
     mutationFn: (productId: string) =>
-      approvePendingProduct(selectedMenuId as number, productId, targets),
+      approvePendingProduct(selectedMenuId as number, productId),
     onSuccess: async () => {
       setSelectedIds([]);
       await invalidate();
@@ -106,8 +99,7 @@ export default function UberEatsPendingView() {
   });
 
   const bulkMutation = useMutation({
-    mutationFn: () =>
-      bulkApprovePendingProducts(selectedMenuId as number, selectedIds, targets),
+    mutationFn: () => bulkApprovePendingProducts(selectedMenuId as number, selectedIds),
     onSuccess: async () => {
       setSelectedIds([]);
       await invalidate();
@@ -152,13 +144,7 @@ export default function UberEatsPendingView() {
     },
   });
 
-  const targetSummary = useMemo(
-    () =>
-      TARGET_OPTIONS.filter((option) => targets.includes(option.value))
-        .map((option) => option.label)
-        .join(" + ") || "Hedef seçin",
-    [targets],
-  );
+  const targetSummary = "Kendi menüm";
 
   if (accessLoading || menusQuery.loading) {
     return (
@@ -184,13 +170,13 @@ export default function UberEatsPendingView() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <IntegrationsSectionHeader
-          brandDescription="Menü senkronu, onay akışı ve Uber mağaza bağlantısını buradan yönetin."
+          brandDescription="İçe aktarılan ürünleri inceleyip kendi menünüze yazın."
           pageTitle="Onay bekleyen ürünler"
-          pageDescription="AI eşleştirmelerini inceleyip yayın hedefini seçin"
+          pageDescription="AI eşleştirmelerini inceleyip onaylayın"
         />
         <div className="flex shrink-0 lg:pt-8">
           <Button asChild variant="outline">
-            <Link href={DASHBOARD_ROUTES.uberEats}>Bağlantı</Link>
+            <Link href={DASHBOARD_ROUTES.uberEatsMenuSync}>Menü senkronu</Link>
           </Button>
         </div>
       </div>
@@ -231,25 +217,6 @@ export default function UberEatsPendingView() {
               ))}
             </select>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {TARGET_OPTIONS.map((option) => {
-              const checked = targets.includes(option.value);
-              return (
-                <label key={option.value} className="inline-flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(value) => {
-                      setTargets((current) => {
-                        if (value) return [...new Set([...current, option.value])];
-                        return current.filter((item) => item !== option.value);
-                      });
-                    }}
-                  />
-                  {option.label}
-                </label>
-              );
-            })}
-          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -273,7 +240,7 @@ export default function UberEatsPendingView() {
           </Button>
           <Button
             type="button"
-            disabled={selectedIds.length === 0 || targets.length === 0 || bulkMutation.isPending}
+            disabled={selectedIds.length === 0 || bulkMutation.isPending}
             onClick={() => bulkMutation.mutate()}
           >
             {bulkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -290,7 +257,7 @@ export default function UberEatsPendingView() {
         <div className={`${UBER_EATS_SOFT_CARD_CLASS} border-dashed p-10 text-center`}>
           <p className="font-medium">Onay bekleyen ürün yok</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            İçe veya dışa aktarım sonrası AI sonuçları burada listelenir.
+            İçe aktarım sonrası AI sonuçları burada listelenir.
           </p>
         </div>
       ) : (
@@ -356,7 +323,7 @@ export default function UberEatsPendingView() {
                       <Button
                         type="button"
                         size="sm"
-                        disabled={targets.length === 0 || approveMutation.isPending}
+                        disabled={approveMutation.isPending}
                         onClick={() => approveMutation.mutate(product.id)}
                       >
                         Onayla
