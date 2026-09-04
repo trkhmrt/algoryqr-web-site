@@ -161,6 +161,7 @@ export default function UberEatsHubView() {
       </Link>
 
       <IntegrationsSectionHeader
+        brandDescription="Menü senkronu, onay akışı ve Uber mağaza bağlantısını buradan yönetin."
         pageTitle="Menü senkronu"
         pageDescription="Ürünleri onay sonrası kendi menünüze veya Uber Eats’e aktarın"
       />
@@ -206,7 +207,7 @@ export default function UberEatsHubView() {
           <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
-          href={DASHBOARD_ROUTES.trendyolGoOrders}
+          href={DASHBOARD_ROUTES.uberEatsOrders}
           className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
         >
           <div className="flex items-center gap-3">

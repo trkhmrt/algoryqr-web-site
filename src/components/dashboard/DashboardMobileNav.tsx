@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 const NAV_ICONS = {
   overview: BarChart3,
   digitalMenu: DigitalMenuIcon,
-  trendyolGo: UtensilsCrossed,
+  uberEats: UtensilsCrossed,
   orderPanel: MonitorSmartphone,
   reports: TrendingUp,
   accounting: Calculator,

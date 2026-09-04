@@ -65,7 +65,10 @@ export const DASHBOARD_ROUTES = {
   integrations: "/dashboard/entegrasyonlar",
   yemekSepeti: "/dashboard/entegrasyonlar/yemek-sepeti",
   uberEats: "/dashboard/uber-eats",
+  uberEatsProducts: "/dashboard/uber-eats/urunler",
+  uberEatsOrders: "/dashboard/uber-eats/siparisler",
   uberEatsPending: "/dashboard/uber-eats/onay-bekleyen",
+  uberEatsMenuSync: "/dashboard/uber-eats/menu-senkron",
   trendyolGo: "/dashboard/trendyol-go",
   trendyolGoProducts: "/dashboard/trendyol-go/urunler",
   trendyolGoOrders: "/dashboard/trendyol-go/siparisler",
@@ -137,7 +140,7 @@ export const DASHBOARD_ROUTES = {
 export type DashboardNavKey =
   | "overview"
   | "digitalMenu"
-  | "trendyolGo"
+  | "uberEats"
   | "orderPanel"
   | "reports"
   | "accounting"
@@ -166,7 +169,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavGroup[] = [
   { id: "main", label: "", items: ["overview"] },
   { id: "operations", label: "Operasyon", items: ["orderPanel"] },
   { id: "menu", label: "Menü", items: ["digitalMenu", "campaigns", "qrCodes"] },
-  { id: "integrations", label: "Entegrasyonlar", items: ["trendyolGo"] },
+  { id: "integrations", label: "Entegrasyonlar", items: ["uberEats"] },
   { id: "reports", label: "Raporlar", items: ["reports"] },
   { id: "management", label: "Yönetim", items: ["accounting", "menuUsers", "menuCustomers"] },
   { id: "account", label: "", items: ["account"] },
@@ -226,7 +229,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     requiredScope: "QR_MENU_OWNER",
   },
   {
-    key: "trendyolGo",
+    key: "uberEats",
     label: "Entegrasyonlar",
     mobileLabel: "Entegrasyon",
     href: DASHBOARD_ROUTES.integrations,
@@ -363,13 +366,28 @@ export function buildDashboardBreadcrumbs(
     }
     if (
       pathname === DASHBOARD_ROUTES.uberEats ||
-      pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`)
+      pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`) ||
+      pathname === DASHBOARD_ROUTES.trendyolGo ||
+      pathname.startsWith(`${DASHBOARD_ROUTES.trendyolGo}/`)
     ) {
       crumbs.push({ label: "Uber Eats", href: DASHBOARD_ROUTES.uberEats });
-      if (pathname === DASHBOARD_ROUTES.uberEatsPending) {
-        crumbs.push({ label: "Onay bekleyen" });
-      } else if (pathname !== DASHBOARD_ROUTES.uberEats) {
-        crumbs.push({ label: currentLabel ?? "Uber Eats" });
+      if (
+        pathname === DASHBOARD_ROUTES.uberEatsPending ||
+        pathname === DASHBOARD_ROUTES.uberEatsProducts ||
+        pathname === DASHBOARD_ROUTES.uberEatsOrders ||
+        pathname === DASHBOARD_ROUTES.uberEatsMenuSync ||
+        pathname === DASHBOARD_ROUTES.trendyolGoProducts ||
+        pathname === DASHBOARD_ROUTES.trendyolGoOrders
+      ) {
+        const labelByPath: Record<string, string> = {
+          [DASHBOARD_ROUTES.uberEatsPending]: "Onay bekleyen",
+          [DASHBOARD_ROUTES.uberEatsProducts]: "Ürünler",
+          [DASHBOARD_ROUTES.uberEatsOrders]: "Siparişler",
+          [DASHBOARD_ROUTES.uberEatsMenuSync]: "Menü senkronu",
+          [DASHBOARD_ROUTES.trendyolGoProducts]: "Ürünler",
+          [DASHBOARD_ROUTES.trendyolGoOrders]: "Siparişler",
+        };
+        crumbs.push({ label: labelByPath[pathname] ?? currentLabel ?? "Uber Eats" });
       }
       return crumbs;
     }
@@ -567,8 +585,13 @@ export function isIntegrationsSectionActive(pathname: string): boolean {
   );
 }
 
-export function isTrendyolGoSectionActive(pathname: string): boolean {
+export function isUberEatsSectionActive(pathname: string): boolean {
   return isIntegrationsSectionActive(pathname);
+}
+
+/** @deprecated Use isUberEatsSectionActive */
+export function isTrendyolGoSectionActive(pathname: string): boolean {
+  return isUberEatsSectionActive(pathname);
 }
 
 export function isDigitalMenuSectionActive(pathname: string): boolean {

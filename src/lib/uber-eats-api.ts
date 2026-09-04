@@ -64,14 +64,14 @@ export type UpdatePendingProductPayload = {
 };
 
 export async function listUberEatsConnections() {
-  const { data } = await api.get<UberEatsConnection[]>("/integrations/ubereats/connections");
+  const { data } = await api.get<UberEatsConnection[]>("/integrations/ubereats-menu/connections");
   return data;
 }
 
 export async function getUberEatsConnection(menuId: number) {
   try {
     const { data } = await api.get<UberEatsConnection>(
-      `/integrations/ubereats/connections/${menuId}`,
+      `/integrations/ubereats-menu/connections/${menuId}`,
     );
     return data;
   } catch (error) {
@@ -83,13 +83,13 @@ export async function getUberEatsConnection(menuId: number) {
 }
 
 export async function upsertUberEatsConnection(payload: UpsertUberEatsConnectionPayload) {
-  const { data } = await api.put<UberEatsConnection>("/integrations/ubereats/connections", payload);
+  const { data } = await api.put<UberEatsConnection>("/integrations/ubereats-menu/connections", payload);
   return data;
 }
 
 export async function disconnectUberEats(menuId: number) {
   const { data } = await api.delete<UberEatsConnection>(
-    `/integrations/ubereats/connections/${menuId}`,
+    `/integrations/ubereats-menu/connections/${menuId}`,
   );
   return data;
 }

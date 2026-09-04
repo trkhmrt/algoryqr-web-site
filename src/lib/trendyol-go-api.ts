@@ -90,14 +90,14 @@ export type UpsertTrendyolGoConnectionPayload = {
 };
 
 export async function listTrendyolGoConnections() {
-  const { data } = await api.get<TrendyolGoConnection[]>("/integrations/trendyol-go/connections");
+  const { data } = await api.get<TrendyolGoConnection[]>("/integrations/ubereats/connections");
   return data;
 }
 
 export async function getTrendyolGoConnection(branchId: number) {
   try {
     const { data } = await api.get<TrendyolGoConnection>(
-      `/integrations/trendyol-go/connections/${branchId}`,
+      `/integrations/ubereats/connections/${branchId}`,
     );
     return data;
   } catch (error) {
@@ -109,26 +109,26 @@ export async function getTrendyolGoConnection(branchId: number) {
 }
 
 export async function upsertTrendyolGoConnection(payload: UpsertTrendyolGoConnectionPayload) {
-  const { data } = await api.put<TrendyolGoConnection>("/integrations/trendyol-go/connections", payload);
+  const { data } = await api.put<TrendyolGoConnection>("/integrations/ubereats/connections", payload);
   return data;
 }
 
 export async function disconnectTrendyolGo(branchId: number) {
   const { data } = await api.delete<TrendyolGoConnection>(
-    `/integrations/trendyol-go/connections/${branchId}`,
+    `/integrations/ubereats/connections/${branchId}`,
   );
   return data;
 }
 
 export async function listTrendyolGoRestaurants(branchId: number) {
-  const { data } = await api.get<TrendyolGoRestaurant[]>("/integrations/trendyol-go/restaurants", {
+  const { data } = await api.get<TrendyolGoRestaurant[]>("/integrations/ubereats/restaurants", {
     params: { branchId },
   });
   return data;
 }
 
 export async function listTrendyolGoProducts(branchId: number, q: string, page: number, size = 20) {
-  const { data } = await api.get<TrendyolGoProductPage>("/integrations/trendyol-go/products", {
+  const { data } = await api.get<TrendyolGoProductPage>("/integrations/ubereats/products", {
     params: { branchId, q: q || undefined, page, size },
     timeout: 25_000,
   });
@@ -141,7 +141,7 @@ export async function listTrendyolGoOrders(
   page: number,
   params?: { from?: string; to?: string; size?: number },
 ) {
-  const { data } = await api.get<TrendyolGoOrderPage>("/integrations/trendyol-go/orders", {
+  const { data } = await api.get<TrendyolGoOrderPage>("/integrations/ubereats/orders", {
     params: {
       branchId,
       status: status || undefined,
@@ -159,7 +159,7 @@ export async function syncTrendyolGoOrders(
   params?: { from?: string; to?: string },
 ) {
   const { data } = await api.post<{ upserted: number; lookbackHours: number; from?: string; to?: string }>(
-    "/integrations/trendyol-go/orders/sync",
+    "/integrations/ubereats/orders/sync",
     {},
     {
       params: {
@@ -174,7 +174,7 @@ export async function syncTrendyolGoOrders(
 }
 
 export async function getTrendyolGoOrder(branchId: number, orderId: number) {
-  const { data } = await api.get<TrendyolGoOrder>(`/integrations/trendyol-go/orders/${orderId}`, {
+  const { data } = await api.get<TrendyolGoOrder>(`/integrations/ubereats/orders/${orderId}`, {
     params: { branchId },
   });
   return data;
@@ -182,7 +182,7 @@ export async function getTrendyolGoOrder(branchId: number, orderId: number) {
 
 export async function acceptTrendyolGoOrder(branchId: number, orderId: number) {
   const { data } = await api.post<TrendyolGoOrder>(
-    `/integrations/trendyol-go/orders/${orderId}/accept`,
+    `/integrations/ubereats/orders/${orderId}/accept`,
     {},
     { params: { branchId } },
   );
@@ -191,7 +191,7 @@ export async function acceptTrendyolGoOrder(branchId: number, orderId: number) {
 
 export async function rejectTrendyolGoOrder(branchId: number, orderId: number) {
   const { data } = await api.post<TrendyolGoOrder>(
-    `/integrations/trendyol-go/orders/${orderId}/reject`,
+    `/integrations/ubereats/orders/${orderId}/reject`,
     {},
     { params: { branchId } },
   );
@@ -200,7 +200,7 @@ export async function rejectTrendyolGoOrder(branchId: number, orderId: number) {
 
 export async function cancelTrendyolGoOrder(branchId: number, orderId: number) {
   const { data } = await api.post<TrendyolGoOrder>(
-    `/integrations/trendyol-go/orders/${orderId}/cancel`,
+    `/integrations/ubereats/orders/${orderId}/cancel`,
     {},
     { params: { branchId } },
   );
@@ -209,7 +209,7 @@ export async function cancelTrendyolGoOrder(branchId: number, orderId: number) {
 
 export async function readyTrendyolGoOrder(branchId: number, orderId: number) {
   const { data } = await api.post<TrendyolGoOrder>(
-    `/integrations/trendyol-go/orders/${orderId}/ready`,
+    `/integrations/ubereats/orders/${orderId}/ready`,
     {},
     { params: { branchId } },
   );

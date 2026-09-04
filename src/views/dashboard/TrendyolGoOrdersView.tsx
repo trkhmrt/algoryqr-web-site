@@ -95,10 +95,10 @@ export default function TrendyolGoOrdersView() {
         result.from && result.to
           ? `${result.from} – ${result.to}`
           : formatDateRangeLabel(dateRange.from, dateRange.to);
-      notify("info", `TGO senkronu tamamlandı. ${result.upserted} sipariş güncellendi (${rangeLabel}).`);
+      notify("info", `Senkron tamamlandı. ${result.upserted} sipariş güncellendi (${rangeLabel}).`);
     },
     onError: (error) => {
-      notify("danger", error instanceof ApiError ? error.message : "TGO siparişleri senkronize edilemedi.");
+      notify("danger", error instanceof ApiError ? error.message : "Siparişler senkronize edilemedi.");
     },
   });
 
@@ -148,7 +148,7 @@ export default function TrendyolGoOrdersView() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <IntegrationsSectionHeader
           pageTitle="Siparişler"
-          pageDescription="Uber Eats Trendyol Go Yemek sipariş takibi"
+          pageDescription="Uber Eats sipariş takibi"
         />
         <div className="flex shrink-0 flex-wrap gap-2 lg:pt-8">
           <Button
@@ -156,17 +156,17 @@ export default function TrendyolGoOrdersView() {
             disabled={selectedBranchId == null || syncMutation.isPending}
             onClick={() => syncMutation.mutate()}
           >
-            {syncMutation.isPending ? "Senkronize ediliyor..." : "TGO'dan senkronize et"}
+            {syncMutation.isPending ? "Senkronize ediliyor..." : "Uber Eats'ten senkronize et"}
           </Button>
           <Button asChild variant="outline">
-            <Link href={DASHBOARD_ROUTES.trendyolGo}>Bağlantı</Link>
+            <Link href={DASHBOARD_ROUTES.uberEats}>Bağlantı</Link>
           </Button>
         </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
         Liste yerel veritabanındaki senkronize siparişleri gösterir. Tarih aralığını seçin, ardından
-        &quot;TGO&apos;dan senkronize et&quot; ile o dönemin siparişlerini çekin.
+        &quot;Uber Eats&apos;ten senkronize et&quot; ile o dönemin siparişlerini çekin.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-3">

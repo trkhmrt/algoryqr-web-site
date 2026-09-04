@@ -254,24 +254,30 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return <YemekSepetiHubView />;
   }
 
-  if (pathname === DASHBOARD_ROUTES.uberEats) {
+  if (pathname === DASHBOARD_ROUTES.uberEats || pathname === DASHBOARD_ROUTES.trendyolGo) {
+    return <TrendyolGoHubView />;
+  }
+
+  if (
+    pathname === DASHBOARD_ROUTES.uberEatsProducts ||
+    pathname === DASHBOARD_ROUTES.trendyolGoProducts
+  ) {
+    return <TrendyolGoProductsView />;
+  }
+
+  if (
+    pathname === DASHBOARD_ROUTES.uberEatsOrders ||
+    pathname === DASHBOARD_ROUTES.trendyolGoOrders
+  ) {
+    return <TrendyolGoOrdersView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.uberEatsMenuSync) {
     return <UberEatsHubView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.uberEatsPending) {
     return <UberEatsPendingView />;
-  }
-
-  if (pathname === DASHBOARD_ROUTES.trendyolGo) {
-    return <TrendyolGoHubView />;
-  }
-
-  if (pathname === DASHBOARD_ROUTES.trendyolGoProducts) {
-    return <TrendyolGoProductsView />;
-  }
-
-  if (pathname === DASHBOARD_ROUTES.trendyolGoOrders) {
-    return <TrendyolGoOrdersView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.restaurantLayout) {

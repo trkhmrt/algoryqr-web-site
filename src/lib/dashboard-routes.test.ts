@@ -30,12 +30,14 @@ describe("dashboard report routes", () => {
 });
 
 describe("integrations routes", () => {
-  it("exposes hub and partner console paths", () => {
+  it("exposes hub and partner console paths under Uber Eats", () => {
     expect(DASHBOARD_ROUTES.integrations).toBe("/dashboard/entegrasyonlar");
     expect(DASHBOARD_ROUTES.yemekSepeti).toBe("/dashboard/entegrasyonlar/yemek-sepeti");
-    expect(DASHBOARD_ROUTES.trendyolGo).toBe("/dashboard/trendyol-go");
-    expect(DASHBOARD_ROUTES.trendyolGoProducts).toBe("/dashboard/trendyol-go/urunler");
-    expect(DASHBOARD_ROUTES.trendyolGoOrders).toBe("/dashboard/trendyol-go/siparisler");
+    expect(DASHBOARD_ROUTES.uberEats).toBe("/dashboard/uber-eats");
+    expect(DASHBOARD_ROUTES.uberEatsProducts).toBe("/dashboard/uber-eats/urunler");
+    expect(DASHBOARD_ROUTES.uberEatsOrders).toBe("/dashboard/uber-eats/siparisler");
+    expect(DASHBOARD_ROUTES.uberEatsPending).toBe("/dashboard/uber-eats/onay-bekleyen");
+    expect(DASHBOARD_ROUTES.uberEatsMenuSync).toBe("/dashboard/uber-eats/menu-senkron");
   });
 });
 
