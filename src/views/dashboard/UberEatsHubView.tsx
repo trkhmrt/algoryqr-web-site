@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Package, ShoppingBag } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Package,
+  ShoppingBag,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -151,7 +159,22 @@ export default function UberEatsHubView() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link
+          href={DASHBOARD_ROUTES.uberEatsMenuSync}
+          className={`group flex items-center justify-between ${UBER_EATS_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted dark:bg-muted">
+              <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Menü senkronu</p>
+              <p className="text-xs text-muted-foreground">Ürünleri menü ↔ Uber Eats arasında aktarın</p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </Link>
         <Link
           href={DASHBOARD_ROUTES.uberEatsProducts}
           className={`group flex items-center justify-between ${UBER_EATS_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}

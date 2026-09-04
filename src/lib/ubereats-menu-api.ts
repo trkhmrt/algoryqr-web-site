@@ -1,27 +1,6 @@
 import { api } from "@/lib/api/client";
-import { ApiError } from "@/lib/api/errors";
 
-export type UberEatsConnectionStatus = "DISCONNECTED" | "CONNECTED" | "ERROR";
-
-export type UberEatsConnection = {
-  id: number;
-  menuId: number;
-  storeId: string;
-  clientIdMasked?: string | null;
-  status: UberEatsConnectionStatus;
-  lastError?: string | null;
-  lastSyncedAt?: string | null;
-  updatedAt?: string | null;
-};
-
-export type UpsertUberEatsConnectionPayload = {
-  menuId: number;
-  storeId: string;
-  clientId?: string;
-  clientSecret?: string;
-};
-
-export type PublishTarget = "INTERNAL_MENU" | "UBEREATS";
+export type PublishTarget = "INTERNAL_MENU";
 
 export type IntegrationPendingProduct = {
   id: string;
@@ -63,44 +42,6 @@ export type UpdatePendingProductPayload = {
   available?: boolean;
 };
 
-export async function listUberEatsConnections() {
-  const { data } = await api.get<UberEatsConnection[]>("/integrations/ubereats-menu/connections");
-  return data;
-}
-
-export async function getUberEatsConnection(menuId: number) {
-  try {
-    const { data } = await api.get<UberEatsConnection>(
-      `/integrations/ubereats-menu/connections/${menuId}`,
-    );
-    return data;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-    throw error;
-  }
-}
-
-export async function upsertUberEatsConnection(payload: UpsertUberEatsConnectionPayload) {
-  const { data } = await api.put<UberEatsConnection>("/integrations/ubereats-menu/connections", payload);
-  return data;
-}
-
-export async function disconnectUberEats(menuId: number) {
-  const { data } = await api.delete<UberEatsConnection>(
-    `/integrations/ubereats-menu/connections/${menuId}`,
-  );
-  return data;
-}
-
-export async function exportMenuToUberEats(menuId: number) {
-  const { data } = await api.post<IntegrationJobAccepted>(
-    `/integrations/menus/${menuId}/export-to-ubereats`,
-  );
-  return data;
-}
-
 export async function importMenuFromUberEats(menuId: number) {
   const { data } = await api.post<IntegrationJobAccepted>(
     `/integrations/menus/${menuId}/import-from-ubereats`,
@@ -140,7 +81,7 @@ export async function updatePendingProduct(
 export async function approvePendingProduct(
   menuId: number,
   id: string,
-  publishTargets: PublishTarget[],
+  publishTargets: PublishTarget[] = ["INTERNAL_MENU"],
 ) {
   const { data } = await api.post<IntegrationPendingProduct>(
     `/integrations/pending-products/menus/${menuId}/${id}/approve`,
@@ -156,7 +97,7 @@ export async function rejectPendingProduct(menuId: number, id: string, reason: s
 export async function bulkApprovePendingProducts(
   menuId: number,
   productIds: string[],
-  publishTargets: PublishTarget[],
+  publishTargets: PublishTarget[] = ["INTERNAL_MENU"],
 ) {
   const { data } = await api.post<IntegrationPendingProduct[]>(
     `/integrations/pending-products/menus/${menuId}/bulk-approve`,
