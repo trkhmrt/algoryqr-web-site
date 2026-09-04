@@ -102,7 +102,7 @@ export default function TrendyolGoHubView() {
     mutationFn: () => disconnectTrendyolGo(selectedBranchId as number),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["tgo-connection"] });
-      notify("info", "TGO bağlantısı kapatıldı.");
+      notify("info", "Uber Eats bağlantısı kapatıldı.");
     },
     onError: (error) => {
       notify("danger", error instanceof ApiError ? error.message : "Bağlantı kapatılamadı.");
@@ -162,7 +162,7 @@ export default function TrendyolGoHubView() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link
-          href={DASHBOARD_ROUTES.trendyolGoProducts}
+          href={DASHBOARD_ROUTES.uberEatsProducts}
           className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
         >
           <div className="flex items-center gap-3">
@@ -177,7 +177,7 @@ export default function TrendyolGoHubView() {
           <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
-          href={DASHBOARD_ROUTES.trendyolGoOrders}
+          href={DASHBOARD_ROUTES.uberEatsOrders}
           className={`group flex items-center justify-between ${TGO_SOFT_CARD_CLASS} p-5 transition-colors hover:border-primary/30`}
         >
           <div className="flex items-center gap-3">
@@ -203,7 +203,7 @@ export default function TrendyolGoHubView() {
               <div>
                 <h2 className="text-base font-semibold text-foreground">Bağlantı ayarları</h2>
                 <p className="text-xs text-muted-foreground">
-                  Şube bazında Trendyol Go kimlik bilgilerinizi tanımlayın.
+                  Şube bazında Uber Eats kimlik bilgilerinizi tanımlayın.
                 </p>
               </div>
               <ChevronDown
@@ -269,7 +269,7 @@ export default function TrendyolGoHubView() {
               <Input
                 value={sellerId || connection?.sellerId || ""}
                 onChange={(event) => setSellerId(event.target.value)}
-                placeholder="Trendyol Go satıcı numarası"
+                placeholder="Satıcı numarası"
               />
             </div>
             <div className="space-y-1.5">

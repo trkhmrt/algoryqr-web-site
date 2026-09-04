@@ -56,7 +56,7 @@ export default function TrendyolGoProductsView() {
         />
         <div className="flex shrink-0 lg:pt-8">
           <Button asChild variant="outline">
-            <Link href={DASHBOARD_ROUTES.trendyolGo}>Bağlantı</Link>
+            <Link href={DASHBOARD_ROUTES.uberEats}>Bağlantı</Link>
           </Button>
         </div>
       </div>

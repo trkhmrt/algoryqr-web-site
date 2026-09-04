@@ -1,11 +1,13 @@
 import { UberEatsWordmarkSvg } from "@/components/icons/UberEatsWordmarkSvg";
 
 type IntegrationsSectionHeaderProps = {
+  brandDescription?: string;
   pageTitle?: string;
   pageDescription?: string;
 };
 
 export function IntegrationsSectionHeader({
+  brandDescription = "Uber Eats hesabınızdaki ürünleri görün ve siparişleri takip edin.",
   pageTitle,
   pageDescription,
 }: IntegrationsSectionHeaderProps) {
@@ -15,9 +17,7 @@ export function IntegrationsSectionHeader({
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           <UberEatsWordmarkSvg className="text-2xl sm:text-3xl" />
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Menü senkronu, onay akışı ve sipariş yönetimini buradan yönetin.
-        </p>
+        <p className="text-sm text-muted-foreground">{brandDescription}</p>
       </div>
       {pageTitle ? (
         <div className="space-y-1 pt-1">

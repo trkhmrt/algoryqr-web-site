@@ -184,6 +184,7 @@ export default function UberEatsPendingView() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <IntegrationsSectionHeader
+          brandDescription="Menü senkronu, onay akışı ve Uber mağaza bağlantısını buradan yönetin."
           pageTitle="Onay bekleyen ürünler"
           pageDescription="AI eşleştirmelerini inceleyip yayın hedefini seçin"
         />
