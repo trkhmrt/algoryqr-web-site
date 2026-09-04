@@ -10,30 +10,29 @@ import { DateRangeFilter, type DateRangeValue } from "@/components/ui/date-range
 import { IntegrationsSectionHeader } from "@/components/dashboard/IntegrationsSectionHeader";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { useBranches } from "@/hooks/use-branches";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
-  acceptTrendyolGoOrder,
-  cancelTrendyolGoOrder,
-  listTrendyolGoOrders,
-  readyTrendyolGoOrder,
-  rejectTrendyolGoOrder,
-  syncTrendyolGoOrders,
-  type TrendyolGoOrder,
-} from "@/lib/trendyol-go-api";
+  acceptUberEatsOrder,
+  cancelUberEatsOrder,
+  listUberEatsOrders,
+  readyUberEatsOrder,
+  rejectUberEatsOrder,
+  syncUberEatsOrders,
+  type UberEatsOrder,
+} from "@/lib/ubereats-api";
 import {
   deliveryTypeLabel,
   displayValue,
   formatOrderReference,
-  formatTrendyolGoAmount,
-  formatTrendyolGoDateTime,
+  formatUberEatsAmount,
+  formatUberEatsDateTime,
   packageStatusClass,
   packageStatusLabel,
   paymentMethodLabel,
-  TGO_SOFT_CARD_CLASS,
-  TGO_SOFT_FIELD_CLASS,
-} from "@/lib/trendyol-go-ui";
+  UBER_EATS_SOFT_CARD_CLASS,
+  UBER_EATS_SOFT_FIELD_CLASS,
+} from "@/lib/ubereats-ui";
 
 const STATUS_FILTERS = [
   { value: "", label: "Tüm durumlar" },
@@ -60,37 +59,33 @@ function formatDateRangeLabel(from: string, to: string): string {
   return from || to;
 }
 
-export default function TrendyolGoOrdersView() {
+export default function UberEatsOrdersView() {
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const branchesQuery = useBranches(canUseDigitalMenu && !accessLoading);
-  const branches = branchesQuery.data?.content ?? [];
-  const [branchId, setBranchId] = useState<number | null>(null);
-  const selectedBranchId = branchId ?? branches[0]?.id ?? null;
   const [status, setStatus] = useState("");
   const [dateRange, setDateRange] = useState<DateRangeValue>(createDefaultDateRange);
   const [page, setPage] = useState(0);
   const [openId, setOpenId] = useState<number | null>(null);
 
   const ordersQuery = useQuery({
-    queryKey: ["tgo-orders", selectedBranchId, status, dateRange.from, dateRange.to, page],
+    queryKey: ["ubereats-orders", status, dateRange.from, dateRange.to, page],
     queryFn: () =>
-      listTrendyolGoOrders(selectedBranchId as number, status, page, {
+      listUberEatsOrders(status, page, {
         from: dateRange.from || undefined,
         to: dateRange.to || undefined,
       }),
-    enabled: selectedBranchId != null && canUseDigitalMenu,
+    enabled: canUseDigitalMenu && !accessLoading,
   });
 
   const syncMutation = useMutation({
     mutationFn: () =>
-      syncTrendyolGoOrders(selectedBranchId as number, {
+      syncUberEatsOrders({
         from: dateRange.from || undefined,
         to: dateRange.to || undefined,
       }),
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ["tgo-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["ubereats-orders"] });
       const rangeLabel =
         result.from && result.to
           ? `${result.from} – ${result.to}`
@@ -104,14 +99,13 @@ export default function TrendyolGoOrdersView() {
 
   const actionMutation = useMutation({
     mutationFn: async ({ orderId, action }: { orderId: number; action: "accept" | "reject" | "cancel" | "ready" }) => {
-      const id = selectedBranchId as number;
-      if (action === "accept") return acceptTrendyolGoOrder(id, orderId);
-      if (action === "reject") return rejectTrendyolGoOrder(id, orderId);
-      if (action === "cancel") return cancelTrendyolGoOrder(id, orderId);
-      return readyTrendyolGoOrder(id, orderId);
+      if (action === "accept") return acceptUberEatsOrder(orderId);
+      if (action === "reject") return rejectUberEatsOrder(orderId);
+      if (action === "cancel") return cancelUberEatsOrder(orderId);
+      return readyUberEatsOrder(orderId);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["tgo-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["ubereats-orders"] });
       notify("info", "Sipariş güncellendi.");
     },
     onError: (error) => {
@@ -153,7 +147,7 @@ export default function TrendyolGoOrdersView() {
         <div className="flex shrink-0 flex-wrap gap-2 lg:pt-8">
           <Button
             variant="secondary"
-            disabled={selectedBranchId == null || syncMutation.isPending}
+            disabled={!canUseDigitalMenu || syncMutation.isPending}
             onClick={() => syncMutation.mutate()}
           >
             {syncMutation.isPending ? "Senkronize ediliyor..." : "Uber Eats'ten senkronize et"}
@@ -170,39 +164,22 @@ export default function TrendyolGoOrdersView() {
       </p>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Bu sayfada yeni</p>
           <p className="mt-1 text-xl font-semibold">{statusCounts.new}</p>
         </div>
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">İşlemde</p>
           <p className="mt-1 text-xl font-semibold">{statusCounts.active}</p>
         </div>
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Seçili dönemde toplam</p>
           <p className="mt-1 text-xl font-semibold">{totalElements}</p>
         </div>
       </div>
 
-      <div className={`${TGO_SOFT_CARD_CLASS} p-4 sm:p-5`}>
+      <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-4 sm:p-5`}>
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <div className="min-w-[180px] flex-1 space-y-1.5">
-            <label className="text-xs text-muted-foreground">Şube</label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={selectedBranchId ?? ""}
-              onChange={(event) => {
-                setBranchId(Number(event.target.value));
-                setPage(0);
-              }}
-            >
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </div>
           <DateRangeFilter
             className="min-w-0 flex-1"
             value={dateRange}
@@ -283,7 +260,7 @@ export default function TrendyolGoOrdersView() {
   );
 }
 
-function orderDisplayReference(order: TrendyolGoOrder): string {
+function orderDisplayReference(order: UberEatsOrder): string {
   if (order.orderNumber?.trim()) {
     return order.orderNumber.trim();
   }
@@ -297,7 +274,7 @@ function OrderCard({
   busy,
   onAction,
 }: {
-  order: TrendyolGoOrder;
+  order: UberEatsOrder;
   open: boolean;
   onToggle: () => void;
   busy: boolean;
@@ -306,7 +283,7 @@ function OrderCard({
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <article className={`${TGO_SOFT_CARD_CLASS} overflow-hidden`}>
+    <article className={`${UBER_EATS_SOFT_CARD_CLASS} overflow-hidden`}>
       <button
         type="button"
         className="flex w-full items-start gap-4 p-4 text-left sm:p-5"
@@ -324,13 +301,13 @@ function OrderCard({
           </div>
           <p className="text-sm text-foreground">{order.customerName || "Müşteri bilgisi yok"}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>{formatTrendyolGoDateTime(order.packageCreatedAt)}</span>
+            <span>{formatUberEatsDateTime(order.packageCreatedAt)}</span>
             <span>{itemCount} ürün</span>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <p className="text-base font-semibold text-foreground">
-            {formatTrendyolGoAmount(order.totalAmount, order.currency ?? "TRY")}
+            {formatUberEatsAmount(order.totalAmount, order.currency ?? "TRY")}
           </p>
           <ChevronDown
             className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
@@ -350,7 +327,7 @@ function OrderCard({
           </div>
 
           {order.note ? (
-            <div className={TGO_SOFT_FIELD_CLASS}>
+            <div className={UBER_EATS_SOFT_FIELD_CLASS}>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Sipariş notu</p>
               <p className="mt-0.5 text-sm text-foreground">{order.note}</p>
             </div>
@@ -379,7 +356,7 @@ function OrderCard({
                       </div>
                       {item.unitPrice != null ? (
                         <p className="shrink-0 text-muted-foreground">
-                          {formatTrendyolGoAmount(item.unitPrice, order.currency ?? "TRY")}
+                          {formatUberEatsAmount(item.unitPrice, order.currency ?? "TRY")}
                         </p>
                       ) : null}
                     </li>
@@ -419,7 +396,7 @@ function DetailField({
   className?: string;
 }) {
   return (
-    <div className={`${TGO_SOFT_FIELD_CLASS} ${className ?? ""}`}>
+    <div className={`${UBER_EATS_SOFT_FIELD_CLASS} ${className ?? ""}`}>
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
     </div>

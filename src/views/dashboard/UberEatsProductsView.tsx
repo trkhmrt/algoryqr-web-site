@@ -9,29 +9,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IntegrationsSectionHeader } from "@/components/dashboard/IntegrationsSectionHeader";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
-import { useBranches } from "@/hooks/use-branches";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { listTrendyolGoProducts } from "@/lib/trendyol-go-api";
+import { listUberEatsProducts } from "@/lib/ubereats-api";
 import {
-  formatTrendyolGoAmount,
+  formatUberEatsAmount,
   productAvailabilityClass,
   productAvailabilityLabel,
-  TGO_SOFT_CARD_CLASS,
-} from "@/lib/trendyol-go-ui";
+  UBER_EATS_SOFT_CARD_CLASS,
+} from "@/lib/ubereats-ui";
 
-export default function TrendyolGoProductsView() {
+export default function UberEatsProductsView() {
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const branchesQuery = useBranches(canUseDigitalMenu && !accessLoading);
-  const branches = branchesQuery.data?.content ?? [];
-  const [branchId, setBranchId] = useState<number | null>(null);
-  const selectedBranchId = branchId ?? branches[0]?.id ?? null;
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
 
   const productsQuery = useQuery({
-    queryKey: ["tgo-products", selectedBranchId, q, page],
-    queryFn: () => listTrendyolGoProducts(selectedBranchId as number, q, page),
-    enabled: selectedBranchId != null && canUseDigitalMenu,
+    queryKey: ["ubereats-products", q, page],
+    queryFn: () => listUberEatsProducts(q, page),
+    enabled: canUseDigitalMenu && !accessLoading,
   });
 
   const pageData = productsQuery.data;
@@ -62,40 +57,23 @@ export default function TrendyolGoProductsView() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Bu sayfada</p>
           <p className="mt-1 text-xl font-semibold">{products.length}</p>
         </div>
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Satışta</p>
           <p className="mt-1 text-xl font-semibold">{availableCount}</p>
         </div>
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Toplam kayıt</p>
           <p className="mt-1 text-xl font-semibold">{pageData?.totalElements ?? 0}</p>
         </div>
       </div>
 
-      <div className={`${TGO_SOFT_CARD_CLASS} p-4 sm:p-5`}>
+      <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-4 sm:p-5`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-[180px] flex-1 space-y-1.5">
-            <label className="text-xs text-muted-foreground">Şube</label>
-            <select
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={selectedBranchId ?? ""}
-              onChange={(event) => {
-                setBranchId(Number(event.target.value));
-                setPage(0);
-              }}
-            >
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="min-w-[220px] flex-[2] space-y-1.5">
+          <div className="min-w-[220px] flex-1 space-y-1.5">
             <label className="text-xs text-muted-foreground">Ara</label>
             <Input
               value={q}
@@ -124,7 +102,7 @@ export default function TrendyolGoProductsView() {
         ) : (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {products.map((product) => (
-              <article key={product.id} className={`${TGO_SOFT_CARD_CLASS} p-4`}>
+              <article key={product.id} className={`${UBER_EATS_SOFT_CARD_CLASS} p-4`}>
                 <div className="flex gap-3">
                   {product.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -142,7 +120,7 @@ export default function TrendyolGoProductsView() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <p className="font-medium text-foreground">{product.name || "İsimsiz ürün"}</p>
                       <p className="shrink-0 text-sm font-semibold text-foreground">
-                        {formatTrendyolGoAmount(product.price, product.currency ?? "TRY")}
+                        {formatUberEatsAmount(product.price, product.currency ?? "TRY")}
                       </p>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2">

@@ -69,9 +69,6 @@ export const DASHBOARD_ROUTES = {
   uberEatsOrders: "/dashboard/uber-eats/siparisler",
   uberEatsPending: "/dashboard/uber-eats/onay-bekleyen",
   uberEatsMenuSync: "/dashboard/uber-eats/menu-senkron",
-  trendyolGo: "/dashboard/trendyol-go",
-  trendyolGoProducts: "/dashboard/trendyol-go/urunler",
-  trendyolGoOrders: "/dashboard/trendyol-go/siparisler",
   reportsHub: "/dashboard/raporlar",
   orderPanel: "/dashboard/siparis-paneli",
   orderPanelReports: "/dashboard/siparis-paneli/raporlar",
@@ -366,26 +363,20 @@ export function buildDashboardBreadcrumbs(
     }
     if (
       pathname === DASHBOARD_ROUTES.uberEats ||
-      pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`) ||
-      pathname === DASHBOARD_ROUTES.trendyolGo ||
-      pathname.startsWith(`${DASHBOARD_ROUTES.trendyolGo}/`)
+      pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`)
     ) {
       crumbs.push({ label: "Uber Eats", href: DASHBOARD_ROUTES.uberEats });
       if (
         pathname === DASHBOARD_ROUTES.uberEatsPending ||
         pathname === DASHBOARD_ROUTES.uberEatsProducts ||
         pathname === DASHBOARD_ROUTES.uberEatsOrders ||
-        pathname === DASHBOARD_ROUTES.uberEatsMenuSync ||
-        pathname === DASHBOARD_ROUTES.trendyolGoProducts ||
-        pathname === DASHBOARD_ROUTES.trendyolGoOrders
+        pathname === DASHBOARD_ROUTES.uberEatsMenuSync
       ) {
         const labelByPath: Record<string, string> = {
           [DASHBOARD_ROUTES.uberEatsPending]: "Onay bekleyen",
           [DASHBOARD_ROUTES.uberEatsProducts]: "Ürünler",
           [DASHBOARD_ROUTES.uberEatsOrders]: "Siparişler",
           [DASHBOARD_ROUTES.uberEatsMenuSync]: "Menü senkronu",
-          [DASHBOARD_ROUTES.trendyolGoProducts]: "Ürünler",
-          [DASHBOARD_ROUTES.trendyolGoOrders]: "Siparişler",
         };
         crumbs.push({ label: labelByPath[pathname] ?? currentLabel ?? "Uber Eats" });
       }
@@ -579,19 +570,15 @@ export function isIntegrationsSectionActive(pathname: string): boolean {
     pathname === DASHBOARD_ROUTES.integrations ||
     pathname.startsWith(`${DASHBOARD_ROUTES.integrations}/`) ||
     pathname === DASHBOARD_ROUTES.uberEats ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`) ||
-    pathname === DASHBOARD_ROUTES.trendyolGo ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.trendyolGo}/`)
+    pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`)
   );
 }
 
 export function isUberEatsSectionActive(pathname: string): boolean {
-  return isIntegrationsSectionActive(pathname);
-}
-
-/** @deprecated Use isUberEatsSectionActive */
-export function isTrendyolGoSectionActive(pathname: string): boolean {
-  return isUberEatsSectionActive(pathname);
+  return (
+    pathname === DASHBOARD_ROUTES.uberEats ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.uberEats}/`)
+  );
 }
 
 export function isDigitalMenuSectionActive(pathname: string): boolean {

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   ArrowDown,
   Banknote,
+  Bike,
   CreditCard,
   Coins,
   PackageX,
@@ -116,11 +117,17 @@ export default function AnalyticsRevenuePanel({
       </div>
 
       {breakdown ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
           {[
             { label: "Nakit", value: breakdown.cashRevenue, icon: Banknote, color: COLORS.green },
             { label: "Kart", value: breakdown.cardRevenue, icon: CreditCard, color: COLORS.indigo },
             { label: "Bahşiş", value: breakdown.tipRevenue, icon: Coins, color: COLORS.orange },
+            {
+              label: "Uber Eats cirosu",
+              value: breakdown.uberEatsRevenue,
+              icon: Bike,
+              color: COLORS.indigo,
+            },
             { label: "Brüt ciro", value: breakdown.grossRevenue, icon: Wallet, color: COLORS.teal },
             {
               label: "Sabit gider (düşüldü)",

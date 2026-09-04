@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { TGO_SOFT_CARD_CLASS } from "@/lib/trendyol-go-ui";
+import { UBER_EATS_SOFT_CARD_CLASS } from "@/lib/ubereats-ui";
 import {
   approvePendingProduct,
   bulkApprovePendingProducts,
@@ -39,7 +39,7 @@ import {
   updatePendingProduct,
   type IntegrationPendingProduct,
   type PublishTarget,
-} from "@/lib/uber-eats-api";
+} from "@/lib/ubereats-menu-api";
 import { cn } from "@/lib/utils";
 
 const TARGET_OPTIONS: { value: PublishTarget; label: string }[] = [
@@ -196,21 +196,21 @@ export default function UberEatsPendingView() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Bekleyen</p>
           <p className="mt-1 text-xl font-semibold">{totalElements}</p>
         </div>
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Seçili</p>
           <p className="mt-1 text-xl font-semibold">{selectedIds.length}</p>
         </div>
-        <div className={`${TGO_SOFT_CARD_CLASS} p-6`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6`}>
           <p className="text-xs text-muted-foreground">Yayın hedefi</p>
           <p className="mt-1 text-sm font-semibold">{targetSummary}</p>
         </div>
       </div>
 
-      <div className={`${TGO_SOFT_CARD_CLASS} space-y-4 p-4 sm:p-5`}>
+      <div className={`${UBER_EATS_SOFT_CARD_CLASS} space-y-4 p-4 sm:p-5`}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <Label htmlFor="pending-menu">Menü</Label>
@@ -287,7 +287,7 @@ export default function UberEatsPendingView() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : products.length === 0 ? (
-        <div className={`${TGO_SOFT_CARD_CLASS} border-dashed p-10 text-center`}>
+        <div className={`${UBER_EATS_SOFT_CARD_CLASS} border-dashed p-10 text-center`}>
           <p className="font-medium">Onay bekleyen ürün yok</p>
           <p className="mt-1 text-sm text-muted-foreground">
             İçe veya dışa aktarım sonrası AI sonuçları burada listelenir.
@@ -304,7 +304,7 @@ export default function UberEatsPendingView() {
             const price = productPrice(product);
             const checked = selectedIds.includes(product.id);
             return (
-              <div key={product.id} className={`${TGO_SOFT_CARD_CLASS} p-4 sm:p-5`}>
+              <div key={product.id} className={`${UBER_EATS_SOFT_CARD_CLASS} p-4 sm:p-5`}>
                 <div className="flex gap-4">
                   <Checkbox
                     checked={checked}

@@ -7,7 +7,7 @@ import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader"
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { DASHBOARD_BACK } from "@/lib/dashboard-surface";
-import { TGO_SOFT_CARD_CLASS } from "@/lib/trendyol-go-ui";
+import { UBER_EATS_SOFT_CARD_CLASS } from "@/lib/ubereats-ui";
 
 export default function YemekSepetiHubView() {
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
@@ -37,7 +37,7 @@ export default function YemekSepetiHubView() {
       />
 
       <div className="space-y-3">
-        <div className={`flex items-center justify-center ${TGO_SOFT_CARD_CLASS} p-6 sm:p-8`}>
+        <div className={`flex items-center justify-center ${UBER_EATS_SOFT_CARD_CLASS} p-6 sm:p-8`}>
           <Image
             src="/yemek-sepeti/wordmark.png"
             alt="Yemek Sepeti"
@@ -48,7 +48,7 @@ export default function YemekSepetiHubView() {
         </div>
       </div>
 
-      <div className={`${TGO_SOFT_CARD_CLASS} p-6 sm:p-8`}>
+      <div className={`${UBER_EATS_SOFT_CARD_CLASS} p-6 sm:p-8`}>
         <p className="text-sm font-medium text-foreground">Yakında</p>
         <p className="mt-1 text-sm text-muted-foreground">
           Yemek Sepeti entegrasyonu üzerinde çalışıyoruz. Hazır olduğunda buradan bağlantı kurabileceksiniz.
