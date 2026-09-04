@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 
 import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
@@ -30,6 +30,7 @@ import DigitalMenuSettingsView from "@/views/dashboard/DigitalMenuSettingsView";
 import DigitalMenuProductsView from "@/views/dashboard/DigitalMenuProductsView";
 import DigitalMenuProductCreateView from "@/views/dashboard/DigitalMenuProductCreateView";
 import DigitalMenuProductDetailView from "@/views/dashboard/DigitalMenuProductDetailView";
+import AiMenuImportView from "@/views/dashboard/AiMenuImportView";
 import DigitalMenuCategoriesView from "@/views/dashboard/DigitalMenuCategoriesView";
 import PackageComparisonView from "@/views/dashboard/PackageComparisonView";
 import PaymentHistoryDetailView from "@/views/dashboard/PaymentHistoryDetailView";
@@ -66,8 +67,15 @@ interface DashboardPageClientProps {
 
 export default function DashboardPageClient({ initialUser = null }: DashboardPageClientProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
+
+  useEffect(() => {
+    if (pathname === "/dashboard/dijital-menu/rezervasyonlar") {
+      router.replace(DASHBOARD_ROUTES.reservations);
+    }
+  }, [pathname, router]);
 
   useEffect(() => {
     if (pathname.startsWith(`${DASHBOARD_ROUTES.account}/`)) {
@@ -246,6 +254,10 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     );
   }
 
+  if (pathname === "/dashboard/dijital-menu/rezervasyonlar") {
+    return null;
+  }
+
   if (pathname === DASHBOARD_ROUTES.integrations) {
     return <IntegrationsHubView />;
   }
@@ -292,14 +304,6 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (pathname === DASHBOARD_ROUTES.orderPanel) {
     return <OrderPanelView />;
-  }
-
-  if (pathname === DASHBOARD_ROUTES.orderPanelReports) {
-    return (
-      <Suspense fallback={null}>
-        <AnalyticsTab variant="orders" />
-      </Suspense>
-    );
   }
 
   if (pathname === DASHBOARD_ROUTES.waiter) {
@@ -409,6 +413,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return (
       <Suspense fallback={null}>
         <DigitalMenuProductCreateView />
+      </Suspense>
+    );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.digitalMenuAiImport) {
+    return (
+      <Suspense fallback={null}>
+        <AiMenuImportView />
       </Suspense>
     );
   }

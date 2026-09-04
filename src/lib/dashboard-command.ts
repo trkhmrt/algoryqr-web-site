@@ -13,14 +13,6 @@ export type DashboardCommandEntry = {
 
 const EXTRA_COMMANDS: DashboardCommandEntry[] = [
   {
-    id: "reservations",
-    label: "Rezervasyonlar",
-    href: DASHBOARD_ROUTES.reservations,
-    group: "Operasyon",
-    keywords: "rezervasyon masa misafir",
-    requiredScope: "QR_MENU_OWNER",
-  },
-  {
     id: "products",
     label: "Ürünler",
     href: DASHBOARD_ROUTES.digitalMenuProducts,
@@ -60,7 +52,10 @@ export function getDashboardCommandEntries(): DashboardCommandEntry[] {
     label: item.label,
     href: item.href,
     group: "Sayfalar",
-    keywords: `${item.label} ${item.mobileLabel}`,
+    keywords:
+      item.key === "reservations"
+        ? `${item.label} ${item.mobileLabel} rezervasyon masa misafir`
+        : `${item.label} ${item.mobileLabel}`,
     requiredScope: item.requiredScope,
   }));
   return [...fromNav, ...EXTRA_COMMANDS];

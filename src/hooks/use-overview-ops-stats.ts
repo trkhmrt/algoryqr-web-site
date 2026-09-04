@@ -20,6 +20,10 @@ export function useOverviewOpsStats(options: {
     options.reservations,
   );
   const menuId = selection?.menu.menuId ?? null;
+  const selectedMenuName =
+    selection?.qr.name?.trim() ||
+    selection?.menu.businessName?.trim() ||
+    null;
   const today = todayDateRange();
 
   const reservationsQuery = useQuery({
@@ -41,6 +45,7 @@ export function useOverviewOpsStats(options: {
   return {
     pendingOrders: pending.count,
     reservationsToday: reservationsQuery.data ?? 0,
+    selectedMenuName,
     liveMenus,
     totalMenus: menus.length,
     branchCount: branchesQuery.data?.content.length ?? 0,

@@ -1,11 +1,9 @@
 "use client";
 
-import { BarChart3, Bell, Sparkles, TrendingUp, type LucideIcon } from "lucide-react";
+import { Sparkles, TrendingUp, type LucideIcon } from "lucide-react";
 
-import { RequireScope } from "@/components/auth/RequireScope";
 import { DashboardHubTile } from "@/components/dashboard/DashboardHubTile";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
-import type { ProductScope } from "@/lib/auth-user";
 import { DASHBOARD_HUB_GRID } from "@/lib/dashboard-surface";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
@@ -15,7 +13,6 @@ type HubItem = {
   description: string;
   icon: LucideIcon;
   href: string;
-  requiredScope?: ProductScope;
 };
 
 const HUB_ITEMS: HubItem[] = [
@@ -33,14 +30,6 @@ const HUB_ITEMS: HubItem[] = [
     icon: Sparkles,
     href: DASHBOARD_ROUTES.smartReports,
   },
-  {
-    key: "order-reports",
-    title: "Sipariş Raporları",
-    description: "Personel performansı ve onaylanan siparişler",
-    icon: BarChart3,
-    href: DASHBOARD_ROUTES.orderPanelReports,
-    requiredScope: "WAITER_PANEL_OWNER",
-  },
 ];
 
 export default function ReportsHubView() {
@@ -48,38 +37,20 @@ export default function ReportsHubView() {
     <div className="space-y-6 animate-fade-in">
       <DashboardPageHeader
         title="Raporlar"
-        hint="Menü, sipariş ve performans raporlarına erişin."
+        hint="Menü ve performans raporlarına erişin."
       />
 
       <div className={DASHBOARD_HUB_GRID}>
-        {HUB_ITEMS.map((item) => {
-          const tile = (
+        {HUB_ITEMS.map((item) => (
+          <div key={item.key}>
             <DashboardHubTile
               title={item.title}
               description={item.description}
               icon={item.icon}
               href={item.href}
             />
-          );
-
-          if (item.requiredScope) {
-            return (
-              <RequireScope key={item.key} scope={item.requiredScope}>
-                {tile}
-              </RequireScope>
-            );
-          }
-
-          return <div key={item.key}>{tile}</div>;
-        })}
-        <RequireScope scope="WAITER_PANEL_OWNER">
-          <DashboardHubTile
-            title="Bekleyen siparişler"
-            description="Onay kuyruğunu yönet"
-            icon={Bell}
-            href={DASHBOARD_ROUTES.waiter}
-          />
-        </RequireScope>
+          </div>
+        ))}
       </div>
     </div>
   );

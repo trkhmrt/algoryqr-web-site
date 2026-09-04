@@ -3,6 +3,7 @@ import {
   DASHBOARD_ROUTES,
   isDigitalMenuSectionActive,
   isReportsSectionActive,
+  isReservationsSectionActive,
   isUberEatsSectionActive,
 } from "@/lib/dashboard-routes";
 
@@ -19,8 +20,6 @@ export function resolveRequiredScope(pathname: string): ProductScope | null {
     pathname === DASHBOARD_ROUTES.orderPanel ||
     pathname === DASHBOARD_ROUTES.waiter ||
     pathname.startsWith(`${DASHBOARD_ROUTES.waiter}/`) ||
-    pathname === DASHBOARD_ROUTES.orderPanelReports ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.orderPanelReports}/`) ||
     pathname === DASHBOARD_ROUTES.restaurantLayout ||
     pathname.startsWith(`${DASHBOARD_ROUTES.restaurantLayout}/`) ||
     pathMatches(pathname, DASHBOARD_ROUTES.menuUsers) ||
@@ -31,6 +30,10 @@ export function resolveRequiredScope(pathname: string): ProductScope | null {
 
   if (isReportsSectionActive(pathname)) {
     return "SMART_REPORTING_OWNER";
+  }
+
+  if (isReservationsSectionActive(pathname)) {
+    return "QR_MENU_OWNER";
   }
 
   if (pathMatches(pathname, DASHBOARD_ROUTES.campaigns) || isUberEatsSectionActive(pathname)) {
@@ -56,7 +59,7 @@ export const ROUTE_SCOPES: Partial<Record<string, ProductScope>> = {
   [DASHBOARD_ROUTES.menuCustomers]: "WAITER_PANEL_OWNER",
   [DASHBOARD_ROUTES.campaigns]: "QR_MENU_OWNER",
   [DASHBOARD_ROUTES.restaurantLayout]: "WAITER_PANEL_OWNER",
-  [DASHBOARD_ROUTES.orderPanelReports]: "WAITER_PANEL_OWNER",
+  [DASHBOARD_ROUTES.reservations]: "QR_MENU_OWNER",
   [DASHBOARD_ROUTES.analytics]: "SMART_REPORTING_OWNER",
   [DASHBOARD_ROUTES.analyticsLegacy]: "SMART_REPORTING_OWNER",
   [DASHBOARD_ROUTES.smartReports]: "SMART_REPORTING_OWNER",

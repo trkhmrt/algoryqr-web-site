@@ -38,7 +38,10 @@ export function useBillingAddresses() {
   });
 }
 
-export function usePaymentMethods() {
+export function usePaymentMethods(options?: {
+  enabled?: boolean;
+  refetchOnWindowFocus?: boolean;
+}) {
   return useQuery({
     queryKey: PAYMENT_METHODS_QUERY_KEY,
     queryFn: async () => {
@@ -53,7 +56,11 @@ export function usePaymentMethods() {
         expiryYear: (item.expiryYear as number | null | undefined) ?? null,
       })) satisfies PaymentMethod[];
     },
-    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
+    refetchOnReconnect: false,
   });
 }
 

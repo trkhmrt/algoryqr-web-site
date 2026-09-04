@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, CheckCircle2, Clock, Loader2 } from "lucide-react";
 
 import { DigitalMenuHubGate } from "@/components/dashboard/digital-menu/DigitalMenuHubGate";
-import { DigitalMenuHubShell } from "@/components/dashboard/digital-menu/DigitalMenuHubShell";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterSelect } from "@/components/dashboard/FilterSelect";
 import { useListQueryState } from "@/hooks/use-list-query-state";
@@ -246,21 +246,22 @@ function ReservationsPanel() {
   };
 
   return (
-    <DigitalMenuHubShell
-      title="Rezervasyonlar"
-      hint="Onay bekleyen ve aktif rezervasyonları yönetin."
-      action={
-        <DigitalMenuPicker
-          compact
-          menuQrs={menuQrs}
-          selectedQrId={selection?.qr.id ?? null}
-          onSelectQrId={(qrId) => {
-            setPage(0);
-            void selectQrId(qrId);
-          }}
-        />
-      }
-    >
+    <div className="space-y-6 animate-fade-in">
+      <DashboardPageHeader
+        title="Rezervasyonlar"
+        hint="Onay bekleyen ve aktif rezervasyonları yönetin."
+        action={
+          <DigitalMenuPicker
+            compact
+            menuQrs={menuQrs}
+            selectedQrId={selection?.qr.id ?? null}
+            onSelectQrId={(qrId) => {
+              setPage(0);
+              void selectQrId(qrId);
+            }}
+          />
+        }
+      />
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
@@ -499,7 +500,7 @@ function ReservationsPanel() {
           ) : null}
         </>
       )}
-    </DigitalMenuHubShell>
+    </div>
   );
 }
 

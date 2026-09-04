@@ -44,7 +44,15 @@ async function proxy(req: Request, method: string, path: string[]) {
       validateStatus: () => true,
       timeout: 20_000,
     });
-    return NextResponse.json(upstream.data ?? {}, { status: upstream.status });
+    if (
+      upstream.status === 204 ||
+      upstream.status === 205 ||
+      upstream.data == null ||
+      upstream.data === ""
+    ) {
+      return new NextResponse(null, { status: upstream.status });
+    }
+    return NextResponse.json(upstream.data, { status: upstream.status });
   } catch (error) {
     if (error instanceof AxiosError && error.response) {
       return NextResponse.json(error.response.data ?? {}, { status: error.response.status });

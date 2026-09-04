@@ -104,6 +104,7 @@ const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
   SMART_ASSISTANT: ["SMART_ASSISTANT", "QR_AGENT"],
   SMART_REPORTING: ["SMART_REPORTING", "QR_ANALYTICS"],
   SMART_SUMMARY: ["SMART_SUMMARY"],
+  AI_MENU_IMPORT: ["AI_MENU_IMPORT"],
 };
 
 export function matchesProductCode(actual: string, expected: string): boolean {

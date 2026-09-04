@@ -1,12 +1,12 @@
 "use client";
 
-import { DigitalMenuBranchesPanel } from "@/components/dashboard/digital-menu/DigitalMenuBranchesPanel";
+import { DigitalMenuDirectoryPanel } from "@/components/dashboard/digital-menu/DigitalMenuDirectoryPanel";
 import { DigitalMenuHubGate } from "@/components/dashboard/digital-menu/DigitalMenuHubGate";
 
 export default function DigitalMenuView() {
   return (
     <DigitalMenuHubGate>
-      <DigitalMenuBranchesPanel />
+      <DigitalMenuDirectoryPanel />
     </DigitalMenuHubGate>
   );
 }

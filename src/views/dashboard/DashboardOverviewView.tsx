@@ -1,5 +1,7 @@
 "use client";
 
+import { BellRing, CalendarDays, Store } from "lucide-react";
+
 import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import {
@@ -18,6 +20,18 @@ import { hasScope } from "@/lib/auth-user";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { buildSetupSteps, isSetupComplete } from "@/lib/dashboard-setup";
 import { isActivePaidPurchase } from "@/lib/product-access";
+
+function pendingOrdersDetail(count: number): string {
+  return count > 0 ? "Onay bekliyor" : "Kuyruk boş";
+}
+
+function reservationsDetail(menuName: string | null): string {
+  return menuName ?? "Menü seçilmedi";
+}
+
+function liveMenusDetail(total: number): string {
+  return total > 0 ? `${total} menü toplam` : "Menü yok";
+}
 
 export default function DashboardOverviewView() {
   const { data: accessProfile } = useAccessProfile();
@@ -64,32 +78,39 @@ export default function DashboardOverviewView() {
       ) : null}
 
       {showStats ? (
-        <section className="mb-8 grid gap-3 sm:grid-cols-3" aria-label="Operasyon özeti">
-          {showOrders ? (
-            <OverviewStatCard
-              href={DASHBOARD_ROUTES.waiter}
-              label="Bekleyen sipariş"
-              value={stats.pendingOrders}
-              hint="Onay kuyruğu"
-              badgeCount={stats.pendingOrders}
-            />
-          ) : null}
-          {showMenus ? (
-            <OverviewStatCard
-              href={DASHBOARD_ROUTES.reservations}
-              label="Bugünkü rezervasyon"
-              value={stats.reservationsToday}
-              hint="Seçili menü"
-            />
-          ) : null}
-          {showMenus ? (
-            <OverviewStatCard
-              href={DASHBOARD_ROUTES.digitalMenuMenus}
-              label="Yayındaki menü"
-              value={stats.liveMenus}
-              hint={stats.totalMenus > 0 ? `${stats.totalMenus} menü toplam` : "Henüz menü yok"}
-            />
-          ) : null}
+        <section className="mb-8" aria-label="Bugünün özeti">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            {showOrders ? (
+              <OverviewStatCard
+                href={DASHBOARD_ROUTES.waiter}
+                icon={BellRing}
+                label="Bekleyen sipariş"
+                value={stats.pendingOrders}
+                detail={pendingOrdersDetail(stats.pendingOrders)}
+                accent="hsl(var(--chart-orange))"
+              />
+            ) : null}
+            {showMenus ? (
+              <OverviewStatCard
+                href={DASHBOARD_ROUTES.reservations}
+                icon={CalendarDays}
+                label="Bugünkü rezervasyon"
+                value={stats.reservationsToday}
+                detail={reservationsDetail(stats.selectedMenuName)}
+                accent="hsl(var(--chart-indigo))"
+              />
+            ) : null}
+            {showMenus ? (
+              <OverviewStatCard
+                href={DASHBOARD_ROUTES.digitalMenuMenus}
+                icon={Store}
+                label="Yayındaki menü"
+                value={stats.liveMenus}
+                detail={liveMenusDetail(stats.totalMenus)}
+                accent="hsl(var(--chart-teal))"
+              />
+            ) : null}
+          </div>
         </section>
       ) : null}
 

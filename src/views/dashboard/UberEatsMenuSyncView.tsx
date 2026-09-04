@@ -16,7 +16,11 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { getUberEatsConnection } from "@/lib/ubereats-api";
-import { importMenuFromUberEats, listPendingProducts } from "@/lib/ubereats-menu-api";
+import {
+  exportMenuToUberEats,
+  importMenuFromUberEats,
+  listPendingProducts,
+} from "@/lib/ubereats-menu-api";
 import {
   connectionStatusClass,
   connectionStatusLabel,
@@ -59,12 +63,31 @@ export default function UberEatsMenuSyncView() {
     mutationFn: () => importMenuFromUberEats(selectedMenuId as number),
     onSuccess: async (job) => {
       await queryClient.invalidateQueries({ queryKey: ["uber-eats-pending-count"] });
-      notify("info", `İçe aktarım başladı. Job: ${job.jobId.slice(0, 8)}…`);
+      notify(
+        "info",
+        `İçe aktarım başladı. Job: ${job.jobId.slice(0, 8)}… Onay sonrası menünüze yazılır.`,
+      );
     },
     onError: (error) => {
       notify("danger", error instanceof ApiError ? error.message : "İçe aktarım başlatılamadı.");
     },
   });
+
+  const exportMutation = useMutation({
+    mutationFn: () => exportMenuToUberEats(selectedMenuId as number),
+    onSuccess: async (job) => {
+      await queryClient.invalidateQueries({ queryKey: ["uber-eats-pending-count"] });
+      notify(
+        "info",
+        `Dışa aktarım başladı. Job: ${job.jobId.slice(0, 8)}… Onay sonrası Uber’e yazılır.`,
+      );
+    },
+    onError: (error) => {
+      notify("danger", error instanceof ApiError ? error.message : "Dışa aktarım başlatılamadı.");
+    },
+  });
+
+  const syncBusy = importMutation.isPending || exportMutation.isPending;
 
   if (accessLoading || menusQuery.loading || (canUseDigitalMenu && connectionQuery.isLoading)) {
     return (
@@ -89,9 +112,9 @@ export default function UberEatsMenuSyncView() {
       </Link>
 
       <IntegrationsSectionHeader
-        brandDescription="Bağlı restoranın ürünlerini kendi menünüze aktarın."
+        brandDescription="Uber Eats menüsü ile kendi menünüz arasında iki yönlü aktarım."
         pageTitle="Menü senkronu"
-        pageDescription="Ürünler onay sonrası kendi menünüze yazılır"
+        pageDescription="İçe veya dışa aktarım sonrası ürünler onay ekranına düşer"
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -167,7 +190,7 @@ export default function UberEatsMenuSyncView() {
       <div className={`${UBER_EATS_SOFT_CARD_CLASS} space-y-4 p-5`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
-            <Label htmlFor="uber-menu">Hedef menü</Label>
+            <Label htmlFor="uber-menu">Menü</Label>
             <select
               id="uber-menu"
               className="flex h-10 w-full min-w-[16rem] rounded-md border border-input bg-background px-3 text-sm"
@@ -184,17 +207,29 @@ export default function UberEatsMenuSyncView() {
               <p className="text-xs text-muted-foreground">Menü #{selectedMenu.menuId}</p>
             ) : null}
           </div>
-          <Button
-            type="button"
-            disabled={selectedMenuId == null || !isConnected || importMutation.isPending}
-            onClick={() => importMutation.mutate()}
-          >
-            {importMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Uber’den içe aktar
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              disabled={selectedMenuId == null || !isConnected || syncBusy}
+              onClick={() => importMutation.mutate()}
+            >
+              {importMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Uber’den içe aktar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={selectedMenuId == null || !isConnected || syncBusy}
+              onClick={() => exportMutation.mutate()}
+            >
+              {exportMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Menüden Uber’e aktar
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Aktarılan ürünler doğrudan yayına girmez; önce onay bekleyenler ekranına düşer.
+          Aktarılan ürünler doğrudan yayına girmez; önce onay bekleyenler ekranına düşer. Export
+          onayında hedef Uber Eats’tir.
         </p>
       </div>
     </div>

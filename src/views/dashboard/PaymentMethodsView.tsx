@@ -24,7 +24,7 @@ export default function PaymentMethodsView() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { notify } = useDashboardBanners();
-  const methods = usePaymentMethods();
+  const methods = usePaymentMethods({ refetchOnWindowFocus: true });
   const subscription = useSubscription();
   const hasActiveSubscription = isActivePaidPurchase(subscription.data?.activePurchase ?? null);
   const verification = searchParams.get("verification");

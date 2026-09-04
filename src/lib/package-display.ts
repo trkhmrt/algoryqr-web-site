@@ -174,6 +174,7 @@ export function packageFeatures(pkg: PlanPackageApiItem): string[] {
     "SMART_SUMMARY",
     "CUSTOM_DESIGN",
     "WAITER_PANEL",
+    "AI_MENU_IMPORT",
   ] as const) {
     if (findPackageItem(pkg, code)) {
       features.push(productDisplayName(code));
@@ -231,6 +232,8 @@ export function featureTooltip(feature: string, productCode?: string): string {
   if (f.includes("deneme")) return "Bu paket için deneme sürümü başlatılabilir mi?";
   if (f.includes("özet") || f.includes("ozet"))
     return getProductHintByCode("SMART_SUMMARY").description;
+  if (f.includes("ai menu") || f.includes("ai menü") || f.includes("fotoğraf") || f.includes("fotograf"))
+    return getProductHintByCode("AI_MENU_IMPORT").description;
   if (f.includes("temel")) return "Temel kullanım ve temel özelliklere erişim.";
   return "Bu paketin ilgili ürünü hakkında kısa bilgi.";
 }
@@ -253,6 +256,7 @@ const PRODUCT_ORDER = [
   "SMART_SUMMARY",
   "CUSTOM_DESIGN",
   "WAITER_PANEL",
+  "AI_MENU_IMPORT",
 ] as const;
 
 const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
@@ -265,6 +269,7 @@ const PRODUCT_CODE_ALIASES: Record<string, readonly string[]> = {
   MENU_PRODUCT: ["MENU_PRODUCT"],
   CUSTOM_DESIGN: ["CUSTOM_DESIGN"],
   WAITER_PANEL: ["WAITER_PANEL"],
+  AI_MENU_IMPORT: ["AI_MENU_IMPORT"],
 };
 
 function packageKey(pkg: PlanPackageApiItem): string {
@@ -291,6 +296,8 @@ function productDisplayName(code: string): string {
       return "Özel tasarım menü";
     case "WAITER_PANEL":
       return "Garson paneli";
+    case "AI_MENU_IMPORT":
+      return "AI menü import";
     default:
       return code;
   }

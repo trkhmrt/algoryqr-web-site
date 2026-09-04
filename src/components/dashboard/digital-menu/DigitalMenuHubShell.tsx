@@ -2,24 +2,15 @@
 
 import type { ReactNode } from "react";
 
-import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
-
-import { DigitalMenuHubTabs } from "./DigitalMenuHubTabs";
-
 type DigitalMenuHubShellProps = {
-  title: string;
-  hint?: string | null;
   action?: ReactNode;
   children: ReactNode;
 };
 
-export function DigitalMenuHubShell({ title, hint, action, children }: DigitalMenuHubShellProps) {
+export function DigitalMenuHubShell({ action, children }: DigitalMenuHubShellProps) {
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="space-y-4">
-        <DigitalMenuHubTabs />
-        <DashboardPageHeader title={title} hint={hint} action={action} />
-      </div>
+    <div className="space-y-4 animate-fade-in">
+      {action ? <div className="flex justify-end">{action}</div> : null}
       {children}
     </div>
   );

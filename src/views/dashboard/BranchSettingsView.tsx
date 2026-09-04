@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
-import { invalidateBranches, useBranch, useBranches } from "@/hooks/use-branches";
+import { invalidateBranches, useBranch, useBranches, BRANCHES_QUERY_KEY } from "@/hooks/use-branches";
 import { ApiError } from "@/lib/api";
 import {
   applyBranchPhotoToAllBranchesRequest,
@@ -108,7 +108,6 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
-  const branchQuery = useBranch(branchId, canUseDigitalMenu);
   const branchesQuery = useBranches(canUseDigitalMenu);
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -124,7 +123,11 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   const [photoOpen, setPhotoOpen] = useState(false);
   const [menusOpen, setMenusOpen] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [branchRemoved, setBranchRemoved] = useState(false);
+  const leavingAfterDeleteRef = useRef(false);
 
+  const branchQuery = useBranch(branchId, canUseDigitalMenu && !deleting && !branchRemoved);
   const branch = branchQuery.data ?? null;
   useDashboardPageLabel(branch?.name);
   const menus = branch?.menus ?? [];
@@ -144,11 +147,22 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   }, [branch, hydratedFor]);
 
   useEffect(() => {
+    if (leavingAfterDeleteRef.current || deleting || branchRemoved) return;
     if (branchQuery.isError) {
       notify("danger", branchQuery.error instanceof ApiError ? branchQuery.error.message : "Şube yüklenemedi.");
       router.push(DASHBOARD_ROUTES.digitalMenu);
     }
-  }, [branchQuery.error, branchQuery.isError, notify, router]);
+  }, [branchQuery.error, branchQuery.isError, branchRemoved, deleting, notify, router]);
+
+  const finishBranchDelete = async () => {
+    leavingAfterDeleteRef.current = true;
+    setBranchRemoved(true);
+    setDeleteConfirmOpen(false);
+    queryClient.removeQueries({ queryKey: [...BRANCHES_QUERY_KEY, branchId] });
+    await queryClient.invalidateQueries({ queryKey: BRANCHES_QUERY_KEY, exact: true });
+    notify("info", "Şube silindi.");
+    router.push(DASHBOARD_ROUTES.digitalMenu);
+  };
 
   const save = async () => {
     if (!name.trim()) {
@@ -230,13 +244,17 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
   };
 
   const removeBranch = async () => {
+    if (deleting) return;
     setDeleting(true);
     try {
       await deleteBranchRequest(branchId);
-      await invalidateBranches(queryClient);
-      notify("info", "Şube silindi.");
-      router.push(DASHBOARD_ROUTES.digitalMenu);
+      await finishBranchDelete();
     } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        await finishBranchDelete();
+        return;
+      }
+      leavingAfterDeleteRef.current = false;
       notify("danger", error instanceof ApiError ? error.message : "Şube silinemedi.");
     } finally {
       setDeleting(false);
@@ -397,31 +415,43 @@ export default function BranchSettingsView({ branchId }: BranchSettingsViewProps
         title="Şubeyi sil"
         description={
           hasMenus
-            ? "Önce bu şubeye bağlı menüleri silmeniz gerekir"
-            : "Şube soft delete ile kaldırılır"
+            ? `Şube ve bağlı ${menus.length} menü kalıcı olarak silinir`
+            : "Şube kalıcı olarak silinir"
         }
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         tone="danger"
       >
         <div className="flex justify-end">
-          <AlertDialog>
+          <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="gap-2" disabled={deleting || hasMenus}>
+              <Button variant="destructive" className="gap-2" disabled={deleting}>
                 {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 Şubeyi sil
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Şube silinsin mi?</AlertDialogTitle>
+                <AlertDialogTitle>Şube kalıcı olarak silinsin mi?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  <span className="font-medium">{branch?.name ?? "Bu şube"}</span> kaldırılır.
+                  <span className="font-medium">{branch?.name ?? "Bu şube"}</span>
+                  {hasMenus
+                    ? ` ve bağlı ${menus.length} menü kalıcı olarak silinecek. Bu işlem geri alınamaz.`
+                    : " kalıcı olarak silinecek. Bu işlem geri alınamaz."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                <AlertDialogAction onClick={() => void removeBranch()}>Sil</AlertDialogAction>
+                <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={deleting}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void removeBranch();
+                  }}
+                >
+                  {deleting ? "Siliniyor..." : "Kalıcı olarak sil"}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
