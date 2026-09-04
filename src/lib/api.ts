@@ -1368,6 +1368,7 @@ export interface MenuRevenuePaymentBreakdown {
   cashRevenue?: number | string | null;
   cardRevenue?: number | string | null;
   tipRevenue?: number | string | null;
+  uberEatsRevenue?: number | string | null;
   grossRevenue?: number | string | null;
   fixedExpenseTotal?: number | string | null;
   netRevenue?: number | string | null;

@@ -40,10 +40,10 @@ import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
 import TrialStartView from "@/views/dashboard/TrialStartView";
 import FeedbackView from "@/views/dashboard/FeedbackView";
 import ReservationsView from "@/views/dashboard/ReservationsView";
-import TrendyolGoHubView from "@/views/dashboard/TrendyolGoHubView";
-import TrendyolGoOrdersView from "@/views/dashboard/TrendyolGoOrdersView";
-import TrendyolGoProductsView from "@/views/dashboard/TrendyolGoProductsView";
 import UberEatsHubView from "@/views/dashboard/UberEatsHubView";
+import UberEatsOrdersView from "@/views/dashboard/UberEatsOrdersView";
+import UberEatsProductsView from "@/views/dashboard/UberEatsProductsView";
+import UberEatsMenuSyncView from "@/views/dashboard/UberEatsMenuSyncView";
 import UberEatsPendingView from "@/views/dashboard/UberEatsPendingView";
 import IntegrationsHubView from "@/views/dashboard/IntegrationsHubView";
 import YemekSepetiHubView from "@/views/dashboard/YemekSepetiHubView";
@@ -254,26 +254,20 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     return <YemekSepetiHubView />;
   }
 
-  if (pathname === DASHBOARD_ROUTES.uberEats || pathname === DASHBOARD_ROUTES.trendyolGo) {
-    return <TrendyolGoHubView />;
+  if (pathname === DASHBOARD_ROUTES.uberEats) {
+    return <UberEatsHubView />;
   }
 
-  if (
-    pathname === DASHBOARD_ROUTES.uberEatsProducts ||
-    pathname === DASHBOARD_ROUTES.trendyolGoProducts
-  ) {
-    return <TrendyolGoProductsView />;
+  if (pathname === DASHBOARD_ROUTES.uberEatsProducts) {
+    return <UberEatsProductsView />;
   }
 
-  if (
-    pathname === DASHBOARD_ROUTES.uberEatsOrders ||
-    pathname === DASHBOARD_ROUTES.trendyolGoOrders
-  ) {
-    return <TrendyolGoOrdersView />;
+  if (pathname === DASHBOARD_ROUTES.uberEatsOrders) {
+    return <UberEatsOrdersView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.uberEatsMenuSync) {
-    return <UberEatsHubView />;
+    return <UberEatsMenuSyncView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.uberEatsPending) {

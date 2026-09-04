@@ -1,13 +1,13 @@
-import type { TrendyolGoConnectionStatus } from "@/lib/trendyol-go-api";
+import type { UberEatsConnectionStatus } from "@/lib/ubereats-api";
 
 import { DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 
-export const TGO_SOFT_CARD_CLASS = DASHBOARD_SURFACE;
+export const UBER_EATS_SOFT_CARD_CLASS = DASHBOARD_SURFACE;
 
-export const TGO_SOFT_FIELD_CLASS =
+export const UBER_EATS_SOFT_FIELD_CLASS =
   "rounded-xl border border-border bg-muted px-3 py-2.5";
 
-export function formatTrendyolGoDateTime(value?: string | null): string {
+export function formatUberEatsDateTime(value?: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -20,7 +20,7 @@ export function formatTrendyolGoDateTime(value?: string | null): string {
   });
 }
 
-export function formatTrendyolGoAmount(value?: number | null, currency = "TRY"): string {
+export function formatUberEatsAmount(value?: number | null, currency = "TRY"): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
@@ -29,7 +29,7 @@ export function formatTrendyolGoAmount(value?: number | null, currency = "TRY"):
   }).format(value);
 }
 
-export function connectionStatusLabel(status?: TrendyolGoConnectionStatus | string | null): string {
+export function connectionStatusLabel(status?: UberEatsConnectionStatus | string | null): string {
   switch (status) {
     case "CONNECTED":
       return "Bağlı";
@@ -44,7 +44,7 @@ export function connectionStatusLabel(status?: TrendyolGoConnectionStatus | stri
   }
 }
 
-export function connectionStatusClass(status?: TrendyolGoConnectionStatus | string | null): string {
+export function connectionStatusClass(status?: UberEatsConnectionStatus | string | null): string {
   switch (status) {
     case "CONNECTED":
       return "bg-emerald-500/15 text-emerald-700";

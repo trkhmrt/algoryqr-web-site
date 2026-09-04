@@ -8,9 +8,9 @@ import {
   packageStatusLabel,
   paymentMethodLabel,
   shortDisplayId,
-} from "@/lib/trendyol-go-ui";
+} from "@/lib/ubereats-ui";
 
-describe("trendyol-go-ui", () => {
+describe("ubereats-ui", () => {
   it("translates package statuses to Turkish", () => {
     expect(packageStatusLabel("Created")).toBe("Yeni sipariş");
     expect(packageStatusLabel("Accepted")).toBe("Kabul edildi");
