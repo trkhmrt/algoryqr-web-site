@@ -448,7 +448,7 @@ export default function AiMenuImportView() {
             <div className="space-y-1">
               <Label>Alt kategori</Label>
               <SearchableSelect
-                value={editForm.subCategoryId || undefined}
+                value={editForm.subCategoryId}
                 onValueChange={(value) =>
                   setEditForm((prev) => ({ ...prev, subCategoryId: value }))
                 }
