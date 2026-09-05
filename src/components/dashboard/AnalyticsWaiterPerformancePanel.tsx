@@ -140,8 +140,8 @@ export default function AnalyticsWaiterPerformancePanel({
   if (baseView.empty) {
     return (
       <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 text-sm text-muted-foreground shadow-none dark:border-border dark:bg-card">
-        Seçilen dönemde personel performans verisi yok. Garson kayıtları oluşturup siparişler onaylandıkça
-        burada görünür.
+        Seçilen dönemde personel performans verisi yok. Garson kayıtları oluşturup adisyon ödemeleri
+        alındıkça burada görünür.
       </div>
     );
   }
@@ -606,7 +606,7 @@ function PersonnelDesktopTable({
       <div className="border-b border-border px-6 py-4">
         <h2 className="text-base font-semibold text-foreground">Personel performans tablosu</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Onaylanmış siparişler, garson atamasına göre gruplanır. Satır detayında personelin en çok sattığı ürünler
+          Adisyon ödemeleri, ödeyen garsona göre gruplanır. Satır detayında personelin en çok sattığı ürünler
           görünür.
         </p>
       </div>
