@@ -58,6 +58,7 @@ export {
   activeWaiterCount,
   assignedOrderCount,
   isWaiterPerformanceReportEmpty,
+  isWaiterRowEmpty,
   unassignedOrderCount,
   waiterPerformanceAverageBasket,
   waiterPerformanceBillsClosedCount,

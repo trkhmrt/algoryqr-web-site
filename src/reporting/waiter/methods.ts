@@ -26,48 +26,48 @@ export const WAITER_PERFORMANCE_METHODS: {
     id: "assignedOrderCount",
     label: "Atanan adisyon",
     method: "assignedOrderCount",
-    formula: "COUNT(bill.closedByWaiterId != null)",
-    filter: "Kapalı adisyonlar",
+    formula: "COUNT(DISTINCT payment.billId WHERE payment.waiterId != null)",
+    filter: "Ödemeler (garson atanmış)",
     unit: "count",
   },
   unassignedOrderCount: {
     id: "unassignedOrderCount",
     label: "Atanmamış adisyon",
     method: "unassignedOrderCount",
-    formula: "COUNT(bill.closedByWaiterId = null)",
-    filter: "Kapalı adisyonlar",
+    formula: "COUNT(DISTINCT payment.billId WHERE payment.waiterId = null)",
+    filter: "Ödemeler (garson atanmamış)",
     unit: "count",
   },
   totalRevenue: {
     id: "totalRevenue",
     label: "Toplam ciro",
     method: "totalRevenue",
-    formula: "Σ bill.totalAmount",
-    filter: "Kapalı adisyonlar (kapatan garson)",
+    formula: "Σ payment.amount WHERE tip = false",
+    filter: "Adisyon ödemeleri (ödeyen garson)",
     unit: "money",
   },
   soldItemCount: {
     id: "soldItemCount",
     label: "Satılan ürün",
     method: "soldItemCount",
-    formula: "Σ billItem.quantity",
-    filter: "Kapalı adisyon kalemleri",
+    formula: "Σ payment.quantityPaid",
+    filter: "Ürün ödemeleri",
     unit: "count",
   },
   totalCommission: {
     id: "totalCommission",
     label: "Toplam komisyon",
     method: "totalCommission",
-    formula: "Σ bill.commissionAmount",
-    filter: "Kapalı adisyonlar",
+    formula: "Σ commissionRecord.amount",
+    filter: "Personel komisyon kayıtları",
     unit: "money",
   },
   totalTip: {
     id: "totalTip",
     label: "Toplam bahşiş",
     method: "totalTip",
-    formula: "Σ bill.tipAmount",
-    filter: "Kapalı adisyonlar",
+    formula: "Σ payment.amount WHERE tip = true",
+    filter: "Bahşiş ödemeleri",
     unit: "money",
   },
   billsClosedCount: {
@@ -139,4 +139,18 @@ export function isWaiterPerformanceReportEmpty(
   waiterCount: number,
 ): boolean {
   return orderCount <= 0 && revenue <= 0 && waiterCount <= 0;
+}
+
+export function isWaiterRowEmpty(row: {
+  orderCount: number;
+  revenue: number;
+  tipAmount: number;
+  billsClosedCount: number;
+}): boolean {
+  return (
+    row.orderCount <= 0 &&
+    row.revenue <= 0 &&
+    row.tipAmount <= 0 &&
+    row.billsClosedCount <= 0
+  );
 }

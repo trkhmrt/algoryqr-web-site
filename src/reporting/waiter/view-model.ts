@@ -7,6 +7,7 @@ import {
   activeWaiterCount,
   assignedOrderCount,
   isWaiterPerformanceReportEmpty,
+  isWaiterRowEmpty,
   unassignedOrderCount,
   waiterPerformanceAverageBasket,
   waiterPerformanceBillsClosedCount,
@@ -137,7 +138,7 @@ export function buildWaiterPerformanceReportView(
   });
 
   const chartData = rows
-    .filter((row) => row.orderCount > 0)
+    .filter((row) => row.orderCount > 0 || row.revenue > 0)
     .slice(0, 8)
     .map((row) => ({
       name: row.displayName,
@@ -202,7 +203,7 @@ export function filterWaiterPerformanceReportView(
 
   return {
     ...view,
-    empty: row.orderCount <= 0 && row.revenue <= 0,
+    empty: isWaiterRowEmpty(row),
     kpis: [
       kpi("totalRevenue", row.revenue),
       kpi("soldItemCount", row.itemCount),
