@@ -14,6 +14,13 @@ export type OrderItemResponse = {
   quantity: number;
   note?: string | null;
   lineTotal?: number | string;
+  selectedOptions?: Array<{
+    groupId?: number;
+    groupName?: string;
+    optionId?: number;
+    optionName?: string;
+    priceDelta?: number | string;
+  }>;
 };
 
 export type OrderStatus =
@@ -60,6 +67,7 @@ export type CartItemRequest = {
   productId: number;
   quantity: number;
   note?: string;
+  selectedOptionIds?: number[];
 };
 
 export type UpdateCartRequest = {

@@ -10,6 +10,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  areOptionSelectionsValid,
+  cartLineKey,
+  formatOptionGroupHeading,
+  optionDeltaTotal,
+  optionKindLabel,
+  productHasOptions,
+} from "@/lib/product-options";
+import {
   createWaiterOrder,
   listWaiterCatalog,
   listWaiterTables,
@@ -19,12 +34,15 @@ import {
 } from "@/lib/waiter-api";
 
 type CartLine = {
+  lineKey: string;
   productId: number;
   name: string;
   price: number;
   currency: string;
   quantity: number;
   note: string;
+  selectedOptionIds: number[];
+  selectedLabels: string[];
 };
 
 function commissionValueNumber(value: number | string | null | undefined): number | null {
@@ -60,6 +78,17 @@ function tableLabel(table: WaiterTableSummary): string {
   return table.tableName || `Masa ${table.tableNumber ?? table.tableId}`;
 }
 
+function optionLabels(product: WaiterCatalogProduct, selectedOptionIds: number[]): string[] {
+  const selected = new Set(selectedOptionIds);
+  const labels: string[] = [];
+  for (const group of product.optionGroups ?? []) {
+    for (const option of group.options ?? []) {
+      if (selected.has(option.optionId)) labels.push(option.name);
+    }
+  }
+  return labels;
+}
+
 export default function WaiterCreateOrderView({
   initialTable,
   onClose,
@@ -72,9 +101,11 @@ export default function WaiterCreateOrderView({
   const [selectedTable, setSelectedTable] = useState<WaiterTableSummary | null>(initialTable ?? null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
-  const [cart, setCart] = useState<Record<number, CartLine>>({});
+  const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [orderNote, setOrderNote] = useState("");
   const [waiterNote, setWaiterNote] = useState("");
+  const [optionsProduct, setOptionsProduct] = useState<WaiterCatalogProduct | null>(null);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
 
   const tablesQuery = useQuery({
     queryKey: ["waiter-orders-tables"],
@@ -122,25 +153,47 @@ export default function WaiterCreateOrderView({
   const total = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
   const currency = lines[0]?.currency || "TRY";
 
-  function setQuantity(product: WaiterCatalogProduct, quantity: number) {
+  function upsertLine(
+    product: WaiterCatalogProduct,
+    quantity: number,
+    optionIds: number[] = [],
+  ) {
     if (!product.available) return;
+    const key = cartLineKey(product.productId, optionIds);
     setCart((prev) => {
       const next = { ...prev };
       if (quantity <= 0) {
-        delete next[product.productId];
+        delete next[key];
         return next;
       }
-      const existing = prev[product.productId];
-      next[product.productId] = {
+      const existing = prev[key];
+      const unit =
+        productPrice(product) + optionDeltaTotal(product.optionGroups, optionIds);
+      next[key] = {
+        lineKey: key,
         productId: product.productId,
         name: product.name,
-        price: productPrice(product),
+        price: unit,
         currency: product.currency || "TRY",
         quantity,
         note: existing?.note ?? "",
+        selectedOptionIds: optionIds,
+        selectedLabels: optionLabels(product, optionIds),
       };
       return next;
     });
+  }
+
+  function addOrOpenOptions(product: WaiterCatalogProduct) {
+    if (!product.available) return;
+    if (productHasOptions(product)) {
+      setOptionsProduct(product);
+      setSelectedOptionIds([]);
+      return;
+    }
+    const key = cartLineKey(product.productId, []);
+    const current = cart[key]?.quantity ?? 0;
+    upsertLine(product, current + 1, []);
   }
 
   function submit() {
@@ -151,11 +204,19 @@ export default function WaiterCreateOrderView({
         productId: line.productId,
         quantity: line.quantity,
         ...(line.note.trim() ? { note: line.note.trim() } : {}),
+        ...(line.selectedOptionIds.length
+          ? { selectedOptionIds: line.selectedOptionIds }
+          : {}),
       })),
       ...(orderNote.trim() ? { note: orderNote.trim() } : {}),
       ...(waiterNote.trim() ? { waiterNote: waiterNote.trim() } : {}),
     });
   }
+
+  const optionsValid = areOptionSelectionsValid(
+    optionsProduct?.optionGroups,
+    selectedOptionIds,
+  );
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -178,70 +239,41 @@ export default function WaiterCreateOrderView({
         </div>
       </header>
 
-      <main className="flex-1 space-y-4 px-4 py-4 pb-36">
-        {createMutation.isError ? (
-          <p className="text-sm text-destructive">
-            {createMutation.error instanceof WaiterApiError
-              ? createMutation.error.message
-              : "Sipariş oluşturulamadı."}
-          </p>
-        ) : null}
-
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-4 px-4 py-4">
         {selectedTable == null ? (
           tablesQuery.isLoading ? (
             <div className="flex justify-center py-16 text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-          ) : (tablesQuery.data ?? []).filter((table) => table.active).length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              Aktif masa bulunamadı.
-            </p>
           ) : (
-            <div className="space-y-2">
-              <h2 className="text-sm font-medium text-muted-foreground">Masa seç</h2>
-              {(tablesQuery.data ?? [])
-                .filter((table) => table.active)
-                .map((table) => (
+            <ul className="space-y-2">
+              {(tablesQuery.data ?? []).map((table) => (
+                <li key={table.tableId}>
                   <button
-                    key={table.tableId}
                     type="button"
+                    className="w-full rounded-lg border border-border bg-card px-4 py-3 text-left shadow-sm"
                     onClick={() => setSelectedTable(table)}
-                    className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-left shadow-sm hover:bg-muted/40"
                   >
-                    <span className="font-medium">{tableLabel(table)}</span>
-                    {table.pendingOrderCount > 0 ? (
-                      <span className="text-xs text-muted-foreground">
-                        {table.pendingOrderCount} bekleyen
-                      </span>
-                    ) : null}
+                    <p className="font-medium">{tableLabel(table)}</p>
                   </button>
-                ))}
-            </div>
+                </li>
+              ))}
+            </ul>
           )
         ) : (
           <>
-            {initialTable == null ? (
-              <button
-                type="button"
-                className="text-sm text-muted-foreground"
-                onClick={() => setSelectedTable(null)}
-              >
-                Masayı değiştir
-              </button>
-            ) : null}
-
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                className="pl-9"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Ürün ara…"
-                className="pl-9"
               />
             </div>
 
             {categories.length > 0 ? (
-              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 <CategoryChip
                   label="Tümü"
                   active={category === "all"}
@@ -275,7 +307,12 @@ export default function WaiterCreateOrderView({
             ) : (
               <ul className="space-y-2">
                 {filteredProducts.map((product) => {
-                  const quantity = cart[product.productId]?.quantity ?? 0;
+                  const plainKey = cartLineKey(product.productId, []);
+                  const quantity = productHasOptions(product)
+                    ? lines
+                        .filter((line) => line.productId === product.productId)
+                        .reduce((sum, line) => sum + line.quantity, 0)
+                    : cart[plainKey]?.quantity ?? 0;
                   const hint = commissionHint(
                     product,
                     catalog?.commissionEnabled,
@@ -295,19 +332,31 @@ export default function WaiterCreateOrderView({
                           <p className="text-sm text-muted-foreground">
                             {formatMenuPrice(product.price ?? undefined, product.currency || "TRY")}
                             {!product.available ? " · Kapalı" : ""}
+                            {productHasOptions(product) ? " · Opsiyonlu" : ""}
                           </p>
                           {hint ? (
                             <p className="text-[11px] text-muted-foreground/90">{hint}</p>
                           ) : null}
                         </div>
-                        <QuantityStepper
-                          value={quantity}
-                          min={quantity > 0 ? 1 : 0}
-                          disabled={!product.available}
-                          showDelete={quantity > 0}
-                          onChange={(next) => setQuantity(product, next)}
-                          onRemove={() => setQuantity(product, 0)}
-                        />
+                        {productHasOptions(product) ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!product.available}
+                            onClick={() => addOrOpenOptions(product)}
+                          >
+                            Ekle{quantity > 0 ? ` (${quantity})` : ""}
+                          </Button>
+                        ) : (
+                          <QuantityStepper
+                            value={quantity}
+                            min={quantity > 0 ? 1 : 0}
+                            disabled={!product.available}
+                            showDelete={quantity > 0}
+                            onChange={(next) => upsertLine(product, next, [])}
+                            onRemove={() => upsertLine(product, 0, [])}
+                          />
+                        )}
                       </div>
                     </li>
                   );
@@ -316,7 +365,43 @@ export default function WaiterCreateOrderView({
             )}
 
             {lines.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
+                <ul className="space-y-2 rounded-lg border border-border p-3">
+                  {lines.map((line) => (
+                    <li key={line.lineKey} className="flex items-start justify-between gap-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {line.quantity}× {line.name}
+                        </p>
+                        {line.selectedLabels.length ? (
+                          <p className="text-xs text-muted-foreground">
+                            {line.selectedLabels.join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-muted-foreground">
+                          {formatMenuPrice(line.price * line.quantity, line.currency)}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2"
+                          onClick={() =>
+                            setCart((prev) => {
+                              const next = { ...prev };
+                              delete next[line.lineKey];
+                              return next;
+                            })
+                          }
+                        >
+                          Sil
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
                 <label className="text-xs font-medium text-muted-foreground" htmlFor="order-note">
                   Sipariş notu
                 </label>
@@ -366,6 +451,97 @@ export default function WaiterCreateOrderView({
           </Button>
         </div>
       ) : null}
+
+      <Dialog
+        open={optionsProduct != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOptionsProduct(null);
+            setSelectedOptionIds([]);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{optionsProduct?.name ?? "Opsiyonlar"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(optionsProduct?.optionGroups ?? []).map((group) => {
+              const single = group.maxSelect <= 1;
+              return (
+                <section key={group.groupId} className="space-y-2">
+                  <p className="text-sm font-semibold">
+                    {formatOptionGroupHeading(group)}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {optionKindLabel(group.kind)}
+                      {" · "}
+                      {group.minSelect > 0 ? "Zorunlu" : "İsteğe bağlı"}
+                    </span>
+                  </p>
+                  <ul className="space-y-1.5">
+                    {(group.options ?? []).map((option) => {
+                      const checked = selectedOptionIds.includes(option.optionId);
+                      return (
+                        <li key={option.optionId}>
+                          <button
+                            type="button"
+                            disabled={!option.available}
+                            className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm disabled:opacity-40 ${
+                              checked ? "border-foreground bg-muted" : "border-border"
+                            }`}
+                            onClick={() => {
+                              const groupIds = new Set(
+                                (group.options ?? []).map((item) => item.optionId),
+                              );
+                              setSelectedOptionIds((prev) => {
+                                if (single) {
+                                  return [
+                                    ...prev.filter((id) => !groupIds.has(id)),
+                                    option.optionId,
+                                  ];
+                                }
+                                if (prev.includes(option.optionId)) {
+                                  return prev.filter((id) => id !== option.optionId);
+                                }
+                                const inGroup = prev.filter((id) => groupIds.has(id));
+                                if (inGroup.length >= group.maxSelect) return prev;
+                                return [...prev, option.optionId];
+                              });
+                            }}
+                          >
+                            <span>{option.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {Number(option.priceDelta ?? 0) > 0
+                                ? `+${formatMenuPrice(option.priceDelta, optionsProduct?.currency || "TRY")}`
+                                : ""}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              disabled={!optionsValid || !optionsProduct}
+              onClick={() => {
+                if (!optionsProduct) return;
+                const key = cartLineKey(optionsProduct.productId, selectedOptionIds);
+                const current = cart[key]?.quantity ?? 0;
+                upsertLine(optionsProduct, current + 1, selectedOptionIds);
+                setOptionsProduct(null);
+                setSelectedOptionIds([]);
+              }}
+            >
+              Sepete ekle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -13,6 +13,12 @@ import { useSearchParams } from "next/navigation";
 
 import type { MenuProductApiItem } from "@/lib/api";
 import {
+  cartLineKey,
+  productHasOptions,
+  selectedOptionIdsFromSnapshot,
+  type SelectedOrderOption,
+} from "@/lib/product-options";
+import {
   getCart,
   openTableSession,
   OrderingApiError,
@@ -21,15 +27,20 @@ import {
   type OrderResponse,
 } from "@/lib/ordering-api";
 
+import { ProductOptionsSheet } from "./ProductOptionsSheet";
+
 const SESSION_STORAGE_PREFIX = "algory_table_session:";
 
 type LocalCartItem = {
+  lineKey: string;
   productId: number;
   productName: string;
   unitPrice?: number | string;
   quantity: number;
   note?: string;
   currency?: string;
+  selectedOptionIds: number[];
+  selectedOptions?: SelectedOrderOption[];
 };
 
 type OrderingContextValue = {
@@ -47,8 +58,14 @@ type OrderingContextValue = {
   loading: boolean;
   submitting: boolean;
   error: string | null;
-  addProduct: (product: MenuProductApiItem, quantity?: number) => Promise<string | null>;
-  updateQty: (productId: number, quantity: number) => Promise<void>;
+  beginAddProduct: (product: MenuProductApiItem, quantity?: number) => Promise<string | null>;
+  addProduct: (
+    product: MenuProductApiItem,
+    quantity?: number,
+    selectedOptionIds?: number[],
+    lineNote?: string,
+  ) => Promise<string | null>;
+  updateQty: (lineKey: string, quantity: number) => Promise<void>;
   submitOrder: () => Promise<OrderResponse | null>;
   refreshCart: () => Promise<void>;
   cartOpen: boolean;
@@ -90,16 +107,25 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
   const [error, setError] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [optionsProduct, setOptionsProduct] = useState<MenuProductApiItem | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const syncLocalFromCart = useCallback((order: OrderResponse | null) => {
-    const items = (order?.items ?? []).map((item) => ({
-      productId: item.productId,
-      productName: item.productName || `#${item.productId}`,
-      unitPrice: item.unitPrice,
-      quantity: item.quantity,
-      note: item.note ?? undefined,
-      currency: order?.currency ?? undefined,
-    }));
+    const items = (order?.items ?? []).map((item) => {
+      const selectedOptions = item.selectedOptions ?? [];
+      const selectedOptionIds = selectedOptionIdsFromSnapshot(selectedOptions);
+      return {
+        lineKey: cartLineKey(item.productId, selectedOptionIds),
+        productId: item.productId,
+        productName: item.productName || `#${item.productId}`,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        note: item.note ?? undefined,
+        currency: order?.currency ?? undefined,
+        selectedOptionIds,
+        selectedOptions,
+      };
+    });
     setLocalItems(items);
     setNote(order?.note ?? "");
   }, []);
@@ -135,9 +161,8 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
       const next = await getCart(identifier, sessionToken);
       setCart(next);
       syncLocalFromCart(next);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Sepet alınamadı");
+    } catch {
+      /* ignore */
     }
   }, [identifier, sessionToken, syncLocalFromCart]);
 
@@ -148,27 +173,31 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
       setLoading(true);
       setError(null);
       try {
-        let token: string | null = null;
-        let name: string | null = null;
-        let reuseStored = false;
-
         if (typeof window !== "undefined") {
-          const stored = sessionStorage.getItem(sessionStorageKey(identifier));
-          if (stored) {
+          const raw = sessionStorage.getItem(sessionStorageKey(identifier));
+          if (raw) {
             try {
-              const parsed = JSON.parse(stored) as {
+              const parsed = JSON.parse(raw) as {
                 sessionToken?: string;
                 tableName?: string;
                 tableToken?: string | null;
               };
-              // Masa QR değiştiyse eski oturumu kullanma
               if (
                 parsed.sessionToken &&
-                (parsed.tableToken ?? null) === (tableToken ?? null)
+                (!tableToken || !parsed.tableToken || parsed.tableToken === tableToken)
               ) {
-                token = parsed.sessionToken;
-                name = parsed.tableName ?? null;
-                reuseStored = true;
+                setSessionToken(parsed.sessionToken);
+                setTableName(parsed.tableName ?? null);
+                const next = await getCart(identifier, parsed.sessionToken);
+                if (!cancelled) {
+                  setCart(next);
+                  syncLocalFromCart(next);
+                }
+                if (!cancelled) {
+                  setLoading(false);
+                  setBootstrapped(true);
+                }
+                return;
               }
             } catch {
               sessionStorage.removeItem(sessionStorageKey(identifier));
@@ -176,42 +205,21 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
           }
         }
 
-        if (!reuseStored) {
-          const session = await openTableSession(identifier, tableToken);
-          token = session.sessionToken;
-          name = session.tableName;
-          persistSession(session);
-        }
-
-        if (cancelled) return;
-        setSessionToken(token);
-        setTableName(name);
-
-        if (token) {
+        if (tableToken) {
           try {
-            const next = await getCart(identifier, token);
+            const session = await openTableSession(identifier, tableToken);
+            if (cancelled) return;
+            setSessionToken(session.sessionToken);
+            setTableName(session.tableName);
+            persistSession(session);
+            const next = await getCart(identifier, session.sessionToken);
             if (!cancelled) {
               setCart(next);
               syncLocalFromCart(next);
             }
-          } catch {
-            try {
-              const session = await openTableSession(identifier, tableToken);
-              if (cancelled) return;
-              token = session.sessionToken;
-              name = session.tableName;
-              setSessionToken(token);
-              setTableName(name);
-              persistSession(session);
-              const next = await getCart(identifier, token);
-              if (!cancelled) {
-                setCart(next);
-                syncLocalFromCart(next);
-              }
-            } catch (err) {
-              if (!cancelled) {
-                setError(err instanceof Error ? err.message : "Sipariş oturumu açılamadı");
-              }
+          } catch (err) {
+            if (!cancelled) {
+              setError(err instanceof Error ? err.message : "Sipariş oturumu açılamadı");
             }
           }
         }
@@ -242,6 +250,9 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
             productId: item.productId,
             quantity: item.quantity,
             ...(item.note ? { note: item.note } : {}),
+            ...(item.selectedOptionIds.length
+              ? { selectedOptionIds: item.selectedOptionIds }
+              : {}),
           })),
         ...(nextNote.trim() ? { note: nextNote.trim() } : {}),
       };
@@ -254,7 +265,12 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
   );
 
   const addProduct = useCallback(
-    async (product: MenuProductApiItem, quantity = 1): Promise<string | null> => {
+    async (
+      product: MenuProductApiItem,
+      quantity = 1,
+      selectedOptionIds: number[] = [],
+      lineNote?: string,
+    ): Promise<string | null> => {
       setError(null);
       if (!Number.isFinite(product.productId) || product.productId <= 0) {
         const message = "Ürün bilgisi eksik";
@@ -273,21 +289,29 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
         }
       }
 
-      const existing = localItems.find((item) => item.productId === product.productId);
+      const key = cartLineKey(product.productId, selectedOptionIds);
+      const existing = localItems.find((item) => item.lineKey === key);
       const nextItems = existing
         ? localItems.map((item) =>
-            item.productId === product.productId
-              ? { ...item, quantity: item.quantity + quantity }
+            item.lineKey === key
+              ? {
+                  ...item,
+                  quantity: item.quantity + quantity,
+                  ...(lineNote ? { note: lineNote } : {}),
+                }
               : item,
           )
         : [
             ...localItems,
             {
+              lineKey: key,
               productId: product.productId,
               productName: product.name,
               unitPrice: product.price,
               quantity,
               currency: product.currency,
+              selectedOptionIds,
+              note: lineNote,
             },
           ];
 
@@ -323,8 +347,22 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
     [ensureSession, localItems, note, persistCart, refreshCart, sessionToken],
   );
 
+  const beginAddProduct = useCallback(
+    async (product: MenuProductApiItem, quantity = 1): Promise<string | null> => {
+      if (productHasOptions(product)) {
+        setOptionsProduct(product);
+        setOptionsOpen(true);
+        return null;
+      }
+      const failure = await addProduct(product, quantity);
+      if (!failure) setCartOpen(true);
+      return failure;
+    },
+    [addProduct],
+  );
+
   const updateQty = useCallback(
-    async (productId: number, quantity: number) => {
+    async (lineKey: string, quantity: number) => {
       let token = sessionToken;
       if (!token) {
         try {
@@ -335,9 +373,9 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
       }
       const nextItems =
         quantity <= 0
-          ? localItems.filter((item) => item.productId !== productId)
+          ? localItems.filter((item) => item.lineKey !== lineKey)
           : localItems.map((item) =>
-              item.productId === productId ? { ...item, quantity } : item,
+              item.lineKey === lineKey ? { ...item, quantity } : item,
             );
       setLocalItems(nextItems);
       try {
@@ -403,6 +441,7 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
       loading,
       submitting,
       error,
+      beginAddProduct,
       addProduct,
       updateQty,
       submitOrder,
@@ -412,6 +451,7 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
     }),
     [
       addProduct,
+      beginAddProduct,
       bootstrapped,
       cart,
       cartCount,
@@ -432,7 +472,30 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
     ],
   );
 
-  return <OrderingContext.Provider value={value}>{children}</OrderingContext.Provider>;
+  return (
+    <OrderingContext.Provider value={value}>
+      {children}
+      <ProductOptionsSheet
+        product={optionsProduct}
+        open={optionsOpen}
+        onOpenChange={(open) => {
+          setOptionsOpen(open);
+          if (!open) setOptionsProduct(null);
+        }}
+        onConfirm={async ({ selectedOptionIds, quantity, note: lineNote }) => {
+          if (!optionsProduct) return "Ürün bulunamadı";
+          const failure = await addProduct(
+            optionsProduct,
+            quantity,
+            selectedOptionIds,
+            lineNote,
+          );
+          if (!failure) setCartOpen(true);
+          return failure;
+        }}
+      />
+    </OrderingContext.Provider>
+  );
 }
 
 export function useOrdering(): OrderingContextValue {

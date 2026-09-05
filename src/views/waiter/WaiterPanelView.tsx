@@ -609,6 +609,14 @@ function PendingOrderCard({
               <li key={`${order.id}-${item.id ?? item.productId}`} className="text-sm">
                 <span className="font-medium">{item.quantity}×</span>{" "}
                 {item.productName || `#${item.productId}`}
+                {item.selectedOptions?.length ? (
+                  <span className="block text-xs text-white/80">
+                    {item.selectedOptions
+                      .map((option) => option.optionName)
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                ) : null}
                 {item.note ? (
                   <span className="block text-xs text-white/80">Not: {item.note}</span>
                 ) : null}
@@ -729,6 +737,14 @@ function HistoryOrderCard({
               <li key={`${order.id}-${item.id ?? item.productId}`} className="text-sm">
                 <span className="font-medium">{item.quantity}×</span>{" "}
                 {item.productName || `#${item.productId}`}
+                {item.selectedOptions?.length ? (
+                  <span className="block text-xs text-muted-foreground">
+                    {item.selectedOptions
+                      .map((option) => option.optionName)
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                ) : null}
               </li>
             ))
           )}
@@ -857,6 +873,14 @@ function WaiterOrderDetail({
                     <span>
                       <span className="font-medium">{item.quantity}×</span>{" "}
                       {item.productName || `#${item.productId}`}
+                      {item.selectedOptions?.length ? (
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {item.selectedOptions
+                            .map((option) => option.optionName)
+                            .filter(Boolean)
+                            .join(", ")}
+                        </span>
+                      ) : null}
                       {item.note ? (
                         <span className="mt-0.5 block text-xs text-muted-foreground">{item.note}</span>
                       ) : null}

@@ -185,6 +185,7 @@ export type WaiterCatalogProduct = {
   mainCategoryId?: number | null;
   mainCategoryName?: string | null;
   commissionEligible?: boolean;
+  optionGroups?: import("@/lib/api").MenuProductOptionGroupApiItem[];
 };
 
 export type WaiterCatalogResponse = {

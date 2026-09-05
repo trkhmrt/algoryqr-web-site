@@ -70,13 +70,21 @@ export function CartSheet() {
             <ul className="space-y-3">
               {localItems.map((item) => (
                 <li
-                  key={item.productId}
+                  key={item.lineKey}
                   className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
                       <Tx>{item.productName}</Tx>
                     </p>
+                    {item.selectedOptions?.length ? (
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {item.selectedOptions
+                          .map((option) => option.optionName)
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-muted-foreground">
                       <MenuPriceText price={item.unitPrice} currency={currency} />
                     </p>
@@ -85,7 +93,7 @@ export function CartSheet() {
                     <button
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded-md border border-border"
-                      onClick={() => void updateQty(item.productId, item.quantity - 1)}
+                      onClick={() => void updateQty(item.lineKey, item.quantity - 1)}
                       aria-label={t?.decreaseQty ?? "Azalt"}
                     >
                       <Minus className="h-3.5 w-3.5" />
@@ -94,7 +102,7 @@ export function CartSheet() {
                     <button
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded-md border border-border"
-                      onClick={() => void updateQty(item.productId, item.quantity + 1)}
+                      onClick={() => void updateQty(item.lineKey, item.quantity + 1)}
                       aria-label={t?.increaseQty ?? "Artır"}
                     >
                       <Plus className="h-3.5 w-3.5" />

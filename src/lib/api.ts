@@ -502,6 +502,7 @@ export interface MenuProfileApiItem {
   ratingAvg?: number | string | null;
   ratingCount?: number | null;
   userRating?: number | null;
+  updatedAt?: string | null;
   qr?: MenuQrBriefApiItem | null;
 }
 
@@ -559,6 +560,26 @@ export interface MenuProductApiItem {
     mainCategoryIds?: number[];
     subCategoryIds?: number[];
   };
+  optionGroups?: MenuProductOptionGroupApiItem[];
+}
+
+export interface MenuProductOptionApiItem {
+  optionId: number;
+  name: string;
+  priceDelta?: number | string;
+  available: boolean;
+  sortOrder: number;
+}
+
+export interface MenuProductOptionGroupApiItem {
+  groupId: number;
+  name: string;
+  kind?: string;
+  unit?: string;
+  minSelect: number;
+  maxSelect: number;
+  sortOrder: number;
+  options: MenuProductOptionApiItem[];
 }
 
 export interface MenuTagApiItem {
@@ -689,6 +710,20 @@ export interface MenuProductRequestBody {
     mainCategoryIds?: number[];
     subCategoryIds?: number[];
   };
+  optionGroups?: Array<{
+    name: string;
+    kind?: string;
+    unit?: string;
+    minSelect?: number;
+    maxSelect?: number;
+    sortOrder?: number;
+    options: Array<{
+      name: string;
+      priceDelta?: number | string;
+      available?: boolean;
+      sortOrder?: number;
+    }>;
+  }>;
 }
 
 export interface ProductFacetsApiResponse {
