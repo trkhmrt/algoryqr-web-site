@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, createElement as h, type ReactNode } from "react";
 import { Gift, Loader2, RefreshCw } from "lucide-react";
 
 import {
@@ -69,100 +69,140 @@ export function CustomerRewardsPanel({
   }, [load]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Kampanya ödülleri yükleniyor…
-      </div>
+    return h(
+      "div",
+      { className: "flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground" },
+      h(Loader2, { className: "h-4 w-4 animate-spin" }),
+      "Kampanya ödülleri yükleniyor…",
     );
   }
 
-  return (
-    <div className={compact ? "space-y-2" : "space-y-3"}>
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="inline-flex items-center gap-1.5 text-sm font-medium">
-          <Gift className="h-4 w-4" />
-          {compact ? "Kazanılan ödüller" : "Kampanyalar"}
-        </h3>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            aria-label="Yenile"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-          {onBack ? (
-            <button
-              type="button"
-              onClick={onBack}
-              className="text-xs text-muted-foreground underline"
-            >
-              Geri
-            </button>
-          ) : null}
-        </div>
-      </div>
+  const header = h(
+    "div",
+    { className: "flex items-center justify-between gap-2" },
+    h(
+      "h3",
+      { className: "inline-flex items-center gap-1.5 text-sm font-medium" },
+      h(Gift, { className: "h-4 w-4" }),
+      compact ? "Kazanılan ödüller" : "Kampanyalar",
+    ),
+    h(
+      "div",
+      { className: "flex items-center gap-2" },
+      h(
+        "button",
+        {
+          type: "button",
+          onClick: () => void load(),
+          className: "inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground",
+          "aria-label": "Yenile",
+        },
+        h(RefreshCw, { className: "h-3.5 w-3.5" }),
+      ),
+      onBack
+        ? h(
+            "button",
+            {
+              type: "button",
+              onClick: onBack,
+              className: "text-xs text-muted-foreground underline",
+            },
+            "Geri",
+          )
+        : null,
+    ),
+  );
 
-      {error ? (
-        <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-          <p className="text-sm text-destructive">{error}</p>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="text-xs font-medium text-destructive underline"
-          >
-            Tekrar dene
-          </button>
-        </div>
-      ) : null}
+  const errorBlock: ReactNode = error
+    ? h(
+        "div",
+        { className: "space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5" },
+        h("p", { className: "text-sm text-destructive" }, error),
+        h(
+          "button",
+          {
+            type: "button",
+            onClick: () => void load(),
+            className: "text-xs font-medium text-destructive underline",
+          },
+          "Tekrar dene",
+        ),
+      )
+    : null;
 
-      {!error && rewards.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-          Henüz kazanılmış kampanya ödülünüz yok.
-        </p>
-      ) : null}
+  const emptyBlock: ReactNode =
+    !error && rewards.length === 0
+      ? h(
+          "p",
+          {
+            className:
+              "rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground",
+          },
+          "Henüz kazanılmış kampanya ödülünüz yok.",
+        )
+      : null;
 
-      {rewards.length > 0 ? (
-        <ul className="space-y-2">
-          {rewards.map((reward) => (
-            <li
-              key={reward.id}
-              className="rounded-lg border border-border px-3 py-2.5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {reward.campaignName || `Ödül #${reward.id}`}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatWhen(reward.issuedAt)}
-                    {reward.orderId != null ? ` · Sipariş #${reward.orderId}` : ""}
-                  </p>
-                  {reward.message ? (
-                    <p className="mt-1 text-xs text-muted-foreground">{reward.message}</p>
-                  ) : null}
-                </div>
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  {statusLabel(reward.status)}
-                </span>
-              </div>
-              {reward.claimUrl || reward.claimToken ? (
-                <a
-                  href={
-                    reward.claimUrl ||
-                    `/reward/claim?c=${encodeURIComponent(reward.claimToken!)}`
-                  }
-                  className="mt-2 inline-block text-xs font-medium text-foreground underline"
-                >
-                  Ödül bağlantısı
-                </a>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
+  const listBlock: ReactNode =
+    rewards.length > 0
+      ? h(
+          "ul",
+          { className: "space-y-2" },
+          ...rewards.map((reward) =>
+            h(
+              "li",
+              { key: reward.id, className: "rounded-lg border border-border px-3 py-2.5" },
+              h(
+                "div",
+                { className: "flex items-start justify-between gap-2" },
+                h(
+                  "div",
+                  { className: "min-w-0" },
+                  h(
+                    "p",
+                    { className: "truncate text-sm font-medium" },
+                    reward.campaignName || `Ödül #${reward.id}`,
+                  ),
+                  h(
+                    "p",
+                    { className: "mt-0.5 text-xs text-muted-foreground" },
+                    `${formatWhen(reward.issuedAt)}${reward.orderId != null ? ` · Sipariş #${reward.orderId}` : ""}`,
+                  ),
+                  reward.message
+                    ? h("p", { className: "mt-1 text-xs text-muted-foreground" }, reward.message)
+                    : null,
+                ),
+                h(
+                  "span",
+                  {
+                    className:
+                      "shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground",
+                  },
+                  statusLabel(reward.status),
+                ),
+              ),
+              reward.claimUrl || reward.claimToken
+                ? h(
+                    "a",
+                    {
+                      href:
+                        reward.claimUrl ||
+                        `/reward/claim?c=${encodeURIComponent(reward.claimToken!)}`,
+                      className: "mt-2 inline-block text-xs font-medium text-foreground underline",
+                    },
+                    "Ödül bağlantısı",
+                  )
+                : null,
+            ),
+          ),
+        )
+      : null;
+
+  return h(
+    "div",
+    { className: compact ? "space-y-2" : "space-y-3" },
+    header,
+    errorBlock,
+    emptyBlock,
+    listBlock,
   );
 }
