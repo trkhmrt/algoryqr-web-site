@@ -13,6 +13,7 @@ export {
 } from "./campaign-product-context";
 export { CustomerAccountMenu } from "./CustomerAccountMenu";
 export { CustomerAuthDialog } from "./CustomerAuthDialog";
+export { CustomerRewardsPanel } from "./CustomerRewardsPanel";
 export { WaiterAuthDialog } from "./WaiterAuthDialog";
 export { MenuCampaignRail } from "./MenuCampaignRail";
 export { MenuEntryGate } from "./MenuEntryGate";
