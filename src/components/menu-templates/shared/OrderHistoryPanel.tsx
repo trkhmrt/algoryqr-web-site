@@ -22,11 +22,13 @@ function statusLabel(status: string): string {
     case "DRAFT":
       return "Taslak";
     case "SUBMITTED":
-      return "Gönderildi";
+      return "Alındı";
     case "CONFIRMED":
-      return "Onaylandı";
+      return "Alındı";
     case "REJECTED":
       return "Reddedildi";
+    case "CANCELLED":
+      return "İptal edildi";
     default:
       return status;
   }

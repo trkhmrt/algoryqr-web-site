@@ -232,7 +232,6 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     mobileLabel: "Sipariş",
     href: DASHBOARD_ROUTES.waiter,
     requiredScope: "WAITER_PANEL_OWNER",
-    badgeKey: "pendingOrders",
   },
   {
     key: "reservations",

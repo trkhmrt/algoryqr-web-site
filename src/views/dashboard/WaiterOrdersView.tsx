@@ -34,13 +34,14 @@ import { useListQueryState } from "@/hooks/use-list-query-state";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { DASHBOARD_LIST_ITEM } from "@/lib/dashboard-surface";
 import {
-  confirmMerchantOrder,
+  cancelMerchantOrder,
   listMerchantOrders,
   OrderingApiError,
-  rejectMerchantOrder,
   type OrderResponse,
+  type OrderStatus,
 } from "@/lib/ordering-api";
 import { formatMenuPrice } from "@/components/menu-templates/types";
+import { cn } from "@/lib/utils";
 
 function formatWhen(value?: string | null): string {
   if (!value) return "—";
@@ -69,28 +70,65 @@ function orderTimestamp(order: OrderResponse): number | null {
 
 function orderCustomerName(order: OrderResponse): string {
   const name = order.customerName?.trim();
-  return name || "Misafir";
+  if (name) return name;
+  const waiter = order.waiterName?.trim();
+  if (waiter) return waiter;
+  return "Misafir";
+}
+
+function statusLabel(status: OrderStatus): string {
+  switch (status) {
+    case "CANCELLED":
+      return "İptal edildi";
+    case "REJECTED":
+      return "Reddedildi";
+    case "CONFIRMED":
+      return "Alındı";
+    case "SUBMITTED":
+      return "Alındı";
+    default:
+      return String(status);
+  }
+}
+
+function canCancelOrder(status: OrderStatus): boolean {
+  return status === "CONFIRMED" || status === "SUBMITTED";
 }
 
 function OrderCard({
   order,
   busy,
-  onConfirm,
-  onReject,
+  onCancel,
 }: {
   order: OrderResponse;
   busy: boolean;
-  onConfirm: () => void;
-  onReject: () => void;
+  onCancel: () => void;
 }) {
+  const cancelled = order.status === "CANCELLED";
+
   return (
-    <article className={DASHBOARD_LIST_ITEM}>
+    <article className={cn(DASHBOARD_LIST_ITEM, cancelled && "opacity-80")}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">{order.tableName || "Masa"}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold">{order.tableName || "Masa"}</h2>
+            <span
+              className={cn(
+                "rounded-md px-2 py-0.5 text-xs font-medium",
+                cancelled
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {statusLabel(order.status)}
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">
             {orderCustomerName(order)} · #{order.id} · {formatWhen(order.submittedAt || order.createdAt)}
           </p>
+          {order.waiterName ? (
+            <p className="text-xs text-muted-foreground">Garson: {order.waiterName}</p>
+          ) : null}
         </div>
         <p className="text-base font-semibold">
           {formatMenuPrice(order.totalAmount ?? undefined, order.currency || "TRY")}
@@ -123,27 +161,26 @@ function OrderCard({
         </p>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          size="lg"
-          className="h-12 text-base"
-          disabled={busy}
-          onClick={onConfirm}
-        >
-          Onayla
-        </Button>
-        <Button
-          type="button"
-          size="lg"
-          variant="outline"
-          className="h-12 text-base"
-          disabled={busy}
-          onClick={onReject}
-        >
-          Reddet
-        </Button>
-      </div>
+      {order.waiterNote ? (
+        <p className="mt-2 rounded-md bg-muted/50 px-2 py-1.5 text-sm text-muted-foreground">
+          Garson notu: {order.waiterNote}
+        </p>
+      ) : null}
+
+      {canCancelOrder(order.status) ? (
+        <div className="mt-4">
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-12 w-full text-base"
+            disabled={busy}
+            onClick={onCancel}
+          >
+            İptal et
+          </Button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -160,10 +197,7 @@ export default function WaiterOrdersView() {
     to: searchParams.get("to") ?? "",
   }));
   const [customerQuery, setCustomerQuery] = useState(() => searchParams.get("q") ?? "");
-  const [pendingAction, setPendingAction] = useState<{
-    orderId: number;
-    action: "confirm" | "reject";
-  } | null>(null);
+  const [pendingCancelId, setPendingCancelId] = useState<number | null>(null);
   const debouncedCustomer = useDebouncedValue(customerQuery);
 
   const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
@@ -177,9 +211,9 @@ export default function WaiterOrdersView() {
   const menuId = selection?.menu.menuId ?? null;
 
   const ordersQuery = useQuery({
-    queryKey: ["menu-orders-submitted", menuId],
+    queryKey: ["menu-orders", menuId],
     enabled: menuId != null,
-    queryFn: () => listMerchantOrders(menuId!, "SUBMITTED"),
+    queryFn: () => listMerchantOrders(menuId!, "ALL"),
     refetchInterval: 6_000,
   });
 
@@ -196,33 +230,26 @@ export default function WaiterOrdersView() {
       if (!query) return true;
       const name = orderCustomerName(order).toLowerCase();
       const email = (order.customerEmail || "").trim().toLowerCase();
-      return name.includes(query) || email.includes(query);
+      const waiter = (order.waiterName || "").trim().toLowerCase();
+      return name.includes(query) || email.includes(query) || waiter.includes(query);
     });
   }, [debouncedCustomer, ordersQuery.data, range.from, range.to]);
 
-  const actionMutation = useMutation({
-    mutationFn: async (payload: { orderId: number; action: "confirm" | "reject" }) => {
-      if (payload.action === "confirm") {
-        return confirmMerchantOrder(menuId!, payload.orderId);
-      }
-      return rejectMerchantOrder(menuId!, payload.orderId);
-    },
-    onSuccess: async (_data, vars) => {
-      await queryClient.invalidateQueries({ queryKey: ["menu-orders-submitted", menuId] });
-      notify("info", vars.action === "confirm" ? "Sipariş onaylandı." : "Sipariş reddedildi.");
+  const cancelMutation = useMutation({
+    mutationFn: (orderId: number) => cancelMerchantOrder(menuId!, orderId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["menu-orders", menuId] });
+      notify("info", "Sipariş iptal edildi.");
     },
     onError: (err) => {
-      notify("danger", err instanceof OrderingApiError ? err.message : "İşlem başarısız.");
+      notify("danger", err instanceof OrderingApiError ? err.message : "İptal başarısız.");
     },
   });
 
   if (accessLoading || loading) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <DashboardPageHeader
-          title="Sipariş Yönetimi"
-          hint="Onay bekleyen siparişler"
-        />
+        <DashboardPageHeader title="Sipariş Yönetimi" hint="Verilen siparişler" />
         <DashboardLoadingState label="Sipariş yönetimi hazırlanıyor..." />
       </div>
     );
@@ -234,7 +261,7 @@ export default function WaiterOrdersView() {
     <div className="space-y-6 animate-fade-in pb-8">
       <DashboardPageHeader
         title="Sipariş Yönetimi"
-        hint="Onay bekleyen siparişler"
+        hint="Verilen siparişler — detay ve iptal"
         action={
           <Button asChild variant="outline">
             <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
@@ -255,6 +282,13 @@ export default function WaiterOrdersView() {
         />
       </DashboardFilterBar>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {ordersQuery.isError ? (
+        <p className="text-sm text-destructive">
+          {ordersQuery.error instanceof OrderingApiError
+            ? ordersQuery.error.message
+            : "Siparişler yüklenemedi"}
+        </p>
+      ) : null}
 
       {menuId ? (
         <DashboardFilterBar>
@@ -273,8 +307,8 @@ export default function WaiterOrdersView() {
               setCustomerQuery(next);
               setQuery({ q: next.trim() || null });
             }}
-            placeholder="Müşteri adı"
-            aria-label="Müşteri adı ile filtrele"
+            placeholder="Müşteri veya garson"
+            aria-label="Müşteri veya garson ile filtrele"
           />
         </DashboardFilterBar>
       ) : null}
@@ -282,7 +316,7 @@ export default function WaiterOrdersView() {
       {!menuId ? (
         <EmptyState
           title="Menü seçin"
-          description="Bekleyen siparişleri görmek için bir dijital menü seçin."
+          description="Siparişleri görmek için bir dijital menü seçin."
           action={
             <Button asChild variant="outline">
               <Link href={DASHBOARD_ROUTES.digitalMenu}>Menü & Şubeler</Link>
@@ -290,11 +324,11 @@ export default function WaiterOrdersView() {
           }
         />
       ) : ordersQuery.isLoading ? (
-        <DashboardLoadingState label="Bekleyen siparişler yükleniyor..." />
+        <DashboardLoadingState label="Siparişler yükleniyor..." />
       ) : orders.length === 0 ? (
         <EmptyState
-          title="Bekleyen sipariş yok"
-          description="Yeni siparişler burada görünür. Garson uygulamasından da sipariş alabilirsiniz."
+          title="Henüz sipariş yok"
+          description="Garson veya müşteri siparişleri burada detaylı görünür."
           action={
             <Button asChild variant="outline">
               <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
@@ -306,7 +340,7 @@ export default function WaiterOrdersView() {
       ) : filteredOrders.length === 0 ? (
         <EmptyState
           title="Filtrelere uyan sipariş yok"
-          description="Tarih veya müşteri filtresini temizleyip tekrar deneyin."
+          description="Tarih veya arama filtresini temizleyip tekrar deneyin."
           action={
             <Button
               variant="outline"
@@ -327,37 +361,35 @@ export default function WaiterOrdersView() {
             <OrderCard
               key={order.id}
               order={order}
-              busy={actionMutation.isPending}
-              onConfirm={() => setPendingAction({ orderId: order.id, action: "confirm" })}
-              onReject={() => setPendingAction({ orderId: order.id, action: "reject" })}
+              busy={cancelMutation.isPending}
+              onCancel={() => setPendingCancelId(order.id)}
             />
           ))}
         </div>
       )}
 
-      <AlertDialog open={pendingAction != null} onOpenChange={(open) => !open && setPendingAction(null)}>
+      <AlertDialog
+        open={pendingCancelId != null}
+        onOpenChange={(open) => !open && setPendingCancelId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingAction?.action === "reject" ? "Siparişi reddet?" : "Siparişi onayla?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Siparişi iptal et?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAction?.action === "reject"
-                ? "Reddettiğiniz sipariş kuyruktan çıkar. Bu işlem geri alınamaz."
-                : "Onaylanan sipariş hazırlık kuyruğuna geçer."}
+              İptal edilen sipariş listede İptal edildi olarak görünür. Bu işlem geri alınamaz.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Vazgeç</AlertDialogCancel>
             <AlertDialogAction
-              className={pendingAction?.action === "reject" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                if (!pendingAction) return;
-                actionMutation.mutate(pendingAction);
-                setPendingAction(null);
+                if (pendingCancelId == null) return;
+                cancelMutation.mutate(pendingCancelId);
+                setPendingCancelId(null);
               }}
             >
-              {pendingAction?.action === "reject" ? "Reddet" : "Onayla"}
+              İptal et
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
