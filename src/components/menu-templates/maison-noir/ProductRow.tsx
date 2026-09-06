@@ -75,7 +75,7 @@ export function MaisonNoirProductRow({ product, onOpen }: ProductRowProps) {
             <button
               type="button"
               onClick={async () => {
-                await ordering.addProduct(product, 1);
+                await ordering.beginAddProduct(product, 1);
               }}
               disabled={ordering.loading}
               className="inline-flex min-h-8 min-w-[3.5rem] items-center justify-center border border-[var(--mn-primary)]/50 px-2.5 mn-type-eyebrow text-[var(--mn-primary)] transition-colors hover:bg-[var(--mn-primary)] hover:text-[var(--mn-primary-fg)] disabled:opacity-50"

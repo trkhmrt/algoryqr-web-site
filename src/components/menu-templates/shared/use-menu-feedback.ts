@@ -9,7 +9,7 @@ import {
   type MenuProductApiItem,
 } from "@/lib/api";
 
-export function useMenuFeedback(menuId: number, initialAvg?: number | null, initialCount?: number) {
+export function useMenuFeedback(publicId: string, initialAvg?: number | null, initialCount?: number) {
   const [menuRatingAvg, setMenuRatingAvg] = useState<number | null>(
     initialAvg != null && Number(initialAvg) > 0 ? Number(initialAvg) : null,
   );
@@ -25,7 +25,7 @@ export function useMenuFeedback(menuId: number, initialAvg?: number | null, init
 
   useEffect(() => {
     let active = true;
-    void getPublicMenuRatingRequest(menuId)
+    void getPublicMenuRatingRequest(publicId)
       .then((data) => {
         if (!active) return;
         const avg = Number(data.ratingAvg);
@@ -37,7 +37,7 @@ export function useMenuFeedback(menuId: number, initialAvg?: number | null, init
     return () => {
       active = false;
     };
-  }, [menuId]);
+  }, [publicId]);
 
   const syncProductState = useCallback((product: MenuProductApiItem | null) => {
     if (!product) {
@@ -59,7 +59,7 @@ export function useMenuFeedback(menuId: number, initialAvg?: number | null, init
       if (menuSubmitting) return;
       setMenuSubmitting(true);
       try {
-        const data = await submitPublicMenuRatingRequest(menuId, score, comment);
+        const data = await submitPublicMenuRatingRequest(publicId, score, comment);
         const avg = Number(data.ratingAvg);
         setMenuRatingAvg(Number.isFinite(avg) && avg > 0 ? avg : null);
         setMenuRatingCount(data.ratingCount ?? menuRatingCount);
@@ -70,7 +70,7 @@ export function useMenuFeedback(menuId: number, initialAvg?: number | null, init
         setMenuSubmitting(false);
       }
     },
-    [menuId, menuRatingCount, menuSubmitting],
+    [publicId, menuRatingCount, menuSubmitting],
   );
 
   const submitProductFeedback = useCallback(
@@ -78,7 +78,7 @@ export function useMenuFeedback(menuId: number, initialAvg?: number | null, init
       if (productSubmitting || activeProductId == null) return;
       setProductSubmitting(true);
       try {
-        const data = await submitPublicProductRatingRequest(menuId, activeProductId, score, comment);
+        const data = await submitPublicProductRatingRequest(publicId, activeProductId, score, comment);
         const avg = Number(data.ratingAvg);
         setProductRatingAvg(Number.isFinite(avg) && avg > 0 ? avg : null);
         setProductRatingCount(data.ratingCount ?? productRatingCount);
@@ -89,7 +89,7 @@ export function useMenuFeedback(menuId: number, initialAvg?: number | null, init
         setProductSubmitting(false);
       }
     },
-    [activeProductId, menuId, productRatingCount, productSubmitting],
+    [activeProductId, publicId, productRatingCount, productSubmitting],
   );
 
   return {

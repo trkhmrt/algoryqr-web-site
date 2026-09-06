@@ -1,9 +1,9 @@
 export const publicMenuKeys = {
   all: ["public-menu"] as const,
-  categories: (menuId: number) => [...publicMenuKeys.all, "categories", menuId] as const,
-  products: (menuId: number) => [...publicMenuKeys.all, "products", menuId] as const,
-  categoryStats: (menuId: number, mainCategoryId: number) =>
-    [...publicMenuKeys.all, "category-stats", menuId, mainCategoryId] as const,
-  categoryCover: (menuId: number, mainCategoryId: number) =>
-    [...publicMenuKeys.all, "category-cover", menuId, mainCategoryId] as const,
+  categories: (publicId: string) => [...publicMenuKeys.all, "categories", publicId] as const,
+  products: (publicId: string) => [...publicMenuKeys.all, "products", publicId] as const,
+  categoryStats: (publicId: string, mainCategoryId: number) =>
+    [...publicMenuKeys.all, "category-stats", publicId, mainCategoryId] as const,
+  categoryCover: (publicId: string, mainCategoryId: number) =>
+    [...publicMenuKeys.all, "category-cover", publicId, mainCategoryId] as const,
 };

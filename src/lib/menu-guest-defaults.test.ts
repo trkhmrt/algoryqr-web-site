@@ -6,8 +6,7 @@ describe("resolveMenuGuestDefaults", () => {
   it("uses English and USD for Aya Roof style menus", () => {
     expect(
       resolveMenuGuestDefaults({
-        menuId: 1,
-        qrId: 10,
+        publicId: "aya-roof",
         businessName: "Aya Roof Lounge",
       }),
     ).toEqual({ locale: "en", currency: "USD" });
@@ -16,8 +15,7 @@ describe("resolveMenuGuestDefaults", () => {
   it("uses Turkish and TRY for Ulas Bayram style menus", () => {
     expect(
       resolveMenuGuestDefaults({
-        menuId: 2,
-        qrId: 11,
+        publicId: "ulasbayram",
         businessName: "Paradise Restaurant",
         identifier: "ulasbayram",
       }),
@@ -27,8 +25,7 @@ describe("resolveMenuGuestDefaults", () => {
   it("falls back to Turkish and TRY for unknown menus", () => {
     expect(
       resolveMenuGuestDefaults({
-        menuId: 3,
-        qrId: 12,
+        publicId: "limon",
         businessName: "Limon Restaurant",
       }),
     ).toEqual({ locale: "tr", currency: "TRY" });

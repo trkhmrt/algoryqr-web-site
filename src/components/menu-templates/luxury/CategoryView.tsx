@@ -32,10 +32,11 @@ export function LuxuryCategoryView({
   onOpenProduct,
 }: CategoryViewProps) {
   const theme = usePublicMenuTheme();
+  const isKahve = theme.id === "kahve-sokagi";
   const isLuxury = theme.id === "luxury";
   const isEditorial = theme.layout === "editorial";
   const isElixir = theme.layout === "elixir";
-  const isCardFeed = isEditorial || isElixir;
+  const isCardFeed = isEditorial || isElixir || isKahve;
   const crumbs = getBreadcrumbs(categories, category.categoryId);
   const children = category.children ?? [];
   const items = filterProductsForCategory(products, category);
@@ -46,7 +47,21 @@ export function LuxuryCategoryView({
     else onHome();
   };
 
-  const rowProps = isElixir
+  const rowProps = isKahve
+    ? {
+        variant: "card" as const,
+        className: "ks-soft-card overflow-hidden border-0",
+        imageClassName: "h-44 bg-[var(--ks-surface-high)]",
+        titleClassName: "lx-card-fg font-semibold",
+        priceClassName: "lx-gold font-semibold whitespace-nowrap",
+        descriptionClassName: "lx-card-muted",
+        chipClassName: "bg-[var(--lx-chip)] lx-card-muted",
+        accentChipClassName: "lx-gold-bg text-[var(--lx-primary-fg)]",
+        destructiveChipClassName:
+          "bg-[color-mix(in_srgb,var(--lx-destructive)_14%,white)] text-[var(--lx-destructive)]",
+        imagePlaceholderClassName: "lx-gold",
+      }
+    : isElixir
     ? {
         variant: "card" as const,
         className: "elixir-card",
@@ -159,7 +174,7 @@ export function LuxuryCategoryView({
         ) : null}
 
         {items.length > 0 ? (
-          <section className={isElixir ? "grid grid-cols-1 gap-10" : isLuxury ? "grid grid-cols-1 gap-8 sm:grid-cols-2" : isCardFeed ? "grid grid-cols-1 gap-3" : undefined}>
+          <section className={isElixir ? "grid grid-cols-1 gap-10" : isLuxury ? "grid grid-cols-1 gap-8 sm:grid-cols-2" : isKahve || isCardFeed ? "grid grid-cols-1 gap-3" : undefined}>
             {items.map((item) => (
               <DenseProductRow
                 key={item.productId}

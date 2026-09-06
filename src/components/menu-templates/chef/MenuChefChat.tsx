@@ -23,7 +23,7 @@ import { MenuChefSearchComplete } from "./MenuChefSearchComplete";
 import { isSearchCompleteVisible, type SearchCompletePayload } from "@/lib/chef/search-complete";
 
 type MenuChefChatProps = {
-  menuId: number;
+  publicId: string;
   chefDisplayName: string;
   chefAvatarUrl: string;
   open: boolean;
@@ -171,7 +171,7 @@ function AssistantBubble({
   onAvatarClick,
   chefAvatarUrl,
   chefDisplayName,
-  menuId,
+  publicId,
   badgesDisabled,
   onBadgeSelect,
 }: {
@@ -182,7 +182,7 @@ function AssistantBubble({
   onAvatarClick: () => void;
   chefAvatarUrl: string;
   chefDisplayName: string;
-  menuId: number;
+  publicId: string;
   badgesDisabled: boolean;
   onBadgeSelect: (badge: ChefChatBadge) => void;
 }) {
@@ -232,7 +232,7 @@ function AssistantBubble({
             ) : null}
             {msg.id === "welcome" ? (
               <MenuChefQuickBadges
-                menuId={menuId}
+                publicId={publicId}
                 disabled={badgesDisabled}
                 onSelect={onBadgeSelect}
               />
@@ -345,14 +345,14 @@ function ChefResetConfirm({
 }
 
 export function MenuChefChat({
-  menuId,
+  publicId,
   chefDisplayName,
   chefAvatarUrl,
   open,
   onClose,
 }: MenuChefChatProps) {
   const ordering = useOrderingOptional();
-  const saved = getChefChatSession(menuId);
+  const saved = getChefChatSession(publicId);
   const [messages, setMessages] = useState<ChefChatMessage[]>(
     () => saved?.messages ?? [CHEF_WELCOME_MESSAGE],
   );
@@ -372,8 +372,8 @@ export function MenuChefChat({
   );
 
   useEffect(() => {
-    setChefChatSession(menuId, { messages, conversationId });
-  }, [menuId, messages, conversationId]);
+    setChefChatSession(publicId, { messages, conversationId });
+  }, [publicId, messages, conversationId]);
 
   useEffect(() => {
     if (!open) {
@@ -418,7 +418,7 @@ export function MenuChefChat({
 
   const resetChat = () => {
     if (loading) return;
-    clearChefChatSession(menuId);
+    clearChefChatSession(publicId);
     enteredIdsRef.current = new Set(["welcome"]);
     setConversationId(undefined);
     setInput("");
@@ -436,7 +436,7 @@ export function MenuChefChat({
       const res = await fetch("/api/menu/chef/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ menuId, message: trimmed, conversationId }),
+        body: JSON.stringify({ publicId, message: trimmed, conversationId }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         reply?: string;
@@ -494,7 +494,7 @@ export function MenuChefChat({
       const res = await fetch("/api/menu/chef/badge-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ menuId, badgeId: badge.id }),
+        body: JSON.stringify({ publicId, badgeId: badge.id }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         reply?: string;
@@ -649,7 +649,7 @@ export function MenuChefChat({
                           onAvatarClick={() => setAvatarOpen(true)}
                           chefAvatarUrl={chefAvatarUrl}
                           chefDisplayName={chefDisplayName}
-                          menuId={menuId}
+                          publicId={publicId}
                           badgesDisabled={loading}
                           onBadgeSelect={(badge) => {
                             void sendBadge(badge);

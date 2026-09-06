@@ -18,7 +18,7 @@ type ModernBistroShellProps = {
     | "email"
     | "address"
     | "qrId"
-    | "menuId"
+    | "publicId"
     | "chefName"
     | "chefDisplayName"
     | "chefAvatarUrl"

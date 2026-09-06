@@ -35,7 +35,7 @@ import { OrderHistoryPanel } from "./OrderHistoryPanel";
 type Panel = "home" | "history" | "password";
 
 type CustomerAccountMenuProps = {
-  menuId: number;
+  publicId: string;
   children?: ReactNode;
 };
 
@@ -51,7 +51,7 @@ export function useCustomerAccountUi() {
   return useContext(AccountUiContext);
 }
 
-export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuProps) {
+export function CustomerAccountMenu({ publicId, children }: CustomerAccountMenuProps) {
   const locale = useMenuLocaleOptional();
   const t = locale?.t;
   const [open, setOpen] = useState(false);
@@ -80,7 +80,7 @@ export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuPro
         setLastName(me.lastName || "");
         setPhone(me.phone || "");
         try {
-          await joinCustomerMembership(menuId);
+          await joinCustomerMembership(publicId);
         } catch {
           /* ignore */
         }
@@ -90,7 +90,7 @@ export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuPro
     } finally {
       setLoading(false);
     }
-  }, [menuId]);
+  }, [publicId]);
 
   useEffect(() => {
     void loadProfile();
@@ -161,7 +161,7 @@ export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuPro
                 </button>
               </div>
             ) : panel === "history" ? (
-              <OrderHistoryPanel menuId={menuId} onBack={() => setPanel("home")} />
+              <OrderHistoryPanel publicId={publicId} onBack={() => setPanel("home")} />
             ) : panel === "password" ? (
               <form
                 className="space-y-3"
@@ -320,7 +320,7 @@ export function CustomerAccountMenu({ menuId, children }: CustomerAccountMenuPro
       <CustomerAuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}
-        menuId={menuId}
+        publicId={publicId}
         initialMode={authMode}
         onSuccess={async () => {
           await loadProfile();

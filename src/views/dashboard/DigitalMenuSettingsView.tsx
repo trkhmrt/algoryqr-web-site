@@ -57,7 +57,7 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
 
   useEffect(() => {
     if (!profile) return;
-    if (menuHydratedFor === profile.menuId) return;
+    if (menuHydratedFor === (profile.menuId ?? null)) return;
     const themeId = resolveMenuThemeId(profile.themeId);
     setMenu({
       businessName: profile.businessName ?? "",
@@ -70,7 +70,7 @@ export default function DigitalMenuSettingsView({ qrId }: DigitalMenuSettingsVie
       chefAvatarKey: profile.chefAvatarKey ?? "default",
       logoUrl: profile.logoUrl ?? "",
     });
-    setMenuHydratedFor(profile.menuId);
+    setMenuHydratedFor(profile.menuId ?? null);
   }, [menuHydratedFor, profile]);
 
   useEffect(() => {

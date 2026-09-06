@@ -10,7 +10,7 @@ import {
 } from "./use-public-menu-products";
 
 type MenuProductFeedProps = {
-  menuId: number;
+  publicId: string;
   initialProducts: MenuProductApiItem[];
   productPage?: number;
   productSize?: number;
@@ -19,7 +19,7 @@ type MenuProductFeedProps = {
 };
 
 export function MenuProductFeed({
-  menuId,
+  publicId,
   initialProducts,
   productPage = 0,
   productSize = 20,
@@ -27,7 +27,7 @@ export function MenuProductFeed({
   children,
 }: MenuProductFeedProps) {
   const value = useMenuProductFeedState({
-    menuId,
+    publicId,
     initialProducts,
     initialPage: productPage,
     initialSize: productSize,

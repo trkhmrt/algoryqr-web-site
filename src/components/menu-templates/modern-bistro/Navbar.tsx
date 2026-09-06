@@ -15,7 +15,7 @@ import { MaisonNoirChefNavButton } from "../maison-noir/ChefNavButton";
 type ModernBistroNavbarProps = {
   menu: Pick<
     MenuProfileApiItem,
-    "menuId" | "chefName" | "chefDisplayName" | "chefAvatarUrl"
+    "publicId" | "chefName" | "chefDisplayName" | "chefAvatarUrl"
   >;
 };
 
@@ -62,7 +62,7 @@ export function ModernBistroNavbar({ menu }: ModernBistroNavbarProps) {
           <div className="relative flex h-12 items-center justify-between px-4 sm:px-6">
             <div className="relative z-10 min-w-0 shrink-0">
               <MaisonNoirChefNavButton
-                menuId={menu.menuId}
+                publicId={menu.publicId ?? ""}
                 chefName={menu.chefName}
                 chefDisplayName={menu.chefDisplayName}
                 chefAvatarUrl={menu.chefAvatarUrl}
