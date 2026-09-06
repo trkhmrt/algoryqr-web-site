@@ -20,7 +20,6 @@ export type CampaignPreviewLine = {
   currentSpend?: number | string;
   thresholdAmount?: number | string;
   message?: string;
-  /** When true (or derived), cart already meets the campaign threshold. */
   earned?: boolean;
   rewardUnlocked?: boolean;
 };
@@ -47,23 +46,24 @@ export type ClaimInfoResponse = {
   alreadyClaimed?: boolean;
 };
 
-/**
- * Customer-facing earned campaign rewards.
- * Upstream contract may still evolve — keep fields optional and tolerant.
- */
+/** Exact contract from qr-service GET /customer/account/rewards */
 export type CustomerCampaignReward = {
-  id: number;
+  rewardId: number;
   campaignId?: number;
-  campaignName?: string;
-  status?: "AVAILABLE" | "REDEEMED" | "EXPIRED" | "PENDING" | string;
+  campaignName?: string | null;
+  rewardType?: string | null;
+  rewardPayload?: Record<string, unknown> | null;
+  status?: "AVAILABLE" | "REDEEMED" | string;
   issuedAt?: string | null;
   redeemedAt?: string | null;
-  expiresAt?: string | null;
-  orderId?: number | null;
-  message?: string | null;
-  claimToken?: string | null;
-  claimUrl?: string | null;
-  templateCode?: string | null;
+};
+
+export type StampCardProgress = {
+  campaignId: number;
+  campaignName: string;
+  currentQuantity: number;
+  requiredQuantity: number;
+  earned: boolean;
 };
 
 export async function fetchActiveCampaigns(identifier: string): Promise<ActiveCampaign[]> {
@@ -139,26 +139,15 @@ export async function claimCampaignReward(token: string): Promise<{ rewardId?: n
   return data;
 }
 
-/**
- * List earned rewards for the logged-in customer.
- * Proxies to `/api/customer/account/rewards` → upstream `/customer/account/rewards`
- * (path may change when qr-service finalizes the contract).
- */
-export async function fetchCustomerRewards(publicId?: string): Promise<CustomerCampaignReward[]> {
-  const params = new URLSearchParams();
-  if (publicId) params.set("publicId", publicId);
-  const qs = params.toString();
-  const response = await fetch(`/api/customer/account/rewards${qs ? `?${qs}` : ""}`, {
+/** GET /api/customer/account/rewards → upstream /customer/account/rewards */
+export async function fetchCustomerRewards(_publicId?: string): Promise<CustomerCampaignReward[]> {
+  const response = await fetch("/api/customer/account/rewards", {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
   });
   if (response.status === 401) {
     throw new Error("Ödülleri görmek için giriş yapın");
-  }
-  if (response.status === 404) {
-    // Upstream not ready yet — treat as empty rather than hard-failing the UI.
-    return [];
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {
@@ -169,11 +158,5 @@ export async function fetchCustomerRewards(publicId?: string): Promise<CustomerC
     throw new Error(message || "Ödüller yüklenemedi");
   }
   if (Array.isArray(data)) return data as CustomerCampaignReward[];
-  if (data && typeof data === "object" && Array.isArray((data as { content?: unknown }).content)) {
-    return (data as { content: CustomerCampaignReward[] }).content;
-  }
-  if (data && typeof data === "object" && Array.isArray((data as { rewards?: unknown }).rewards)) {
-    return (data as { rewards: CustomerCampaignReward[] }).rewards;
-  }
   return [];
 }
