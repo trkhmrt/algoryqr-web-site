@@ -5,6 +5,7 @@ export { AddToOrderButton } from "./AddToOrderButton";
 export { CartFab } from "./CartFab";
 export { CartSheet } from "./CartSheet";
 export { CampaignCartPreview } from "./CampaignCartPreview";
+export { StampCardProgressPanel } from "./StampCardProgressPanel";
 export {
   CampaignProductIdsProvider,
   useActiveCampaigns,
@@ -13,6 +14,7 @@ export {
 } from "./campaign-product-context";
 export { CustomerAccountMenu } from "./CustomerAccountMenu";
 export { CustomerAuthDialog } from "./CustomerAuthDialog";
+export { CustomerRewardsPanel } from "./CustomerRewardsPanel";
 export { WaiterAuthDialog } from "./WaiterAuthDialog";
 export { MenuCampaignRail } from "./MenuCampaignRail";
 export { MenuEntryGate } from "./MenuEntryGate";

@@ -31,6 +31,23 @@ export type OrderStatus =
   | "CANCELLED"
   | string;
 
+/** Exact FE contract from qr-service OrderCampaignSummary.stampCardProgress */
+export type StampCardProgress = {
+  campaignId: number;
+  campaignName: string;
+  currentQuantity: number;
+  requiredQuantity: number;
+  earned: boolean;
+};
+
+export type OrderCampaignSummary = {
+  campaignProductCount?: number;
+  guestOrder?: boolean;
+  rewardEligible?: boolean;
+  hint?: string | null;
+  stampCardProgress?: StampCardProgress[];
+};
+
 export type OrderResponse = {
   id: number;
   menuId?: number;
@@ -55,12 +72,7 @@ export type OrderResponse = {
   rejectedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
-  campaignSummary?: {
-    campaignProductCount?: number;
-    guestOrder?: boolean;
-    rewardEligible?: boolean;
-    hint?: string | null;
-  } | null;
+  campaignSummary?: OrderCampaignSummary | null;
 };
 
 export type CartItemRequest = {

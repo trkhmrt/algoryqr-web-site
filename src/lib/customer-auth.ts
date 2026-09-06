@@ -1,3 +1,8 @@
+import {
+  getProviderConflictMessage,
+  resolveCustomerAuthConflictMessage,
+} from "@/lib/google-auth-error";
+
 export type CustomerProfile = {
   id: number;
   firstName?: string | null;
@@ -15,6 +20,7 @@ export type CustomerAuthResult = {
   refreshToken?: string;
   customerId?: number;
   message?: string;
+  code?: string;
 };
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -29,10 +35,29 @@ async function parseJson<T>(response: Response): Promise<T> {
 
 export class CustomerAuthError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
+}
+
+function throwAuthError(
+  status: number,
+  data: { message?: string; code?: string; error?: string },
+  fallback: string,
+): never {
+  const code = data.code ?? data.error;
+  const conflict = resolveCustomerAuthConflictMessage({
+    code,
+    message: data.message,
+  });
+  throw new CustomerAuthError(
+    status,
+    conflict ?? data.message ?? fallback,
+    code,
+  );
 }
 
 export async function customerLogin(payload: {
@@ -46,9 +71,9 @@ export async function customerLogin(payload: {
     body: JSON.stringify(payload),
     credentials: "same-origin",
   });
-  const data = await parseJson<CustomerAuthResult & { message?: string }>(response);
+  const data = await parseJson<CustomerAuthResult & { message?: string; code?: string; error?: string }>(response);
   if (!response.ok) {
-    throw new CustomerAuthError(response.status, data.message || "Giriş başarısız");
+    throwAuthError(response.status, data, "Giriş başarısız");
   }
   return data;
 }
@@ -67,9 +92,9 @@ export async function customerRegister(payload: {
     body: JSON.stringify(payload),
     credentials: "same-origin",
   });
-  const data = await parseJson<CustomerAuthResult & { message?: string }>(response);
+  const data = await parseJson<CustomerAuthResult & { message?: string; code?: string; error?: string }>(response);
   if (!response.ok) {
-    throw new CustomerAuthError(response.status, data.message || "Kayıt başarısız");
+    throwAuthError(response.status, data, "Kayıt başarısız");
   }
   return data;
 }
@@ -151,3 +176,5 @@ export function customerGoogleStartUrl(
   if (returnUrl) params.set("returnUrl", returnUrl);
   return `/api/customer/auth/google/start?${params.toString()}`;
 }
+
+export { getProviderConflictMessage };

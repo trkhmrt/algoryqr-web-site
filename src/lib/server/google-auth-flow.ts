@@ -37,6 +37,14 @@ const ERROR_CODES = new Set<GoogleAuthErrorCode>([
   "upstream_unavailable",
 ]);
 
+/** Upstream / qr-service aliases → canonical GoogleAuthErrorCode */
+const ERROR_CODE_ALIASES: Record<string, GoogleAuthErrorCode> = {
+  account_exists_different_provider: "provider_conflict",
+  auth_method_mismatch: "provider_conflict",
+  different_provider: "provider_conflict",
+  method_mismatch: "provider_conflict",
+};
+
 export function parseGoogleAuthIntent(value: unknown): GoogleAuthIntent | null {
   return value === "login" || value === "register" ? value : null;
 }
@@ -61,6 +69,9 @@ export function safeGoogleAuthErrorCode(
 ): GoogleAuthErrorCode {
   if (typeof value !== "string") return fallback;
   const normalized = value.trim().toLowerCase();
+  if (ERROR_CODE_ALIASES[normalized]) {
+    return ERROR_CODE_ALIASES[normalized];
+  }
   return ERROR_CODES.has(normalized as GoogleAuthErrorCode)
     ? (normalized as GoogleAuthErrorCode)
     : fallback;
