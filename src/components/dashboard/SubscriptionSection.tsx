@@ -32,7 +32,12 @@ import {
   formatPackagePrice,
   purchaseTypeLabel,
 } from "@/lib/package-display";
-import { formatBranchMenuQuota, formatBranchQuota } from "@/lib/branch";
+import {
+  formatBranchMenuQuota,
+  formatBranchQuota,
+  formatBranchQuotaSubtitle,
+  formatBranchQuotaUsageFraction,
+} from "@/lib/branch";
 import { invalidateAccessProfile } from "@/hooks/use-access-profile";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
 import {
@@ -114,14 +119,6 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
   const branchQuotaLabel = formatBranchQuota(data?.branchQuota ?? null);
   const menuQuotaLabel = formatBranchMenuQuota(data?.menuQuota ?? null);
   const products = summary?.products ?? [];
-  const branchAddonTotal = data?.branchQuota?.extraPurchased ?? 0;
-  const branchIncludedTotal =
-    products.find((product) => product.productCode === "QR_BRANCH" && !product.unlimited)
-      ?.totalQuantity ?? 1;
-  const branchAddonUsed = data?.branchQuota
-    ? Math.max(0, data.branchQuota.used - branchIncludedTotal - data.branchQuota.grandfathered)
-    : 0;
-  const branchAddonRemaining = Math.max(0, branchAddonTotal - branchAddonUsed);
 
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -609,15 +606,11 @@ export default function SubscriptionSection({ onNotify }: SubscriptionSectionPro
                         <div className="min-w-0">
                           <p className="font-medium text-foreground">Şube hakkı</p>
                           <p className="text-xs text-muted-foreground">
-                            {data.branchQuota.extraPurchased > 0
-                              ? "Satın alınan şube hakkı"
-                              : `Paket dahil ${branchIncludedTotal} şube`}
+                            {formatBranchQuotaSubtitle(data.branchQuota)}
                           </p>
                         </div>
                         <p className="shrink-0 text-xs text-muted-foreground">
-                          {data.branchQuota.extraPurchased > 0
-                            ? `${branchAddonRemaining}/${branchAddonTotal}`
-                            : `${data.branchQuota.remaining}/${data.branchQuota.allowed}`}
+                          {formatBranchQuotaUsageFraction(data.branchQuota)}
                         </p>
                       </div>
                     ) : null}
