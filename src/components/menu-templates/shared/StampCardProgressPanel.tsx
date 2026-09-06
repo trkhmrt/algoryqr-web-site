@@ -3,7 +3,7 @@
 import { createElement as h } from "react";
 import { CheckCircle2, Gift } from "lucide-react";
 
-import type { StampCardProgress } from "@/lib/ordering-api";
+import type { StampCardProgress } from "@/lib/ordering-campaign-types";
 import { cn } from "@/lib/utils";
 
 type StampCardProgressPanelProps = {
