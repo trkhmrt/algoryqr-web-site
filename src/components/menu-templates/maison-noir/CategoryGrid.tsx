@@ -12,14 +12,14 @@ import { useMenuLocale } from "../shared/menu-locale";
 import { maisonNoirCategoryMark } from "./styles";
 
 type CategoryGridProps = {
-  menuId: number;
+  publicId: string;
   categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   onSelectCategory: (category: TaxonomyNavNode) => void;
 };
 
 export function MaisonNoirCategoryGrid({
-  menuId,
+  publicId,
   categories,
   products,
   onSelectCategory,
@@ -46,7 +46,7 @@ export function MaisonNoirCategoryGrid({
     [categories],
   );
 
-  const stats = usePublicMenuCategoryStats(menuId, mainCategories);
+  const stats = usePublicMenuCategoryStats(publicId, mainCategories);
 
   const tiles = useMemo(() => {
     return categories

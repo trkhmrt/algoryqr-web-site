@@ -28,7 +28,7 @@ export type ModernBistroCategoryRailItem = {
 };
 
 type ModernBistroCategoryRailProps = {
-  menuId: number;
+  publicId: string;
   categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   activeTab: ModernBistroHomeTab;
@@ -37,7 +37,7 @@ type ModernBistroCategoryRailProps = {
 };
 
 export function ModernBistroCategoryRail({
-  menuId,
+  publicId,
   categories,
   products,
   activeTab,
@@ -66,7 +66,7 @@ export function ModernBistroCategoryRail({
     [categories],
   );
 
-  const stats = usePublicMenuCategoryStats(menuId, mainCategories);
+  const stats = usePublicMenuCategoryStats(publicId, mainCategories);
   const popularPreview = useMemo(() => modernBistroPopularProducts(products)[0], [products]);
 
   const items = useMemo(() => {

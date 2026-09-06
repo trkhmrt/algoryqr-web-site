@@ -6,6 +6,10 @@ import {
   formatBranchCreateQuota,
   formatBranchMenuQuota,
   formatBranchQuota,
+  formatBranchQuotaSubtitle,
+  formatBranchQuotaUsageFraction,
+  packageIncludedBranchSlots,
+  summarizePurchasedBranchUsage,
   type BranchItem,
   type BranchMenuQuota,
   type BranchQuota,
@@ -23,17 +27,79 @@ function branch(overrides: Partial<BranchItem> = {}): BranchItem {
   };
 }
 
+function quota(overrides: Partial<BranchQuota> = {}): BranchQuota {
+  return {
+    used: 0,
+    allowed: 1,
+    remaining: 1,
+    grandfathered: 0,
+    extraPurchased: 0,
+    canCreate: true,
+    ...overrides,
+  };
+}
+
+describe("summarizePurchasedBranchUsage", () => {
+  it("uses allowed minus extraPurchased as base slots, not package+grandfathered twice", () => {
+    const exhausted = quota({
+      used: 8,
+      allowed: 8,
+      remaining: 0,
+      grandfathered: 1,
+      extraPurchased: 7,
+      canCreate: false,
+    });
+    expect(packageIncludedBranchSlots(exhausted)).toBe(1);
+    expect(summarizePurchasedBranchUsage(exhausted)).toEqual({
+      purchased: 7,
+      used: 7,
+      remaining: 0,
+    });
+    expect(formatBranchQuotaUsageFraction(exhausted)).toBe("0/7");
+    expect(formatBranchQuotaSubtitle(exhausted)).toBe("Satın alınan şube hakkı");
+  });
+
+  it("counts unused purchased slots after the included base slot is filled", () => {
+    const partial = quota({
+      used: 3,
+      allowed: 8,
+      remaining: 5,
+      grandfathered: 0,
+      extraPurchased: 7,
+      canCreate: true,
+    });
+    expect(summarizePurchasedBranchUsage(partial)).toEqual({
+      purchased: 7,
+      used: 2,
+      remaining: 5,
+    });
+    expect(formatBranchQuotaUsageFraction(partial)).toBe("5/7");
+  });
+
+  it("shows package remaining when no add-ons were purchased", () => {
+    const includedOnly = quota({
+      used: 0,
+      allowed: 1,
+      remaining: 1,
+      extraPurchased: 0,
+      canCreate: true,
+    });
+    expect(formatBranchQuotaSubtitle(includedOnly)).toBe("Paket dahil 1 şube");
+    expect(formatBranchQuotaUsageFraction(includedOnly)).toBe("1/1");
+  });
+});
+
 describe("formatBranchQuota", () => {
   it("describes remaining and exhausted branch slots", () => {
-    const remaining: BranchQuota = {
+    const remaining = quota({
       used: 1,
       allowed: 2,
       remaining: 1,
       grandfathered: 1,
       extraPurchased: 1,
       canCreate: true,
-    };
-    const exhausted: BranchQuota = { ...remaining, remaining: 0, canCreate: false };
+    });
+    const exhausted = { ...remaining, remaining: 0, canCreate: false };
     expect(formatBranchQuota(remaining)).toBe("1 şube hakkınız kaldı");
     expect(formatBranchQuota(exhausted)).toBe("Şube hakkınız doldu. Ek şube ücretlidir.");
   });

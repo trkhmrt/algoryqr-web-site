@@ -60,16 +60,42 @@ export function MenuEntryGate({
             </div>
 
             {campaigns.length > 0 ? (
-              <div className="rounded-xl border border-[color-mix(in_oklch,var(--lx-gold)_35%,transparent)] bg-[color-mix(in_oklch,var(--lx-gold)_8%,transparent)] px-4 py-3 text-left">
-                <div className="mb-1 flex items-center gap-2 text-[var(--lx-gold)]">
-                  <Megaphone className="h-4 w-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wide">Kampanya</span>
-                </div>
-                <p className="text-sm font-medium lx-fg">{campaigns[0].name}</p>
-                {campaigns[0].slogan ? (
-                  <p className="mt-1 text-xs lx-muted">{campaigns[0].slogan}</p>
-                ) : null}
-                <p className="mt-2 text-[11px] lx-muted">
+              <div className="space-y-3 text-left">
+                {campaigns.slice(0, 3).map((campaign) => (
+                  <div
+                    key={campaign.id}
+                    className="overflow-hidden rounded-xl border border-[color-mix(in_oklch,var(--lx-gold)_35%,transparent)] bg-[color-mix(in_oklch,var(--lx-gold)_8%,transparent)]"
+                  >
+                    {campaign.imageUrl ? (
+                      <div className="relative aspect-[21/9] w-full overflow-hidden">
+                        <img
+                          src={campaign.imageUrl}
+                          alt={campaign.name}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-3 text-white">
+                          <p className="text-sm font-medium">{campaign.name}</p>
+                          {campaign.slogan ? (
+                            <p className="mt-0.5 text-xs text-white/85">{campaign.slogan}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3">
+                        <div className="mb-1 flex items-center gap-2 text-[var(--lx-gold)]">
+                          <Megaphone className="h-4 w-4" />
+                          <span className="text-xs font-semibold uppercase tracking-wide">Kampanya</span>
+                        </div>
+                        <p className="text-sm font-medium lx-fg">{campaign.name}</p>
+                        {campaign.slogan ? (
+                          <p className="mt-1 text-xs lx-muted">{campaign.slogan}</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <p className="text-[11px] lx-muted">
                   Faydalanmak için giriş yapın veya misafir devam edin.
                 </p>
               </div>
@@ -98,7 +124,7 @@ export function MenuEntryGate({
       <CustomerAuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}
-        menuId={menu.menuId}
+        publicId={menu.publicId ?? ""}
         onSuccess={onAuthenticated}
         onContinueAsGuest={onContinueAsGuest}
         initialMode="login"

@@ -108,8 +108,7 @@ export function ModernBistroProductDetailView({
                     onClick={async () => {
                       setBusy(true);
                       try {
-                        await ordering.addProduct(product, quantity);
-                        ordering.setCartOpen(true);
+                        await ordering.beginAddProduct(product, quantity);
                       } finally {
                         setBusy(false);
                       }

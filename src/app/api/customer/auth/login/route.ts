@@ -8,16 +8,17 @@ import { setCustomerAuthCookies } from "@/lib/server/customer-auth-cookies";
 type LoginBody = {
   email?: string;
   password?: string;
-  menuId?: number;
+  publicId?: string;
 };
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as LoginBody;
+    const publicId = typeof body?.publicId === "string" ? body.publicId.trim() : "";
     const loginPayload = {
       email: typeof body?.email === "string" ? body.email.trim() : "",
       password: typeof body?.password === "string" ? body.password : "",
-      ...(typeof body?.menuId === "number" && body.menuId > 0 ? { menuId: body.menuId } : {}),
+      ...(publicId ? { publicId } : {}),
     };
 
     if (!loginPayload.email || !loginPayload.password) {

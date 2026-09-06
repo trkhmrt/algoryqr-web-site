@@ -25,7 +25,7 @@ type Mode = "login" | "register";
 type CustomerAuthDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  menuId: number;
+  publicId: string;
   onSuccess: () => void | Promise<void>;
   onContinueAsGuest?: () => void;
   initialMode?: Mode;
@@ -34,7 +34,7 @@ type CustomerAuthDialogProps = {
 export function CustomerAuthDialog({
   open,
   onOpenChange,
-  menuId,
+  publicId,
   onSuccess,
   onContinueAsGuest,
   initialMode = "login",
@@ -65,7 +65,7 @@ export function CustomerAuthDialog({
     setError(null);
     try {
       if (mode === "login") {
-        await customerLogin({ email, password, menuId });
+        await customerLogin({ email, password, publicId });
       } else {
         await customerRegister({
           firstName,
@@ -73,11 +73,11 @@ export function CustomerAuthDialog({
           email,
           password,
           passwordConfirm,
-          menuId,
+          publicId,
         });
       }
       try {
-        await joinCustomerMembership(menuId);
+        await joinCustomerMembership(publicId);
       } catch {
         /* membership may already exist */
       }

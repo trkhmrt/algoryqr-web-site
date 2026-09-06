@@ -6,7 +6,7 @@ import { normalizeChefProducts } from "@/lib/chef/normalize-chef-products";
 import { QR_AGENT_BASE_URL } from "@/lib/config";
 
 const bodySchema = z.object({
-  menuId: z.number().int().positive(),
+  publicId: z.string().trim().min(1).max(128),
   message: z.string().trim().min(1).max(1000),
   conversationId: z.string().trim().min(1).max(100).optional(),
 });
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     const upstream = await axios.post<AgentChatResponse>(
       `${QR_AGENT_BASE_URL}/api/v1/chat`,
       {
-        menuId: parsed.data.menuId,
+        publicId: parsed.data.publicId,
         message: parsed.data.message,
         conversationId: parsed.data.conversationId,
       },
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
       console.error(
         JSON.stringify({
           event: "chef_bff_timing",
-          menuId: parsed.data.menuId,
+          publicId: parsed.data.publicId,
           conversationId: upstream.data.conversationId,
           ...timing,
         }),

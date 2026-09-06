@@ -163,7 +163,7 @@ function AddButton({
         event.stopPropagation();
         setBusy(true);
         try {
-          await ordering.addProduct(product, 1);
+          await ordering.beginAddProduct(product, 1);
         } finally {
           setBusy(false);
         }

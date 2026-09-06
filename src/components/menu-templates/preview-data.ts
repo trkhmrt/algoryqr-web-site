@@ -9,6 +9,7 @@ const PREVIEW_MENU_ID = 0;
 export const MENU_THEME_PREVIEW_MENU: MenuProfileApiItem = {
   menuId: PREVIEW_MENU_ID,
   qrId: 0,
+  publicId: "preview",
   userId: 0,
   themeId: "luxury",
   businessName: "LUXURY DINING",
@@ -19,7 +20,7 @@ export const MENU_THEME_PREVIEW_MENU: MenuProfileApiItem = {
   phone: "+90 555 000 0000",
   email: "hello@luxury.dining",
   address: "İstanbul",
-  publicUrl: "/menu/0",
+  publicUrl: "/menu/preview",
   active: true,
 };
 

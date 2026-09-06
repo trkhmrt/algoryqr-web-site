@@ -8,7 +8,7 @@ import { resolveSelectedProduct } from "./use-chef-open-product";
 import type { PublicMenuUrlViewBase } from "./use-public-menu-url-state";
 
 type UsePublicMenuDeepLinkProductArgs = {
-  menuId: number;
+  publicId: string;
   view: PublicMenuUrlViewBase;
   products: MenuProductApiItem[];
   pinnedProduct: MenuProductApiItem | null;
@@ -16,7 +16,7 @@ type UsePublicMenuDeepLinkProductArgs = {
 };
 
 export function usePublicMenuDeepLinkProduct({
-  menuId,
+  publicId,
   view,
   products,
   pinnedProduct,
@@ -33,7 +33,7 @@ export function usePublicMenuDeepLinkProduct({
     let cancelled = false;
     setLoading(true);
 
-    getPublicProductRequest(menuId, view.productId)
+    getPublicProductRequest(publicId, view.productId)
       .then((product) => {
         if (cancelled) return;
         setPinnedProduct(product);
@@ -49,7 +49,7 @@ export function usePublicMenuDeepLinkProduct({
     return () => {
       cancelled = true;
     };
-  }, [menuId, pinnedProduct, products, setPinnedProduct, view]);
+  }, [publicId, pinnedProduct, products, setPinnedProduct, view]);
 
   return { loadingDeepLinkProduct: loading };
 }

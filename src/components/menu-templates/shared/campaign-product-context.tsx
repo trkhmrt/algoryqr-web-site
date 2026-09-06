@@ -9,9 +9,14 @@ import {
   type ReactNode,
 } from "react";
 
-import { fetchCampaignProductIds } from "@/lib/public-campaign-api";
+import {
+  fetchActiveCampaigns,
+  fetchCampaignProductIds,
+  type ActiveCampaign,
+} from "@/lib/public-campaign-api";
 
 const CampaignProductIdsContext = createContext<Set<number>>(new Set());
+const ActiveCampaignsContext = createContext<ActiveCampaign[]>([]);
 
 type CampaignProductIdsProviderProps = {
   identifier: string;
@@ -23,23 +28,31 @@ export function CampaignProductIdsProvider({
   children,
 }: CampaignProductIdsProviderProps) {
   const [ids, setIds] = useState<number[]>([]);
+  const [campaigns, setCampaigns] = useState<ActiveCampaign[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    void fetchCampaignProductIds(identifier).then((next) => {
-      if (!cancelled) setIds(next);
+    void Promise.all([
+      fetchCampaignProductIds(identifier),
+      fetchActiveCampaigns(identifier),
+    ]).then(([nextIds, nextCampaigns]) => {
+      if (cancelled) return;
+      setIds(nextIds);
+      setCampaigns(nextCampaigns);
     });
     return () => {
       cancelled = true;
     };
   }, [identifier]);
 
-  const value = useMemo(() => new Set(ids), [ids]);
+  const idSet = useMemo(() => new Set(ids), [ids]);
 
   return (
-    <CampaignProductIdsContext.Provider value={value}>
-      {children}
-    </CampaignProductIdsContext.Provider>
+    <ActiveCampaignsContext.Provider value={campaigns}>
+      <CampaignProductIdsContext.Provider value={idSet}>
+        {children}
+      </CampaignProductIdsContext.Provider>
+    </ActiveCampaignsContext.Provider>
   );
 }
 
@@ -50,4 +63,8 @@ export function useCampaignProductIds(): Set<number> {
 export function useIsCampaignProduct(productId: number): boolean {
   const ids = useCampaignProductIds();
   return ids.has(productId);
+}
+
+export function useActiveCampaigns(): ActiveCampaign[] {
+  return useContext(ActiveCampaignsContext);
 }

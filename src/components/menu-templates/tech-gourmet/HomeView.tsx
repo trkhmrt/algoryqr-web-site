@@ -10,6 +10,7 @@ import {
 } from "../types";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { searchMenuProducts } from "../shared/search-products";
+import { MenuCampaignRail } from "../shared/MenuCampaignRail";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useMenuLocale } from "../shared/menu-locale";
@@ -174,6 +175,7 @@ export function TechGourmetHomeView({
 
       {/* Product Grid */}
       <main className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
+        <MenuCampaignRail className="mb-4" />
         {filteredProducts.length === 0 ? (
           <div className="py-20 text-center">
             <p
@@ -358,7 +360,7 @@ function TechProductCard({
           onClick={async () => {
             setBusy(true);
             try {
-              await ordering.addProduct(product, 1);
+              await ordering.beginAddProduct(product, 1);
             } finally {
               setBusy(false);
             }

@@ -11,12 +11,13 @@ type RegisterBody = {
   email?: string;
   password?: string;
   passwordConfirm?: string;
-  menuId?: number;
+  publicId?: string;
 };
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as RegisterBody;
+    const publicId = typeof body?.publicId === "string" ? body.publicId.trim() : "";
     const registerPayload = {
       firstName: typeof body?.firstName === "string" ? body.firstName.trim() : "",
       lastName: typeof body?.lastName === "string" ? body.lastName.trim() : "",
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       password: typeof body?.password === "string" ? body.password : "",
       passwordConfirm:
         typeof body?.passwordConfirm === "string" ? body.passwordConfirm : body?.password ?? "",
-      ...(typeof body?.menuId === "number" && body.menuId > 0 ? { menuId: body.menuId } : {}),
+      ...(publicId ? { publicId } : {}),
     };
 
     if (

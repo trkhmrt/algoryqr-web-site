@@ -20,7 +20,7 @@ export type MenuVisitAnalytics = {
   trackServesFilter: (servesPeople: number) => void;
 };
 
-export function useMenuVisitAnalytics(menuId: number | null | undefined): MenuVisitAnalytics {
+export function useMenuVisitAnalytics(publicId: string | null | undefined): MenuVisitAnalytics {
   const sessionIdRef = useRef<string>("");
   const deviceTypeRef = useRef<MenuAnalyticsDeviceType>("DESKTOP");
   const queueRef = useRef<MenuAnalyticsEventItem[]>([]);
@@ -30,24 +30,24 @@ export function useMenuVisitAnalytics(menuId: number | null | undefined): MenuVi
   const openedRef = useRef(false);
 
   const flush = useCallback(() => {
-    if (!menuId || queueRef.current.length === 0) {
+    if (!publicId || queueRef.current.length === 0) {
       return;
     }
     const batch = queueRef.current.splice(0, queueRef.current.length);
-    postMenuAnalyticsEvents(menuId, sessionIdRef.current, batch, deviceTypeRef.current);
-  }, [menuId]);
+    postMenuAnalyticsEvents(publicId, sessionIdRef.current, batch, deviceTypeRef.current);
+  }, [publicId]);
 
   const enqueue = useCallback(
     (type: MenuAnalyticsEventType, extras: Partial<MenuAnalyticsEventItem> = {}) => {
-      if (!menuId) {
+      if (!publicId) {
         return;
       }
       if (!sessionIdRef.current) {
-        sessionIdRef.current = getOrCreateMenuSessionId(menuId);
+        sessionIdRef.current = getOrCreateMenuSessionId(publicId);
       }
       queueRef.current.push({
         type,
-        sequence: nextMenuEventSequence(menuId),
+        sequence: nextMenuEventSequence(publicId),
         occurredAt: new Date().toISOString().slice(0, 19),
         ...extras,
       });
@@ -59,15 +59,15 @@ export function useMenuVisitAnalytics(menuId: number | null | undefined): MenuVi
         flushTimerRef.current = null;
       }, 250);
     },
-    [flush, menuId],
+    [flush, publicId],
   );
 
   useEffect(() => {
-    if (!menuId || openedRef.current) {
+    if (!publicId || openedRef.current) {
       return;
     }
     openedRef.current = true;
-    sessionIdRef.current = getOrCreateMenuSessionId(menuId);
+    sessionIdRef.current = getOrCreateMenuSessionId(publicId);
     deviceTypeRef.current = detectMenuDeviceType();
     enqueue("MENU_OPEN");
     return () => {
@@ -79,7 +79,7 @@ export function useMenuVisitAnalytics(menuId: number | null | undefined): MenuVi
       }
       flush();
     };
-  }, [enqueue, flush, menuId]);
+  }, [enqueue, flush, publicId]);
 
   useEffect(() => {
     const onHide = () => flush();

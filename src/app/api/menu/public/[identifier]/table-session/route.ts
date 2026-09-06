@@ -23,7 +23,7 @@ export async function POST(
     const realIp = request.headers.get("x-real-ip");
 
     const upstream = await axios.post(
-      `${API_BASE_URL}/menu/public/id/${identifier}/table-session`,
+      `${API_BASE_URL}/menu/public/${identifier}/table-session`,
       data,
       {
         headers: {

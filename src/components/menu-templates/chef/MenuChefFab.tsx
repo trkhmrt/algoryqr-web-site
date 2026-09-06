@@ -12,14 +12,14 @@ import {
 import { MenuChefChat } from "./MenuChefChat";
 
 type MenuChefFabProps = {
-  menuId: number;
+  publicId: string;
   chefName?: string | null;
   chefDisplayName?: string | null;
   chefAvatarUrl?: string | null;
 };
 
 export function MenuChefFab({
-  menuId,
+  publicId,
   chefName,
   chefDisplayName,
   chefAvatarUrl,
@@ -72,7 +72,7 @@ export function MenuChefFab({
     <>
       {chatMounted ? (
         <MenuChefChat
-          menuId={menuId}
+          publicId={publicId}
           chefDisplayName={displayName}
           chefAvatarUrl={avatarSrc}
           open={open}

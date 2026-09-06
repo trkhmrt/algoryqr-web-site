@@ -26,7 +26,7 @@ export default async function PublicMenuContentPage({
       products={result.data.products}
       categories={result.data.categories ?? []}
       themeId={result.data.themeId}
-      identifier={identifier}
+      identifier={result.publicId}
       productPage={result.data.productPage ?? 0}
       productSize={result.data.productSize ?? 20}
       productTotalElements={result.data.productTotalElements ?? result.data.products.length}

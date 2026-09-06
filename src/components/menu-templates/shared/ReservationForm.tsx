@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 
 type ReservationFormProps = {
-  menuId: number;
+  publicId: string;
   className?: string;
   inputClassName?: string;
   buttonClassName?: string;
@@ -21,7 +21,7 @@ function toReservationAt(date: string, time: string): string {
 }
 
 export function ReservationForm({
-  menuId,
+  publicId,
   className,
   inputClassName,
   buttonClassName,
@@ -77,7 +77,7 @@ export function ReservationForm({
 
     setSubmitting(true);
     try {
-      await createPublicReservationRequest(menuId, payload);
+      await createPublicReservationRequest(publicId, payload);
       setSuccess(true);
       setCustomerName("");
       setPhone("");

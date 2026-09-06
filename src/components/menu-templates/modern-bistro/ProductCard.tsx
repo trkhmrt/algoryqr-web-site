@@ -28,8 +28,7 @@ export function ModernBistroProductCard({ product, onOpen }: ModernBistroProduct
     if (!ordering || unavailable) return;
     setBusy(true);
     try {
-      await ordering.addProduct(product, 1);
-      ordering.setCartOpen(true);
+      await ordering.beginAddProduct(product, 1);
     } finally {
       setBusy(false);
     }

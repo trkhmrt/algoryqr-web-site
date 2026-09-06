@@ -81,7 +81,7 @@ export function MenuLandingScreens({
     const form = (
       <MenuLandingPanelShell onBack={onBackToLanding} className={panelClassName} backClassName={backClassName}>
         <ReservationForm
-          menuId={menu.menuId}
+          publicId={menu.publicId ?? ""}
           className={formClassName}
           inputClassName={inputClassName}
           buttonClassName={buttonClassName}

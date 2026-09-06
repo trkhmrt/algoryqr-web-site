@@ -17,7 +17,7 @@ type MenuChrome = Pick<
   | "email"
   | "address"
   | "qrId"
-  | "menuId"
+  | "publicId"
   | "chefName"
   | "chefDisplayName"
   | "chefAvatarUrl"

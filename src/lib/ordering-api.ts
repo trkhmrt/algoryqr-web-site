@@ -197,8 +197,8 @@ export async function getOrder(
   return data;
 }
 
-export async function getCustomerOrders(menuId: number): Promise<OrderResponse[]> {
-  const response = await fetch(`/api/customer/orders?menuId=${encodeURIComponent(String(menuId))}`, {
+export async function getCustomerOrders(publicId: string): Promise<OrderResponse[]> {
+  const response = await fetch(`/api/customer/orders?publicId=${encodeURIComponent(publicId)}`, {
     method: "GET",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
