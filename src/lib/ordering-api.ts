@@ -320,7 +320,7 @@ export async function deleteMenuTable(menuId: number, tableId: number): Promise<
 
 export async function listMerchantOrders(
   menuId: number,
-  status = "SUBMITTED",
+  status = "ALL",
 ): Promise<OrderResponse[]> {
   const params = new URLSearchParams({ status });
   const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders?${params}`, {
@@ -339,34 +339,18 @@ export async function listMerchantOrders(
   return Array.isArray(data) ? data : [];
 }
 
-export async function confirmMerchantOrder(
+export async function cancelMerchantOrder(
   menuId: number,
   orderId: number,
 ): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders/${orderId}/confirm`, {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders/${orderId}/cancel`, {
     method: "POST",
     headers: { Accept: "application/json" },
     credentials: "same-origin",
   });
   const data = await parseJson<OrderResponse & { message?: string }>(response);
   if (!response.ok) {
-    throw new OrderingApiError(response.status, data.message || "Sipariş onaylanamadı");
-  }
-  return data;
-}
-
-export async function rejectMerchantOrder(
-  menuId: number,
-  orderId: number,
-): Promise<OrderResponse> {
-  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders/${orderId}/reject`, {
-    method: "POST",
-    headers: { Accept: "application/json" },
-    credentials: "same-origin",
-  });
-  const data = await parseJson<OrderResponse & { message?: string }>(response);
-  if (!response.ok) {
-    throw new OrderingApiError(response.status, data.message || "Sipariş reddedilemedi");
+    throw new OrderingApiError(response.status, data.message || "Sipariş iptal edilemedi");
   }
   return data;
 }

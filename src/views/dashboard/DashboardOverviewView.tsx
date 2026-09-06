@@ -22,7 +22,7 @@ import { buildSetupSteps, isSetupComplete } from "@/lib/dashboard-setup";
 import { isActivePaidPurchase } from "@/lib/product-access";
 
 function pendingOrdersDetail(count: number): string {
-  return count > 0 ? "Onay bekliyor" : "Kuyruk boş";
+  return count > 0 ? "Aktif sipariş" : "Sipariş yok";
 }
 
 function reservationsDetail(menuName: string | null): string {
@@ -84,7 +84,7 @@ export default function DashboardOverviewView() {
               <OverviewStatCard
                 href={DASHBOARD_ROUTES.waiter}
                 icon={BellRing}
-                label="Bekleyen sipariş"
+                label="Aktif sipariş"
                 value={stats.pendingOrders}
                 detail={pendingOrdersDetail(stats.pendingOrders)}
                 accent="hsl(var(--chart-orange))"

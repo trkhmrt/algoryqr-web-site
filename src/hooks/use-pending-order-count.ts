@@ -10,12 +10,14 @@ export function usePendingOrderCount(enabled: boolean) {
   const menuId = selection?.menu.menuId ?? null;
 
   const ordersQuery = useQuery({
-    queryKey: ["pending-order-count", menuId],
-    queryFn: () => listMerchantOrders(menuId!, "SUBMITTED"),
+    queryKey: ["menu-orders-active-count", menuId],
+    queryFn: () => listMerchantOrders(menuId!, "ALL"),
     enabled: enabled && menuId != null,
     refetchInterval: 30_000,
     staleTime: 15_000,
-    select: (orders) => orders.length,
+    select: (orders) =>
+      orders.filter((order) => order.status === "CONFIRMED" || order.status === "SUBMITTED")
+        .length,
   });
 
   return {

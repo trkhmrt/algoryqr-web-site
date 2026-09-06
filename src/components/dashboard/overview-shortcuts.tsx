@@ -38,7 +38,6 @@ export const OPERATION_TILES: OverviewTile[] = [
     href: DASHBOARD_ROUTES.waiter,
     icon: BellRing,
     requiredScope: "WAITER_PANEL_OWNER",
-    badgeKey: "pendingOrders",
   },
   {
     title: "Menülerim",

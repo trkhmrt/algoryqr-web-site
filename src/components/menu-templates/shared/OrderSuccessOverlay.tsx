@@ -133,13 +133,6 @@ export function OrderSuccessOverlay({
         </p>
         <p className="mt-2 text-sm lx-muted">#{orderId}</p>
 
-        {status === "SUBMITTED" ? (
-          <p className="mt-3 flex items-center justify-center gap-2 text-sm lx-muted">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {t.waiterApprovalPending}
-          </p>
-        ) : null}
-
         {status === "CONFIRMED" ? (
           <p className="mt-3 text-sm text-emerald-600">{t.orderConfirmed}</p>
         ) : null}
