@@ -31,8 +31,9 @@ import { CustomerAuthDialog } from "./CustomerAuthDialog";
 import { MenuLanguagePicker } from "./MenuLanguagePicker";
 import { useMenuLocaleOptional } from "./menu-locale";
 import { OrderHistoryPanel } from "./OrderHistoryPanel";
+import { CustomerRewardsPanel } from "./CustomerRewardsPanel";
 
-type Panel = "home" | "history" | "password";
+type Panel = "home" | "history" | "rewards" | "password";
 
 type CustomerAccountMenuProps = {
   publicId: string;
@@ -162,6 +163,8 @@ export function CustomerAccountMenu({ publicId, children }: CustomerAccountMenuP
               </div>
             ) : panel === "history" ? (
               <OrderHistoryPanel publicId={publicId} onBack={() => setPanel("home")} />
+            ) : panel === "rewards" ? (
+              <CustomerRewardsPanel publicId={publicId} onBack={() => setPanel("home")} />
             ) : panel === "password" ? (
               <form
                 className="space-y-3"
@@ -292,6 +295,13 @@ export function CustomerAccountMenu({ publicId, children }: CustomerAccountMenuP
                   className="w-full rounded-lg border border-border px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/40"
                 >
                   {t?.orderHistory || "Sipariş geçmişi"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPanel("rewards")}
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/40"
+                >
+                  Kampanyalar
                 </button>
                 <button
                   type="button"
