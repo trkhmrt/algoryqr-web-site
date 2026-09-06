@@ -5,6 +5,7 @@ export { AddToOrderButton } from "./AddToOrderButton";
 export { CartFab } from "./CartFab";
 export { CartSheet } from "./CartSheet";
 export { CampaignCartPreview } from "./CampaignCartPreview";
+export { StampCardProgressPanel } from "./StampCardProgressPanel";
 export {
   CampaignProductIdsProvider,
   useActiveCampaigns,
