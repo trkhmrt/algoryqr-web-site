@@ -11,14 +11,12 @@ import {
 type CustomerRewardsPanelProps = {
   publicId: string;
   onBack?: () => void;
-  /** Compact embed (e.g. above order history). */
   compact?: boolean;
 };
 
 function statusLabel(status?: string): string {
   switch ((status ?? "").toUpperCase()) {
     case "AVAILABLE":
-    case "PENDING":
       return "Kullanılabilir";
     case "REDEEMED":
       return "Kullanıldı";
@@ -30,7 +28,7 @@ function statusLabel(status?: string): string {
 }
 
 function formatWhen(value?: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleString("tr-TR", {
@@ -41,8 +39,20 @@ function formatWhen(value?: string | null): string {
   });
 }
 
+function rewardTypeLabel(type?: string | null): string {
+  if (!type) return "";
+  switch (type.toUpperCase()) {
+    case "FREE_PRODUCT":
+      return "Bedava ürün";
+    case "DISCOUNT":
+      return "İndirim";
+    default:
+      return type;
+  }
+}
+
 export function CustomerRewardsPanel({
-  publicId,
+  publicId: _publicId,
   onBack,
   compact = false,
 }: CustomerRewardsPanelProps) {
@@ -54,7 +64,7 @@ export function CustomerRewardsPanel({
     setLoading(true);
     setError(null);
     try {
-      const list = await fetchCustomerRewards(publicId);
+      const list = await fetchCustomerRewards();
       setRewards(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ödüller yüklenemedi");
@@ -62,7 +72,7 @@ export function CustomerRewardsPanel({
     } finally {
       setLoading(false);
     }
-  }, [publicId]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -73,7 +83,7 @@ export function CustomerRewardsPanel({
       "div",
       { className: "flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground" },
       h(Loader2, { className: "h-4 w-4 animate-spin" }),
-      "Kampanya ödülleri yükleniyor…",
+      "Kampanya ödülleri yükleniyor...",
     );
   }
 
@@ -102,11 +112,7 @@ export function CustomerRewardsPanel({
       onBack
         ? h(
             "button",
-            {
-              type: "button",
-              onClick: onBack,
-              className: "text-xs text-muted-foreground underline",
-            },
+            { type: "button", onClick: onBack, className: "text-xs text-muted-foreground underline" },
             "Geri",
           )
         : null,
@@ -150,7 +156,10 @@ export function CustomerRewardsPanel({
           ...rewards.map((reward) =>
             h(
               "li",
-              { key: reward.id, className: "rounded-lg border border-border px-3 py-2.5" },
+              {
+                key: reward.rewardId,
+                className: "rounded-lg border border-border px-3 py-2.5",
+              },
               h(
                 "div",
                 { className: "flex items-start justify-between gap-2" },
@@ -160,16 +169,15 @@ export function CustomerRewardsPanel({
                   h(
                     "p",
                     { className: "truncate text-sm font-medium" },
-                    reward.campaignName || `Ödül #${reward.id}`,
+                    reward.campaignName || `Ödül #${reward.rewardId}`,
                   ),
                   h(
                     "p",
                     { className: "mt-0.5 text-xs text-muted-foreground" },
-                    `${formatWhen(reward.issuedAt)}${reward.orderId != null ? ` · Sipariş #${reward.orderId}` : ""}`,
+                    `${formatWhen(reward.issuedAt)}${
+                      reward.rewardType ? ` · ${rewardTypeLabel(reward.rewardType)}` : ""
+                    }`,
                   ),
-                  reward.message
-                    ? h("p", { className: "mt-1 text-xs text-muted-foreground" }, reward.message)
-                    : null,
                 ),
                 h(
                   "span",
@@ -180,18 +188,6 @@ export function CustomerRewardsPanel({
                   statusLabel(reward.status),
                 ),
               ),
-              reward.claimUrl || reward.claimToken
-                ? h(
-                    "a",
-                    {
-                      href:
-                        reward.claimUrl ||
-                        `/reward/claim?c=${encodeURIComponent(reward.claimToken!)}`,
-                      className: "mt-2 inline-block text-xs font-medium text-foreground underline",
-                    },
-                    "Ödül bağlantısı",
-                  )
-                : null,
             ),
           ),
         )
