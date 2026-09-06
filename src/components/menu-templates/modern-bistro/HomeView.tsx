@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
+import { MenuCampaignRail } from "../shared/MenuCampaignRail";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useMenuLocale } from "../shared/menu-locale";
 
@@ -65,6 +66,10 @@ export function ModernBistroHomeView({
             className="w-full rounded-full border border-[var(--mb-border)] bg-[var(--mb-surface)] py-2.5 pl-10 pr-4 text-sm text-[var(--mb-fg)] outline-none transition-shadow placeholder:text-[var(--mb-muted)] focus:border-[var(--mb-primary)] focus:ring-2 focus:ring-[var(--mb-primary)]/10"
           />
         </div>
+      </div>
+
+      <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">
+        <MenuCampaignRail />
       </div>
 
       <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">

@@ -7,12 +7,14 @@ export { CartSheet } from "./CartSheet";
 export { CampaignCartPreview } from "./CampaignCartPreview";
 export {
   CampaignProductIdsProvider,
+  useActiveCampaigns,
   useCampaignProductIds,
   useIsCampaignProduct,
 } from "./campaign-product-context";
 export { CustomerAccountMenu } from "./CustomerAccountMenu";
 export { CustomerAuthDialog } from "./CustomerAuthDialog";
 export { WaiterAuthDialog } from "./WaiterAuthDialog";
+export { MenuCampaignRail } from "./MenuCampaignRail";
 export { MenuEntryGate } from "./MenuEntryGate";
 export { MenuLanguagePicker } from "./MenuLanguagePicker";
 export {
