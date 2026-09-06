@@ -12,14 +12,14 @@ import { MenuChefChat } from "../chef/MenuChefChat";
 import { useMenuLocale } from "../shared/menu-locale";
 
 type MaisonNoirChefNavButtonProps = {
-  menuId: number;
+  publicId: string;
   chefName?: string | null;
   chefDisplayName?: string | null;
   chefAvatarUrl?: string | null;
 };
 
 export function MaisonNoirChefNavButton({
-  menuId,
+  publicId,
   chefName,
   chefDisplayName,
   chefAvatarUrl,
@@ -78,7 +78,7 @@ export function MaisonNoirChefNavButton({
     <>
       {chatMounted ? (
         <MenuChefChat
-          menuId={menuId}
+          publicId={publicId}
           chefDisplayName={displayName}
           chefAvatarUrl={avatarSrc}
           open={open}

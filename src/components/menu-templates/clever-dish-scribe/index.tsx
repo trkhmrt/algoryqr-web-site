@@ -35,7 +35,7 @@ export function CleverDishScribeMenuTemplate({
   const [pinnedProduct, setPinnedProduct] = useState<MenuProductApiItem | null>(null);
 
   usePublicMenuDeepLinkProduct({
-    menuId: menu.menuId,
+    publicId: menu.publicId ?? "",
     view,
     products,
     pinnedProduct,
@@ -43,7 +43,7 @@ export function CleverDishScribeMenuTemplate({
   });
 
   const feedback = useMenuFeedback(
-    menu.menuId,
+    menu.publicId ?? "",
     menu.ratingAvg != null ? Number(menu.ratingAvg) : null,
     menu.ratingCount ?? 0,
   );

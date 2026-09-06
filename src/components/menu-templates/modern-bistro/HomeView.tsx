@@ -74,7 +74,7 @@ export function ModernBistroHomeView({
 
       <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">
         <ModernBistroCategoryRail
-          menuId={menu.menuId}
+          publicId={menu.publicId ?? ""}
           categories={categories}
           products={products}
           activeTab={activeTab}

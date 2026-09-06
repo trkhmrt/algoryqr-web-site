@@ -6,7 +6,7 @@ export async function POST(
 ) {
   const { identifier } = await context.params;
   const body = await request.text();
-  const upstream = await fetch(`${API_BASE_URL}/menu/public/id/${identifier}/campaigns/preview`, {
+  const upstream = await fetch(`${API_BASE_URL}/menu/public/${identifier}/campaigns/preview`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,

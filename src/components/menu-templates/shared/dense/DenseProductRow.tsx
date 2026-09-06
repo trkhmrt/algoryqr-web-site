@@ -202,7 +202,7 @@ function DenseAddButton({
       onClick={async () => {
         setBusy(true);
         try {
-          await ordering.addProduct(item, 1);
+          await ordering.beginAddProduct(item, 1);
         } finally {
           setBusy(false);
         }

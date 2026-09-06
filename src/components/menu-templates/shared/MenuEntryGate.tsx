@@ -124,7 +124,7 @@ export function MenuEntryGate({
       <CustomerAuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}
-        menuId={menu.menuId}
+        publicId={menu.publicId ?? ""}
         onSuccess={onAuthenticated}
         onContinueAsGuest={onContinueAsGuest}
         initialMode="login"

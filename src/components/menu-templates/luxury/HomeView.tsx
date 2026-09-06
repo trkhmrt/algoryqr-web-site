@@ -86,7 +86,7 @@ export function LuxuryHomeView({
     [categories],
   );
 
-  const categoryStats = usePublicMenuCategoryStats(menu.menuId, mainCategoriesForStats);
+  const categoryStats = usePublicMenuCategoryStats(menu.publicId ?? "", mainCategoriesForStats);
 
   const categoryGridItems = useMemo(
     () =>

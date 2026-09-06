@@ -45,6 +45,7 @@ import {
 } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { PRODUCT_HINTS } from "@/lib/product-hints";
+import { publicMenuContentPath } from "@/lib/public-menu-paths";
 import { createSmartSummaryRequest } from "@/lib/smart-summary";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
@@ -178,7 +179,9 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
       ? `${DASHBOARD_ROUTES.digitalMenuProducts}?qr=${selection.qr.id}`
       : DASHBOARD_ROUTES.digitalMenuProducts;
 
-  const publicUrl = selection?.menu.publicUrl ?? null;
+  const publicUrl =
+    selection?.menu.publicUrl?.trim() ||
+    (selection?.menu.publicId ? publicMenuContentPath(selection.menu.publicId) : null);
   const selectedMain = categories.find((main) => main.id === mainCategoryId);
   const subOptions = selectedMain?.subs ?? [];
   const mainCategorySelectOptions = categories.map((main) => ({

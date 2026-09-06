@@ -9,26 +9,26 @@ import { publicMenuKeys } from "./keys";
 import { toProductsInitialData, type PublicMenuProductsInitialPage } from "./types";
 
 type UsePublicMenuProductsArgs = {
-  menuId: number;
+  publicId: string;
   pageSize?: number;
   initial: PublicMenuProductsInitialPage;
   enabled?: boolean;
 };
 
 export function usePublicMenuProductsQuery({
-  menuId,
+  publicId,
   pageSize = 20,
   initial,
   enabled = true,
 }: UsePublicMenuProductsArgs) {
   return useInfiniteQuery({
-    queryKey: publicMenuKeys.products(menuId),
-    enabled: enabled && menuId > 0,
+    queryKey: publicMenuKeys.products(publicId),
+    enabled: enabled && publicId.length > 0,
     initialData: toProductsInitialData(initial),
     initialPageParam: initial.page,
     staleTime: PUBLIC_MENU_STALE_TIME_MS,
     queryFn: ({ pageParam }) =>
-      getPublicMenuProductsRequest(menuId, pageParam as number, pageSize),
+      getPublicMenuProductsRequest(publicId, pageParam as number, pageSize),
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),
   });
 }

@@ -5,7 +5,7 @@ export async function GET(
   context: { params: Promise<{ identifier: string }> },
 ) {
   const { identifier } = await context.params;
-  const upstream = await fetch(`${API_BASE_URL}/menu/public/id/${identifier}/campaigns/active`, {
+  const upstream = await fetch(`${API_BASE_URL}/menu/public/${identifier}/campaigns/active`, {
     cache: "no-store",
   });
   const text = await upstream.text();

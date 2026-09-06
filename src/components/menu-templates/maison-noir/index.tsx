@@ -40,7 +40,7 @@ export function MaisonNoirMenuTemplate({
   const localizedPinnedProduct = useLocalizedMenuProduct(pinnedProduct);
 
   usePublicMenuDeepLinkProduct({
-    menuId: menu.menuId,
+    publicId: menu.publicId ?? "",
     view,
     products,
     pinnedProduct,
@@ -48,7 +48,7 @@ export function MaisonNoirMenuTemplate({
   });
 
   const feedback = useMenuFeedback(
-    menu.menuId,
+    menu.publicId ?? "",
     menu.ratingAvg != null ? Number(menu.ratingAvg) : null,
     menu.ratingCount ?? 0,
   );

@@ -33,7 +33,7 @@ export function MaisonNoirHomeView({
           </h2>
           <div className="mt-4">
             <MaisonNoirCategoryGrid
-              menuId={menu.menuId}
+              publicId={menu.publicId ?? ""}
               categories={categories}
               products={products}
               onSelectCategory={onSelectCategory}

@@ -606,10 +606,7 @@ export default function MenuCategoriesPanel({
       current.map((main) => (main.id === categoryId ? { ...main, imageUrl } : main)),
     );
     void refresh();
-    void queryClient.invalidateQueries({ queryKey: publicMenuKeys.categories(resolvedMenuId) });
-    void queryClient.invalidateQueries({
-      queryKey: publicMenuKeys.categoryCover(resolvedMenuId, categoryId),
-    });
+    void queryClient.invalidateQueries({ queryKey: publicMenuKeys.all });
   };
 
   const busy = saving || deleting || reordering;

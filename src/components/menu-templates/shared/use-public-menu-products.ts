@@ -23,7 +23,7 @@ export type MenuProductFeedValue = {
 export const MenuProductFeedContext = createContext<MenuProductFeedValue | null>(null);
 
 type UseMenuProductFeedStateArgs = {
-  menuId: number;
+  publicId: string;
   initialProducts: MenuProductApiItem[];
   initialPage?: number;
   initialSize?: number;
@@ -31,7 +31,7 @@ type UseMenuProductFeedStateArgs = {
 };
 
 export function useMenuProductFeedState({
-  menuId,
+  publicId,
   initialProducts,
   initialPage = 0,
   initialSize = 20,
@@ -47,7 +47,7 @@ export function useMenuProductFeedState({
     setIsFetchingNextPage(true);
     try {
       const nextPage = page + 1;
-      const response = await getPublicMenuProductsRequest(menuId, nextPage, initialSize);
+      const response = await getPublicMenuProductsRequest(publicId, nextPage, initialSize);
       setProducts((prev) => {
         const seen = new Set(prev.map((item) => item.productId));
         const appended = (response.content ?? []).filter((item) => !seen.has(item.productId));
@@ -58,7 +58,7 @@ export function useMenuProductFeedState({
     } finally {
       setIsFetchingNextPage(false);
     }
-  }, [hasNext, isFetchingNextPage, page, menuId, initialSize]);
+  }, [hasNext, isFetchingNextPage, page, publicId, initialSize]);
 
   return useMemo<MenuProductFeedValue>(
     () => ({

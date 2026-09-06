@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import type { ChefChatBadge } from "@/lib/chef/chef-chat-badges";
 
 type MenuChefQuickBadgesProps = {
-  menuId: number;
+  publicId: string;
   disabled?: boolean;
   onSelect: (badge: ChefChatBadge) => void;
 };
@@ -18,7 +18,7 @@ const badgeIcons: Record<string, typeof Sparkles> = {
 };
 
 export function MenuChefQuickBadges({
-  menuId,
+  publicId,
   disabled = false,
   onSelect,
 }: MenuChefQuickBadgesProps) {
@@ -27,7 +27,7 @@ export function MenuChefQuickBadges({
   useEffect(() => {
     let cancelled = false;
 
-    void fetch(`/api/menu/chef/badges?menuId=${menuId}`)
+    void fetch(`/api/menu/chef/badges?publicId=${publicId}`)
       .then((res) => res.json())
       .then((data: { badges?: ChefChatBadge[] }) => {
         if (cancelled) return;
@@ -40,7 +40,7 @@ export function MenuChefQuickBadges({
     return () => {
       cancelled = true;
     };
-  }, [menuId]);
+  }, [publicId]);
 
   if (badges.length === 0) return null;
 

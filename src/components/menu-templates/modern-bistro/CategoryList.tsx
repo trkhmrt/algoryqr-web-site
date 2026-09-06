@@ -12,7 +12,7 @@ import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { modernBistroCategoryMark } from "./styles";
 
 type CategoryListProps = {
-  menuId: number;
+  publicId: string;
   categories: TaxonomyNavNode[];
   products: MenuProductApiItem[];
   searchQuery: string;
@@ -20,7 +20,7 @@ type CategoryListProps = {
 };
 
 export function ModernBistroCategoryList({
-  menuId,
+  publicId,
   categories,
   products,
   searchQuery,
@@ -47,7 +47,7 @@ export function ModernBistroCategoryList({
     [categories],
   );
 
-  const stats = usePublicMenuCategoryStats(menuId, mainCategories);
+  const stats = usePublicMenuCategoryStats(publicId, mainCategories);
 
   const tiles = useMemo(() => {
     const normalized = searchQuery.trim().toLocaleLowerCase("tr");

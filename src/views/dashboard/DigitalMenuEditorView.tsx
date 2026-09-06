@@ -65,7 +65,9 @@ export default function DigitalMenuEditorView({ qrId }: DigitalMenuEditorViewPro
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
   const menuQuery = useMenuByQr(qrId, canUseDigitalMenu);
   const menuName = menuQuery.data?.businessName?.trim() || "";
-  const menuHref = publicMenuContentPath(qrId);
+  const menuHref =
+    menuQuery.data?.publicUrl?.trim() ||
+    (menuQuery.data?.publicId ? publicMenuContentPath(menuQuery.data.publicId) : "");
 
   if (accessLoading) {
     return (

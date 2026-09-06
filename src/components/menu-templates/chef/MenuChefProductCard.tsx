@@ -43,12 +43,10 @@ export function MenuChefProductCard({ item, onOpened }: MenuChefProductCardProps
     setAddBusy(true);
     setLocalError(null);
     try {
-      const failure = await ordering.addProduct(chefItemToMenuProduct(item), 1);
+      const failure = await ordering.beginAddProduct(chefItemToMenuProduct(item), 1);
       if (failure) {
         setLocalError(failure);
-        return;
       }
-      ordering.setCartOpen(true);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Sepete eklenemedi");
     } finally {
