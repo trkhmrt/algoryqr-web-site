@@ -16,6 +16,12 @@ import {
 } from "@/components/dashboard/menu/ProductNutritionPanel";
 import { ProductImageField } from "@/components/dashboard/menu/ProductImageField";
 import { ProductPairingFields, emptyPairings, normalizePairings } from "@/components/dashboard/menu/ProductPairingFields";
+import {
+  ProductOptionFields,
+  emptyOptionGroups,
+  toOptionGroupsPayload,
+  type ProductOptionGroupForm,
+} from "@/components/dashboard/menu/ProductOptionFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
@@ -114,6 +120,7 @@ export default function DigitalMenuProductCreateView() {
   const productsQuery = useMenuProducts(menuId > 0 ? menuId : null);
 
   const [form, setForm] = useState<MenuProductRequestBody>(() => emptyForm(presetCategoryId));
+  const [optionGroups, setOptionGroups] = useState<ProductOptionGroupForm[]>(emptyOptionGroups);
   const [mainCategoryId, setMainCategoryId] = useState<number | "">("");
   const [nutritionForm, setNutritionForm] = useState<NutritionFormFields>(emptyNutritionForm());
   const [saving, setSaving] = useState(false);
@@ -195,6 +202,7 @@ export default function DigitalMenuProductCreateView() {
       const created = await createMenuProductRequest(menuId, {
         ...form,
         nutrition,
+        optionGroups: toOptionGroupsPayload(optionGroups),
       });
       notify("info", "Ürün eklendi.");
       await invalidateMenuProducts(queryClient, menuId, qrId ?? undefined);
@@ -418,6 +426,12 @@ export default function DigitalMenuProductCreateView() {
               </div>
             </div>
           </div>
+
+          <ProductOptionFields
+            groups={optionGroups}
+            onChange={setOptionGroups}
+            disabled={busy}
+          />
 
           <ProductPairingFields
             pairings={normalizePairings(form.pairings)}

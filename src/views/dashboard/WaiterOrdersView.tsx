@@ -102,6 +102,14 @@ function OrderCard({
           <li key={`${order.id}-${item.id ?? item.productId}`} className="text-sm">
             <span className="font-medium">{item.quantity}×</span>{" "}
             {item.productName || `#${item.productId}`}
+            {item.selectedOptions?.length ? (
+              <span className="block text-xs text-muted-foreground">
+                {item.selectedOptions
+                  .map((option) => option.optionName)
+                  .filter(Boolean)
+                  .join(", ")}
+              </span>
+            ) : null}
             {item.note ? (
               <span className="block text-xs text-muted-foreground">Not: {item.note}</span>
             ) : null}

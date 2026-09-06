@@ -17,6 +17,13 @@ import {
   normalizePairings,
   type ProductPairingsForm,
 } from "@/components/dashboard/menu/ProductPairingFields";
+import {
+  ProductOptionFields,
+  emptyOptionGroups,
+  normalizeOptionGroups,
+  toOptionGroupsPayload,
+  type ProductOptionGroupForm,
+} from "@/components/dashboard/menu/ProductOptionFields";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { Button } from "@/components/ui/button";
@@ -64,6 +71,7 @@ type ProductFormState = {
   servesPeopleMax: string;
   chefRecommended: boolean;
   pairings: ProductPairingsForm;
+  optionGroups: ProductOptionGroupForm[];
 };
 
 function formFromProduct(product: MenuProductApiItem): ProductFormState {
@@ -81,6 +89,7 @@ function formFromProduct(product: MenuProductApiItem): ProductFormState {
     servesPeopleMax: product.servesPeopleMax != null ? String(product.servesPeopleMax) : "",
     chefRecommended: Boolean(product.chefRecommended),
     pairings: normalizePairings(product.pairings),
+    optionGroups: normalizeOptionGroups(product.optionGroups),
   };
 }
 
@@ -218,6 +227,7 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
       nutrition: product?.nutrition ?? undefined,
       chefRecommended: next.chefRecommended,
       pairings: normalizePairings(next.pairings),
+      optionGroups: toOptionGroupsPayload(next.optionGroups ?? emptyOptionGroups()),
     };
   };
 
@@ -451,6 +461,13 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
                     onChange={(e) => setForm({ ...form, servesPeopleMax: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="col-span-2">
+                <ProductOptionFields
+                  groups={form.optionGroups}
+                  onChange={(optionGroups) => setForm({ ...form, optionGroups })}
+                  disabled={busy}
+                />
               </div>
               <div className="col-span-2">
                 <ProductPairingFields

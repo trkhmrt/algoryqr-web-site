@@ -64,6 +64,14 @@ function OrderHistoryDetail({ order }: { order: OrderResponse }) {
             <div className="flex justify-between gap-2">
               <span>
                 {item.quantity}× <Tx>{item.productName || `#${item.productId}`}</Tx>
+                {item.selectedOptions?.length ? (
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {item.selectedOptions
+                      .map((option) => option.optionName)
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                ) : null}
               </span>
               <span className="text-muted-foreground">
                 <MenuPriceText price={item.lineTotal ?? item.unitPrice} currency={currency} />

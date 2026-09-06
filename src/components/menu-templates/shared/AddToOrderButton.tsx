@@ -30,8 +30,7 @@ export function AddToOrderButton({ product, className }: AddToOrderButtonProps) 
         onClick={async () => {
           setBusy(true);
           try {
-            const failure = await ordering.addProduct(product, 1);
-            if (!failure) ordering.setCartOpen(true);
+            await ordering.beginAddProduct(product, 1);
           } finally {
             setBusy(false);
           }

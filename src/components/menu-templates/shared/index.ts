@@ -1,3 +1,4 @@
+export { ProductOptionsSheet } from "./ProductOptionsSheet";
 export { MenuCategoryRail } from "./MenuCategoryRail";
 export { MenuViewportFrame } from "./MenuViewportFrame";
 export { AddToOrderButton } from "./AddToOrderButton";
