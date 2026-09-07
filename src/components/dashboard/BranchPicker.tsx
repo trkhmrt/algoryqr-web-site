@@ -68,11 +68,13 @@ export function BranchPicker({
   selectedBranchId,
   onSelect,
   disabled,
+  className,
 }: {
   branches: BranchItem[];
   selectedBranchId: number | null;
   onSelect: (branchId: number) => void;
   disabled?: boolean;
+  className?: string;
 }) {
   if (branches.length === 0) {
     return (
@@ -86,7 +88,7 @@ export function BranchPicker({
 
   return (
     <SearchableSelect
-      className="h-9 min-w-[12rem] max-w-xs text-xs"
+      className={className ?? "h-9 min-w-[12rem] max-w-xs text-xs"}
       value={selectedBranchId != null ? String(selectedBranchId) : ""}
       onValueChange={(next) => {
         const id = Number(next);

@@ -252,6 +252,11 @@ export default function AnalyticsTab() {
     if (!result) return;
     setPdfLoading(true);
     try {
+      const remoteUrl = smartReport.job?.pdfUrl?.trim();
+      if (remoteUrl) {
+        window.open(remoteUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
       const markdown = buildSmartReportMarkdown(result);
       await downloadSmartReportPdf({
         title: result.title || "Akilli Rapor",

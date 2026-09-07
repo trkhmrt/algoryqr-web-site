@@ -1,0 +1,13 @@
+import { proxyAuthenticatedRequest } from "@/lib/server/authenticated-proxy";
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ menuId: string; orderId: string }> },
+) {
+  const { menuId, orderId } = await context.params;
+  return proxyAuthenticatedRequest(
+    request,
+    `/waiter-panel/menu/${menuId}/orders/${orderId}`,
+    "GET",
+  );
+}

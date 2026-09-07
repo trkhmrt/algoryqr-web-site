@@ -3,7 +3,10 @@ export type ActiveCampaign = {
   templateCode: string;
   name: string;
   slogan?: string | null;
+  terms?: string | null;
   imageUrl?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
   config?: Record<string, unknown>;
   targetProductIds?: number[];
 };

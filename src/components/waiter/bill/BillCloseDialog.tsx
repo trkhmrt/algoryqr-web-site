@@ -7,6 +7,7 @@ import { formatMenuPrice } from "@/components/menu-templates/types";
 import { BillSplitPanel } from "@/components/waiter/bill/BillSplitPanel";
 import { PaymentMethodPicker } from "@/components/waiter/bill/bill-utils";
 import { Button } from "@/components/ui/button";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
 import {
   Dialog,
   DialogContent,
@@ -133,14 +134,11 @@ export function BillCloseDialog({
                 Bahşiş alındı
               </label>
               {tipReceived ? (
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
+                <MoneyInput
                   placeholder="Bahşiş tutarı"
                   className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm"
                   value={tipAmount}
-                  onChange={(e) => setTipAmount(e.target.value)}
+                  onChange={setTipAmount}
                 />
               ) : null}
             </div>
@@ -154,7 +152,7 @@ export function BillCloseDialog({
             tipReceived={tipReceived}
             tipAmount={
               tipReceived
-                ? Number(tipAmount.replace(",", "."))
+                ? parseMoneyInput(tipAmount)
                 : undefined
             }
             onPayShare={onPayShare}
@@ -172,14 +170,11 @@ export function BillCloseDialog({
               Son payda bahşiş alındı
             </label>
             {tipReceived ? (
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
+              <MoneyInput
                 placeholder="Bahşiş tutarı"
                 className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm"
                 value={tipAmount}
-                onChange={(e) => setTipAmount(e.target.value)}
+                onChange={setTipAmount}
               />
             ) : null}
           </div>
@@ -202,7 +197,7 @@ export function BillCloseDialog({
               disabled={busy || paymentMethod == null}
               onClick={() => {
                 if (paymentMethod == null) return;
-                const parsedTip = Number(tipAmount.replace(",", "."));
+                const parsedTip = parseMoneyInput(tipAmount);
                 if (tipReceived && (!Number.isFinite(parsedTip) || parsedTip < 0.01)) {
                   return;
                 }

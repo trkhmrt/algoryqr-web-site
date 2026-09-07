@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { CalendarDays } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DASHBOARD_FILTER_FIELD, DASHBOARD_FILTER_LABEL } from "@/lib/dashboard-surface";
 import { cn } from "@/lib/utils";
 
 export type DateRangePreset = "all" | "yesterday" | "today" | "7d" | "30d" | "custom";
@@ -169,112 +171,107 @@ export function DateRangeFilter({
   };
 
   const rangeLabel = useMemo(() => {
-    if (!value.from && !value.to) return "Tümü";
+    if (!customActive) return "Özel";
     const fromDate = parseLocalYmd(value.from);
     const toDate = parseLocalYmd(value.to);
     if (fromDate && toDate) {
-      return `${format(fromDate, "d MMM yyyy", { locale: tr })} – ${format(toDate, "d MMM yyyy", { locale: tr })}`;
+      return `${format(fromDate, "d MMM", { locale: tr })} – ${format(toDate, "d MMM", { locale: tr })}`;
     }
-    return "Tarih aralığı seç";
-  }, [value.from, value.to]);
+    return "Özel";
+  }, [customActive, value.from, value.to]);
 
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex flex-wrap gap-1 rounded-2xl border border-border/60 bg-muted/30 p-1">
-          {PRESETS.map((preset) => {
-            const active = !customActive && !open && activePreset === preset.id;
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => applyPreset(preset.id)}
-                className={cn(
-                  "rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                  active
-                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/70"
-                    : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-                )}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-        </div>
-
+    <div className={cn(DASHBOARD_FILTER_FIELD, className)}>
+      <label className={DASHBOARD_FILTER_LABEL}>{label}</label>
+      <div className="inline-flex h-10 max-w-full items-center gap-1 overflow-x-auto rounded-md border border-input bg-background p-1">
+        {PRESETS.map((preset) => {
+          const active = !customActive && !open && activePreset === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => applyPreset(preset.id)}
+              className={cn(
+                "shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-200 sm:px-3",
+                active
+                  ? "bg-muted text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+              )}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
         <button
           type="button"
           className={cn(
-            "inline-flex h-9 items-center rounded-xl border border-border/50 bg-white px-3 text-sm shadow-sm transition-colors",
-            "dark:border-border/60 dark:bg-muted/60",
-            "hover:bg-white/90 dark:hover:bg-muted/70",
-            (open || customActive) && "ring-1 ring-border/70",
-            open || customActive || (value.from && value.to)
-              ? "text-foreground"
-              : "text-muted-foreground",
+            "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-200 sm:px-3",
+            open || customActive
+              ? "bg-muted text-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
           )}
           onClick={() => setOpen(true)}
         >
+          <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {rangeLabel}
         </button>
-
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogContent
-            className="w-auto max-w-[min(24rem,calc(100%-2rem))] gap-0 overflow-hidden rounded-2xl border-border/60 p-0 shadow-lg sm:rounded-2xl"
-            overlayClassName="bg-black/40"
-          >
-            <DialogTitle className="sr-only">Tarih aralığı seç</DialogTitle>
-            <DialogDescription className="sr-only">
-              Başlangıç ve bitiş gününü seçip uygulayın
-            </DialogDescription>
-            <div className="space-y-2.5 border-b border-border/50 px-4 py-3 pr-12">
-              <p className="text-xs text-muted-foreground">
-                {draft.from && !draft.to
-                  ? "Şimdi bitiş gününü seçin"
-                  : "Önce başlangıç, sonra bitiş gününü seçin"}
-              </p>
-              <div className="flex items-center gap-2">
-                <RangeEndpoint label="Başlangıç" value={draft.from} active={Boolean(draft.from)} />
-                <span className="text-muted-foreground">–</span>
-                <RangeEndpoint label="Bitiş" value={draft.to} active={Boolean(draft.to)} />
-              </div>
-            </div>
-            <Calendar
-              mode="range"
-              numberOfMonths={1}
-              selected={selected}
-              onSelect={(range) => setDraft(fromDateRange(range))}
-              defaultMonth={selected?.from ?? startOfLocalDay()}
-              locale={tr}
-              className="p-3"
-            />
-            <div className="flex items-center justify-between gap-2 border-t border-border/50 px-3 py-2.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 rounded-xl text-xs text-muted-foreground"
-                onClick={() => setDraft({ from: "", to: "" })}
-              >
-                Temizle
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 rounded-xl px-3 text-xs"
-                disabled={!canApply}
-                onClick={() => {
-                  onChange(draft);
-                  setOpen(false);
-                }}
-              >
-                Uygula
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="w-auto max-w-[min(24rem,calc(100%-2rem))] gap-0 overflow-hidden rounded-2xl border-border/60 p-0 shadow-lg sm:rounded-2xl"
+          overlayClassName="bg-black/40"
+        >
+          <DialogTitle className="sr-only">Tarih aralığı seç</DialogTitle>
+          <DialogDescription className="sr-only">
+            Başlangıç ve bitiş gününü seçip uygulayın
+          </DialogDescription>
+          <div className="space-y-2.5 border-b border-border/50 px-4 py-3 pr-12">
+            <p className="text-xs text-muted-foreground">
+              {draft.from && !draft.to
+                ? "Şimdi bitiş gününü seçin"
+                : "Önce başlangıç, sonra bitiş gününü seçin"}
+            </p>
+            <div className="flex items-center gap-2">
+              <RangeEndpoint label="Başlangıç" value={draft.from} active={Boolean(draft.from)} />
+              <span className="text-muted-foreground">–</span>
+              <RangeEndpoint label="Bitiş" value={draft.to} active={Boolean(draft.to)} />
+            </div>
+          </div>
+          <Calendar
+            mode="range"
+            numberOfMonths={1}
+            selected={selected}
+            onSelect={(range) => setDraft(fromDateRange(range))}
+            defaultMonth={selected?.from ?? startOfLocalDay()}
+            locale={tr}
+            className="p-3"
+          />
+          <div className="flex items-center justify-between gap-2 border-t border-border/50 px-3 py-2.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 rounded-xl text-xs text-muted-foreground"
+              onClick={() => setDraft({ from: "", to: "" })}
+            >
+              Temizle
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 rounded-xl px-3 text-xs"
+              disabled={!canApply}
+              onClick={() => {
+                onChange(draft);
+                setOpen(false);
+              }}
+            >
+              Uygula
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

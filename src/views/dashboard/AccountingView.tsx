@@ -9,12 +9,15 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuOptions,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { BranchPicker, useBranchSelection } from "@/components/dashboard/BranchPicker";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
 import {
   Dialog,
   DialogContent,
@@ -24,20 +27,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
-import { DASHBOARD_PANEL, DASHBOARD_STAT_TILE } from "@/lib/dashboard-surface";
+import {
+  DASHBOARD_FILTER_FIELD,
+  DASHBOARD_FILTER_LABEL,
+  DASHBOARD_PANEL,
+  DASHBOARD_STAT_TILE,
+} from "@/lib/dashboard-surface";
+import { cn } from "@/lib/utils";
 import {
   ApiError,
   createAccountingEntryRequest,
-  createMenuFixedExpenseRequest,
+  createBranchFixedExpenseRequest,
   deleteAccountingEntryRequest,
-  deleteMenuFixedExpenseRequest,
+  deleteBranchFixedExpenseRequest,
   getAccountingEntryDetailRequest,
   listAccountingEntriesRequest,
-  listMenuFixedExpensesRequest,
+  listBranchFixedExpensesRequest,
   type AccountingEntryApiItem,
   type AccountingEntryType,
   type AccountingSourceType,
-  type MenuFixedExpenseItem,
+  type BranchFixedExpenseItem,
+  type FixedExpensePeriod,
 } from "@/lib/api";
 
 type TypeFilter = AccountingEntryType | "all";
@@ -123,12 +133,35 @@ function entryTypeClass(type: AccountingEntryType): string {
   }
 }
 
+function periodLabel(period: FixedExpensePeriod): string {
+  switch (period) {
+    case "DAILY":
+      return "Günlük";
+    case "WEEKLY":
+      return "Haftalık";
+    case "MONTHLY":
+      return "Aylık";
+    case "YEARLY":
+      return "Yıllık";
+    default:
+      return period;
+  }
+}
+
+type ExpenseMode = "ONE_TIME" | "FIXED";
+
 export default function AccountingView() {
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
 
   const { canUseDigitalMenu } = useDigitalMenuAccess();
   const { menuQrs } = useDigitalMenuOptions(canUseDigitalMenu);
+  const {
+    branches,
+    branchId: fixedExpenseBranchId,
+    select: selectFixedExpenseBranch,
+    loading: branchesLoading,
+  } = useBranchSelection(null, true);
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [q, setQ] = useState("");
@@ -144,31 +177,33 @@ export default function AccountingView() {
   const [occurredAt, setOccurredAt] = useState(toLocalInputValue());
   const [note, setNote] = useState("");
   const [formMenuId, setFormMenuId] = useState<number | null>(null);
-  const [fixedExpenseQrId, setFixedExpenseQrId] = useState<number | null>(null);
-  const fixedExpenseMenuId =
-    fixedExpenseQrId != null
-      ? menuQrs.find((item) => item.id === fixedExpenseQrId)?.menuId ?? null
-      : null;
-  const [fixedExpenseTitle, setFixedExpenseTitle] = useState("");
-  const [fixedExpenseAmount, setFixedExpenseAmount] = useState("");
+  const [expenseMode, setExpenseMode] = useState<ExpenseMode>("ONE_TIME");
+  const [expensePeriod, setExpensePeriod] = useState<FixedExpensePeriod>("MONTHLY");
+  const [dialogBranchId, setDialogBranchId] = useState<number | null>(null);
 
   const fixedExpenseQuery = useQuery({
-    queryKey: ["menu-fixed-expenses", fixedExpenseMenuId],
-    queryFn: () => listMenuFixedExpensesRequest(fixedExpenseMenuId as number),
-    enabled: fixedExpenseMenuId != null,
+    queryKey: ["branch-fixed-expenses", fixedExpenseBranchId],
+    queryFn: () => listBranchFixedExpensesRequest(fixedExpenseBranchId as number),
+    enabled: fixedExpenseBranchId != null,
   });
 
   const createFixedExpenseMutation = useMutation({
-    mutationFn: (payload: { menuId: number; title: string; dailyAmount: number }) =>
-      createMenuFixedExpenseRequest(payload.menuId, {
+    mutationFn: (payload: {
+      branchId: number;
+      title: string;
+      amount: number;
+      period: FixedExpensePeriod;
+    }) =>
+      createBranchFixedExpenseRequest(payload.branchId, {
         title: payload.title,
-        dailyAmount: payload.dailyAmount,
+        amount: payload.amount,
+        period: payload.period,
         active: true,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["menu-fixed-expenses"] });
-      setFixedExpenseTitle("");
-      setFixedExpenseAmount("");
+      await queryClient.invalidateQueries({ queryKey: ["branch-fixed-expenses"] });
+      setDialogOpen(false);
+      resetForm();
       notify("info", "Sabit gider eklendi.");
     },
     onError: (err) => {
@@ -177,10 +212,10 @@ export default function AccountingView() {
   });
 
   const deleteFixedExpenseMutation = useMutation({
-    mutationFn: (payload: { menuId: number; expenseId: number }) =>
-      deleteMenuFixedExpenseRequest(payload.menuId, payload.expenseId),
+    mutationFn: (payload: { branchId: number; expenseId: number }) =>
+      deleteBranchFixedExpenseRequest(payload.branchId, payload.expenseId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["menu-fixed-expenses"] });
+      await queryClient.invalidateQueries({ queryKey: ["branch-fixed-expenses"] });
       notify("info", "Sabit gider silindi.");
     },
     onError: (err) => {
@@ -245,6 +280,9 @@ export default function AccountingView() {
     setOccurredAt(toLocalInputValue());
     setNote("");
     setFormMenuId(null);
+    setExpenseMode("ONE_TIME");
+    setExpensePeriod("MONTHLY");
+    setDialogBranchId(fixedExpenseBranchId);
   }
 
   function openDialog(entryType: AccountingEntryType) {
@@ -254,7 +292,7 @@ export default function AccountingView() {
   }
 
   function handleSubmit() {
-    const parsedAmount = Number(amount.replace(",", "."));
+    const parsedAmount = parseMoneyInput(amount);
     if (!title.trim()) {
       notify("danger", "Başlık zorunludur.");
       return;
@@ -263,6 +301,22 @@ export default function AccountingView() {
       notify("danger", "Geçerli bir tutar girin.");
       return;
     }
+
+    if (dialogType === "GIDER" && expenseMode === "FIXED") {
+      const branchId = dialogBranchId ?? fixedExpenseBranchId;
+      if (branchId == null) {
+        notify("danger", "Şube seçin.");
+        return;
+      }
+      createFixedExpenseMutation.mutate({
+        branchId,
+        title: title.trim(),
+        amount: parsedAmount,
+        period: expensePeriod,
+      });
+      return;
+    }
+
     if (!occurredAt) {
       notify("danger", "İşlem tarihi zorunludur.");
       return;
@@ -277,6 +331,8 @@ export default function AccountingView() {
       menuId: dialogType === "GELIR" && formMenuId != null ? formMenuId : undefined,
     });
   }
+
+  const saving = createMutation.isPending || createFixedExpenseMutation.isPending;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -306,145 +362,108 @@ export default function AccountingView() {
       </div>
 
       <div className={`${DASHBOARD_PANEL} space-y-4`}>
-          <div>
-            <h2 className="text-base font-semibold text-foreground">Sabit giderler</h2>
-            <p className="text-xs text-muted-foreground">
-              Günlük sabit giderler ciro raporunda otomatik düşülür.
-            </p>
-          </div>
-          <DigitalMenuPicker
-            menuQrs={menuQrs}
-            selectedQrId={fixedExpenseQrId}
-            onSelectQrId={setFixedExpenseQrId}
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Sabit giderler</h2>
+          <p className="text-xs text-muted-foreground">
+            Şube bazlı periyodik giderler ciro raporunda otomatik düşülür. Yeni kayıt için
+            &quot;Gider Gir&quot; → Sabit seçin.
+          </p>
+        </div>
+        {branchesLoading ? (
+          <DashboardLoadingState label="Şubeler yükleniyor…" />
+        ) : (
+          <BranchPicker
+            branches={branches}
+            selectedBranchId={fixedExpenseBranchId}
+            onSelect={selectFixedExpenseBranch}
           />
-          {fixedExpenseMenuId != null ? (
-            <>
-              <div className="grid gap-3 sm:grid-cols-[1fr_160px_auto]">
-                <input
-                  type="text"
-                  placeholder="Gider adı (ör. Kira, Personel)"
-                  className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={fixedExpenseTitle}
-                  onChange={(e) => setFixedExpenseTitle(e.target.value)}
-                />
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Günlük tutar"
-                  className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={fixedExpenseAmount}
-                  onChange={(e) => setFixedExpenseAmount(e.target.value)}
-                />
-                <Button
-                  disabled={createFixedExpenseMutation.isPending}
-                  onClick={() => {
-                    const parsed = Number(fixedExpenseAmount.replace(",", "."));
-                    if (!fixedExpenseTitle.trim()) {
-                      notify("danger", "Başlık zorunludur.");
-                      return;
-                    }
-                    if (!Number.isFinite(parsed) || parsed < 0.01) {
-                      notify("danger", "Geçerli günlük tutar girin.");
-                      return;
-                    }
-                    createFixedExpenseMutation.mutate({
-                      menuId: fixedExpenseMenuId,
-                      title: fixedExpenseTitle.trim(),
-                      dailyAmount: parsed,
-                    });
-                  }}
-                >
-                  Ekle
-                </Button>
-              </div>
-              {fixedExpenseQuery.isLoading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
+        )}
+        {fixedExpenseBranchId != null ? (
+          fixedExpenseQuery.isLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {(fixedExpenseQuery.data ?? []).length === 0 ? (
+                <li className="px-4 py-3 text-sm text-muted-foreground">Sabit gider yok.</li>
               ) : (
-                <ul className="divide-y divide-border rounded-md border border-border">
-                  {(fixedExpenseQuery.data ?? []).length === 0 ? (
-                    <li className="px-4 py-3 text-sm text-muted-foreground">Sabit gider yok.</li>
-                  ) : (
-                    (fixedExpenseQuery.data ?? []).map((item: MenuFixedExpenseItem) => (
-                      <li
-                        key={item.id}
-                        className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-                      >
-                        <div>
-                          <p className="font-medium text-foreground">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Günlük {formatAmount(item.dailyAmount ?? 0)}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive"
-                          disabled={deleteFixedExpenseMutation.isPending}
-                          onClick={() =>
-                            deleteFixedExpenseMutation.mutate({
-                              menuId: fixedExpenseMenuId,
-                              expenseId: item.id,
-                            })
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </li>
-                    ))
-                  )}
-                </ul>
+                (fixedExpenseQuery.data ?? []).map((item: BranchFixedExpenseItem) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {periodLabel(item.period)} · {formatAmount(item.amount ?? 0)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={deleteFixedExpenseMutation.isPending}
+                      onClick={() =>
+                        deleteFixedExpenseMutation.mutate({
+                          branchId: fixedExpenseBranchId,
+                          expenseId: item.id,
+                        })
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))
               )}
-            </>
-          ) : null}
+            </ul>
+          )
+        ) : null}
       </div>
 
-      <div className={`${DASHBOARD_PANEL} space-y-4`}>
-        <DashboardFilterBar className="sm:items-end">
-            <div className="min-w-[160px] space-y-1.5">
-              <label className="text-xs text-muted-foreground">Tür</label>
-              <SearchableSelect
-                value={typeFilter}
-                onValueChange={(value) => {
-                  setTypeFilter(value as TypeFilter);
-                  setPage(0);
-                }}
-                options={[
-                  { value: "all", label: "Tümü" },
-                  { value: "GELIR", label: "Gelir" },
-                  { value: "GIDER", label: "Gider" },
-                  { value: "BORC", label: "Borç" },
-                ]}
-                placeholder="Tür seçin"
-                searchPlaceholder="Tür ara..."
-              />
-            </div>
-            <DateRangeFilter
-              className="min-w-0"
-              value={{ from, to }}
-              onChange={(next) => {
-                setFrom(next.from);
-                setTo(next.to);
-                setPage(0);
-              }}
-            />
-            <div className="min-w-[200px] flex-1 space-y-1.5">
-              <label className="text-xs text-muted-foreground">Ara</label>
-              <input
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={q}
-                placeholder="Başlık veya not"
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-        </DashboardFilterBar>
+      <DashboardFilterBar>
+        <div className={cn(DASHBOARD_FILTER_FIELD, "min-w-[10rem] sm:w-[11rem]")}>
+          <label className={DASHBOARD_FILTER_LABEL}>Tür</label>
+          <SearchableSelect
+            value={typeFilter}
+            onValueChange={(value) => {
+              setTypeFilter(value as TypeFilter);
+              setPage(0);
+            }}
+            options={[
+              { value: "all", label: "Tümü" },
+              { value: "GELIR", label: "Gelir" },
+              { value: "GIDER", label: "Gider" },
+              { value: "BORC", label: "Borç" },
+            ]}
+            placeholder="Tür seçin"
+            searchPlaceholder="Tür ara..."
+          />
+        </div>
+        <DateRangeFilter
+          value={{ from, to }}
+          onChange={(next) => {
+            setFrom(next.from);
+            setTo(next.to);
+            setPage(0);
+          }}
+        />
+        <div className={cn(DASHBOARD_FILTER_FIELD, "min-w-[12rem] flex-1 sm:max-w-xs")}>
+          <label className={DASHBOARD_FILTER_LABEL}>Ara</label>
+          <input
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={q}
+            placeholder="Başlık veya not"
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(0);
+            }}
+          />
+        </div>
+      </DashboardFilterBar>
 
+      <div className={`${DASHBOARD_PANEL} space-y-4`}>
           {listQuery.isLoading ? (
             <DashboardLoadingState label="Kayıtlar yükleniyor…" />
           ) : items.length === 0 ? (
@@ -517,10 +536,43 @@ export default function AccountingView() {
             <DialogDescription>
               {dialogType === "GELIR"
                 ? "Gelir kaydı oluşturun. İsterseniz hangi menüden geldiğini seçebilirsiniz."
-                : `${entryTypeLabel(dialogType)} kaydı oluşturun.`}
+                : dialogType === "GIDER"
+                  ? "Tek seferlik veya şube bazlı sabit gider kaydı oluşturun."
+                  : `${entryTypeLabel(dialogType)} kaydı oluşturun.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {dialogType === "GIDER" ? (
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Gider türü</label>
+                <div className="inline-flex w-full gap-1 rounded-2xl border border-border/60 bg-muted/30 p-1">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all",
+                      expenseMode === "ONE_TIME"
+                        ? "bg-background text-foreground shadow-sm ring-1 ring-border/70"
+                        : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                    )}
+                    onClick={() => setExpenseMode("ONE_TIME")}
+                  >
+                    Tek seferlik
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all",
+                      expenseMode === "FIXED"
+                        ? "bg-background text-foreground shadow-sm ring-1 ring-border/70"
+                        : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+                    )}
+                    onClick={() => setExpenseMode("FIXED")}
+                  >
+                    Sabit
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Başlık</label>
               <input
@@ -532,32 +584,54 @@ export default function AccountingView() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Tutar (₺)</label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+              <MoneyInput value={amount} onChange={setAmount} placeholder="0,00" />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">İşlem tarihi</label>
-              <input
-                type="datetime-local"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={occurredAt}
-                onChange={(e) => setOccurredAt(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Not (opsiyonel)</label>
-              <textarea
-                className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
+            {dialogType === "GIDER" && expenseMode === "FIXED" ? (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Şube</label>
+                  <BranchPicker
+                    className="h-10 w-full justify-between px-3 text-sm font-normal"
+                    branches={branches}
+                    selectedBranchId={dialogBranchId ?? fixedExpenseBranchId}
+                    onSelect={(branchId) => {
+                      setDialogBranchId(branchId);
+                      selectFixedExpenseBranch(branchId);
+                    }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Periyot</label>
+                  <SearchableSelect
+                    value={expensePeriod}
+                    onValueChange={(value) => setExpensePeriod(value as FixedExpensePeriod)}
+                    options={[
+                      { value: "DAILY", label: "Günlük" },
+                      { value: "WEEKLY", label: "Haftalık" },
+                      { value: "MONTHLY", label: "Aylık" },
+                      { value: "YEARLY", label: "Yıllık" },
+                    ]}
+                    placeholder="Periyot seçin"
+                    searchPlaceholder="Periyot ara..."
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">İşlem tarihi</label>
+                <DateTimePicker value={occurredAt} onChange={setOccurredAt} />
+              </div>
+            )}
+            {!(dialogType === "GIDER" && expenseMode === "FIXED") ? (
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Not (opsiyonel)</label>
+                <textarea
+                  className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+            ) : null}
             {dialogType === "GELIR" && canUseDigitalMenu && menuQrs.length > 0 ? (
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">Menü (opsiyonel)</label>
@@ -581,8 +655,8 @@ export default function AccountingView() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Vazgeç
             </Button>
-            <Button disabled={createMutation.isPending} onClick={handleSubmit}>
-              {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            <Button disabled={saving} onClick={handleSubmit}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Kaydet
             </Button>
           </DialogFooter>

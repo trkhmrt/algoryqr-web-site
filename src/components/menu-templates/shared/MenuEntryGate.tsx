@@ -7,6 +7,7 @@ import type { MenuProfileApiItem } from "@/lib/api";
 import { fetchActiveCampaigns, type ActiveCampaign } from "@/lib/public-campaign-api";
 
 import { LuxurySiteLayout } from "../luxury/LuxurySiteLayout";
+import { CampaignDetailDialog } from "./CampaignDetailDialog";
 import { CustomerAuthDialog } from "./CustomerAuthDialog";
 import { useMenuLocale } from "./menu-locale";
 
@@ -26,6 +27,7 @@ export function MenuEntryGate({
   const { t, dir } = useMenuLocale();
   const [authOpen, setAuthOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<ActiveCampaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<ActiveCampaign | null>(null);
   const businessName = menu.businessName?.trim() || "Algory";
 
   useEffect(() => {
@@ -62,9 +64,11 @@ export function MenuEntryGate({
             {campaigns.length > 0 ? (
               <div className="space-y-3 text-left">
                 {campaigns.slice(0, 3).map((campaign) => (
-                  <div
+                  <button
                     key={campaign.id}
-                    className="overflow-hidden rounded-xl border border-[color-mix(in_oklch,var(--lx-gold)_35%,transparent)] bg-[color-mix(in_oklch,var(--lx-gold)_8%,transparent)]"
+                    type="button"
+                    onClick={() => setSelectedCampaign(campaign)}
+                    className="w-full overflow-hidden rounded-xl border border-[color-mix(in_oklch,var(--lx-gold)_35%,transparent)] bg-[color-mix(in_oklch,var(--lx-gold)_8%,transparent)] text-left transition hover:border-[color-mix(in_oklch,var(--lx-gold)_55%,transparent)]"
                   >
                     {campaign.imageUrl ? (
                       <div className="relative aspect-[21/9] w-full overflow-hidden">
@@ -93,7 +97,7 @@ export function MenuEntryGate({
                         ) : null}
                       </div>
                     )}
-                  </div>
+                  </button>
                 ))}
                 <p className="text-[11px] lx-muted">
                   Faydalanmak için giriş yapın veya misafir devam edin.
@@ -120,6 +124,14 @@ export function MenuEntryGate({
           </div>
         </div>
       </LuxurySiteLayout>
+
+      <CampaignDetailDialog
+        campaign={selectedCampaign}
+        open={selectedCampaign != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCampaign(null);
+        }}
+      />
 
       <CustomerAuthDialog
         open={authOpen}

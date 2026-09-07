@@ -28,6 +28,7 @@ import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createMenuProductRequest,
@@ -201,6 +202,10 @@ export default function DigitalMenuProductCreateView() {
     try {
       const created = await createMenuProductRequest(menuId, {
         ...form,
+        price:
+          form.price != null && String(form.price).trim() !== ""
+            ? parseMoneyInput(String(form.price))
+            : undefined,
         nutrition,
         optionGroups: toOptionGroupsPayload(optionGroups),
       });
@@ -321,9 +326,9 @@ export default function DigitalMenuProductCreateView() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Fiyat</Label>
-              <Input
+              <MoneyInput
                 value={String(form.price ?? "")}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                onChange={(price) => setForm({ ...form, price })}
                 placeholder="120"
               />
             </div>

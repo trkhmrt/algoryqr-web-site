@@ -29,6 +29,7 @@ import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -218,7 +219,10 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
     return {
       name: next.name.trim(),
       description: next.description,
-      price: next.price,
+      price:
+        next.price.trim() === ""
+          ? undefined
+          : parseMoneyInput(next.price),
       currency: next.currency,
       subCategoryId: next.subCategoryId,
       tagIds: next.tagIds,
@@ -439,9 +443,9 @@ export default function DigitalMenuProductDetailView({ productId }: DigitalMenuP
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Fiyat</Label>
-                <Input
+                <MoneyInput
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  onChange={(price) => setForm({ ...form, price })}
                   placeholder="120"
                 />
               </div>

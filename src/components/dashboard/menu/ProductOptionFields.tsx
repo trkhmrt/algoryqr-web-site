@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
 import {
   Select,
   SelectContent,
@@ -81,7 +82,8 @@ export function toOptionGroupsPayload(groups: ProductOptionGroupForm[]) {
         options: group.options
           .map((option, optionIndex) => ({
             name: option.name.trim(),
-            priceDelta: option.priceDelta.trim() === "" ? 0 : option.priceDelta,
+            priceDelta:
+              option.priceDelta.trim() === "" ? 0 : parseMoneyInput(option.priceDelta),
             available: option.available,
             sortOrder: option.sortOrder ?? optionIndex,
           }))
@@ -323,13 +325,14 @@ export function ProductOptionFields({
                         : "Seçenek adı"
                     }
                   />
-                  <Input
+                  <MoneyInput
                     value={option.priceDelta}
                     disabled={disabled}
-                    onChange={(e) =>
-                      updateOption(groupIndex, optionIndex, { priceDelta: e.target.value })
+                    onChange={(priceDelta) =>
+                      updateOption(groupIndex, optionIndex, { priceDelta })
                     }
                     placeholder="+0"
+                    className="h-10"
                   />
                   <div className="flex items-center gap-1.5">
                     <Switch

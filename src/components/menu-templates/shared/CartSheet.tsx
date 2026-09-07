@@ -15,7 +15,6 @@ import { useMenuLocaleOptional } from "./menu-locale";
 import { Tx } from "@/components/google-translate-provider";
 import { OrderSuccessOverlay } from "./OrderSuccessOverlay";
 import { CampaignCartPreview } from "./CampaignCartPreview";
-import { StampCardProgressPanel } from "./StampCardProgressPanel";
 import { useOrdering } from "./ordering-context";
 import { usePublicMenuTheme } from "./public-menu-theme";
 
@@ -120,11 +119,6 @@ export function CartSheet() {
               productId: item.productId,
               quantity: item.quantity,
             }))}
-          />
-
-          <StampCardProgressPanel
-            progress={cart?.campaignSummary?.stampCardProgress ?? []}
-            guestHint={Boolean(cart?.campaignSummary?.guestOrder)}
           />
 
           <div>

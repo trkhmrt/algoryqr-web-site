@@ -188,8 +188,8 @@ export default function UberEatsOrdersView() {
               setPage(0);
             }}
           />
-          <div className="min-w-[180px] flex-1 space-y-1.5">
-            <label className="text-xs text-muted-foreground">Durum</label>
+          <div className="flex min-w-[180px] flex-1 flex-col gap-2">
+            <label className="text-xs leading-4 text-muted-foreground">Durum</label>
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={status}

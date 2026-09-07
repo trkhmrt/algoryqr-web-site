@@ -17,12 +17,23 @@ import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader"
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { FilterSelect } from "@/components/dashboard/FilterSelect";
 import { useListQueryState } from "@/hooks/use-list-query-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   activateCampaign,
+  deleteCampaign,
   listCampaigns,
   pauseCampaign,
   type CampaignItem,
@@ -43,6 +54,10 @@ function statusLabel(status: CampaignItem["status"]): string {
   }
 }
 
+function activateLabel(status: CampaignItem["status"]): string {
+  return status === "PAUSED" ? "Aktifleştir" : "Yayınla";
+}
+
 export default function CampaignsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,6 +72,7 @@ export default function CampaignsView() {
     canUseDigitalMenu && !accessLoading,
   );
   const menuId = selection?.menu.menuId ?? null;
+  const [deleteTarget, setDeleteTarget] = useState<CampaignItem | null>(null);
 
   const campaignsQuery = useQuery({
     queryKey: ["campaigns", menuId],
@@ -77,12 +93,27 @@ export default function CampaignsView() {
         ? activateCampaign(menuId, campaignId)
         : pauseCampaign(menuId, campaignId);
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       void queryClient.invalidateQueries({ queryKey: ["campaigns", menuId] });
-      notify("info", "Kampanya güncellendi.");
+      notify("info", vars.action === "pause" ? "Kampanya duraklatıldı." : "Kampanya aktifleştirildi.");
     },
     onError: (err) => {
       notify("danger", err instanceof Error ? err.message : "İşlem başarısız.");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (campaignId: number) => {
+      if (menuId == null) throw new Error("Menü seçilmedi");
+      await deleteCampaign(menuId, campaignId);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["campaigns", menuId] });
+      setDeleteTarget(null);
+      notify("info", "Kampanya silindi.");
+    },
+    onError: (err) => {
+      notify("danger", err instanceof Error ? err.message : "Kampanya silinemedi.");
     },
   });
 
@@ -133,14 +164,6 @@ export default function CampaignsView() {
         title="Kampanyalar"
         hint="Sadakat programı kampanyalarını oluşturun ve müşterilerinize sunun."
         action={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-          <DigitalMenuPicker
-            menuQrs={menuQrs}
-            selectedQrId={selection?.qr.id ?? null}
-            onSelectQrId={(qrId) => {
-              void selectQrId(qrId);
-            }}
-          />
           <Button
             disabled={menuId == null}
             className="gap-1.5"
@@ -155,7 +178,6 @@ export default function CampaignsView() {
             <Plus className="h-4 w-4" />
             Kampanya Oluştur
           </Button>
-        </div>
         }
       />
 
@@ -171,13 +193,16 @@ export default function CampaignsView() {
             </Button>
           }
         />
-      ) : menuId == null ? (
-        <DashboardLoadingState label="Menü bilgisi yükleniyor..." />
-      ) : campaignsQuery.isLoading ? (
-        <DashboardLoadingState label="Kampanyalar yükleniyor..." />
       ) : (
         <>
           <DashboardFilterBar>
+            <DigitalMenuPicker
+              menuQrs={menuQrs}
+              selectedQrId={selection?.qr.id ?? null}
+              onSelectQrId={(qrId) => {
+                void selectQrId(qrId);
+              }}
+            />
             <FilterSelect
               className="w-full sm:w-[12rem]"
               label="Durum"
@@ -209,7 +234,12 @@ export default function CampaignsView() {
               />
             </div>
           </DashboardFilterBar>
-      {campaigns.length === 0 ? (
+
+          {menuId == null || campaignsQuery.isLoading ? (
+            <DashboardLoadingState
+              label={menuId == null ? "Menü bilgisi yükleniyor..." : "Kampanyalar yükleniyor..."}
+            />
+          ) : campaigns.length === 0 ? (
         <EmptyState
           title="Henüz kampanya yok"
           description="İlk kampanyanızı oluşturarak müşterilerinize puan, indirim veya ödül tanımlayın."
@@ -279,17 +309,7 @@ export default function CampaignsView() {
                       Detay
                     </Link>
                   </Button>
-                  {campaign.status !== "ACTIVE" ? (
-                    <Button
-                      size="sm"
-                      disabled={actionMutation.isPending}
-                      onClick={() =>
-                        actionMutation.mutate({ campaignId: campaign.id, action: "activate" })
-                      }
-                    >
-                      Yayınla
-                    </Button>
-                  ) : (
+                  {campaign.status === "ACTIVE" ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -300,7 +320,25 @@ export default function CampaignsView() {
                     >
                       Duraklat
                     </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={actionMutation.isPending}
+                      onClick={() =>
+                        actionMutation.mutate({ campaignId: campaign.id, action: "activate" })
+                      }
+                    >
+                      {activateLabel(campaign.status)}
+                    </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => setDeleteTarget(campaign)}
+                  >
+                    Sil
+                  </Button>
                 </div>
               </div>
             </article>
@@ -309,6 +347,42 @@ export default function CampaignsView() {
       )}
         </>
       )}
+
+      <AlertDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kampanya silinsin mi?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Kampanya listeden kaldırılır ve müşterilere sunulmaz. Bu işlem soft delete
+              uygular; kayıt kalıcı olarak silinmez.
+              {deleteTarget ? (
+                <span className="mt-2 block font-medium text-foreground">
+                  Kampanya: {deleteTarget.name}
+                </span>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Vazgeç</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending || !deleteTarget}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                if (!deleteTarget) return;
+                deleteMutation.mutate(deleteTarget.id);
+              }}
+            >
+              Evet, sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

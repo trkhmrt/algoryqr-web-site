@@ -1431,6 +1431,19 @@ export interface MenuFixedExpenseItem {
   updatedAt?: string | null;
 }
 
+export type FixedExpensePeriod = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+
+export interface BranchFixedExpenseItem {
+  id: number;
+  branchId: number;
+  title: string;
+  amount?: number | string | null;
+  period: FixedExpensePeriod;
+  active: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export async function listMenuFixedExpensesRequest(
   menuId: number | string,
 ): Promise<MenuFixedExpenseItem[]> {
@@ -1463,6 +1476,31 @@ export async function deleteMenuFixedExpenseRequest(
   expenseId: number | string,
 ): Promise<void> {
   await api.delete(`/menus/${menuId}/fixed-expenses/${expenseId}`);
+}
+
+export async function listBranchFixedExpensesRequest(
+  branchId: number | string,
+): Promise<BranchFixedExpenseItem[]> {
+  const response = await api.get<BranchFixedExpenseItem[]>(`/branches/${branchId}/fixed-expenses`);
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+export async function createBranchFixedExpenseRequest(
+  branchId: number | string,
+  payload: { title: string; amount: number; period: FixedExpensePeriod; active?: boolean },
+): Promise<BranchFixedExpenseItem> {
+  const response = await api.post<BranchFixedExpenseItem>(
+    `/branches/${branchId}/fixed-expenses`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function deleteBranchFixedExpenseRequest(
+  branchId: number | string,
+  expenseId: number | string,
+): Promise<void> {
+  await api.delete(`/branches/${branchId}/fixed-expenses/${expenseId}`);
 }
 
 export async function getMenuRevenueReportRequest(

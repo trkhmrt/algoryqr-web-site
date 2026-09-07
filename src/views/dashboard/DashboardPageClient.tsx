@@ -58,6 +58,7 @@ import CampaignCreateView from "@/views/dashboard/CampaignCreateView";
 import CampaignDetailView from "@/views/dashboard/CampaignDetailView";
 import MenuUserDetailView from "@/views/dashboard/MenuUserDetailView";
 import MenuUsersView from "@/views/dashboard/MenuUsersView";
+import WaiterOrderDetailView from "@/views/dashboard/WaiterOrderDetailView";
 import WaiterOrdersView from "@/views/dashboard/WaiterOrdersView";
 import AccountingView from "@/views/dashboard/AccountingView";
 
@@ -314,6 +315,18 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     );
   }
 
+  const waiterOrderDetailPrefix = `${DASHBOARD_ROUTES.waiter}/`;
+  if (pathname.startsWith(waiterOrderDetailPrefix)) {
+    const orderId = Number(pathname.slice(waiterOrderDetailPrefix.length).split("/")[0]);
+    if (Number.isSafeInteger(orderId) && orderId > 0) {
+      return (
+        <Suspense fallback={null}>
+          <WaiterOrderDetailView orderId={orderId} />
+        </Suspense>
+      );
+    }
+  }
+
   const menuUserDetailPrefix = `${DASHBOARD_ROUTES.menuUsers}/`;
   if (pathname.startsWith(menuUserDetailPrefix)) {
     const waiterId = Number(pathname.slice(menuUserDetailPrefix.length).split("/")[0]);
@@ -365,7 +378,7 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
     if (slug && Number.isFinite(id) && id > 0) {
       return (
         <Suspense fallback={null}>
-          <CampaignDetailView />
+          <CampaignDetailView campaignId={id} />
         </Suspense>
       );
     }

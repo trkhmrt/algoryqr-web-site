@@ -17,6 +17,7 @@ export type CampaignItem = {
   templateCode: string;
   name: string;
   slogan?: string | null;
+  terms?: string | null;
   imageUrl?: string | null;
   startsAt: string;
   endsAt: string;
@@ -30,6 +31,7 @@ export type CreateCampaignPayload = {
   templateCode: string;
   name: string;
   slogan?: string;
+  terms?: string;
   imageUrl?: string | null;
   startsAt: string;
   endsAt: string;
@@ -39,6 +41,7 @@ export type CreateCampaignPayload = {
 export type UpdateCampaignPayload = {
   name?: string;
   slogan?: string | null;
+  terms?: string | null;
   imageUrl?: string | null;
   startsAt?: string;
   endsAt?: string;
@@ -48,6 +51,7 @@ export type UpdateCampaignPayload = {
 export type GenerateCampaignImagePayload = {
   name: string;
   slogan?: string;
+  brief?: string;
   productNames?: string[];
   productImageUrls?: string[];
 };
@@ -180,4 +184,15 @@ export async function pauseCampaign(menuId: number, campaignId: number): Promise
     `/api/waiter-panel/menu/${menuId}/campaigns/${campaignId}/pause`,
     { method: "POST" },
   );
+}
+
+export async function deleteCampaign(menuId: number, campaignId: number): Promise<void> {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/campaigns/${campaignId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const data = await parseJson<{ message?: string }>(response);
+    throw new ApiError(response.status, data.message ?? "Kampanya silinemedi");
+  }
 }
