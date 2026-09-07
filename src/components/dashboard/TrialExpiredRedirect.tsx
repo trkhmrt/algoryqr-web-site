@@ -21,6 +21,7 @@ export default function TrialExpiredRedirect() {
   useEffect(() => {
     if (trial.isLoading || subscription.isLoading) return;
     if (isTrialExpiredAllowlistedPath(pathname)) return;
+    if (trial.isError) return;
 
     const hasActivePaid = isActivePaidPurchase(subscription.data?.activePurchase ?? null);
     if (!shouldForceTrialExpiredGate(trial.data?.status, hasActivePaid)) return;
@@ -32,6 +33,7 @@ export default function TrialExpiredRedirect() {
     subscription.data?.activePurchase,
     subscription.isLoading,
     trial.data?.status,
+    trial.isError,
     trial.isLoading,
   ]);
 
