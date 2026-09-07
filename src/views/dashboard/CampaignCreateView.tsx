@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   DigitalMenuPicker,
@@ -56,7 +56,7 @@ export default function CampaignCreateView() {
   });
 
   const [step, setStep] = useState(1);
-  const [templateCode, setTemplateCode] = useState<string>("STAMP_CARD");
+  const [templateCode, setTemplateCode] = useState<string>("");
   const [name, setName] = useState("");
   const [slogan, setSlogan] = useState("");
   const [startsAt, setStartsAt] = useState(toLocalDateTimeValue(new Date()));
@@ -69,6 +69,14 @@ export default function CampaignCreateView() {
   const [thresholdAmount, setThresholdAmount] = useState("500");
   const [period, setPeriod] = useState<"WEEKLY" | "MONTHLY">("WEEKLY");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const templates = templatesQuery.data;
+    if (!templates?.length) return;
+    if (!templates.some((item) => item.code === templateCode)) {
+      setTemplateCode(templates[0].code);
+    }
+  }, [templatesQuery.data, templateCode]);
 
   const selectedTemplate = useMemo(
     () => templatesQuery.data?.find((item) => item.code === templateCode),
@@ -112,6 +120,7 @@ export default function CampaignCreateView() {
   const createMutation = useMutation({
     mutationFn: async () => {
       if (menuId == null) throw new Error("Menü seçilmedi");
+      if (!templateCode) throw new Error("Kampanya şablonu seçilmedi");
       const productIds = targetProductIds
         .map((value) => Number(value))
         .filter((value) => Number.isFinite(value) && value > 0);
@@ -175,6 +184,10 @@ export default function CampaignCreateView() {
     );
   }
 
+  const templates = templatesQuery.data ?? [];
+  const canAdvanceFromStep1 =
+    Boolean(templateCode) && templates.some((item) => item.code === templateCode);
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       <DashboardPageHeader
@@ -210,23 +223,47 @@ export default function CampaignCreateView() {
       {step === 1 ? (
         <div className={DASHBOARD_PANEL_LG}>
           <h2 className={DASHBOARD_TYPE_SECTION}>Şablon seçin</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {(templatesQuery.data ?? []).map((template: CampaignTemplate) => (
-              <button
-                key={template.code}
-                type="button"
-                onClick={() => setTemplateCode(template.code)}
-                className={`rounded-lg border p-4 text-left transition-colors ${
-                  templateCode === template.code
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-muted/40"
-                }`}
-              >
-                <p className="font-medium">{template.name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
-              </button>
-            ))}
-          </div>
+          {templatesQuery.isLoading ? (
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Şablonlar yükleniyor…
+            </div>
+          ) : templatesQuery.isError ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-destructive">
+                Kampanya şablonları yüklenemedi.
+                {templatesQuery.error instanceof Error
+                  ? ` ${templatesQuery.error.message}`
+                  : ""}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => void templatesQuery.refetch()}>
+                Tekrar dene
+              </Button>
+            </div>
+          ) : templates.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Henüz tanımlı kampanya şablonu yok. Backend tarafında `tbl_campaign_template`
+              seed edilmeli.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {templates.map((template: CampaignTemplate) => (
+                <button
+                  key={template.code}
+                  type="button"
+                  onClick={() => setTemplateCode(template.code)}
+                  className={`rounded-lg border p-4 text-left transition-colors ${
+                    templateCode === template.code
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <p className="font-medium">{template.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -373,7 +410,11 @@ export default function CampaignCreateView() {
         {step < 3 ? (
           <Button
             onClick={() => setStep((prev) => prev + 1)}
-            disabled={(step === 2 && !name.trim()) || menuId == null}
+            disabled={
+              (step === 1 && !canAdvanceFromStep1) ||
+              (step === 2 && !name.trim()) ||
+              menuId == null
+            }
           >
             İleri
           </Button>
@@ -382,6 +423,7 @@ export default function CampaignCreateView() {
             disabled={
               createMutation.isPending ||
               menuId == null ||
+              !templateCode ||
               (templateCode === "STAMP_CARD" && targetProductIds.length === 0)
             }
             onClick={() => createMutation.mutate()}
