@@ -31,7 +31,7 @@ import {
   parseGoogleAuthIntent,
   safeGoogleAuthErrorCode,
 } from "@/lib/server/google-auth-flow";
-import { resolvePostAuthDashboardPathWithAccessToken } from "@/lib/server/trial-expired-gate";
+import { resolvePostAuthDashboardPathWithAccessToken } from "@/lib/server/access-session-gate";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 type RedeemResponse = {

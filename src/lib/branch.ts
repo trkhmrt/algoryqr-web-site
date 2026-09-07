@@ -56,7 +56,7 @@ export async function listBranchesRequest() {
 }
 
 export async function createBranchRequest(payload: BranchWritePayload) {
-  const { data } = await api.post<BranchItem>("/branches", payload);
+  const { data } = await api.post<BranchItem>("/features/QR_BRANCH/branches", payload);
   return data;
 }
 

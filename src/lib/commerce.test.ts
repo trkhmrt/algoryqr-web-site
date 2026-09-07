@@ -3,13 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   billingAddressSchema,
   buildBillingAddressPayload,
-  calculateTrialDaysRemaining,
   cardSchema,
   checkoutSchema,
   DEFAULT_IDENTITY_NUMBER,
   formatCardNumber,
   getBin,
-  mapTrialStatus,
 } from "./commerce";
 
 describe("commerce schemas and logic", () => {
@@ -155,15 +153,5 @@ describe("commerce schemas and logic", () => {
     const formatted = formatCardNumber("5890040000000016");
     expect(formatted).toBe("5890 0400 0000 0016");
     expect(getBin(formatted)).toBe("58900400");
-  });
-
-  it("maps trial lifecycle and calculates remaining days", () => {
-    const mapped = mapTrialStatus({
-      lifecycle: "ACTIVE",
-      expiresAt: "2026-07-19T00:00:00.000Z",
-      purchaseId: 12,
-    });
-    expect(mapped.status).toBe("ACTIVE");
-    expect(calculateTrialDaysRemaining(mapped, new Date("2026-07-16T00:00:00.000Z"))).toBe(3);
   });
 });

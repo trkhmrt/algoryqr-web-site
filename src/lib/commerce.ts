@@ -41,17 +41,6 @@ export interface BinInstallmentOption {
   totalAmount?: number | string | null;
 }
 
-export interface DigitalMenuTrialStatus {
-  status: "NOT_STARTED" | "ACTIVE" | "TRIAL_EXPIRED" | "PURCHASED" | string;
-  trialEndsAt?: string | null;
-  daysRemaining?: number | null;
-  packageId?: number | null;
-  packageName?: string | null;
-  price?: number | string | null;
-  currency?: string | null;
-  purchaseId?: number | null;
-}
-
 const requiredText = (message: string) => z.string().trim().min(1, message);
 
 export const DEFAULT_IDENTITY_NUMBER = "11111111111";
@@ -164,42 +153,6 @@ export function formatExpiry(value: string): string {
 
 export function getBin(value: string): string {
   return value.replace(/\D/g, "").slice(0, 8);
-}
-
-export function mapTrialStatus(payload: {
-  lifecycle?: string;
-  expiresAt?: string | null;
-  purchaseId?: number | null;
-  packageId?: number | null;
-  packageCode?: string | null;
-  packageName?: string | null;
-  daysUntilExpiry?: number | null;
-  price?: number | string | null;
-  currency?: string | null;
-}): DigitalMenuTrialStatus {
-  const lifecycle = payload.lifecycle ?? "AVAILABLE";
-  const status =
-    lifecycle === "ACTIVE" ? "ACTIVE"
-      : lifecycle === "TRIAL_EXPIRED" ? "TRIAL_EXPIRED"
-        : "NOT_STARTED";
-  return {
-    status,
-    trialEndsAt: payload.expiresAt ?? null,
-    daysRemaining: typeof payload.daysUntilExpiry === "number" ? payload.daysUntilExpiry : null,
-    packageId: payload.packageId ?? null,
-    packageName: payload.packageName ?? null,
-    price: payload.price ?? null,
-    currency: payload.currency ?? null,
-    purchaseId: payload.purchaseId ?? null,
-  };
-}
-
-export function calculateTrialDaysRemaining(status: DigitalMenuTrialStatus, now = new Date()): number | null {
-  if (typeof status.daysRemaining === "number") return Math.max(0, Math.ceil(status.daysRemaining));
-  if (!status.trialEndsAt) return null;
-  const endsAt = new Date(status.trialEndsAt).getTime();
-  if (Number.isNaN(endsAt)) return null;
-  return Math.max(0, Math.ceil((endsAt - now.getTime()) / 86_400_000));
 }
 
 export function displayBillingName(address: BillingAddress): string {

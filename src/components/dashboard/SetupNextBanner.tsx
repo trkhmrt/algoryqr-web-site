@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { useAccessProfile } from "@/hooks/use-access-profile";
-import { usePaymentMethods, useTrialStatus } from "@/hooks/use-commerce";
+import { useAccessSession, usePaymentMethods } from "@/hooks/use-commerce";
 import { useOverviewOpsStats } from "@/hooks/use-overview-ops-stats";
 import { useSubscription } from "@/hooks/use-subscription";
 import { hasScope } from "@/lib/auth-user";
@@ -16,7 +16,7 @@ export function SetupNextBanner() {
   const { data: accessProfile, isLoading: accessLoading } = useAccessProfile();
   const showMenus = hasScope(accessProfile, "QR_MENU_OWNER");
   const cards = usePaymentMethods({ enabled: !accessLoading });
-  const trial = useTrialStatus(!accessLoading);
+  const trial = useAccessSession(!accessLoading);
   const subscription = useSubscription();
   const hasActiveSubscription = isActivePaidPurchase(subscription.data?.activePurchase ?? null);
   const stats = useOverviewOpsStats({
@@ -38,7 +38,7 @@ export function SetupNextBanner() {
 
   const steps = buildSetupSteps({
     hasCard: (cards.data?.length ?? 0) > 0,
-    canOperate: trial.data?.status === "ACTIVE" || showMenus || hasActiveSubscription,
+    canOperate: trial.data?.decision === "ALLOW" || showMenus || hasActiveSubscription,
     hasActiveSubscription,
     branchCount: stats.branchCount,
     totalMenus: stats.totalMenus,

@@ -13,8 +13,8 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   invalidateDigitalMenuTrial,
   startTrialRequest,
+  useAccessSession,
   useEligibleTrialPackages,
-  useTrialStatus,
 } from "@/hooks/use-commerce";
 import { useActivePackages } from "@/hooks/use-subscription";
 import { ApiError, type PlanPackageApiItem } from "@/lib/api";
@@ -33,17 +33,17 @@ export function DigitalMenuPaywall() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { notify } = useDashboardBanners();
-  const trial = useTrialStatus(true);
+  const trial = useAccessSession(true);
   const eligibleTrials = useEligibleTrialPackages(true);
   const packages = useActivePackages(true);
   const [startingPackageId, setStartingPackageId] = useState<number | null>(null);
 
-  const status = trial.data?.status ?? "NOT_STARTED";
-  const needsRenewal = status === "TRIAL_EXPIRED";
+  const status = trial.data?.decision ?? "START_PACKAGE";
+  const needsRenewal = status === "REQUIRE_PURCHASE" || status === "REQUIRE_PAYMENT";
   const menuPackage = filterCatalogPackages(packages.data ?? []).find((pkg) =>
     pkg.items?.some((item) => item.productCode === "QR_MENU"),
   );
-  const packageId = trial.data?.packageId ?? menuPackage?.id ?? null;
+  const packageId = menuPackage?.id ?? null;
   const eligiblePackages = filterCatalogPackages((eligibleTrials.data ?? []) as PlanPackageApiItem[]);
 
   const startTrial = async (selectedPackageId: number) => {
@@ -54,8 +54,8 @@ export function DigitalMenuPaywall() {
       await invalidateDigitalMenuTrial(queryClient);
       notify(
         "info",
-        `${started.packageName ?? "Paket"} denemeniz başlatıldı` +
-          (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
+        `${menuPackage?.name ?? "Paket"} denemeniz başlatıldı` +
+          (started?.endsAt ? ` · bitiş: ${formatPackageDate(started.endsAt)}` : "") +
           ".",
       );
     } catch (error) {
@@ -110,7 +110,9 @@ export function DigitalMenuPaywall() {
                     Deneme süreniz sona erdi
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    PRO özelliklerine devam etmek için paketi satın alın veya yenileyin.
+                    {status === "REQUIRE_PAYMENT"
+                      ? "Borcunuz var. Ödeme yaparak paketinizi kullanmaya devam edin."
+                      : "PRO özelliklerine devam etmek için paketi satın alın veya yenileyin."}
                   </p>
                 </div>
               ) : null}
@@ -124,7 +126,7 @@ export function DigitalMenuPaywall() {
                 </Button>
               ) : (
                 <div className="space-y-3">
-                  {!needsRenewal && status === "NOT_STARTED" && eligiblePackages.length > 0 ? (
+                  {!needsRenewal && status === "START_PACKAGE" && eligiblePackages.length > 0 ? (
                     <TrialPackagePicker
                       packages={eligiblePackages}
                       startingPackageId={startingPackageId}
