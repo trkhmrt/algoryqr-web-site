@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, Sparkles, X } from "lucide-react";
 
@@ -96,26 +96,17 @@ function BillingPeriodSwitch({
 export default function PackageComparisonView() {
   const searchParams = useSearchParams();
   const highlight = searchParams.get("highlight");
-  const { subscription, packages, featureRows, eligibleTrials, isLoading, isError } =
+  const { subscription, packages, featureRows, isLoading, isError } =
     usePackageCatalog();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("MONTHLY");
 
   const current = subscription.data?.activePurchase ?? null;
-  const trialEligibleIds = useMemo(
-    () => new Set((eligibleTrials.data ?? []).map((pkg) => pkg.id)),
-    [eligibleTrials.data],
-  );
   const isPaidActive =
     !!current &&
     current.usable &&
     !current.expired &&
     current.purchaseType === "PAID" &&
     current.packageCode !== "FREE_PACKAGE";
-  const isFreeOrTrial =
-    !!current &&
-    current.usable &&
-    !current.expired &&
-    (current.purchaseType === "TRIAL" || current.packageCode === "FREE_PACKAGE");
 
   const ctaHref = (pkg: PlanPackageApiItem) => {
     if (pkg.code === "FREE_PACKAGE" && current?.packageId !== pkg.id) {
@@ -220,11 +211,6 @@ export default function PackageComparisonView() {
                 current?.purchaseType,
               );
               const href = ctaHref(pkg);
-              const showTrial =
-                isFreeOrTrial &&
-                current?.packageId !== pkg.id &&
-                trialEligibleIds.has(pkg.id) &&
-                eligibleTrials.data?.some((t) => t.id === pkg.id);
 
               return (
                 <div
@@ -285,11 +271,6 @@ export default function PackageComparisonView() {
                       >
                         <Link href={href}>{label}</Link>
                       </Button>
-                    ) : null}
-                    {showTrial ? (
-                      <p className="text-center text-xs text-muted-foreground">
-                        Deneme için Dijital Menü veya Abonelik ekranından başlatabilirsiniz.
-                      </p>
                     ) : null}
                   </div>
                 </div>

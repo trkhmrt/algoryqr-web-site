@@ -147,7 +147,7 @@ const PricingSection = ({ initialUser = null }: PricingSectionProps) => {
 
   const featureRows = useMemo(() => {
     const rows = buildPackageComparisonRows(packages);
-    return rows.filter((row) => !["price", "validity", "trialEligible"].includes(row.id));
+    return rows.filter((row) => !["price", "validity"].includes(row.id));
   }, [packages]);
 
   const isLoading = packagesQuery.isLoading || (packagesQuery.isFetching && packages.length === 0);

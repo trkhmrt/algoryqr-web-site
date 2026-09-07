@@ -356,19 +356,16 @@ export function buildPackageComparisonRows(packages: PlanPackageApiItem[]): Comp
 
   const validity = emptyValues();
   const price = emptyValues();
-  const trialEligible = emptyValues();
   for (const pkg of packages) {
     const key = packageKey(pkg);
     validity[key] = pkg.validityDays > 0 ? `${pkg.validityDays} gün` : "—";
     price[key] = formatPackagePrice(pkg.price, pkg.currency);
-    trialEligible[key] = pkg.trialEligible ? "Uygun" : "—";
   }
 
   return [
     ...productRows,
     { id: "validity", label: "Geçerlilik", values: validity, kind: "text" },
     { id: "price", label: "Fiyat", values: price, kind: "text" },
-    { id: "trialEligible", label: "Deneme", values: trialEligible, kind: "text" },
   ];
 }
 
