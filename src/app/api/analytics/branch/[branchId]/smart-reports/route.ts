@@ -5,5 +5,5 @@ export async function POST(
   context: { params: Promise<{ branchId: string }> },
 ) {
   const { branchId } = await context.params;
-  return proxyAuthenticatedRequest(request, `/analytics/branch/${branchId}/smart-reports`, "POST");
+  return proxyAuthenticatedRequest(request, `/features/SMART_REPORTING/analytics/branch/${branchId}/smart-reports`, "POST");
 }

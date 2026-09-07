@@ -32,7 +32,7 @@ import {
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import TrialReminderDialog from "@/components/dashboard/TrialReminderDialog";
 import TrialReminderHeaderBadge from "@/components/dashboard/TrialReminderHeaderBadge";
-import TrialExpiredRedirect from "@/components/dashboard/TrialExpiredRedirect";
+import PackageAccessGate from "@/components/dashboard/PackageAccessGate";
 import { TrialReminderUiProvider } from "@/contexts/trial-reminder-ui";
 import { DashboardBreadcrumbs } from "@/components/dashboard/DashboardBreadcrumbs";
 import { SetupNextBanner } from "@/components/dashboard/SetupNextBanner";
@@ -212,7 +212,7 @@ function DashboardShellInner({ children }: DashboardShellProps) {
     <DashboardBannersProvider onBanner={addBanner}>
       <TrialReminderUiProvider>
         {bannerPortal}
-        <TrialExpiredRedirect />
+        <PackageAccessGate />
         <TrialReminderDialog />
         <DashboardCommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
         {isTrialExpiredScreen ? (

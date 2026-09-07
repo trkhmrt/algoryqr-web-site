@@ -18,7 +18,7 @@ import {
   buildRegisterTrialUrl,
   resolveSafeReturnUrl,
 } from "@/lib/trial-flow";
-import { resolvePostAuthDashboardPath } from "@/lib/trial-expired-gate";
+import { resolvePostAuthDashboardPath } from "@/lib/access-session-gate";
 
 const Login = () => {
   const [email, setEmail] = useState("");

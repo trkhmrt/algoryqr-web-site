@@ -12,8 +12,8 @@ import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   invalidateDigitalMenuTrial,
   startTrialRequest,
+  useAccessSession,
   useEligibleTrialPackages,
-  useTrialStatus,
 } from "@/hooks/use-commerce";
 import { useSubscription } from "@/hooks/use-subscription";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
@@ -48,7 +48,7 @@ export default function TrialStartView() {
     return fromQuery || DEFAULT_TRIAL_PACKAGE;
   }, [searchParams]);
 
-  const trialStatus = useTrialStatus();
+  const trialStatus = useAccessSession();
   const subscription = useSubscription();
   const packagesQuery = useEligibleTrialPackages();
   const verification = searchParams.get("verification");
@@ -120,16 +120,16 @@ export default function TrialStartView() {
       return;
     }
 
-    const status = trialStatus.data?.status ?? "NOT_STARTED";
+    const decision = trialStatus.data?.decision;
 
-    if (status === "TRIAL_EXPIRED") {
+    if (decision === "REQUIRE_PURCHASE" || decision === "REQUIRE_PAYMENT") {
       handledRef.current = true;
-      router.replace(DASHBOARD_ROUTES.trialExpired);
+      router.replace(DASHBOARD_ROUTES.accountPackages);
       setPhase("blocked");
       return;
     }
 
-    if (status === "ACTIVE") {
+    if (decision === "ALLOW") {
       handledRef.current = true;
       notify("info", "Denemeniz devam ediyor.");
       window.setTimeout(() => router.replace(DASHBOARD_ROUTES.welcomeOnboarding), REDIRECT_DELAY_MS);
@@ -147,7 +147,7 @@ export default function TrialStartView() {
     emailVerified,
     router,
     subscription.isLoading,
-    trialStatus.data?.status,
+    trialStatus.data?.decision,
     trialStatus.isError,
     trialStatus.isLoading,
   ]);
@@ -161,16 +161,16 @@ export default function TrialStartView() {
       await invalidateDigitalMenuTrial(queryClient);
       notify(
         "info",
-        `${started.packageName ?? trialPackage?.name ?? "Ultimate"} denemeniz başlatıldı` +
-          (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
+        `${trialPackage?.name ?? "Ultimate"} denemeniz başlatıldı` +
+          (started?.endsAt ? ` · bitiş: ${formatPackageDate(started.endsAt)}` : "") +
           ".",
       );
       router.replace(DASHBOARD_ROUTES.welcomeOnboarding);
     } catch (error) {
       setPhase("confirm");
       const message = error instanceof ApiError ? error.message : "Deneme süresi başlatılamadı.";
-      if (/deneme hakki|deneme hakk/i.test(message)) {
-        router.replace(DASHBOARD_ROUTES.trialExpired);
+      if (/penceresi|deneme hakki|deneme hakk/i.test(message)) {
+        router.replace(DASHBOARD_ROUTES.accountPackages);
         return;
       }
       if (/ucretli paket|ücretli paket/i.test(message)) {

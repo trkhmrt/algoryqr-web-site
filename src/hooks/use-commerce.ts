@@ -5,18 +5,17 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import type {
   BillingAddress,
   BinInstallmentOption,
-  DigitalMenuTrialStatus,
   PaymentMethod,
 } from "@/lib/commerce";
-import { mapTrialStatus } from "@/lib/commerce";
+import type { AccessSession } from "@/lib/access-session-gate";
+import { parseAccessSession } from "@/lib/access-session-gate";
 import type { PlanPackageApiItem } from "@/lib/api";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 export const BILLING_ADDRESSES_QUERY_KEY = ["billingAddresses"] as const;
 export const PAYMENT_METHODS_QUERY_KEY = ["paymentMethods"] as const;
-export const DIGITAL_MENU_TRIAL_QUERY_KEY = ["digitalMenuTrial"] as const;
-export const TRIAL_STATUS_QUERY_KEY = ["trialStatus"] as const;
-export const ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY = ["eligibleTrialPackages"] as const;
+export const ACCESS_SESSION_QUERY_KEY = ["accessSession"] as const;
+export const ONBOARDING_PACKAGE_QUERY_KEY = ["onboardingPackage"] as const;
 
 function listFromPayload<TEntity>(payload: unknown, keys: string[]): TEntity[] {
   if (Array.isArray(payload)) return payload as TEntity[];
@@ -65,16 +64,12 @@ export function usePaymentMethods(options?: {
   });
 }
 
-export function useDigitalMenuTrialStatus() {
-  return useTrialStatus();
-}
-
-export function useTrialStatus(enabled = true) {
+export function useAccessSession(enabled = true) {
   return useQuery({
-    queryKey: TRIAL_STATUS_QUERY_KEY,
+    queryKey: ACCESS_SESSION_QUERY_KEY,
     queryFn: async () => {
-      const response = await getSiteSameOriginAxios().get("/trials/status");
-      return mapTrialStatus(response.data) satisfies DigitalMenuTrialStatus;
+      const response = await getSiteSameOriginAxios().get("/access/session");
+      return parseAccessSession(response.data) satisfies AccessSession | null;
     },
     enabled,
     staleTime: 15_000,
@@ -84,10 +79,11 @@ export function useTrialStatus(enabled = true) {
 
 export function useEligibleTrialPackages(enabled = true) {
   return useQuery({
-    queryKey: ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY,
+    queryKey: ONBOARDING_PACKAGE_QUERY_KEY,
     queryFn: async () => {
-      const response = await getSiteSameOriginAxios().get("/trials/eligible-packages");
-      return (Array.isArray(response.data) ? response.data : []) as PlanPackageApiItem[];
+      const response = await getSiteSameOriginAxios().get("/onboarding/package");
+      const pkg = response.data as PlanPackageApiItem;
+      return pkg ? [pkg] : [];
     },
     enabled,
     staleTime: 30_000,
@@ -95,9 +91,9 @@ export function useEligibleTrialPackages(enabled = true) {
   });
 }
 
-export async function startTrialRequest(packageId: number) {
-  const response = await getSiteSameOriginAxios().post("/trials", { packageId });
-  return mapTrialStatus(response.data);
+export async function startTrialRequest(packageId?: number) {
+  const response = await getSiteSameOriginAxios().post("/onboarding/package", { packageId });
+  return parseAccessSession(response.data);
 }
 
 export function useInstallmentOptions(bin: string, amount: number | string | null | undefined, enabled: boolean) {
@@ -136,8 +132,7 @@ export function invalidatePaymentMethods(queryClient: QueryClient) {
 
 export function invalidateDigitalMenuTrial(queryClient: QueryClient) {
   return Promise.all([
-    queryClient.invalidateQueries({ queryKey: DIGITAL_MENU_TRIAL_QUERY_KEY }),
-    queryClient.invalidateQueries({ queryKey: TRIAL_STATUS_QUERY_KEY }),
-    queryClient.invalidateQueries({ queryKey: ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: ACCESS_SESSION_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: ONBOARDING_PACKAGE_QUERY_KEY }),
   ]);
 }

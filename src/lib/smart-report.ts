@@ -315,7 +315,7 @@ export async function createSmartReportRequest(body: {
 }): Promise<SmartReportAccepted> {
   if (body.branchId != null) {
     const response = await api.post<SmartReportAccepted>(
-      `/analytics/branch/${body.branchId}/smart-reports`,
+      `/features/SMART_REPORTING/analytics/branch/${body.branchId}/smart-reports`,
       {
         from: body.from,
         to: body.to,

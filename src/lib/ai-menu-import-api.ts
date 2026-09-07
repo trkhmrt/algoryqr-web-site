@@ -19,7 +19,7 @@ export type AiMenuImportJob = {
 };
 
 export async function createAiMenuImportJob(menuId: number, imageUrls: string[]) {
-  const { data } = await api.post<AiMenuImportJobAccepted>(`/menus/${menuId}/ai-import/jobs`, {
+  const { data } = await api.post<AiMenuImportJobAccepted>(`/features/AI_MENU_IMPORT/menus/${menuId}/ai-import/jobs`, {
     imageUrls,
   });
   return data;
