@@ -103,6 +103,11 @@ export default function SmartReportDetailView({ jobId }: Props) {
     if (!result || !markdown) return;
     setPdfLoading(true);
     try {
+      const remoteUrl = detail?.pdfUrl?.trim();
+      if (remoteUrl) {
+        window.open(remoteUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
       await downloadSmartReportPdf({
         title: result.title || (detail ? smartReportTitle(detail) : "Akilli Rapor"),
         markdown,

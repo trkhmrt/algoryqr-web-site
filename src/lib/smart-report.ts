@@ -35,6 +35,7 @@ export type SmartReportJobResponse = {
   status: SmartReportJobStatus;
   result?: SmartReportResult | null;
   resultText?: string | null;
+  pdfUrl?: string | null;
   errorCode?: string | null;
   errorMessage?: string | null;
   createdAt?: string | null;

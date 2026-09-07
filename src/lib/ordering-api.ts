@@ -65,6 +65,7 @@ export type OrderResponse = {
   waiterName?: string | null;
   waiterNote?: string | null;
   billId?: number | null;
+  tipAmount?: number | string | null;
   commissionAmount?: number | string | null;
   items?: OrderItemResponse[];
   submittedAt?: string | null;
@@ -337,6 +338,22 @@ export async function listMerchantOrders(
     throw new OrderingApiError(response.status, message);
   }
   return Array.isArray(data) ? data : [];
+}
+
+export async function getMerchantOrder(
+  menuId: number,
+  orderId: number,
+): Promise<OrderResponse> {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/orders/${orderId}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<OrderResponse & { message?: string }>(response);
+  if (!response.ok) {
+    throw new OrderingApiError(response.status, data.message || "Sipariş alınamadı");
+  }
+  return data;
 }
 
 export async function cancelMerchantOrder(

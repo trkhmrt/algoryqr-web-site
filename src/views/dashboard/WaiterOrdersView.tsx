@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 
 import {
   DigitalMenuPicker,
@@ -15,32 +16,35 @@ import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter, openQueueDateRange } from "@/components/ui/date-range-filter";
 import { Input } from "@/components/ui/input";
-import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useListQueryState } from "@/hooks/use-list-query-state";
+import { formatMenuPrice } from "@/components/menu-templates/types";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { DASHBOARD_LIST_ITEM } from "@/lib/dashboard-surface";
 import {
-  cancelMerchantOrder,
+  DASHBOARD_FILTER_FIELD,
+  DASHBOARD_FILTER_LABEL,
+  DASHBOARD_STAT_TILE,
+  DASHBOARD_SURFACE,
+} from "@/lib/dashboard-surface";
+import {
   listMerchantOrders,
   OrderingApiError,
   type OrderResponse,
   type OrderStatus,
 } from "@/lib/ordering-api";
-import { formatMenuPrice } from "@/components/menu-templates/types";
 import { cn } from "@/lib/utils";
 
 function formatWhen(value?: string | null): string {
@@ -91,98 +95,62 @@ function statusLabel(status: OrderStatus): string {
   }
 }
 
-function canCancelOrder(status: OrderStatus): boolean {
+function amountNumber(value?: number | string | null): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function countsTowardRevenue(status: OrderStatus): boolean {
   return status === "CONFIRMED" || status === "SUBMITTED";
 }
 
-function OrderCard({
-  order,
-  busy,
-  onCancel,
-}: {
-  order: OrderResponse;
-  busy: boolean;
-  onCancel: () => void;
-}) {
-  const cancelled = order.status === "CANCELLED";
+function itemSummary(order: OrderResponse): string {
+  const items = order.items ?? [];
+  if (items.length === 0) return "—";
+  const first = items[0];
+  const label = `${first.quantity}× ${first.productName || `#${first.productId}`}`;
+  if (items.length === 1) return label;
+  return `${label} +${items.length - 1}`;
+}
 
-  return (
-    <article className={cn(DASHBOARD_LIST_ITEM, cancelled && "opacity-80")}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold">{order.tableName || "Masa"}</h2>
-            <span
-              className={cn(
-                "rounded-md px-2 py-0.5 text-xs font-medium",
-                cancelled
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-muted text-muted-foreground",
-              )}
-            >
-              {statusLabel(order.status)}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {orderCustomerName(order)} · #{order.id} · {formatWhen(order.submittedAt || order.createdAt)}
-          </p>
-          {order.waiterName ? (
-            <p className="text-xs text-muted-foreground">Garson: {order.waiterName}</p>
-          ) : null}
-        </div>
-        <p className="text-base font-semibold">
-          {formatMenuPrice(order.totalAmount ?? undefined, order.currency || "TRY")}
-        </p>
-      </div>
+function tipAmountByOrderId(orders: OrderResponse[]): Map<number, number> {
+  const seenBillIds = new Set<number>();
+  const tips = new Map<number, number>();
 
-      <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
-        {(order.items ?? []).map((item) => (
-          <li key={`${order.id}-${item.id ?? item.productId}`} className="text-sm">
-            <span className="font-medium">{item.quantity}×</span>{" "}
-            {item.productName || `#${item.productId}`}
-            {item.selectedOptions?.length ? (
-              <span className="block text-xs text-muted-foreground">
-                {item.selectedOptions
-                  .map((option) => option.optionName)
-                  .filter(Boolean)
-                  .join(", ")}
-              </span>
-            ) : null}
-            {item.note ? (
-              <span className="block text-xs text-muted-foreground">Not: {item.note}</span>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+  for (const order of orders) {
+    const tip = amountNumber(order.tipAmount);
+    if (tip <= 0) continue;
+    if (order.billId != null) {
+      if (seenBillIds.has(order.billId)) continue;
+      seenBillIds.add(order.billId);
+    }
+    tips.set(order.id, tip);
+  }
+  return tips;
+}
 
-      {order.note ? (
-        <p className="mt-2 rounded-md bg-muted/50 px-2 py-1.5 text-sm text-muted-foreground">
-          Sipariş notu: {order.note}
-        </p>
-      ) : null}
+function sumOrderRevenue(orders: OrderResponse[], includeTips: boolean): number {
+  let total = 0;
+  const revenueOrders: OrderResponse[] = [];
+  for (const order of orders) {
+    if (!countsTowardRevenue(order.status)) continue;
+    total += amountNumber(order.totalAmount);
+    revenueOrders.push(order);
+  }
+  if (!includeTips) return total;
+  for (const tip of tipAmountByOrderId(revenueOrders).values()) {
+    total += tip;
+  }
+  return total;
+}
 
-      {order.waiterNote ? (
-        <p className="mt-2 rounded-md bg-muted/50 px-2 py-1.5 text-sm text-muted-foreground">
-          Garson notu: {order.waiterNote}
-        </p>
-      ) : null}
-
-      {canCancelOrder(order.status) ? (
-        <div className="mt-4">
-          <Button
-            type="button"
-            size="lg"
-            variant="outline"
-            className="h-12 w-full text-base"
-            disabled={busy}
-            onClick={onCancel}
-          >
-            İptal et
-          </Button>
-        </div>
-      ) : null}
-    </article>
-  );
+function sumTipRevenue(orders: OrderResponse[]): number {
+  const revenueOrders = orders.filter((order) => countsTowardRevenue(order.status));
+  let total = 0;
+  for (const tip of tipAmountByOrderId(revenueOrders).values()) {
+    total += tip;
+  }
+  return total;
 }
 
 export default function WaiterOrdersView() {
@@ -190,14 +158,12 @@ export default function WaiterOrdersView() {
   const { searchParams, setQuery } = useListQueryState();
   const qrFromQuery = Number(searchParams.get("qr"));
   const initialQrId = Number.isFinite(qrFromQuery) && qrFromQuery > 0 ? qrFromQuery : null;
-  const { notify } = useDashboardBanners();
-  const queryClient = useQueryClient();
   const [range, setRange] = useState(() => ({
     from: searchParams.get("from") ?? "",
     to: searchParams.get("to") ?? "",
   }));
   const [customerQuery, setCustomerQuery] = useState(() => searchParams.get("q") ?? "");
-  const [pendingCancelId, setPendingCancelId] = useState<number | null>(null);
+  const [includeTips, setIncludeTips] = useState(() => searchParams.get("tips") === "1");
   const debouncedCustomer = useDebouncedValue(customerQuery);
 
   const { accessLoading: waiterAccessLoading, canUseWaiterPanel } = useWaiterPanelAccess();
@@ -209,6 +175,7 @@ export default function WaiterOrdersView() {
   );
 
   const menuId = selection?.menu.menuId ?? null;
+  const qrId = selection?.qr.id ?? null;
 
   const ordersQuery = useQuery({
     queryKey: ["menu-orders", menuId],
@@ -235,16 +202,14 @@ export default function WaiterOrdersView() {
     });
   }, [debouncedCustomer, ordersQuery.data, range.from, range.to]);
 
-  const cancelMutation = useMutation({
-    mutationFn: (orderId: number) => cancelMerchantOrder(menuId!, orderId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["menu-orders", menuId] });
-      notify("info", "Sipariş iptal edildi.");
-    },
-    onError: (err) => {
-      notify("danger", err instanceof OrderingApiError ? err.message : "İptal başarısız.");
-    },
-  });
+  const revenueTotal = useMemo(
+    () => sumOrderRevenue(filteredOrders, false),
+    [filteredOrders],
+  );
+
+  const tipTotal = useMemo(() => sumTipRevenue(filteredOrders), [filteredOrders]);
+
+  const currency = filteredOrders[0]?.currency || ordersQuery.data?.[0]?.currency || "TRY";
 
   if (accessLoading || loading) {
     return (
@@ -261,7 +226,7 @@ export default function WaiterOrdersView() {
     <div className="space-y-6 animate-fade-in pb-8">
       <DashboardPageHeader
         title="Sipariş Yönetimi"
-        hint="Verilen siparişler — detay ve iptal"
+        hint="Verilen siparişler — tablo ve detay"
         action={
           <Button asChild variant="outline">
             <a href={DASHBOARD_ROUTES.waiterPanel} target="_blank" rel="noopener noreferrer">
@@ -275,9 +240,9 @@ export default function WaiterOrdersView() {
         <DigitalMenuPicker
           menuQrs={menuQrs}
           selectedQrId={selection?.qr.id ?? null}
-          onSelectQrId={(qrId) => {
-            void selectQrId(qrId);
-            router.replace(DASHBOARD_ROUTES.waiterForQr(qrId), { scroll: false });
+          onSelectQrId={(nextQrId) => {
+            void selectQrId(nextQrId);
+            router.replace(DASHBOARD_ROUTES.waiterForQr(nextQrId), { scroll: false });
           }}
         />
       </DashboardFilterBar>
@@ -299,17 +264,37 @@ export default function WaiterOrdersView() {
               setQuery({ from: next.from || null, to: next.to || null });
             }}
           />
-          <Input
-            className="min-w-[12rem] flex-1"
-            value={customerQuery}
-            onChange={(event) => {
-              const next = event.target.value;
-              setCustomerQuery(next);
-              setQuery({ q: next.trim() || null });
-            }}
-            placeholder="Müşteri veya garson"
-            aria-label="Müşteri veya garson ile filtrele"
-          />
+          <div className={cn(DASHBOARD_FILTER_FIELD, "min-w-[12rem] flex-1 sm:max-w-xs")}>
+            <Label htmlFor="orders-customer-filter" className={DASHBOARD_FILTER_LABEL}>
+              Ara
+            </Label>
+            <Input
+              id="orders-customer-filter"
+              value={customerQuery}
+              onChange={(event) => {
+                const next = event.target.value;
+                setCustomerQuery(next);
+                setQuery({ q: next.trim() || null });
+              }}
+              placeholder="Müşteri veya garson"
+            />
+          </div>
+          <div className={cn(DASHBOARD_FILTER_FIELD, "min-w-[12rem]")}>
+            <Label htmlFor="include-tips" className={DASHBOARD_FILTER_LABEL}>
+              Bahşiş
+            </Label>
+            <div className="flex h-10 items-center justify-between gap-3 rounded-md border border-input bg-background px-3">
+              <span className="text-sm text-foreground">Bahşişleri dahil et</span>
+              <Switch
+                id="include-tips"
+                checked={includeTips}
+                onCheckedChange={(checked) => {
+                  setIncludeTips(checked);
+                  setQuery({ tips: checked ? "1" : null });
+                }}
+              />
+            </div>
+          </div>
         </DashboardFilterBar>
       ) : null}
 
@@ -348,7 +333,8 @@ export default function WaiterOrdersView() {
                 const next = openQueueDateRange();
                 setRange(next);
                 setCustomerQuery("");
-                setQuery({ from: null, to: null, q: null });
+                setIncludeTips(false);
+                setQuery({ from: null, to: null, q: null, tips: null });
               }}
             >
               Filtreleri temizle
@@ -356,44 +342,118 @@ export default function WaiterOrdersView() {
           }
         />
       ) : (
-        <div className="space-y-3">
-          {filteredOrders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              busy={cancelMutation.isPending}
-              onCancel={() => setPendingCancelId(order.id)}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-stretch gap-3">
+            <div className={cn(DASHBOARD_STAT_TILE, "w-fit min-w-[10.5rem] shrink-0")}>
+              <p className="text-xs text-muted-foreground">Siparişlerden kazanılan toplam</p>
+              <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+                {formatMenuPrice(revenueTotal, currency)}
+              </p>
+            </div>
+            <AnimatePresence initial={false}>
+              {includeTips ? (
+                <motion.div
+                  key="tip-card"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className={cn(DASHBOARD_STAT_TILE, "w-fit min-w-[8.5rem] shrink-0")}
+                >
+                  <p className="text-xs text-muted-foreground">Bahşiş</p>
+                  <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+                    {formatMenuPrice(tipTotal, currency)}
+                  </p>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+
+          <div className={`${DASHBOARD_SURFACE} overflow-hidden`}>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="h-10">Masa</TableHead>
+                  <TableHead className="h-10">Durum</TableHead>
+                  <TableHead className="h-10">Müşteri</TableHead>
+                  <TableHead className="h-10">No</TableHead>
+                  <TableHead className="h-10">Tarih</TableHead>
+                  <TableHead className="h-10">Ürünler</TableHead>
+                  <TableHead className="h-10 text-right">Tutar</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.map((order) => {
+                  const href = DASHBOARD_ROUTES.waiterOrderDetail(order.id, qrId);
+                  const tip = amountNumber(order.tipAmount);
+                  return (
+                    <TableRow
+                      key={order.id}
+                      className={cn("cursor-pointer", order.status === "CANCELLED" && "opacity-70")}
+                      onClick={() => router.push(href)}
+                    >
+                      <TableCell className="py-3 font-medium">{order.tableName || "Masa"}</TableCell>
+                      <TableCell className="py-3">
+                        <span
+                          className={cn(
+                            "rounded-md px-2 py-0.5 text-xs font-medium",
+                            order.status === "CANCELLED"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {statusLabel(order.status)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3 text-muted-foreground">
+                        {orderCustomerName(order)}
+                      </TableCell>
+                      <TableCell className="py-3 text-muted-foreground">#{order.id}</TableCell>
+                      <TableCell className="py-3 text-muted-foreground">
+                        {formatWhen(order.submittedAt || order.createdAt)}
+                      </TableCell>
+                      <TableCell className="max-w-[14rem] truncate py-3 text-muted-foreground">
+                        {itemSummary(order)}
+                      </TableCell>
+                      <TableCell className="py-3 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="font-medium tabular-nums">
+                            {formatMenuPrice(
+                              order.totalAmount ?? undefined,
+                              order.currency || "TRY",
+                            )}
+                          </span>
+                          <AnimatePresence initial={false}>
+                            {includeTips ? (
+                              <motion.span
+                                key={`tip-${order.id}`}
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.2 }}
+                                className={cn(
+                                  "inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
+                                  tip > 0
+                                    ? "bg-orange-500/15 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300"
+                                    : "bg-orange-500/10 text-orange-600/70 dark:bg-orange-400/10 dark:text-orange-300/70",
+                                )}
+                              >
+                                {tip > 0
+                                  ? `+${formatMenuPrice(tip, order.currency || "TRY")} bahşiş`
+                                  : "Bahşiş yok"}
+                              </motion.span>
+                            ) : null}
+                          </AnimatePresence>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
-
-      <AlertDialog
-        open={pendingCancelId != null}
-        onOpenChange={(open) => !open && setPendingCancelId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Siparişi iptal et?</AlertDialogTitle>
-            <AlertDialogDescription>
-              İptal edilen sipariş listede İptal edildi olarak görünür. Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (pendingCancelId == null) return;
-                cancelMutation.mutate(pendingCancelId);
-                setPendingCancelId(null);
-              }}
-            >
-              İptal et
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

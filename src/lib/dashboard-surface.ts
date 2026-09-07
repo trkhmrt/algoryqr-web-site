@@ -18,7 +18,11 @@ export const DASHBOARD_LIST_ITEM =
   `${DASHBOARD_SURFACE} p-4 transition-colors hover:bg-muted/50`;
 
 export const DASHBOARD_FILTER_BAR =
-  `${DASHBOARD_SURFACE} flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:p-5`;
+  `${DASHBOARD_SURFACE} flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-4 sm:gap-y-3 sm:p-5`;
+
+export const DASHBOARD_FILTER_FIELD = "flex min-w-0 flex-col gap-2";
+
+export const DASHBOARD_FILTER_LABEL = "text-xs leading-4 text-muted-foreground";
 
 export const DASHBOARD_STAT_TILE =
   `${DASHBOARD_SURFACE} p-3 text-left transition-colors hover:bg-muted/50`;

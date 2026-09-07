@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Megaphone } from "lucide-react";
 
 import type { ActiveCampaign } from "@/lib/public-campaign-api";
 import { cn } from "@/lib/utils";
 
+import { CampaignDetailDialog } from "./CampaignDetailDialog";
 import { useActiveCampaigns } from "./campaign-product-context";
 
 type MenuCampaignRailProps = {
@@ -16,14 +17,18 @@ type MenuCampaignRailProps = {
 function CampaignCard({
   campaign,
   className,
+  onOpen,
 }: {
   campaign: ActiveCampaign;
   className?: string;
+  onOpen: () => void;
 }) {
   return (
-    <article
+    <button
+      type="button"
+      onClick={onOpen}
       className={cn(
-        "relative w-full shrink-0 snap-center overflow-hidden rounded-2xl border border-black/10 bg-black/5",
+        "relative w-full shrink-0 snap-center overflow-hidden rounded-2xl border border-black/10 bg-black/5 text-left transition hover:border-black/20",
         className,
       )}
     >
@@ -41,6 +46,9 @@ function CampaignCard({
             {campaign.slogan ? (
               <p className="mt-1 line-clamp-2 text-xs text-white/85">{campaign.slogan}</p>
             ) : null}
+            <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-white/70">
+              Detaylar
+            </p>
           </div>
         </div>
       ) : (
@@ -56,23 +64,42 @@ function CampaignCard({
             {campaign.slogan ? (
               <p className="mt-1 line-clamp-2 text-xs opacity-70">{campaign.slogan}</p>
             ) : null}
+            <p className="mt-2 text-[10px] font-medium uppercase tracking-wide opacity-50">
+              Detaylar
+            </p>
           </div>
         </div>
       )}
-    </article>
+    </button>
   );
 }
 
 export function MenuCampaignRail({ className, cardClassName }: MenuCampaignRailProps) {
   const campaigns = useActiveCampaigns();
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<ActiveCampaign | null>(null);
 
   if (campaigns.length === 0) return null;
+
+  const dialog = (
+    <CampaignDetailDialog
+      campaign={selected}
+      open={selected != null}
+      onOpenChange={(open) => {
+        if (!open) setSelected(null);
+      }}
+    />
+  );
 
   if (campaigns.length === 1) {
     return (
       <div className={cn("w-full", className)}>
-        <CampaignCard campaign={campaigns[0]} className={cardClassName} />
+        <CampaignCard
+          campaign={campaigns[0]}
+          className={cardClassName}
+          onOpen={() => setSelected(campaigns[0])}
+        />
+        {dialog}
       </div>
     );
   }
@@ -108,10 +135,15 @@ export function MenuCampaignRail({ className, cardClassName }: MenuCampaignRailP
       >
         {campaigns.map((campaign) => (
           <div key={campaign.id} className="w-[min(100%,22rem)] shrink-0 snap-center sm:w-[min(100%,26rem)]">
-            <CampaignCard campaign={campaign} className={cardClassName} />
+            <CampaignCard
+              campaign={campaign}
+              className={cardClassName}
+              onOpen={() => setSelected(campaign)}
+            />
           </div>
         ))}
       </div>
+      {dialog}
     </div>
   );
 }

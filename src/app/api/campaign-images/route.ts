@@ -9,6 +9,7 @@ import { readAccessTokenFromCookies } from "@/lib/server/auth-cookies";
 const bodySchema = z.object({
   name: z.string().trim().min(1).max(120),
   slogan: z.string().trim().max(255).optional(),
+  brief: z.string().trim().max(1000).optional(),
   productNames: z.array(z.string().trim().min(1)).max(8).default([]),
   productImageUrls: z.array(z.string().trim().min(1).max(2048)).max(4).default([]),
 });
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
       {
         name: parsed.data.name,
         slogan: parsed.data.slogan,
+        brief: parsed.data.brief,
         productNames: parsed.data.productNames,
         productImageUrls: parsed.data.productImageUrls,
       },

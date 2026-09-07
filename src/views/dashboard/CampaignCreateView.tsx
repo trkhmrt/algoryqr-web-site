@@ -17,8 +17,11 @@ import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader"
 import { SearchableMultiSelect } from "@/components/dashboard/menu/SearchableMultiSelect";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput, parseMoneyInput } from "@/components/ui/money-input";
+import { Textarea } from "@/components/ui/textarea";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useMenuProducts } from "@/hooks/use-menu-products";
 import {
@@ -59,6 +62,7 @@ export default function CampaignCreateView() {
   const [templateCode, setTemplateCode] = useState<string>("");
   const [name, setName] = useState("");
   const [slogan, setSlogan] = useState("");
+  const [terms, setTerms] = useState("");
   const [startsAt, setStartsAt] = useState(toLocalDateTimeValue(new Date()));
   const [endsAt, setEndsAt] = useState(
     toLocalDateTimeValue(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
@@ -128,7 +132,7 @@ export default function CampaignCreateView() {
       const config =
         templateCode === "SPEND_THRESHOLD"
           ? {
-              thresholdAmount: Number(thresholdAmount),
+              thresholdAmount: parseMoneyInput(thresholdAmount),
               period,
               scope: { type: "ALL" },
               reward: {
@@ -154,6 +158,7 @@ export default function CampaignCreateView() {
         templateCode,
         name: name.trim(),
         slogan: slogan.trim() || undefined,
+        terms: terms.trim() || undefined,
         imageUrl: imageUrl || undefined,
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
@@ -284,24 +289,27 @@ export default function CampaignCreateView() {
                 placeholder="5 kahve al, 1 bedava"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="campaign-terms">Şartlar / koşullar (isteğe bağlı)</Label>
+              <Textarea
+                id="campaign-terms"
+                value={terms}
+                onChange={(e) => setTerms(e.target.value.slice(0, 2000))}
+                rows={4}
+                placeholder="Örn. Aynı gün içinde geçerlidir. Diğer kampanyalarla birleştirilemez. Stokla sınırlıdır."
+              />
+              <p className="text-xs text-muted-foreground">
+                Müşteri kampanyaya tıkladığında bu metin gösterilir. {terms.trim().length}/2000
+              </p>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="starts-at">Başlangıç</Label>
-                <Input
-                  id="starts-at"
-                  type="datetime-local"
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                />
+                <Label>Başlangıç</Label>
+                <DateTimePicker value={startsAt} onChange={setStartsAt} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="ends-at">Bitiş</Label>
-                <Input
-                  id="ends-at"
-                  type="datetime-local"
-                  value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                />
+                <Label>Bitiş</Label>
+                <DateTimePicker value={endsAt} onChange={setEndsAt} />
               </div>
             </div>
           </div>
@@ -350,12 +358,11 @@ export default function CampaignCreateView() {
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor="threshold-amount">Eşik tutar (TL)</Label>
-                  <Input
+                  <MoneyInput
                     id="threshold-amount"
-                    type="number"
-                    min={1}
                     value={thresholdAmount}
-                    onChange={(e) => setThresholdAmount(e.target.value)}
+                    onChange={setThresholdAmount}
+                    placeholder="500"
                   />
                 </div>
                 <div className="space-y-1.5">

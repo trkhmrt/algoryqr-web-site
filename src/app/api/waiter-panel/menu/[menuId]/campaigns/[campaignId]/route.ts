@@ -23,3 +23,15 @@ export async function PUT(
     "PUT",
   );
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ menuId: string; campaignId: string }> },
+) {
+  const { menuId, campaignId } = await context.params;
+  return proxyAuthenticatedRequest(
+    request,
+    `/waiter-panel/menu/${menuId}/campaigns/${campaignId}`,
+    "DELETE",
+  );
+}

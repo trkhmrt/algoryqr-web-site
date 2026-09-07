@@ -80,6 +80,10 @@ export const DASHBOARD_ROUTES = {
   waiter: "/dashboard/garson",
   waiterForQr: (qrId: number | string) =>
     `/dashboard/garson?qr=${qrId}`,
+  waiterOrderDetail: (orderId: number | string, qrId?: number | string | null) =>
+    qrId != null && qrId !== ""
+      ? `/dashboard/garson/${orderId}?qr=${qrId}`
+      : `/dashboard/garson/${orderId}`,
   menuUsers: "/dashboard/kullanicilar",
   menuUsersForBranch: (branchId: number | string) =>
     `/dashboard/kullanicilar?branch=${branchId}`,
@@ -327,6 +331,10 @@ export function buildDashboardBreadcrumbs(
     }
     if (pathname === DASHBOARD_ROUTES.waiter) {
       crumbs[crumbs.length - 1] = { label: "Sipariş Yönetimi" };
+      return crumbs;
+    }
+    if (pathname.startsWith(`${DASHBOARD_ROUTES.waiter}/`)) {
+      crumbs.push({ label: currentLabel ?? "Sipariş Detayı" });
       return crumbs;
     }
     return crumbs;

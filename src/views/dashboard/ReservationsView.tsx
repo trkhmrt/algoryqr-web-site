@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
@@ -200,11 +201,10 @@ function ReservationsPanel() {
         {item.status !== "CANCELED" ? (
           editingId === item.id ? (
             <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="datetime-local"
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              <DateTimePicker
+                className="h-9 w-auto min-w-[12rem]"
                 value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
+                onChange={setEditValue}
               />
               <Button
                 size="sm"
@@ -400,8 +400,8 @@ function ReservationsPanel() {
                 setQuery({ from: next.from || null, to: next.to || null });
               }}
             />
-            <div className="min-w-[200px] flex-1 space-y-1.5">
-              <label className="text-xs text-muted-foreground">Ara (ad / e-posta)</label>
+            <div className="flex min-w-[200px] flex-1 flex-col gap-2">
+              <label className="text-xs leading-4 text-muted-foreground">Ara (ad / e-posta)</label>
               <Input
                 value={q}
                 placeholder="Müşteri adı veya e-posta"
