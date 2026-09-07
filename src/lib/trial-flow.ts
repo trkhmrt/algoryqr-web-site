@@ -3,13 +3,19 @@ import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 export const TRIAL_INTENT = "trial";
 export const TRIAL_PACKAGE_PARAM = "package";
-export const DEFAULT_TRIAL_PACKAGE = "ultimate";
+export const DEFAULT_TRIAL_PACKAGE = "ultimate-trial";
 export const TRIAL_SESSION_KEY = "algory_trial_intent";
+export const TRIAL_DAYS = 15;
 
 export function normalizeTrialPackageCode(code?: string | null): string {
-  const normalized = (code ?? DEFAULT_TRIAL_PACKAGE).trim().toLowerCase();
-  if (normalized === "ultimate" || normalized === "ultimate_package") {
-    return "ULTIMATE_PACKAGE";
+  const normalized = (code ?? DEFAULT_TRIAL_PACKAGE).trim().toLowerCase().replace(/-/g, "_");
+  if (
+    normalized === "ultimate_trial" ||
+    normalized === "ultimate_trial_package" ||
+    normalized === "ultimate" ||
+    normalized === "ultimate_package"
+  ) {
+    return "ULTIMATE_TRIAL_PACKAGE";
   }
   return normalized.toUpperCase();
 }

@@ -13,6 +13,7 @@ export type PackageCode =
   | "STARTER_PACKAGE"
   | "PRO_PACKAGE"
   | "ULTIMATE_PACKAGE"
+  | "ULTIMATE_TRIAL_PACKAGE"
   | "CORPORATE_PACKAGE";
 
 export type ProductCode =
@@ -86,6 +87,7 @@ const PACKAGE_CODES = new Set<string>([
   "STARTER_PACKAGE",
   "PRO_PACKAGE",
   "ULTIMATE_PACKAGE",
+  "ULTIMATE_TRIAL_PACKAGE",
   "CORPORATE_PACKAGE",
 ]);
 

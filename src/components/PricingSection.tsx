@@ -96,7 +96,7 @@ function BillingPeriodSwitch({
 
 function packageCtaHref(pkg: PlanPackageApiItem, isLoggedIn: boolean): string {
   if (pkg.code === "ULTIMATE_PACKAGE") {
-    return isLoggedIn ? buildTrialStartUrl("ultimate") : buildRegisterTrialUrl("ultimate");
+    return isLoggedIn ? buildTrialStartUrl() : buildRegisterTrialUrl();
   }
   if (!isLoggedIn) {
     return "/register";
@@ -121,7 +121,7 @@ function isTrialPackage(pkg: PlanPackageApiItem): boolean {
 
 function packageCtaLabel(pkg: PlanPackageApiItem): string {
   if (isTrialPackage(pkg)) {
-    return "30 gün ücretsiz dene";
+    return "15 gün ücretsiz dene";
   }
   if (pkg.code === "FREE_PACKAGE" || Number(pkg.price) === 0) {
     return "Ücretsiz Başla";

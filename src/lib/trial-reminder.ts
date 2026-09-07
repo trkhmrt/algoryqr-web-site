@@ -1,7 +1,7 @@
 import type { PurchaseApiItem } from "@/lib/api";
 import { isDateUsablePurchase } from "@/lib/product-access";
 
-export const TRIAL_REMINDER_DAYS_THRESHOLD = 3;
+export const TRIAL_REMINDER_AUTO_OPEN_DAYS = 3;
 
 const DISMISS_KEY_PREFIX = "algory-trial-reminder-dismissed";
 
@@ -21,7 +21,7 @@ export function getTrialReminderInfo(
 
   const days = activePurchase.daysUntilExpiry;
   if (typeof days !== "number" || !Number.isFinite(days)) return null;
-  if (days < 0 || days > TRIAL_REMINDER_DAYS_THRESHOLD) return null;
+  if (days < 0) return null;
 
   return {
     purchaseId: activePurchase.id,
@@ -29,6 +29,10 @@ export function getTrialReminderInfo(
     daysUntilExpiry: days,
     expiresAt: activePurchase.expiresAt,
   };
+}
+
+export function shouldAutoOpenTrialReminder(info: TrialReminderInfo): boolean {
+  return info.daysUntilExpiry <= TRIAL_REMINDER_AUTO_OPEN_DAYS;
 }
 
 export function getTrialReminderDismissKey(info: TrialReminderInfo): string {

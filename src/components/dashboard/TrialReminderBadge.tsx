@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { Clock3 } from "lucide-react";
 
-import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatDaysUntilExpiry } from "@/lib/package-display";
 import type { TrialReminderInfo } from "@/lib/trial-reminder";
+import { useTrialReminderUi } from "@/contexts/trial-reminder-ui";
 import { cn } from "@/lib/utils";
 
 interface TrialReminderBadgeProps {
@@ -14,9 +13,12 @@ interface TrialReminderBadgeProps {
 }
 
 export default function TrialReminderBadge({ info, compact = false }: TrialReminderBadgeProps) {
+  const { openDialog } = useTrialReminderUi();
+
   return (
-    <Link
-      href={DASHBOARD_ROUTES.accountPackages}
+    <button
+      type="button"
+      onClick={openDialog}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/15 dark:text-amber-400",
         compact && "max-w-[9.5rem] sm:max-w-none",
@@ -29,6 +31,6 @@ export default function TrialReminderBadge({ info, compact = false }: TrialRemin
           ? formatDaysUntilExpiry(info.daysUntilExpiry)
           : `Deneme · ${formatDaysUntilExpiry(info.daysUntilExpiry)}`}
       </span>
-    </Link>
+    </button>
   );
 }

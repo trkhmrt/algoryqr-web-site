@@ -9,6 +9,7 @@ import type {
   PaymentMethod,
 } from "@/lib/commerce";
 import { mapTrialStatus } from "@/lib/commerce";
+import type { PlanPackageApiItem } from "@/lib/api";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 
 export const BILLING_ADDRESSES_QUERY_KEY = ["billingAddresses"] as const;
@@ -86,7 +87,7 @@ export function useEligibleTrialPackages(enabled = true) {
     queryKey: ELIGIBLE_TRIAL_PACKAGES_QUERY_KEY,
     queryFn: async () => {
       const response = await getSiteSameOriginAxios().get("/trials/eligible-packages");
-      return Array.isArray(response.data) ? response.data : [];
+      return (Array.isArray(response.data) ? response.data : []) as PlanPackageApiItem[];
     },
     enabled,
     staleTime: 30_000,

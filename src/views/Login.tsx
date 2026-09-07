@@ -18,6 +18,7 @@ import {
   buildRegisterTrialUrl,
   resolveSafeReturnUrl,
 } from "@/lib/trial-flow";
+import { resolvePostAuthDashboardPath } from "@/lib/trial-expired-gate";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -37,11 +38,12 @@ const Login = () => {
   );
   const googleAuthHref = buildGoogleAuthStartUrl("login", returnPath);
   const registerHref = returnPath?.includes("/deneme/baslat")
-    ? buildRegisterTrialUrl("ultimate")
+    ? buildRegisterTrialUrl()
     : "/register";
 
-  const redirectAfterAuth = () => {
-    router.push(returnPath ?? "/dashboard");
+  const redirectAfterAuth = async () => {
+    const path = await resolvePostAuthDashboardPath(returnPath);
+    router.push(path);
     router.refresh();
   };
 
@@ -82,7 +84,7 @@ const Login = () => {
       }
       queryClient.removeQueries({ queryKey: MY_PROFILE_QUERY_KEY });
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
-      redirectAfterAuth();
+      await redirectAfterAuth();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Giriş yapılırken bir hata oluştu";
       toast({ title: "Hata", description: message, variant: "destructive" });
@@ -106,7 +108,7 @@ const Login = () => {
       setTotpCode("");
       setTwoFactorHintEmail(null);
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
-      redirectAfterAuth();
+      await redirectAfterAuth();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "2FA doğrulanamadı";
       toast({ title: "Hata", description: message, variant: "destructive" });

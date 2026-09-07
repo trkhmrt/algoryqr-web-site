@@ -125,6 +125,8 @@ export const DASHBOARD_ROUTES = {
   accountPaymentMethods: "/dashboard/hesabim/kayitli-kartlarim",
   accountBillingAddresses: "/dashboard/hesabim/fatura-adreslerim",
   trialStart: "/dashboard/deneme/baslat",
+  trialExpired: "/dashboard/deneme/bitti",
+  welcomeOnboarding: "/dashboard/karsilama",
 } as const;
 
 export type DashboardNavKey =
