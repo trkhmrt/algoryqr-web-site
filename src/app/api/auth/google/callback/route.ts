@@ -31,6 +31,8 @@ import {
   parseGoogleAuthIntent,
   safeGoogleAuthErrorCode,
 } from "@/lib/server/google-auth-flow";
+import { resolvePostAuthDashboardPathWithAccessToken } from "@/lib/server/trial-expired-gate";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 type RedeemResponse = {
   accessToken?: unknown;
@@ -194,7 +196,11 @@ export async function GET(req: NextRequest) {
       undefined;
 
     if (merchantReturnUrl) {
-      const response = NextResponse.redirect(new URL(merchantReturnUrl, getAppOrigin(req)), 303);
+      const nextPath = await resolvePostAuthDashboardPathWithAccessToken(
+        accessToken,
+        merchantReturnUrl,
+      );
+      const response = NextResponse.redirect(new URL(nextPath, getAppOrigin(req)), 303);
       response.headers.set("Cache-Control", "no-store");
       response.headers.set("Referrer-Policy", "no-referrer");
       response.cookies.set("googleAuthIntent", "", clearGoogleIntentCookie);
@@ -214,8 +220,12 @@ export async function GET(req: NextRequest) {
       return response;
     }
 
+    const nextPath = await resolvePostAuthDashboardPathWithAccessToken(
+      accessToken,
+      DASHBOARD_ROUTES.root,
+    );
     const response = NextResponse.redirect(
-      new URL("/dashboard", getAppOrigin(req)),
+      new URL(nextPath, getAppOrigin(req)),
       303,
     );
     response.headers.set("Cache-Control", "no-store");
