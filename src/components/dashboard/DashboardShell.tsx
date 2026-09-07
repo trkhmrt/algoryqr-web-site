@@ -32,6 +32,8 @@ import {
 import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
 import TrialReminderDialog from "@/components/dashboard/TrialReminderDialog";
 import TrialReminderHeaderBadge from "@/components/dashboard/TrialReminderHeaderBadge";
+import TrialExpiredRedirect from "@/components/dashboard/TrialExpiredRedirect";
+import { TrialReminderUiProvider } from "@/contexts/trial-reminder-ui";
 import { DashboardBreadcrumbs } from "@/components/dashboard/DashboardBreadcrumbs";
 import { SetupNextBanner } from "@/components/dashboard/SetupNextBanner";
 import {
@@ -167,6 +169,7 @@ function DashboardShellInner({ children }: DashboardShellProps) {
   };
 
   const pageLabel = useDashboardPageLabelValue();
+  const isTrialExpiredScreen = pathname === DASHBOARD_ROUTES.trialExpired;
 
   const logout = async () => {
     if (typeof window !== "undefined") {
@@ -207,9 +210,14 @@ function DashboardShellInner({ children }: DashboardShellProps) {
 
   return (
     <DashboardBannersProvider onBanner={addBanner}>
-      {bannerPortal}
-      <TrialReminderDialog />
-      <DashboardCommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <TrialReminderUiProvider>
+        {bannerPortal}
+        <TrialExpiredRedirect />
+        <TrialReminderDialog />
+        <DashboardCommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+        {isTrialExpiredScreen ? (
+          <div className="h-svh overflow-y-auto bg-background">{children}</div>
+        ) : (
       <div className="flex h-svh overflow-hidden bg-background">
         <aside
           className={cn(
@@ -368,6 +376,8 @@ function DashboardShellInner({ children }: DashboardShellProps) {
           </div>
         </main>
       </div>
+        )}
+      </TrialReminderUiProvider>
     </DashboardBannersProvider>
   );
 }

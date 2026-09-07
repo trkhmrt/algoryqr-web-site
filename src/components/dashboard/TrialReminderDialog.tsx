@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
@@ -14,29 +14,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useTrialReminder } from "@/hooks/use-trial-reminder";
+import { useTrialReminderUi } from "@/contexts/trial-reminder-ui";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { formatDaysUntilExpiry, formatPackageDate } from "@/lib/package-display";
-import { dismissTrialReminder, isTrialReminderDismissed } from "@/lib/trial-reminder";
+import {
+  dismissTrialReminder,
+  isTrialReminderDismissed,
+  shouldAutoOpenTrialReminder,
+} from "@/lib/trial-reminder";
 
 export default function TrialReminderDialog() {
   const { info, isLoading } = useTrialReminder();
-  const [open, setOpen] = useState(false);
+  const { dialogOpen, setDialogOpen } = useTrialReminderUi();
 
   useEffect(() => {
     if (!info || isLoading) return;
+    if (!shouldAutoOpenTrialReminder(info)) return;
     if (isTrialReminderDismissed(info)) return;
-    setOpen(true);
-  }, [info, isLoading]);
+    setDialogOpen(true);
+  }, [info, isLoading, setDialogOpen]);
 
   const handleDismiss = () => {
     if (info) dismissTrialReminder(info);
-    setOpen(false);
+    setDialogOpen(false);
   };
 
   if (!info) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
         <div className="smart-feature-panel rounded-none border-0 p-6 shadow-none">
           <DialogHeader className="space-y-4 text-left">
@@ -46,15 +52,18 @@ export default function TrialReminderDialog() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <DialogTitle className="text-xl font-semibold tracking-tight">
-                  Deneme süreniz bitiyor
+                  Deneme sürümünüz
                 </DialogTitle>
                 <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   Deneme
                 </span>
               </div>
               <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                <span className="font-medium text-foreground">{info.packageName}</span> denemeniz{" "}
-                {formatDaysUntilExpiry(info.daysUntilExpiry).toLowerCase()}.
+                Deneme sürümünüzün bitmesine{" "}
+                <span className="font-medium text-foreground">
+                  {formatDaysUntilExpiry(info.daysUntilExpiry).toLowerCase()}
+                </span>
+                . Size uygun paketi seçip gelişmiş özelliklere sahip olun.
                 {info.expiresAt ? (
                   <>
                     {" "}
@@ -64,8 +73,7 @@ export default function TrialReminderDialog() {
                     </span>
                     .
                   </>
-                ) : null}{" "}
-                Kesintisiz kullanım için paketinizi şimdi seçebilirsiniz.
+                ) : null}
               </DialogDescription>
             </div>
           </DialogHeader>

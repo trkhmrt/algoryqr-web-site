@@ -3,7 +3,10 @@ import type { BillingPeriod } from "@/lib/commerce";
 import { getProductHint, getProductHintByCode } from "@/lib/product-hints";
 
 /** Geçici olarak katalog ve satın alma ekranlarında gizlenen paket kodları. */
-export const CATALOG_HIDDEN_PACKAGE_CODES: ReadonlySet<string> = new Set(["PRO_PACKAGE"]);
+export const CATALOG_HIDDEN_PACKAGE_CODES: ReadonlySet<string> = new Set([
+  "PRO_PACKAGE",
+  "ULTIMATE_TRIAL_PACKAGE",
+]);
 
 export function isPackageVisibleInCatalog(
   pkg: Pick<PlanPackageApiItem, "code" | "active">,

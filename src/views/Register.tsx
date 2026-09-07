@@ -173,7 +173,7 @@ const Register = () => {
             <h1 className="text-2xl font-bold">{isTrialFlow ? "Ultimate denemesi için kayıt ol" : "Kayıt Ol"}</h1>
             <p className="text-sm text-muted-foreground">
               {isTrialFlow
-                ? "30 gün ücretsiz denemeye başlamak için hesap oluşturun"
+                ? "15 gün ücretsiz denemeye başlamak için hesap oluşturun"
                 : "Ücretsiz hesabınızı oluşturun"}
             </p>
           </div>

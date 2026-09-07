@@ -11,16 +11,16 @@ import { Button } from "@/components/ui/button";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import {
   invalidateDigitalMenuTrial,
-  invalidatePaymentMethods,
   startTrialRequest,
+  useEligibleTrialPackages,
   useTrialStatus,
 } from "@/hooks/use-commerce";
-import { useActivePackages, useSubscription } from "@/hooks/use-subscription";
+import { useSubscription } from "@/hooks/use-subscription";
 import { getSiteSameOriginAxios } from "@/lib/site-same-origin-axios";
 import { ApiError } from "@/lib/api";
 import { isActivePaidPurchase } from "@/lib/product-access";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { filterCatalogPackages, formatPackageDate } from "@/lib/package-display";
+import { formatPackageDate } from "@/lib/package-display";
 import { refreshAccessAfterEntitlementChange } from "@/lib/refresh-access";
 import { DASHBOARD_PANEL } from "@/lib/dashboard-surface";
 import {
@@ -29,6 +29,7 @@ import {
   readPersistedTrialPackage,
   readTrialPackageFromSearch,
   resolveTrialPackageId,
+  TRIAL_DAYS,
 } from "@/lib/trial-flow";
 
 const REDIRECT_DELAY_MS = 4000;
@@ -49,7 +50,7 @@ export default function TrialStartView() {
 
   const trialStatus = useTrialStatus();
   const subscription = useSubscription();
-  const packagesQuery = useActivePackages();
+  const packagesQuery = useEligibleTrialPackages();
   const verification = searchParams.get("verification");
 
   const [phase, setPhase] = useState<HubPhase>("loading");
@@ -65,10 +66,7 @@ export default function TrialStartView() {
       .catch(() => setEmailVerified(null));
   }, []);
 
-  const packages = useMemo(
-    () => filterCatalogPackages(packagesQuery.data ?? []),
-    [packagesQuery.data],
-  );
+  const packages = packagesQuery.data ?? [];
   const packageId = useMemo(
     () => resolveTrialPackageId(packages, packageCode),
     [packages, packageCode],
@@ -79,7 +77,10 @@ export default function TrialStartView() {
   );
 
   const activePaidPurchase = useMemo(
-    () => (isActivePaidPurchase(subscription.data?.activePurchase ?? null) ? subscription.data?.activePurchase ?? null : null),
+    () =>
+      isActivePaidPurchase(subscription.data?.activePurchase ?? null)
+        ? subscription.data?.activePurchase ?? null
+        : null,
     [subscription.data?.activePurchase],
   );
 
@@ -89,7 +90,7 @@ export default function TrialStartView() {
 
   useEffect(() => {
     if (verification !== "success") return;
-    void invalidatePaymentMethods(queryClient);
+    void invalidateDigitalMenuTrial(queryClient);
   }, [queryClient, verification]);
 
   useEffect(() => {
@@ -123,8 +124,7 @@ export default function TrialStartView() {
 
     if (status === "TRIAL_EXPIRED") {
       handledRef.current = true;
-      notify("warning", "Deneme hakkınız bitmiştir.");
-      window.setTimeout(() => router.replace(DASHBOARD_ROUTES.accountPackages), REDIRECT_DELAY_MS);
+      router.replace(DASHBOARD_ROUTES.trialExpired);
       setPhase("blocked");
       return;
     }
@@ -132,7 +132,7 @@ export default function TrialStartView() {
     if (status === "ACTIVE") {
       handledRef.current = true;
       notify("info", "Denemeniz devam ediyor.");
-      window.setTimeout(() => router.replace(DASHBOARD_ROUTES.branchCreate), REDIRECT_DELAY_MS);
+      window.setTimeout(() => router.replace(DASHBOARD_ROUTES.welcomeOnboarding), REDIRECT_DELAY_MS);
       setPhase("blocked");
       return;
     }
@@ -165,13 +165,12 @@ export default function TrialStartView() {
           (started.trialEndsAt ? ` · bitiş: ${formatPackageDate(started.trialEndsAt)}` : "") +
           ".",
       );
-      router.replace(DASHBOARD_ROUTES.branchCreate);
+      router.replace(DASHBOARD_ROUTES.welcomeOnboarding);
     } catch (error) {
       setPhase("confirm");
       const message = error instanceof ApiError ? error.message : "Deneme süresi başlatılamadı.";
       if (/deneme hakki|deneme hakk/i.test(message)) {
-        notify("warning", "Deneme hakkınız bitmiştir.");
-        window.setTimeout(() => router.replace(DASHBOARD_ROUTES.accountPackages), REDIRECT_DELAY_MS);
+        router.replace(DASHBOARD_ROUTES.trialExpired);
         return;
       }
       if (/ucretli paket|ücretli paket/i.test(message)) {
@@ -214,7 +213,7 @@ export default function TrialStartView() {
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col gap-6 animate-fade-in">
         <DashboardPageHeader
-          title="Ultimate'i 30 gün ücretsiz başlat"
+          title={`Ultimate'i ${TRIAL_DAYS} gün ücretsiz başlat`}
           hint="Deneme durumunuz kontrol ediliyor…"
         />
         <DashboardLoadingState label="Deneme durumunuz kontrol ediliyor…" />
@@ -225,13 +224,13 @@ export default function TrialStartView() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 animate-fade-in">
       <DashboardPageHeader
-        title="Ultimate'i 30 gün ücretsiz başlat"
-          hint={`${trialPackage?.name ?? "Ultimate"} paketini 30 gün ücretsiz kullanın. Deneme için kart zorunlu değildir.`}
+        title={`Ultimate'i ${TRIAL_DAYS} gün ücretsiz başlat`}
+        hint={`${trialPackage?.name ?? "Ultimate Deneme"} paketini ${TRIAL_DAYS} gün ücretsiz kullanın. Deneme için kart zorunlu değildir.`}
       />
 
       <div className={`${DASHBOARD_PANEL} border-primary/35 bg-gradient-to-b from-primary/12 via-primary/6 to-transparent`}>
         <p className="text-sm font-medium text-foreground">
-          {trialPackage?.name ?? "Ultimate"} · 30 gün ücretsiz
+          {trialPackage?.name ?? "Ultimate Deneme"} · {TRIAL_DAYS} gün ücretsiz
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           Deneme süresince dijital menü, akıllı araçlar ve raporlamayı kullanabilirsiniz. İlk 1 TL
@@ -241,13 +240,31 @@ export default function TrialStartView() {
 
       {emailVerified !== true && (
         <div className={`${DASHBOARD_PANEL} space-y-3`}>
-          <div className="flex items-center gap-2 font-medium"><MailCheck className="h-4 w-4" /> E-posta doğrulaması gerekli</div>
-          <p className="text-xs text-muted-foreground">Denemeyi başlatmak için e-posta adresinize gelen 6 haneli kodu girin.</p>
-          <div className="flex gap-2">
-            <input className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm" value={emailCode} onChange={(event) => setEmailCode(event.target.value)} placeholder="6 haneli kod" maxLength={6} />
-            <Button variant="outline" onClick={() => void verifyEmail()} disabled={emailSending || emailCode.length !== 6}>Doğrula</Button>
+          <div className="flex items-center gap-2 font-medium">
+            <MailCheck className="h-4 w-4" /> E-posta doğrulaması gerekli
           </div>
-          <Button variant="ghost" size="sm" onClick={() => void sendVerificationCode()} disabled={emailSending}>Kodu tekrar gönder</Button>
+          <p className="text-xs text-muted-foreground">
+            Denemeyi başlatmak için e-posta adresinize gelen 6 haneli kodu girin.
+          </p>
+          <div className="flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+              value={emailCode}
+              onChange={(event) => setEmailCode(event.target.value)}
+              placeholder="6 haneli kod"
+              maxLength={6}
+            />
+            <Button
+              variant="outline"
+              onClick={() => void verifyEmail()}
+              disabled={emailSending || emailCode.length !== 6}
+            >
+              Doğrula
+            </Button>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => void sendVerificationCode()} disabled={emailSending}>
+            Kodu tekrar gönder
+          </Button>
           {emailError && <p className="text-xs text-destructive">{emailError}</p>}
         </div>
       )}
@@ -267,7 +284,7 @@ export default function TrialStartView() {
         ) : (
           <>
             <Sparkles className="h-4 w-4" />
-            30 gün ücretsiz dene
+            {TRIAL_DAYS} gün ücretsiz dene
           </>
         )}
       </Button>

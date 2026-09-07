@@ -39,6 +39,8 @@ import PaymentMethodsView from "@/views/dashboard/PaymentMethodsView";
 import PlanChangeView from "@/views/dashboard/PlanChangeView";
 import PurchaseDetailView from "@/views/dashboard/PurchaseDetailView";
 import TrialStartView from "@/views/dashboard/TrialStartView";
+import WelcomeOnboardingView from "@/views/dashboard/WelcomeOnboardingView";
+import TrialExpiredGateView from "@/views/dashboard/TrialExpiredGateView";
 import FeedbackView from "@/views/dashboard/FeedbackView";
 import ReservationsView from "@/views/dashboard/ReservationsView";
 import UberEatsHubView from "@/views/dashboard/UberEatsHubView";
@@ -217,6 +219,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
         <TrialStartView />
       </Suspense>
     );
+  }
+
+  if (pathname === DASHBOARD_ROUTES.welcomeOnboarding) {
+    return <WelcomeOnboardingView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.trialExpired) {
+    return <TrialExpiredGateView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.reportsHub) {
