@@ -371,8 +371,6 @@ export interface PlanPackageApiItem {
   currency: string;
   active: boolean;
   validityDays: number;
-  trialDays?: number | null;
-  trialEligible?: boolean;
   priority?: number | null;
   items: PlanPackageItemApi[];
   allowedPaymentModes?: Array<"DIRECT" | "THREE_DS" | "CHECKOUT_FORM">;

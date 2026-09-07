@@ -23,7 +23,7 @@ export function usePackageCatalog() {
 
   const rows = useMemo(() => buildPackageComparisonRows(packages), [packages]);
   const featureRows = useMemo(
-    () => rows.filter((row) => !["price", "validity", "trialEligible"].includes(row.id)),
+    () => rows.filter((row) => !["price", "validity"].includes(row.id)),
     [rows],
   );
 

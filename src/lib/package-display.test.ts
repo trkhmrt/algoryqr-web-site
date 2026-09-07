@@ -46,7 +46,6 @@ describe("buildPackageComparisonRows", () => {
         code: "PRO_PACKAGE",
         name: "Pro",
         price: 249,
-        trialEligible: true,
         items: [
           { id: 2, productCode: "QR_CREATE", productName: "QR", quantity: 30, unlimited: false },
           { id: 3, productCode: "SMART_ASSISTANT", productName: "Akilli Asistan", quantity: 1, unlimited: true },
@@ -79,6 +78,7 @@ describe("buildPackageComparisonRows", () => {
       "product:SMART_SUMMARY",
       "product:CUSTOM_DESIGN",
       "product:WAITER_PANEL",
+      "product:AI_MENU_IMPORT",
     ]);
     expect(rows.find((r) => r.id === "product:QR_CREATE")?.values["1"]).toBe("5 adet");
     expect(rows.find((r) => r.id === "product:QR_CREATE")?.values["2"]).toBe("30 adet");
@@ -131,6 +131,7 @@ describe("buildPackageComparisonRows", () => {
       "product:SMART_SUMMARY",
       "product:CUSTOM_DESIGN",
       "product:WAITER_PANEL",
+      "product:AI_MENU_IMPORT",
     ]);
     expect(rows.find((r) => r.id === "product:QR_MENU")?.values["2"]).toBe("1 adet");
     expect(rows.find((r) => r.id === "product:SMART_ASSISTANT")?.values["2"]).toBe("Var");
