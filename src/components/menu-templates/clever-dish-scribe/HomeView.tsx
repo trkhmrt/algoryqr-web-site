@@ -11,6 +11,7 @@ import {
 } from "../types";
 import { useMenuPriceDisplay } from "../shared/menu-currency";
 import { searchMenuProducts } from "../shared/search-products";
+import { MenuCampaignRail } from "../shared/MenuCampaignRail";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
@@ -127,6 +128,7 @@ export function CleverDishScribeHomeView({
       </div>
 
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-5 sm:px-6 sm:py-6">
+        <MenuCampaignRail />
         {filteredProducts.length === 0 ? (
           <div className="py-20 text-center text-sm text-[var(--cds-muted)]">{t.noProductsFound}</div>
         ) : searchQuery.trim() || activeCategoryId != null ? (
@@ -334,7 +336,7 @@ function AddButton({
         event.stopPropagation();
         setBusy(true);
         try {
-          await ordering.addProduct(product, 1);
+          await ordering.beginAddProduct(product, 1);
         } finally {
           setBusy(false);
         }

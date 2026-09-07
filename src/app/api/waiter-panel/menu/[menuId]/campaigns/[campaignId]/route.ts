@@ -11,3 +11,15 @@ export async function GET(
     "GET",
   );
 }
+
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ menuId: string; campaignId: string }> },
+) {
+  const { menuId, campaignId } = await context.params;
+  return proxyAuthenticatedRequest(
+    request,
+    `/waiter-panel/menu/${menuId}/campaigns/${campaignId}`,
+    "PUT",
+  );
+}

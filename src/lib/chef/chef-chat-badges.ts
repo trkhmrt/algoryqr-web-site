@@ -22,6 +22,6 @@ export const DEFAULT_CHEF_CHAT_BADGES: ChefChatBadge[] = [
   },
 ];
 
-export function getChefChatBadgesForMenu(_menuId: number): ChefChatBadge[] {
+export function getChefChatBadgesForMenu(_publicId: string): ChefChatBadge[] {
   return DEFAULT_CHEF_CHAT_BADGES;
 }

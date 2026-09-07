@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import type { MenuProductApiItem, MenuProfileApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
+import { MenuCampaignRail } from "../shared/MenuCampaignRail";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useMenuLocale } from "../shared/menu-locale";
 
@@ -68,8 +69,12 @@ export function ModernBistroHomeView({
       </div>
 
       <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">
+        <MenuCampaignRail />
+      </div>
+
+      <div className="mx-auto max-w-xl px-4 pt-3 sm:px-6">
         <ModernBistroCategoryRail
-          menuId={menu.menuId}
+          publicId={menu.publicId ?? ""}
           categories={categories}
           products={products}
           activeTab={activeTab}

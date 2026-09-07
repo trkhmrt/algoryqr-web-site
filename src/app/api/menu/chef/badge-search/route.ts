@@ -11,7 +11,7 @@ import { API_BASE_URL } from "@/lib/config";
 const MAX_PRODUCTS = 10;
 
 const bodySchema = z.object({
-  menuId: z.number().int().positive(),
+  publicId: z.string().trim().min(1).max(128),
   badgeId: z.string().trim().min(1).max(64),
 });
 
@@ -38,11 +38,11 @@ function ratingScore(product: MenuProductApiItem): number {
 }
 
 async function fetchPublicProducts(
-  menuId: number,
+  publicId: string,
   params: Record<string, string | number | boolean>,
 ): Promise<MenuProductApiItem[]> {
   const upstream = await axios.get<ProductPageResponse>(
-    `${API_BASE_URL}/menu/public/${menuId}/products`,
+    `${API_BASE_URL}/menu/public/${encodeURIComponent(publicId)}/products`,
     {
       params,
       validateStatus: () => true,
@@ -93,23 +93,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Badge bulunamadı" }, { status: 404 });
     }
 
-    const { menuId, badgeId } = parsed.data;
+    const { publicId, badgeId } = parsed.data;
     let products: MenuProductApiItem[] = [];
 
     if (filter.type === "chefRecommended") {
-      products = await fetchPublicProducts(menuId, {
+      products = await fetchPublicProducts(publicId, {
         page: 0,
         size: MAX_PRODUCTS,
         chefRecommended: true,
       });
     } else if (filter.type === "tagSlug") {
-      products = await fetchPublicProducts(menuId, {
+      products = await fetchPublicProducts(publicId, {
         page: 0,
         size: MAX_PRODUCTS,
         tagSlug: filter.slug,
       });
     } else {
-      const fetched = await fetchPublicProducts(menuId, {
+      const fetched = await fetchPublicProducts(publicId, {
         page: 0,
         size: 50,
       });

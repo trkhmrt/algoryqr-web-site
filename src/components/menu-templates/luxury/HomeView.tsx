@@ -13,6 +13,7 @@ import {
   DenseProductRow,
   DenseStickyToolbar,
   FeedbackForm,
+  MenuCampaignRail,
   MenuCategoryScrollSentinel,
   MenuProductScrollSentinel,
   searchMenuProducts,
@@ -85,7 +86,7 @@ export function LuxuryHomeView({
     [categories],
   );
 
-  const categoryStats = usePublicMenuCategoryStats(menu.menuId, mainCategoriesForStats);
+  const categoryStats = usePublicMenuCategoryStats(menu.publicId ?? "", mainCategoriesForStats);
 
   const categoryGridItems = useMemo(
     () =>
@@ -238,6 +239,7 @@ export function LuxuryHomeView({
       />
 
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6 lg:px-8">
+        <MenuCampaignRail className="mb-6" />
         {searchQuery.trim() ? (
           <section>
             <h2 className="mb-3 font-display text-lg font-semibold lx-fg">

@@ -25,6 +25,7 @@ import {
   MODERN_BISTRO_STYLES,
 } from "../modern-bistro/styles";
 import { TECH_GOURMET_CATEGORY_MARKS, TECH_GOURMET_STYLES } from "../tech-gourmet/styles";
+import { KAHVE_SOKAGI_CATEGORY_MARKS, KAHVE_SOKAGI_HERO_IMAGE, KAHVE_SOKAGI_STYLES } from "../kahve-sokagi/styles";
 
 export type PublicMenuThemeId =
   | "luxury"
@@ -37,7 +38,8 @@ export type PublicMenuThemeId =
   | "tech-gourmet"
   | "modern-bistro"
   | "clever-dish-scribe"
-  | "maison-noir";
+  | "maison-noir"
+  | "kahve-sokagi";
 
 export type PublicMenuThemeLayout = "classic" | "editorial" | "elixir";
 
@@ -222,6 +224,21 @@ const MAISON_NOIR_CHROME: PublicMenuThemeChrome = {
   categoryMarks: MAISON_NOIR_CATEGORY_MARKS,
 };
 
+const KAHVE_SOKAGI_CHROME: PublicMenuThemeChrome = {
+  id: "kahve-sokagi",
+  layout: "classic",
+  rootClassName: "kahve-sokagi-menu",
+  styles: KAHVE_SOKAGI_STYLES,
+  footerKicker: "Köfteli Usta",
+  defaultSlogan: "Kömür ateşinde geleneksel sokak lezzetleri.",
+  heroImage: KAHVE_SOKAGI_HERO_IMAGE,
+  reservationBackgroundUrl: KAHVE_SOKAGI_HERO_IMAGE,
+  contactBackgroundUrl: KAHVE_SOKAGI_HERO_IMAGE,
+  feedbackBackgroundUrl: KAHVE_SOKAGI_HERO_IMAGE,
+  loadingBg: "#fbf9f5",
+  categoryMarks: KAHVE_SOKAGI_CATEGORY_MARKS,
+};
+
 const CHROME_BY_ID: Record<PublicMenuThemeId, PublicMenuThemeChrome> = {
   luxury: LUXURY_CHROME,
   "petite-patisserie": PETITE_CHROME,
@@ -234,6 +251,7 @@ const CHROME_BY_ID: Record<PublicMenuThemeId, PublicMenuThemeChrome> = {
   "modern-bistro": MODERN_BISTRO_CHROME,
   "clever-dish-scribe": CLEVER_DISH_SCRIBE_CHROME,
   "maison-noir": MAISON_NOIR_CHROME,
+  "kahve-sokagi": KAHVE_SOKAGI_CHROME,
 };
 
 export function getPublicMenuThemeChrome(themeId: string): PublicMenuThemeChrome {

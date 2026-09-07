@@ -482,10 +482,11 @@ export interface MenuQrBriefApiItem {
 }
 
 export interface MenuProfileApiItem {
-  menuId: number;
-  qrId: number;
+  menuId?: number;
+  qrId?: number;
+  publicId?: string;
   branchId?: number | null;
-  userId: number;
+  userId?: number;
   themeId: string;
   businessName: string;
   slogan?: string;

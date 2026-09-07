@@ -44,7 +44,7 @@ type MaisonNoirNavbarProps = {
 
     | "qrId"
 
-    | "menuId"
+    | "publicId"
 
     | "chefName"
 
@@ -66,8 +66,8 @@ type DrawerSection = "account" | null;
 
 export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) {
   const pathname = usePathname();
-  const { go } = usePublicMenuNavigation(menu.qrId);
-  const contentPath = publicMenuContentPath(menu.qrId);
+  const { go } = usePublicMenuNavigation(menu.publicId ?? "");
+  const contentPath = publicMenuContentPath(menu.publicId ?? "");
 
   const ordering = useOrderingOptional();
   const { t } = useMenuLocale();
@@ -128,7 +128,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
           <div className="relative mx-auto flex h-12 max-w-xl items-center justify-between px-4 sm:px-6">
             <div className="relative z-10 min-w-0 shrink-0">
               <MaisonNoirChefNavButton
-                menuId={menu.menuId}
+                publicId={menu.publicId ?? ""}
                 chefName={menu.chefName}
                 chefDisplayName={menu.chefDisplayName}
                 chefAvatarUrl={menu.chefAvatarUrl}

@@ -4,13 +4,13 @@ import { z } from "zod";
 import { getChefChatBadgesForMenu } from "@/lib/chef/chef-chat-badges";
 
 const querySchema = z.object({
-  menuId: z.coerce.number().int().positive(),
+  publicId: z.string().trim().min(1).max(128),
 });
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const parsed = querySchema.safeParse({
-    menuId: url.searchParams.get("menuId"),
+    publicId: url.searchParams.get("publicId"),
   });
 
   if (!parsed.success) {
@@ -21,6 +21,6 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
-    badges: getChefChatBadgesForMenu(parsed.data.menuId),
+    badges: getChefChatBadgesForMenu(parsed.data.publicId),
   });
 }

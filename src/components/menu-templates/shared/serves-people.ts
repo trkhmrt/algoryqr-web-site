@@ -36,11 +36,11 @@ export function productMatchesServesPeople(
 
 const PARTY_KEY_PREFIX = "algory_menu_party_";
 
-export function getStoredPartySize(menuId: number): number | null {
-  if (typeof window === "undefined") {
+export function getStoredPartySize(publicId: string): number | null {
+  if (typeof window === "undefined" || !publicId) {
     return null;
   }
-  const raw = window.sessionStorage.getItem(`${PARTY_KEY_PREFIX}${menuId}`);
+  const raw = window.sessionStorage.getItem(`${PARTY_KEY_PREFIX}${publicId}`);
   if (!raw) {
     return null;
   }
@@ -48,11 +48,11 @@ export function getStoredPartySize(menuId: number): number | null {
   return Number.isFinite(value) && value >= 1 ? value : null;
 }
 
-export function setStoredPartySize(menuId: number, value: number | null): void {
-  if (typeof window === "undefined") {
+export function setStoredPartySize(publicId: string, value: number | null): void {
+  if (typeof window === "undefined" || !publicId) {
     return;
   }
-  const key = `${PARTY_KEY_PREFIX}${menuId}`;
+  const key = `${PARTY_KEY_PREFIX}${publicId}`;
   if (value == null || value < 1) {
     window.sessionStorage.removeItem(key);
     return;

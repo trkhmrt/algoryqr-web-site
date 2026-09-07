@@ -61,7 +61,7 @@ export function MenuThemePreviewDialog({
           {open ? (
             <PublicMenuDataProvider
               key={themeId}
-              menuId={MENU_THEME_PREVIEW_MENU.menuId}
+              publicId={MENU_THEME_PREVIEW_MENU.publicId ?? "preview"}
               initialCategories={MENU_THEME_PREVIEW_CATEGORIES}
               initialProducts={MENU_THEME_PREVIEW_PRODUCTS}
             >

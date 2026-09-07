@@ -7,7 +7,7 @@ export async function POST(
   const { identifier, orderId } = await context.params;
   return proxyPublicTableSessionRequest(
     request,
-    `/menu/public/id/${identifier}/campaigns/rewards/${orderId}/produce`,
+    `/menu/public/${identifier}/campaigns/rewards/${orderId}/produce`,
     "POST",
   );
 }

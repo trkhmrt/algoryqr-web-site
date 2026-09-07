@@ -7,7 +7,7 @@ export async function GET(
   const { identifier } = await context.params;
   return proxyPublicTableSessionRequest(
     request,
-    `/menu/public/id/${identifier}/cart`,
+    `/menu/public/${identifier}/cart`,
     "GET",
   );
 }
@@ -19,7 +19,7 @@ export async function PUT(
   const { identifier } = await context.params;
   return proxyPublicTableSessionRequest(
     request,
-    `/menu/public/id/${identifier}/cart`,
+    `/menu/public/${identifier}/cart`,
     "PUT",
   );
 }

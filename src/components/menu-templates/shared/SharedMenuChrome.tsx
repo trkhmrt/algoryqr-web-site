@@ -3,9 +3,9 @@
 import { CartSheet } from "./CartSheet";
 
 type SharedMenuChromeProps = {
-  menuId: number;
+  publicId: string;
 };
 
-export function SharedMenuChrome({ menuId: _menuId }: SharedMenuChromeProps) {
+export function SharedMenuChrome({ publicId: _publicId }: SharedMenuChromeProps) {
   return <CartSheet />;
 }

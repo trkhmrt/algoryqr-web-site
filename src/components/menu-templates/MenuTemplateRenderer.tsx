@@ -98,15 +98,15 @@ function MenuShell({
   categorySize = 50,
   categoryHasNext = false,
 }: MenuTemplateRendererProps) {
-  const analytics = useMenuVisitAnalytics(menu.menuId);
-  const qrIdentifier = identifier ?? String(menu.qrId);
+  const publicId = identifier ?? menu.publicId ?? "";
+  const analytics = useMenuVisitAnalytics(publicId);
   const { dir } = useMenuLocale();
 
   return (
     <PublicMenuThemeProvider themeId={themeId}>
       <div dir={dir}>
         <PublicMenuDataProvider
-          menuId={menu.menuId}
+          publicId={publicId}
           initialCategories={categories}
           initialProducts={products}
           categoryPage={categoryPage}
@@ -118,18 +118,20 @@ function MenuShell({
         >
           <MenuProductNavigatorProvider>
             <Suspense fallback={null}>
-              <OrderingProvider identifier={qrIdentifier} menuId={menu.menuId}>
-                <CampaignProductIdsProvider identifier={qrIdentifier}>
-                  <CustomerAccountMenu menuId={menu.menuId}>
+              <OrderingProvider identifier={publicId} publicId={publicId}>
+                <CampaignProductIdsProvider identifier={publicId}>
+                  <CustomerAccountMenu publicId={publicId}>
                     <MenuTemplateBody
                       menu={menu}
                       themeId={themeId}
                       analytics={analytics}
                     />
-                    <SharedMenuChrome menuId={menu.menuId} />
-                    {themeId !== "maison-noir" && themeId !== "modern-bistro" ? (
+                    <SharedMenuChrome publicId={publicId} />
+                    {themeId !== "maison-noir" &&
+                    themeId !== "modern-bistro" &&
+                    themeId !== "kahve-sokagi" ? (
                       <MenuChefFab
-                        menuId={menu.menuId}
+                        publicId={publicId}
                         chefName={menu.chefName}
                         chefDisplayName={menu.chefDisplayName}
                         chefAvatarUrl={menu.chefAvatarUrl}
@@ -147,13 +149,13 @@ function MenuShell({
 }
 
 export function MenuTemplateRenderer(props: MenuTemplateRendererProps) {
+  const publicId = props.identifier ?? props.menu.publicId ?? "";
   const guestDefaults = resolveMenuGuestDefaults({
-    menuId: props.menu.menuId,
-    qrId: props.menu.qrId,
+    publicId,
     businessName: props.menu.businessName,
     identifier: props.identifier,
   });
-  const scopeKey = menuGuestScopeKey(props.menu.menuId);
+  const scopeKey = menuGuestScopeKey(publicId);
 
   return (
     <MenuLocaleProvider scopeKey={scopeKey} defaultLocale={guestDefaults.locale}>

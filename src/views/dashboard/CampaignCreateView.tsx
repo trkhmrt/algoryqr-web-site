@@ -11,6 +11,7 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { CampaignImageField } from "@/components/dashboard/menu/CampaignImageField";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { SearchableMultiSelect } from "@/components/dashboard/menu/SearchableMultiSelect";
@@ -67,6 +68,7 @@ export default function CampaignCreateView() {
   const [rewardProductId, setRewardProductId] = useState("");
   const [thresholdAmount, setThresholdAmount] = useState("500");
   const [period, setPeriod] = useState<"WEEKLY" | "MONTHLY">("WEEKLY");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const selectedTemplate = useMemo(
     () => templatesQuery.data?.find((item) => item.code === templateCode),
@@ -83,6 +85,29 @@ export default function CampaignCreateView() {
       })),
     [productsQuery.data],
   );
+
+  const imageProductIds = useMemo(() => {
+    if (templateCode === "STAMP_CARD") {
+      return targetProductIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0);
+    }
+    const rewardId = Number(rewardProductId);
+    return Number.isFinite(rewardId) && rewardId > 0 ? [rewardId] : [];
+  }, [rewardProductId, targetProductIds, templateCode]);
+
+  const imageProducts = useMemo(() => {
+    const byId = new Map(
+      (productsQuery.data ?? []).map((product) => [product.productId, product]),
+    );
+    return imageProductIds
+      .map((productId) => byId.get(productId))
+      .filter((product): product is NonNullable<typeof product> => product != null)
+      .map((product) => ({
+        name: product.name,
+        imageUrl: product.imageUrl,
+      }));
+  }, [imageProductIds, productsQuery.data]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -120,6 +145,7 @@ export default function CampaignCreateView() {
         templateCode,
         name: name.trim(),
         slogan: slogan.trim() || undefined,
+        imageUrl: imageUrl || undefined,
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
         config,
@@ -328,6 +354,14 @@ export default function CampaignCreateView() {
                 />
               )}
             </div>
+            <CampaignImageField
+              menuId={menuId}
+              value={imageUrl}
+              onChange={setImageUrl}
+              campaignName={name}
+              campaignSlogan={slogan}
+              products={imageProducts}
+            />
           </div>
         </div>
       ) : null}

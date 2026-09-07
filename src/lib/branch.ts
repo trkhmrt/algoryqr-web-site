@@ -99,6 +99,41 @@ export async function applyBranchPhotoToAllMenusRequest(branchId: number) {
   return data;
 }
 
+export type PurchasedBranchUsage = {
+  purchased: number;
+  used: number;
+  remaining: number;
+};
+
+export function packageIncludedBranchSlots(quota: BranchQuota): number {
+  return Math.max(0, quota.allowed - quota.extraPurchased);
+}
+
+export function summarizePurchasedBranchUsage(quota: BranchQuota): PurchasedBranchUsage {
+  const purchased = Math.max(0, quota.extraPurchased);
+  const used = Math.max(0, quota.used - packageIncludedBranchSlots(quota));
+  return {
+    purchased,
+    used,
+    remaining: Math.max(0, purchased - used),
+  };
+}
+
+export function formatBranchQuotaSubtitle(quota: BranchQuota): string {
+  if (quota.extraPurchased > 0) {
+    return "Satın alınan şube hakkı";
+  }
+  return `Paket dahil ${packageIncludedBranchSlots(quota)} şube`;
+}
+
+export function formatBranchQuotaUsageFraction(quota: BranchQuota): string {
+  if (quota.extraPurchased > 0) {
+    const purchased = summarizePurchasedBranchUsage(quota);
+    return `${purchased.remaining}/${purchased.purchased}`;
+  }
+  return `${quota.remaining}/${quota.allowed}`;
+}
+
 export function formatBranchQuota(quota: BranchQuota | null | undefined) {
   if (!quota) return null;
   if (quota.remaining <= 0) return "Şube hakkınız doldu. Ek şube ücretlidir.";

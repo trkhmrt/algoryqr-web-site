@@ -1,22 +1,47 @@
 import type { PublicMenuApiResponse } from "@/lib/api";
 import { buildPublicMenuUpstreamUrl } from "@/lib/public-menu-server-cache";
+import { permanentRedirect } from "next/navigation";
+import { publicMenuContentPath } from "@/lib/public-menu-paths";
 
 const MENU_OWNER_PACKAGE_INACTIVE = "MENU_OWNER_PACKAGE_INACTIVE";
 
 export type PublicMenuFetchResult =
-  | { status: "ok"; data: PublicMenuApiResponse }
+  | { status: "ok"; data: PublicMenuApiResponse; publicId: string }
   | { status: "package_inactive" }
   | { status: "not_found" };
 
+async function resolveLegacyQrPublicId(qrId: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      buildPublicMenuUpstreamUrl(`/menu/public/legacy-qr/${qrId}/public-id`),
+      { cache: "no-store" },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const body = (await response.json()) as { publicId?: string };
+    return body.publicId?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchPublicMenu(identifier: string): Promise<PublicMenuFetchResult> {
-  if (!/^\d+$/.test(identifier)) {
+  const trimmed = identifier.trim();
+  if (!trimmed) {
     return { status: "not_found" };
   }
 
+  if (/^\d+$/.test(trimmed)) {
+    const publicId = await resolveLegacyQrPublicId(trimmed);
+    if (!publicId) {
+      return { status: "not_found" };
+    }
+    permanentRedirect(publicMenuContentPath(publicId));
+  }
+
   try {
-    // The menu profile includes the active theme. Do not serve a stale ISR
-    // snapshot after the owner changes the theme in the dashboard.
-    const response = await fetch(buildPublicMenuUpstreamUrl(`/menu/public/id/${identifier}`), {
+    const response = await fetch(buildPublicMenuUpstreamUrl(`/menu/public/${encodeURIComponent(trimmed)}`), {
       cache: "no-store",
     });
 
@@ -33,7 +58,8 @@ export async function fetchPublicMenu(identifier: string): Promise<PublicMenuFet
     }
 
     const data = (await response.json()) as PublicMenuApiResponse;
-    return { status: "ok", data };
+    const publicId = data.menu?.publicId?.trim() || trimmed;
+    return { status: "ok", data, publicId };
   } catch {
     return { status: "not_found" };
   }

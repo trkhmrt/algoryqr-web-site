@@ -52,11 +52,11 @@ function randomUuid(): string {
   });
 }
 
-export function getOrCreateMenuSessionId(menuId: number): string {
+export function getOrCreateMenuSessionId(publicId: string): string {
   if (typeof window === "undefined") {
     return randomUuid();
   }
-  const key = `${SESSION_KEY_PREFIX}${menuId}`;
+  const key = `${SESSION_KEY_PREFIX}${publicId}`;
   const existing = window.localStorage.getItem(key);
   if (existing) {
     return existing;
@@ -66,11 +66,11 @@ export function getOrCreateMenuSessionId(menuId: number): string {
   return created;
 }
 
-export function nextMenuEventSequence(menuId: number): number {
+export function nextMenuEventSequence(publicId: string): number {
   if (typeof window === "undefined") {
     return 1;
   }
-  const key = `${SEQUENCE_KEY_PREFIX}${menuId}`;
+  const key = `${SEQUENCE_KEY_PREFIX}${publicId}`;
   const current = Number.parseInt(window.localStorage.getItem(key) ?? "0", 10);
   const next = Number.isFinite(current) ? current + 1 : 1;
   window.localStorage.setItem(key, String(next));
@@ -78,16 +78,16 @@ export function nextMenuEventSequence(menuId: number): number {
 }
 
 export function postMenuAnalyticsEvents(
-  menuId: number,
+  publicId: string,
   sessionId: string,
   events: MenuAnalyticsEventItem[],
   deviceType: MenuAnalyticsDeviceType = detectMenuDeviceType(),
 ): void {
-  if (events.length === 0 || typeof window === "undefined") {
+  if (events.length === 0 || typeof window === "undefined" || !publicId) {
     return;
   }
   const payload = JSON.stringify({ sessionId, deviceType, events });
-  const url = `/api/analytics/menu/${menuId}/events`;
+  const url = `/api/analytics/menu/${encodeURIComponent(publicId)}/events`;
   const clientUserAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
   try {
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {

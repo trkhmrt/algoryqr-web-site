@@ -17,6 +17,7 @@ export type CampaignItem = {
   templateCode: string;
   name: string;
   slogan?: string | null;
+  imageUrl?: string | null;
   startsAt: string;
   endsAt: string;
   status: CampaignStatus;
@@ -29,9 +30,33 @@ export type CreateCampaignPayload = {
   templateCode: string;
   name: string;
   slogan?: string;
+  imageUrl?: string | null;
   startsAt: string;
   endsAt: string;
   config: Record<string, unknown>;
+};
+
+export type UpdateCampaignPayload = {
+  name?: string;
+  slogan?: string | null;
+  imageUrl?: string | null;
+  startsAt?: string;
+  endsAt?: string;
+  config?: Record<string, unknown>;
+};
+
+export type GenerateCampaignImagePayload = {
+  name: string;
+  slogan?: string;
+  productNames?: string[];
+  productImageUrls?: string[];
+};
+
+export type GenerateCampaignImageResponse = {
+  imageBase64: string;
+  contentType: string;
+  model?: string | null;
+  promptVersion?: string | null;
 };
 
 export type CampaignWinner = {
@@ -118,6 +143,26 @@ export async function createCampaign(
   payload: CreateCampaignPayload,
 ): Promise<CampaignItem> {
   return request<CampaignItem>(`/api/waiter-panel/menu/${menuId}/campaigns`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCampaign(
+  menuId: number,
+  campaignId: number,
+  payload: UpdateCampaignPayload,
+): Promise<CampaignItem> {
+  return request<CampaignItem>(`/api/waiter-panel/menu/${menuId}/campaigns/${campaignId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function generateCampaignImage(
+  payload: GenerateCampaignImagePayload,
+): Promise<GenerateCampaignImageResponse> {
+  return request<GenerateCampaignImageResponse>("/api/campaign-images", {
     method: "POST",
     body: JSON.stringify(payload),
   });

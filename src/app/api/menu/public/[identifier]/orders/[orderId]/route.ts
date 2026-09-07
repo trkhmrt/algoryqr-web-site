@@ -7,7 +7,7 @@ export async function GET(
   const { identifier, orderId } = await context.params;
   return proxyPublicTableSessionRequest(
     request,
-    `/menu/public/id/${identifier}/orders/${orderId}`,
+    `/menu/public/${identifier}/orders/${orderId}`,
     "GET",
   );
 }

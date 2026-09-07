@@ -45,7 +45,7 @@ type LocalCartItem = {
 
 type OrderingContextValue = {
   identifier: string;
-  menuId: number;
+  publicId: string;
   hasTableSession: boolean;
   tableName: string | null;
   sessionToken: string | null;
@@ -89,11 +89,11 @@ function toNumber(value: number | string | null | undefined): number {
 
 type OrderingProviderProps = {
   identifier: string;
-  menuId: number;
+  publicId: string;
   children: ReactNode;
 };
 
-export function OrderingProvider({ identifier, menuId, children }: OrderingProviderProps) {
+export function OrderingProvider({ identifier, publicId, children }: OrderingProviderProps) {
   const searchParams = useSearchParams();
   const tableToken = searchParams.get("t")?.trim() || null;
 
@@ -428,7 +428,7 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
   const value = useMemo<OrderingContextValue>(
     () => ({
       identifier,
-      menuId,
+      publicId,
       hasTableSession: Boolean(sessionToken) && bootstrapped,
       tableName,
       sessionToken,
@@ -461,7 +461,7 @@ export function OrderingProvider({ identifier, menuId, children }: OrderingProvi
       identifier,
       loading,
       localItems,
-      menuId,
+      publicId,
       note,
       refreshCart,
       sessionToken,

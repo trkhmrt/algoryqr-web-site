@@ -38,7 +38,7 @@ export class CustomerAuthError extends Error {
 export async function customerLogin(payload: {
   email: string;
   password: string;
-  menuId?: number;
+  publicId?: string;
 }): Promise<CustomerAuthResult> {
   const response = await fetch("/api/customer/auth/login", {
     method: "POST",
@@ -59,7 +59,7 @@ export async function customerRegister(payload: {
   email: string;
   password: string;
   passwordConfirm: string;
-  menuId?: number;
+  publicId?: string;
 }): Promise<CustomerAuthResult> {
   const response = await fetch("/api/customer/auth/register", {
     method: "POST",
@@ -130,11 +130,11 @@ export async function changeCustomerPassword(payload: {
   }
 }
 
-export async function joinCustomerMembership(menuId: number): Promise<void> {
+export async function joinCustomerMembership(publicId: string): Promise<void> {
   const response = await fetch("/api/customer/account/memberships/join", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ menuId }),
+    body: JSON.stringify({ publicId }),
     credentials: "same-origin",
   });
   if (!response.ok) {

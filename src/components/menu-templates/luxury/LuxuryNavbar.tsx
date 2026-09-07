@@ -21,12 +21,12 @@ const NAV_ITEMS: Array<{
 ];
 
 type LuxuryNavbarProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "qrId">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "publicId">;
   showNav?: boolean;
 };
 
 function LuxuryNavbarInner({ menu, showNav = true }: LuxuryNavbarProps) {
-  const { active, go } = usePublicMenuNavigation(menu.qrId);
+  const { active, go } = usePublicMenuNavigation(menu.publicId ?? "");
   const account = useCustomerAccountUi();
   const ordering = useOrderingOptional();
   const [open, setOpen] = useState(false);

@@ -11,6 +11,7 @@ export async function proxyAuthenticatedRequest(
   request: Request,
   upstreamPath: string,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+  options?: { timeoutMs?: number },
 ) {
   try {
     const cookieStore = await cookies();
@@ -44,7 +45,7 @@ export async function proxyAuthenticatedRequest(
         ...clientContextHeaders(request),
       },
       validateStatus: () => true,
-      timeout: 20_000,
+      timeout: options?.timeoutMs ?? 20_000,
     });
 
     if (upstream.status === 204 || upstream.data == null || upstream.data === "") {

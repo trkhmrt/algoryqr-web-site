@@ -7,7 +7,7 @@ export async function POST(
   const { identifier } = await context.params;
   return proxyPublicTableSessionRequest(
     request,
-    `/menu/public/id/${identifier}/orders/submit`,
+    `/menu/public/${identifier}/orders/submit`,
     "POST",
     { forwardCustomerAuth: true },
   );

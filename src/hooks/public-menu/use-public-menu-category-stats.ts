@@ -14,23 +14,23 @@ import { publicMenuKeys } from "./keys";
 import type { PublicMenuCategoryStat } from "./types";
 
 export function usePublicMenuCategoryStats(
-  menuId: number,
+  publicId: string,
   categories: MainCategoryApiItem[],
 ): Map<number, PublicMenuCategoryStat> {
   const facetQueries = useQueries({
     queries: categories.map((category) => ({
-      queryKey: publicMenuKeys.categoryStats(menuId, category.id),
-      queryFn: () => getPublicProductFacetsRequest(menuId, { mainCategoryId: category.id }),
+      queryKey: publicMenuKeys.categoryStats(publicId, category.id),
+      queryFn: () => getPublicProductFacetsRequest(publicId, { mainCategoryId: category.id }),
       staleTime: PUBLIC_MENU_STALE_TIME_MS,
-      enabled: menuId > 0 && category.id > 0,
+      enabled: publicId.length > 0 && category.id > 0,
     })),
   });
 
   const coverQueries = useQueries({
     queries: categories.map((category) => ({
-      queryKey: publicMenuKeys.categoryCover(menuId, category.id),
+      queryKey: publicMenuKeys.categoryCover(publicId, category.id),
       queryFn: async () => {
-        const page = await getPublicMenuProductsRequest(menuId, {
+        const page = await getPublicMenuProductsRequest(publicId, {
           mainCategoryId: category.id,
           page: 0,
           size: 8,
@@ -38,7 +38,7 @@ export function usePublicMenuCategoryStats(
         return (page.content ?? []).find((product) => product.imageUrl)?.imageUrl ?? null;
       },
       staleTime: PUBLIC_MENU_STALE_TIME_MS,
-      enabled: menuId > 0 && category.id > 0 && !category.imageUrl,
+      enabled: publicId.length > 0 && category.id > 0 && !category.imageUrl,
     })),
   });
 
@@ -55,7 +55,7 @@ export function usePublicMenuCategoryStats(
 }
 
 export function usePublicMenuCategoryStat(
-  menuId: number,
+  _publicId: string,
   mainCategoryId: number,
   stats: Map<number, PublicMenuCategoryStat>,
 ): PublicMenuCategoryStat {

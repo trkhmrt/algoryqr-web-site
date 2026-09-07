@@ -123,6 +123,7 @@ export type MenuStrings = {
   rewardAddedToAccount: string;
   rewardLoginToClaim: string;
   done: string;
+  lastUpdated: string;
 };
 
 
@@ -204,7 +205,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     decreaseQty: "Azalt",
     increaseQty: "Artır",
     whatsapp: "WhatsApp",
-    askChef: "Bana sor",
+    askChef: "Bana Sor",
     missingCategory: "Kategori bulunamadı.",
     missingProduct: "Ürün bulunamadı.",
     backToMenu: "Menüye dön",
@@ -226,6 +227,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     rewardAddedToAccount: "Ödül hesabınıza eklendi.",
     rewardLoginToClaim: "QR okutarak giriş yapın, hak tanımlansın.",
     done: "Tamam",
+    lastUpdated: "Son güncelleme",
   },
   en: {
     welcomeTitle: "Welcome",
@@ -325,6 +327,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     rewardAddedToAccount: "The reward was added to your account.",
     rewardLoginToClaim: "Scan the QR code and sign in to claim your reward.",
     done: "Done",
+    lastUpdated: "Last updated",
   },
   ru: {
     welcomeTitle: "Добро пожаловать",
@@ -424,6 +427,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     rewardAddedToAccount: "Награда добавлена в ваш аккаунт.",
     rewardLoginToClaim: "Отсканируйте QR-код и войдите, чтобы получить награду.",
     done: "Готово",
+    lastUpdated: "Обновлено",
   },
   ar: {
     welcomeTitle: "مرحباً",
@@ -523,6 +527,7 @@ const STRINGS: Record<MenuLocaleCode, MenuStrings> = {
     rewardAddedToAccount: "تمت إضافة المكافأة إلى حسابك.",
     rewardLoginToClaim: "امسح رمز QR وسجّل الدخول لاستلام مكافأتك.",
     done: "تم",
+    lastUpdated: "آخر تحديث",
   },
 };
 

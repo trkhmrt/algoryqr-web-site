@@ -13,7 +13,7 @@ import { MenuPriceText, useMenuPriceDisplay } from "./menu-currency";
 import { Tx } from "@/components/google-translate-provider";
 
 type OrderHistoryPanelProps = {
-  menuId: number;
+  publicId: string;
   onBack?: () => void;
 };
 
@@ -122,7 +122,7 @@ function OrderHistoryListItem({
   );
 }
 
-export function OrderHistoryPanel({ menuId, onBack }: OrderHistoryPanelProps) {
+export function OrderHistoryPanel({ publicId, onBack }: OrderHistoryPanelProps) {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [selected, setSelected] = useState<OrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,7 +135,7 @@ export function OrderHistoryPanel({ menuId, onBack }: OrderHistoryPanelProps) {
       setLoading(true);
       setError(null);
       try {
-        const list = await getCustomerOrders(menuId);
+        const list = await getCustomerOrders(publicId);
         if (!cancelled) setOrders(list);
       } catch (err) {
         if (!cancelled) {
@@ -149,7 +149,7 @@ export function OrderHistoryPanel({ menuId, onBack }: OrderHistoryPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [menuId]);
+  }, [publicId]);
 
   async function openDetail(orderId: number) {
     setDetailLoading(true);

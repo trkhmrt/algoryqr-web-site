@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,6 +11,7 @@ import {
   useDigitalMenuAccess,
   useDigitalMenuSelection,
 } from "@/components/dashboard/menu/DigitalMenuPicker";
+import { CampaignImageField } from "@/components/dashboard/menu/CampaignImageField";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
@@ -29,16 +30,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useMenuProducts } from "@/hooks/use-menu-products";
 import {
   getCampaign,
   listCampaignWinners,
+  updateCampaign,
   type CampaignItem,
   type CampaignWinner,
 } from "@/lib/campaign-api";
+import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { useDashboardPageLabel } from "@/contexts/dashboard-page-label";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import { DASHBOARD_BACK, DASHBOARD_PANEL_LG, DASHBOARD_TYPE_SECTION } from "@/lib/dashboard-surface";
 
+function campaignImageProductIds(campaign: CampaignItem): number[] {
+  const config = campaign.config ?? {};
+  if (campaign.templateCode === "STAMP_CARD") {
+    const raw = config.targetProductIds;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0);
+  }
+  const reward = config.reward;
+  if (reward && typeof reward === "object" && "productId" in reward) {
+    const productId = Number((reward as { productId?: unknown }).productId);
+    return Number.isFinite(productId) && productId > 0 ? [productId] : [];
+  }
+  return [];
+}
 function statusLabel(status: CampaignItem["status"]): string {
   switch (status) {
     case "ACTIVE":
@@ -247,6 +267,8 @@ export default function CampaignDetailView() {
     canUseDigitalMenu && !accessLoading,
   );
   const menuId = selection?.menu.menuId ?? null;
+  const { notify } = useDashboardBanners();
+  const queryClient = useQueryClient();
 
   const campaignQuery = useQuery({
     queryKey: ["campaign", menuId, campaignId],
@@ -260,8 +282,33 @@ export default function CampaignDetailView() {
     queryFn: () => listCampaignWinners(menuId!, campaignId, { page: 0, size: 5 }),
   });
 
+  const imageMutation = useMutation({
+    mutationFn: async (nextImageUrl: string | null) => {
+      if (menuId == null) throw new Error("Menü seçilmedi");
+      return updateCampaign(menuId, campaignId, { imageUrl: nextImageUrl });
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["campaign", menuId, campaignId], updated);
+      notify("info", "Kampanya görseli güncellendi.");
+    },
+    onError: (err) => {
+      notify("danger", err instanceof Error ? err.message : "Görsel güncellenemedi.");
+    },
+  });
+
   const campaign = campaignQuery.data;
   useDashboardPageLabel(campaign?.name);
+  const productsQuery = useMenuProducts(menuId, campaign != null);
+  const imageProducts = useMemo(() => {
+    if (!campaign) return [];
+    const ids = new Set(campaignImageProductIds(campaign));
+    return (productsQuery.data ?? [])
+      .filter((product) => ids.has(product.productId))
+      .map((product) => ({
+        name: product.name,
+        imageUrl: product.imageUrl,
+      }));
+  }, [campaign, productsQuery.data]);
   const previewWinners = winnersPreviewQuery.data?.content ?? [];
   const totalWinners = winnersPreviewQuery.data?.totalElements ?? 0;
 
@@ -365,6 +412,17 @@ export default function CampaignDetailView() {
                 <p className="text-muted-foreground">Toplam kazanan</p>
                 <p>{totalWinners}</p>
               </div>
+            </div>
+            <div className="mt-5">
+              <CampaignImageField
+                menuId={menuId}
+                value={campaign.imageUrl}
+                onChange={(next) => imageMutation.mutate(next)}
+                campaignName={campaign.name}
+                campaignSlogan={campaign.slogan ?? undefined}
+                products={imageProducts}
+                disabled={imageMutation.isPending}
+              />
             </div>
           </div>
 

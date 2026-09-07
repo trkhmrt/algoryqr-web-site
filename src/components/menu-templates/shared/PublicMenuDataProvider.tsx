@@ -29,7 +29,7 @@ import {
 const EMPTY_DICT: Record<string, string> = {};
 
 export type PublicMenuDataProviderProps = {
-  menuId: number;
+  publicId: string;
   initialCategories: MainCategoryApiItem[];
   initialProducts: MenuProductApiItem[];
   categoryPage?: number;
@@ -42,7 +42,7 @@ export type PublicMenuDataProviderProps = {
 };
 
 export function PublicMenuDataProvider({
-  menuId,
+  publicId,
   initialCategories,
   initialProducts,
   categoryPage = 0,
@@ -74,13 +74,13 @@ export function PublicMenuDataProvider({
   );
 
   const categoryQuery = usePublicMenuCategories({
-    menuId,
+    publicId,
     pageSize: categorySize,
     initial: categoriesInitial,
   });
 
   const productQuery = usePublicMenuProductsQuery({
-    menuId,
+    publicId,
     pageSize: productSize,
     initial: productsInitial,
   });
@@ -118,7 +118,7 @@ export function PublicMenuDataProvider({
     [dict, products, translate],
   );
 
-  usePublicMenuCategoryStats(menuId, categories);
+  usePublicMenuCategoryStats(publicId, categories);
 
   const fetchCategoryNextPage = useCallback(async () => {
     await categoryQuery.fetchNextPage();

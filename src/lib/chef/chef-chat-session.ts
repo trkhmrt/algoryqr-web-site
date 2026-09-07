@@ -16,7 +16,7 @@ type ChefChatSession = {
   conversationId?: string;
 };
 
-const sessions = new Map<number, ChefChatSession>();
+const sessions = new Map<string, ChefChatSession>();
 
 export const CHEF_WELCOME_MESSAGE: ChefChatMessage = {
   id: "welcome",
@@ -24,14 +24,14 @@ export const CHEF_WELCOME_MESSAGE: ChefChatMessage = {
   text: "Size nasıl yardımcı olabilirim?",
 };
 
-export function getChefChatSession(menuId: number): ChefChatSession | undefined {
-  return sessions.get(menuId);
+export function getChefChatSession(publicId: string): ChefChatSession | undefined {
+  return sessions.get(publicId);
 }
 
-export function setChefChatSession(menuId: number, session: ChefChatSession): void {
-  sessions.set(menuId, session);
+export function setChefChatSession(publicId: string, session: ChefChatSession): void {
+  sessions.set(publicId, session);
 }
 
-export function clearChefChatSession(menuId: number): void {
-  sessions.delete(menuId);
+export function clearChefChatSession(publicId: string): void {
+  sessions.delete(publicId);
 }

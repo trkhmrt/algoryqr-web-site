@@ -39,16 +39,16 @@ describe("menu-analytics", () => {
   });
 
   it("getOrCreateMenuSessionId_reusesStoredUuid", () => {
-    const first = getOrCreateMenuSessionId(42);
-    const second = getOrCreateMenuSessionId(42);
+    const first = getOrCreateMenuSessionId("pub-42");
+    const second = getOrCreateMenuSessionId("pub-42");
     expect(second).toBe(first);
-    expect(window.localStorage.getItem("algory_menu_sid_42")).toBe(first);
+    expect(window.localStorage.getItem("algory_menu_sid_pub-42")).toBe(first);
   });
 
   it("nextMenuEventSequence_incrementsPerMenu", () => {
-    expect(nextMenuEventSequence(7)).toBe(1);
-    expect(nextMenuEventSequence(7)).toBe(2);
-    expect(nextMenuEventSequence(8)).toBe(1);
+    expect(nextMenuEventSequence("pub-7")).toBe(1);
+    expect(nextMenuEventSequence("pub-7")).toBe(2);
+    expect(nextMenuEventSequence("pub-8")).toBe(1);
   });
 
   it("detectMenuDeviceType_whenIphoneUa_thenMobile", () => {
@@ -63,14 +63,14 @@ describe("menu-analytics", () => {
     });
 
     postMenuAnalyticsEvents(
-      3,
+      "pub-3",
       "sid",
       [{ type: "MENU_OPEN", sequence: 1, occurredAt: "2026-07-18T10:00:00" }],
       "MOBILE",
     );
 
     expect(sendBeacon).toHaveBeenCalledWith(
-      "/api/analytics/menu/3/events",
+      "/api/analytics/menu/pub-3/events",
       expect.any(Blob),
     );
     const blob = sendBeacon.mock.calls[0][1] as Blob;

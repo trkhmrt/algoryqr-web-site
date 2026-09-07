@@ -37,14 +37,14 @@ export function LuxuryMenuTemplate({
   );
 
   usePublicMenuDeepLinkProduct({
-    menuId: menu.menuId,
+    publicId: menu.publicId ?? "",
     view,
     products,
     pinnedProduct,
     setPinnedProduct,
   });
   const feedback = useMenuFeedback(
-    menu.menuId,
+    menu.publicId ?? "",
     menu.ratingAvg != null ? Number(menu.ratingAvg) : null,
     menu.ratingCount ?? 0,
   );

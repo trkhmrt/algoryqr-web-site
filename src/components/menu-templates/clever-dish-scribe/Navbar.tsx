@@ -11,11 +11,11 @@ import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
 import { useOrderingOptional } from "../shared/ordering-context";
 
 type CleverDishScribeNavbarProps = {
-  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "qrId">;
+  menu: Pick<MenuProfileApiItem, "businessName" | "logoUrl" | "publicId">;
 };
 
 export function CleverDishScribeNavbar({ menu }: CleverDishScribeNavbarProps) {
-  const { go } = usePublicMenuNavigation(menu.qrId);
+  const { go } = usePublicMenuNavigation(menu.publicId ?? "");
   const ordering = useOrderingOptional();
   const account = useCustomerAccountUi();
   const [open, setOpen] = useState(false);
