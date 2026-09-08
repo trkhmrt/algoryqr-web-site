@@ -10,6 +10,7 @@ import { produceCampaignReward, type ProduceRewardResponse } from "@/lib/public-
 
 import { usePublicMenuTheme } from "./public-menu-theme";
 import { useMenuLocale } from "./menu-locale";
+import { useOrderingOptional } from "./ordering-context";
 
 type OrderSuccessOverlayProps = {
   orderId: number;
@@ -30,6 +31,8 @@ export function OrderSuccessOverlay({
 }: OrderSuccessOverlayProps) {
   const theme = usePublicMenuTheme();
   const { t } = useMenuLocale();
+  const ordering = useOrderingOptional();
+  const tableName = ordering?.tableName ?? null;
   const [status, setStatus] = useState<string>("SUBMITTED");
   const [campaignHint, setCampaignHint] = useState<string | null>(null);
   const [rewardEligible, setRewardEligible] = useState(false);
@@ -132,6 +135,11 @@ export function OrderSuccessOverlay({
           {t.orderReceived}
         </p>
         <p className="mt-2 text-sm lx-muted">#{orderId}</p>
+        {tableName ? (
+          <p className="mt-1 text-xs lx-muted">
+            {t.tableLabel}: {tableName}
+          </p>
+        ) : null}
 
         {status === "CONFIRMED" ? (
           <p className="mt-3 text-sm text-emerald-600">{t.orderConfirmed}</p>

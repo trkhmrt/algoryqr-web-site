@@ -37,6 +37,7 @@ export {
 export { OrderHistoryPanel } from "./OrderHistoryPanel";
 export { OrderingProvider, useOrdering, useOrderingOptional } from "./ordering-context";
 export { SharedMenuChrome } from "./SharedMenuChrome";
+export { TableBadge } from "./TableBadge";
 export { MenuAtmosphereBackdrop } from "./MenuAtmosphereBackdrop";
 export { MenuHomeLink } from "./MenuHomeLink";
 export {
