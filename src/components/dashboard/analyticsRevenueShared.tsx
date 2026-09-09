@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import {
   ArrowDown,
   Banknote,
-  Bike,
   CreditCard,
   Coins,
   PackageX,
@@ -89,12 +88,11 @@ export function buildBreakdownItems(breakdown: {
   return [
     { label: "Nakit", value: n(breakdown.cashRevenue), icon: Banknote, color: REVENUE_COLORS.green },
     { label: "Kart", value: n(breakdown.cardRevenue), icon: CreditCard, color: REVENUE_COLORS.indigo },
-    { label: "Bahşiş", value: n(breakdown.tipRevenue), icon: Coins, color: REVENUE_COLORS.orange },
     {
-      label: "Uber Eats",
-      value: n(breakdown.uberEatsRevenue),
-      icon: Bike,
-      color: REVENUE_COLORS.indigo,
+      label: "Bahşiş",
+      value: n(breakdown.tipRevenue),
+      icon: Coins,
+      color: REVENUE_COLORS.orange,
     },
     { label: "Brüt ciro", value: n(breakdown.grossRevenue), icon: Wallet, color: REVENUE_COLORS.teal },
     {

@@ -63,11 +63,17 @@ export function useSmartReportJob(scope: SmartReportScope) {
 
   const createMutation = useMutation({
     mutationFn: createSmartReportRequest,
-    onSuccess: (data: SmartReportAccepted) => {
+    onSuccess: (data: SmartReportAccepted, variables: SmartReportStartBody) => {
       const id = resolveSmartReportProcessId(data);
       if (!id) return;
       setJobId(id);
-      persist(id, data.status);
+      const nextScope = smartReportScopeKey(variables.branchId ?? null, variables.menuId ?? null);
+      if (nextScope == null) return;
+      writeStoredSmartReportJob(nextScope, variables.from, variables.to, {
+        jobId: id,
+        status: data.status,
+        savedAt: Date.now(),
+      });
     },
   });
 

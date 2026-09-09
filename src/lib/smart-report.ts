@@ -321,9 +321,6 @@ export async function createSmartReportRequest(body: {
         to: body.to,
         locale: body.locale ?? "tr",
       },
-      {
-        params: body.menuId != null ? { menuId: body.menuId } : undefined,
-      },
     );
     return response.data;
   }
@@ -379,4 +376,67 @@ export function buildSmartReportMarkdown(
     result.rawMarkdown?.trim() ||
     [result.summary?.trim(), fromSections].filter(Boolean).join("\n\n")
   );
+}
+
+export function buildChannelComparisonMarkdown(
+  channels: Array<{
+    code: string;
+    label: string;
+    revenue?: number | string | null;
+    orderCount?: number;
+    avgOrderValue?: number | string | null;
+    sharePercent?: number | string | null;
+    connected: boolean;
+  }>,
+  currency = "TRY",
+): string {
+  if (!channels.length) return "";
+  const lines = channels.map((channel) => {
+    if (!channel.connected && Number(channel.revenue ?? 0) <= 0) {
+      return `- ${channel.label}: Bağlı değil`;
+    }
+    const revenue = Number(channel.revenue ?? 0).toFixed(2);
+    const share = Number(channel.sharePercent ?? 0).toFixed(0);
+    const aov = Number(channel.avgOrderValue ?? 0).toFixed(2);
+    return `- ${channel.label}: ${revenue} ${currency} (%${share}) · ${channel.orderCount ?? 0} sipariş · ort. ${aov} ${currency}`;
+  });
+  return ["## Satış kanalları", "", ...lines].join("\n");
+}
+
+export function buildChannelComparisonHtml(
+  channels: Array<{
+    code: string;
+    label: string;
+    revenue?: number | string | null;
+    sharePercent?: number | string | null;
+    connected: boolean;
+  }>,
+): string {
+  if (!channels.length) return "";
+  const max = Math.max(...channels.map((c) => Number(c.revenue ?? 0)), 1);
+  const bars = channels
+    .map((channel) => {
+      const value = Number(channel.revenue ?? 0);
+      const width = Math.max(4, Math.round((value / max) * 100));
+      const color = channel.code === "UBER_EATS" ? "#4f46e5" : "#16a34a";
+      const label = !channel.connected && value <= 0
+        ? `${escapePdf(channel.label)} — Bağlı değil`
+        : `${escapePdf(channel.label)} — %${Number(channel.sharePercent ?? 0).toFixed(0)}`;
+      return `<div style="margin:0 0 10px">
+        <div style="font-size:12px;margin:0 0 4px;color:#111">${label}</div>
+        <div style="height:14px;background:#f3f4f6;border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:${width}%;background:${color};border-radius:999px"></div>
+        </div>
+      </div>`;
+    })
+    .join("");
+  return `<h2 style="font-size:16px;margin:16px 0 8px;font-weight:700">Satış kanalları</h2>${bars}`;
+}
+
+function escapePdf(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }

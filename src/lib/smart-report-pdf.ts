@@ -96,9 +96,10 @@ export async function downloadSmartReportPdf(input: {
   title: string;
   markdown: string;
   fileName: string;
+  prefixHtml?: string;
 }): Promise<void> {
   const markdown = input.markdown?.trim() || "";
-  if (!markdown && !input.title?.trim()) {
+  if (!markdown && !input.title?.trim() && !input.prefixHtml?.trim()) {
     throw new Error("PDF icin icerik bulunamadi");
   }
 
@@ -120,6 +121,7 @@ export async function downloadSmartReportPdf(input: {
   container.style.zIndex = "-1";
   container.innerHTML = `
     <h1 style="font-size:20px;margin:0 0 16px;font-weight:700;color:#111">${escapeHtml(input.title)}</h1>
+    ${input.prefixHtml?.trim() || ""}
     <div style="font-size:12px;color:#111">${markdownToHtml(markdown)}</div>
   `;
   document.body.appendChild(container);

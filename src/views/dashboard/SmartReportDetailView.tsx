@@ -6,12 +6,14 @@ import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { useRequireScope } from "@/components/auth/RequireScope";
+import BranchSmartReportStory from "@/components/dashboard/BranchSmartReportStory";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
+  buildChannelComparisonHtml,
   buildSmartReportMarkdown,
   getSmartReportJobRequest,
   isSmartReportPending,
@@ -20,6 +22,7 @@ import {
   smartReportTitle,
   type SmartReportDetailResponse,
 } from "@/lib/smart-report";
+import { getBranchRevenueReportRequest } from "@/lib/api";
 import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   downloadSmartReportPdf,
@@ -108,9 +111,23 @@ export default function SmartReportDetailView({ jobId }: Props) {
         window.open(remoteUrl, "_blank", "noopener,noreferrer");
         return;
       }
+      let prefixHtml = "";
+      if (detail?.branchId != null && detail.from && detail.to) {
+        try {
+          const revenue = await getBranchRevenueReportRequest(
+            detail.branchId,
+            detail.from,
+            detail.to,
+            null,
+          );
+          prefixHtml = buildChannelComparisonHtml(revenue.channels ?? []);
+        } catch {
+        }
+      }
       await downloadSmartReportPdf({
         title: result.title || (detail ? smartReportTitle(detail) : "Akilli Rapor"),
         markdown,
+        prefixHtml,
         fileName: `akilli-rapor-${detail?.branchId ?? detail?.menuId ?? "rapor"}-${detail?.from ?? ""}-${detail?.to ?? ""}.pdf`,
       });
     } catch {
@@ -188,7 +205,15 @@ export default function SmartReportDetailView({ jobId }: Props) {
             </p>
           ) : null}
 
-          {bodyHtml ? (
+          {detail?.branchId != null && result && !pending ? (
+            <BranchSmartReportStory
+              branchId={detail.branchId}
+              from={detail.from}
+              to={detail.to}
+              branchName={detail.branchName}
+              result={result}
+            />
+          ) : bodyHtml ? (
             <div
               className={`${DASHBOARD_SURFACE} p-4 text-sm text-foreground [&_h1]:mb-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:mb-1 [&_p]:mb-2 [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5`}
               dangerouslySetInnerHTML={{ __html: bodyHtml }}
