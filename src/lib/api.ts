@@ -1396,6 +1396,8 @@ export interface MenuRevenueReportResponse {
   } | null;
   paymentBreakdown?: MenuRevenuePaymentBreakdown | null;
   personnel?: MenuRevenuePersonnelRow[];
+  channels?: RevenueChannelShare[];
+  channelDaily?: RevenueChannelDailyPoint[];
 }
 
 export interface MenuRevenuePaymentBreakdown {
@@ -1407,6 +1409,24 @@ export interface MenuRevenuePaymentBreakdown {
   fixedExpenseTotal?: number | string | null;
   netRevenue?: number | string | null;
   currency?: string | null;
+}
+
+export interface RevenueChannelShare {
+  code: string;
+  label: string;
+  revenue?: number | string | null;
+  orderCount?: number;
+  avgOrderValue?: number | string | null;
+  sharePercent?: number | string | null;
+  deltaVsPrevPercent?: number | string | null;
+  connected: boolean;
+}
+
+export interface RevenueChannelDailyPoint {
+  date: string;
+  channelCode: string;
+  revenue?: number | string | null;
+  orderCount?: number;
 }
 
 export interface MenuRevenuePersonnelRow {

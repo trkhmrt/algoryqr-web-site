@@ -8,20 +8,12 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { RequireScope } from "@/components/auth/RequireScope";
 import { BranchReportPicker, useBranchReportSelection } from "@/components/dashboard/BranchReportPicker";
+import BranchSmartReportStory from "@/components/dashboard/BranchSmartReportStory";
 import AnalyticsRevenuePanel from "@/components/dashboard/AnalyticsRevenuePanel";
 import AnalyticsVisitsPanel from "@/components/dashboard/AnalyticsVisitsPanel";
 import AnalyticsWaiterPerformancePanel from "@/components/dashboard/AnalyticsWaiterPerformancePanel";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -32,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useBranchAnalyticsReport } from "@/hooks/use-branch-analytics-report";
 import { useBranchRevenueReport } from "@/hooks/use-branch-revenue-report";
 import { useBranchWaiterPerformanceReport } from "@/hooks/use-branch-waiter-performance-report";
@@ -43,7 +36,14 @@ import { hasScope } from "@/lib/auth-user";
 import { PRODUCT_HINTS } from "@/lib/product-hints";
 import { SlidingTabSelect } from "@/components/ui/sliding-tab-select";
 import { downloadSmartReportPdf } from "@/lib/smart-report-pdf";
-import { getSmartReportQuotaRequest, buildSmartReportMarkdown, isSmartReportQuotaExhausted, normalizeSmartReportResult } from "@/lib/smart-report";
+import {
+  getSmartReportQuotaRequest,
+  buildChannelComparisonHtml,
+  buildSmartReportMarkdown,
+  isSmartReportQuotaExhausted,
+  normalizeSmartReportResult,
+} from "@/lib/smart-report";
+import { getBranchRevenueReportRequest } from "@/lib/api";
 import {
   buildVisitReportView,
   reportingPeriodRange,
@@ -90,6 +90,7 @@ export default function AnalyticsTab() {
   const activeReportView: ReportView = reportView;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [draftBranchId, setDraftBranchId] = useState<number | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const tooltipStyle = useTooltipStyle();
   const { toast } = useToast();
@@ -133,7 +134,7 @@ export default function AnalyticsTab() {
   const report = reportQuery.data;
   const smartReport = useSmartReportJob({
     branchId,
-    menuId,
+    menuId: null,
     from: range.from,
     to: range.to,
   });
@@ -172,6 +173,19 @@ export default function AnalyticsTab() {
     router.push(DASHBOARD_ROUTES.smartReports);
   }
 
+  function openSmartReportConfirm() {
+    if (branches.length === 0) {
+      toast({
+        title: "Şube bulunamadı",
+        description: "Akıllı rapor için önce bir şube oluşturun.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDraftBranchId(branchId ?? branches[0].id);
+    setConfirmOpen(true);
+  }
+
   function handleSmartReportClick() {
     if (smartReport.isReady) {
       setDialogOpen(true);
@@ -192,32 +206,21 @@ export default function AnalyticsTab() {
       });
       return;
     }
-    if (branchId == null) {
-      toast({
-        title: "Şube seçin",
-        description: "Akıllı rapor için önce bir şube seçin.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (reportQuery.isError || !report) {
-      toast({
-        title: "Rapor hazır değil",
-        description: "Analitik rapor yüklenmeden akıllı rapor üretilemez.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setConfirmOpen(true);
+    openSmartReportConfirm();
   }
 
   async function startSmartReport() {
-    if (branchId == null) return;
+    if (draftBranchId == null) return;
+    if (!branches.some((item) => item.id === draftBranchId)) return;
     setConfirmOpen(false);
+    select(draftBranchId, null);
+    router.replace(
+      DASHBOARD_ROUTES.digitalMenuAnalyticsForBranch(draftBranchId, null),
+      { scroll: false },
+    );
     try {
       const body = {
-        branchId,
-        menuId,
+        branchId: draftBranchId,
         from: range.from,
         to: range.to,
         locale: "tr",
@@ -257,10 +260,24 @@ export default function AnalyticsTab() {
         window.open(remoteUrl, "_blank", "noopener,noreferrer");
         return;
       }
+      let prefixHtml = "";
+      if (branchId != null) {
+        try {
+          const revenue = await getBranchRevenueReportRequest(
+            branchId,
+            range.from,
+            range.to,
+            null,
+          );
+          prefixHtml = buildChannelComparisonHtml(revenue.channels ?? []);
+        } catch {
+        }
+      }
       const markdown = buildSmartReportMarkdown(result);
       await downloadSmartReportPdf({
         title: result.title || "Akilli Rapor",
         markdown,
+        prefixHtml,
         fileName: `akilli-rapor-${branchId ?? "sube"}-${range.from}-${range.to}.pdf`,
       });
     } catch {
@@ -284,14 +301,8 @@ export default function AnalyticsTab() {
       : activeReportView === "personnel"
         ? personnelLoading
         : visitLoading;
-  const canGenerate =
-    branchId != null &&
-    !visitLoading &&
-    !reportQuery.isError &&
-    !!report &&
-    !visit.empty &&
-    !smartReport.isGenerating &&
-    !quotaExhausted;
+  const canGenerate = branches.length > 0 && !smartReport.isGenerating && !quotaExhausted;
+  const canConfirmSmartReport = draftBranchId != null;
   const smartReportLabel = smartReport.isReady
     ? "İndirmeye hazır"
     : smartReport.isGenerating
@@ -348,30 +359,54 @@ export default function AnalyticsTab() {
 
       {canUseSmartReporting ? (
         <>
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Akıllı rapor oluşturulsun mu?</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hangi şube için rapor oluşturulsun?</DialogTitle>
+            <DialogDescription>
               {quota?.period === "WEEK"
-                ? "Bu hafta için akıllı rapor hak sayınız sınırlıdır. Hakkınızı kullanmak istiyor musunuz?"
-                : "Akıllı rapor günde bir kez alınabilir. Bugünkü hakkınızı kullanmak istiyor musunuz?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void startSmartReport()}>
+                ? "Seçtiğiniz şube için akıllı rapor hazırlanır. Bu haftaki hakkınızdan bir kullanım düşer."
+                : "Seçtiğiniz şube için akıllı rapor hazırlanır. Bugünkü hakkınızdan bir kullanım düşer."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="space-y-2">
+              <Label>Şube</Label>
+              <SearchableSelect
+                className="h-10 w-full text-sm"
+                value={draftBranchId != null ? String(draftBranchId) : ""}
+                onValueChange={(next) => {
+                  const id = Number(next);
+                  if (!Number.isFinite(id) || id <= 0) return;
+                  setDraftBranchId(id);
+                }}
+                options={branches.map((item) => ({ value: String(item.id), label: item.name }))}
+                placeholder="Şube seçin"
+                searchPlaceholder="Şube ara..."
+                emptyText="Şube bulunamadı."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
+              Vazgeç
+            </Button>
+            <Button
+              type="button"
+              disabled={!canConfirmSmartReport}
+              onClick={() => void startSmartReport()}
+            >
               Raporu hazırla
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
       >
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {result?.title || "Akıllı Rapor"}
@@ -397,7 +432,16 @@ export default function AnalyticsTab() {
             </div>
           ) : null}
 
-          {result && !smartReport.isGenerating ? (
+          {result && !smartReport.isGenerating && branchId != null ? (
+            <BranchSmartReportStory
+              branchId={branchId}
+              from={range.from}
+              to={range.to}
+              branchName={selection?.branch?.name}
+              result={result}
+              compact
+            />
+          ) : result && !smartReport.isGenerating ? (
             <div className="space-y-3 text-sm text-foreground">
               <p className="whitespace-pre-wrap text-muted-foreground">{result.summary}</p>
               {result.sections?.slice(0, 3).map((section) => (

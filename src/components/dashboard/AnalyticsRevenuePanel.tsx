@@ -43,9 +43,11 @@ import {
   type KpiDisplay,
   type RevenueRow,
 } from "./analyticsRevenueShared";
+import AnalyticsChannelPanel from "./AnalyticsChannelPanel";
 
 const MOBILE_SECTIONS = [
   { value: "ozet", label: "Özet" },
+  { value: "kanallar", label: "Kanallar" },
   { value: "trend", label: "Trend" },
   { value: "detay", label: "Detay" },
 ] as const;
@@ -72,9 +74,11 @@ type DetailTab = (typeof DETAIL_TABS)[number]["value"];
 export default function AnalyticsRevenuePanel({
   report,
   tooltipStyle,
+  hideChannels = false,
 }: {
   report: MenuRevenueReportResponse;
   tooltipStyle: Record<string, string>;
+  hideChannels?: boolean;
 }) {
   const isMobile = useIsMobile();
   const [section, setSection] = useState<MobileSection>("ozet");
@@ -95,7 +99,7 @@ export default function AnalyticsRevenuePanel({
     display: m.unit === "money" ? formatMenuPrice(m.value, currency) : m.display,
   }));
 
-  if (empty) {
+  if (empty && !(report.channels ?? []).some((c) => Number(c.revenue ?? 0) > 0 || c.connected)) {
     return (
       <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 text-sm text-muted-foreground shadow-none dark:border-border dark:bg-card">
         Seçilen dönemde tahsilat kaydı yok. Adisyon ödemeleri alındıkça ciro burada görünür.
@@ -119,6 +123,16 @@ export default function AnalyticsRevenuePanel({
       personnel={personnel}
       isMobile={isMobile}
       spotlight={spotlightBlock}
+    />
+  );
+
+  const channels = hideChannels ? null : (
+    <AnalyticsChannelPanel
+      channels={report.channels ?? []}
+      channelDaily={report.channelDaily ?? []}
+      currency={currency}
+      tooltipStyle={tooltipStyle}
+      accountScopedNote={(report.channels ?? []).some((c) => c.code === "UBER_EATS" && c.connected)}
     />
   );
 
@@ -161,6 +175,7 @@ export default function AnalyticsRevenuePanel({
           ariaLabel="Ciro bölümleri"
         />
         {section === "ozet" ? overview : null}
+        {section === "kanallar" && channels ? channels : null}
         {section === "trend" ? trends : null}
         {section === "detay" ? details : null}
       </div>
@@ -170,6 +185,7 @@ export default function AnalyticsRevenuePanel({
   return (
     <>
       {overview}
+      {channels}
       {trends}
       {details}
     </>
