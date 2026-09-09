@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Home } from "lucide-react";
 
-import { publicMenuPath } from "@/lib/public-menu-paths";
+import { buildPublicMenuContentPath } from "@/lib/public-menu-paths";
 import { cn } from "@/lib/utils";
 
 type MenuHomeLinkProps = {
@@ -19,6 +20,10 @@ export function MenuHomeLink({
   className,
   label = "Ana sayfa",
 }: MenuHomeLinkProps) {
+  const searchParams = useSearchParams();
+  const tableToken = searchParams.get("t")?.trim() || undefined;
+  const href = buildPublicMenuContentPath(qrId, { tableToken });
+
   if (onClick) {
     return (
       <button
@@ -35,7 +40,7 @@ export function MenuHomeLink({
 
   return (
     <Link
-      href={publicMenuPath(qrId)}
+      href={href}
       className={cn("inline-flex items-center gap-1.5 text-sm", className)}
       aria-label={label}
     >

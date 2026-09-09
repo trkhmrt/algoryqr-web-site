@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -22,9 +22,10 @@ import { useMenuLocale } from "../shared/menu-locale";
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
 
 import { usePublicMenuNavigation } from "@/hooks/use-public-menu-navigation";
-import { publicMenuContentPath } from "@/lib/public-menu-paths";
+import { buildPublicMenuContentPath, publicMenuContentPath } from "@/lib/public-menu-paths";
 
 import { useOrderingOptional } from "../shared/ordering-context";
+import { TableBadge } from "../shared/TableBadge";
 
 
 
@@ -66,8 +67,11 @@ type DrawerSection = "account" | null;
 
 export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tableToken = searchParams.get("t")?.trim() || undefined;
   const { go } = usePublicMenuNavigation(menu.publicId ?? "");
-  const contentPath = publicMenuContentPath(menu.publicId ?? "");
+  const pathOnly = publicMenuContentPath(menu.publicId ?? "");
+  const contentPath = buildPublicMenuContentPath(menu.publicId ?? "", { tableToken });
 
   const ordering = useOrderingOptional();
   const { t } = useMenuLocale();
@@ -140,7 +144,7 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
               onClick={(event) => {
                 onBrandClick?.();
                 closeDrawer();
-                if (pathname === contentPath) {
+                if (pathname === pathOnly) {
                   event.preventDefault();
                   go("landing");
                 }
@@ -151,6 +155,10 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
             </Link>
 
             <div className="relative z-10 flex shrink-0 items-center justify-end gap-0.5">
+              <TableBadge
+                variant="inline"
+                className="mr-0.5 text-[var(--mn-muted)]"
+              />
 
               <MenuLanguagePicker variant="minimal" />
 
@@ -183,7 +191,6 @@ export function MaisonNoirNavbar({ menu, onBrandClick }: MaisonNoirNavbarProps) 
           </div>
 
         </header>
-
       </div>
 
 

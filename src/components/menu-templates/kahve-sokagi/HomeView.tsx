@@ -9,6 +9,7 @@ import { MenuCategoryName } from "../shared/MenuCategoryName";
 import { MenuCampaignRail } from "../shared/MenuCampaignRail";
 import { MenuCategoryScrollSentinel } from "../shared/MenuCategoryScrollSentinel";
 import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
+import { TableBadge } from "../shared/TableBadge";
 import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useMenuLocale } from "../shared/menu-locale";
 import { usePublicMenuTheme } from "../shared/public-menu-theme";
@@ -86,6 +87,7 @@ export function KahveSokagiHomeView({
               className="w-full rounded-xl border border-[var(--lx-border)] bg-white py-2.5 pl-9 pr-3 text-sm text-[var(--lx-fg)] outline-none placeholder:text-[var(--lx-muted)] focus:border-[var(--ks-secondary)]"
             />
           </div>
+          <TableBadge variant="inline" className="shrink-0 text-[var(--lx-muted)]" />
           <MenuLanguagePicker variant="minimal" />
         </div>
 

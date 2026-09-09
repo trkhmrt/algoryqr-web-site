@@ -201,21 +201,6 @@ export function splitMobileDashboardNav(items: DashboardNavItem[]): {
   };
 }
 
-export function isWideDashboardPath(pathname: string): boolean {
-  if (pathname === DASHBOARD_ROUTES.overview) return true;
-  if (isOrderPanelSectionActive(pathname) || isReportsSectionActive(pathname)) return true;
-  return (
-    pathname === DASHBOARD_ROUTES.reservations ||
-    pathname === DASHBOARD_ROUTES.campaigns ||
-    pathname === DASHBOARD_ROUTES.qrCodes ||
-    pathname === DASHBOARD_ROUTES.digitalMenuProducts ||
-    pathname === DASHBOARD_ROUTES.feedback ||
-    pathname === DASHBOARD_ROUTES.menuCustomers ||
-    pathname === DASHBOARD_ROUTES.menuUsers ||
-    pathname === DASHBOARD_ROUTES.muhasebe
-  );
-}
-
 export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { key: "overview", label: "Genel Bakış", mobileLabel: "Genel", href: DASHBOARD_ROUTES.overview },
   {

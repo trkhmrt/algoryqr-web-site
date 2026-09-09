@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   DASHBOARD_NAV_ITEMS,
   DASHBOARD_ROUTES,
-  isWideDashboardPath,
   splitMobileDashboardNav,
 } from "./dashboard-routes";
 import { applyListQueryParams } from "@/hooks/use-list-query-state";
@@ -52,14 +51,6 @@ describe("splitMobileDashboardNav", () => {
     expect(primary).toHaveLength(4);
     expect(primary[0].key).toBe("overview");
     expect(primary.map((item) => item.key)).not.toContain("orderPanel");
-  });
-});
-
-describe("isWideDashboardPath", () => {
-  it("widens operational lists and keeps account pages narrow", () => {
-    expect(isWideDashboardPath(DASHBOARD_ROUTES.waiter)).toBe(true);
-    expect(isWideDashboardPath(DASHBOARD_ROUTES.reservations)).toBe(true);
-    expect(isWideDashboardPath(DASHBOARD_ROUTES.account)).toBe(false);
   });
 });
 

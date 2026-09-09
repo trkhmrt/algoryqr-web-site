@@ -7,11 +7,16 @@ export const dynamic = "force-dynamic";
 
 export default async function PublicMenuContentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ identifier: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { identifier } = await params;
-  const result = await fetchPublicMenu(identifier);
+  const query = await searchParams;
+  const raw = query.t;
+  const tableToken = typeof raw === "string" ? raw.trim() : Array.isArray(raw) ? raw[0]?.trim() : undefined;
+  const result = await fetchPublicMenu(identifier, { tableToken: tableToken || undefined });
 
   if (result.status === "package_inactive") {
     return <MenuUnavailableView />;

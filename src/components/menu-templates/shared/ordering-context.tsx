@@ -43,11 +43,14 @@ type LocalCartItem = {
   selectedOptions?: SelectedOrderOption[];
 };
 
+export const TABLE_INACTIVE_MESSAGE = "Bu masa şu anda hizmet vermemektedir";
+
 type OrderingContextValue = {
   identifier: string;
   publicId: string;
   hasTableSession: boolean;
   tableName: string | null;
+  tableInactive: boolean;
   sessionToken: string | null;
   cart: OrderResponse | null;
   localItems: LocalCartItem[];
@@ -99,6 +102,7 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
 
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [tableName, setTableName] = useState<string | null>(null);
+  const [tableInactive, setTableInactive] = useState(false);
   const [cart, setCart] = useState<OrderResponse | null>(null);
   const [localItems, setLocalItems] = useState<LocalCartItem[]>([]);
   const [note, setNote] = useState("");
@@ -109,6 +113,12 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
   const [bootstrapped, setBootstrapped] = useState(false);
   const [optionsProduct, setOptionsProduct] = useState<MenuProductApiItem | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+
+  const markSessionError = useCallback((err: unknown) => {
+    const message = err instanceof Error ? err.message : "Sipariş oturumu açılamadı";
+    setError(message);
+    setTableInactive(message === TABLE_INACTIVE_MESSAGE);
+  }, []);
 
   const syncLocalFromCart = useCallback((order: OrderResponse | null) => {
     const items = (order?.items ?? []).map((item) => {
@@ -148,12 +158,18 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
   );
 
   const ensureSession = useCallback(async () => {
-    const session = await openTableSession(identifier, tableToken);
-    setSessionToken(session.sessionToken);
-    setTableName(session.tableName);
-    persistSession(session);
-    return session.sessionToken;
-  }, [identifier, persistSession, tableToken]);
+    try {
+      const session = await openTableSession(identifier, tableToken);
+      setSessionToken(session.sessionToken);
+      setTableName(session.tableName);
+      setTableInactive(false);
+      persistSession(session);
+      return session.sessionToken;
+    } catch (err) {
+      markSessionError(err);
+      throw err;
+    }
+  }, [identifier, markSessionError, persistSession, tableToken]);
 
   const refreshCart = useCallback(async () => {
     if (!sessionToken) return;
@@ -172,39 +188,8 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
     async function bootstrap() {
       setLoading(true);
       setError(null);
+      setTableInactive(false);
       try {
-        if (typeof window !== "undefined") {
-          const raw = sessionStorage.getItem(sessionStorageKey(identifier));
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw) as {
-                sessionToken?: string;
-                tableName?: string;
-                tableToken?: string | null;
-              };
-              if (
-                parsed.sessionToken &&
-                (!tableToken || !parsed.tableToken || parsed.tableToken === tableToken)
-              ) {
-                setSessionToken(parsed.sessionToken);
-                setTableName(parsed.tableName ?? null);
-                const next = await getCart(identifier, parsed.sessionToken);
-                if (!cancelled) {
-                  setCart(next);
-                  syncLocalFromCart(next);
-                }
-                if (!cancelled) {
-                  setLoading(false);
-                  setBootstrapped(true);
-                }
-                return;
-              }
-            } catch {
-              sessionStorage.removeItem(sessionStorageKey(identifier));
-            }
-          }
-        }
-
         if (tableToken) {
           try {
             const session = await openTableSession(identifier, tableToken);
@@ -218,15 +203,40 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
               syncLocalFromCart(next);
             }
           } catch (err) {
-            if (!cancelled) {
-              setError(err instanceof Error ? err.message : "Sipariş oturumu açılamadı");
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem(sessionStorageKey(identifier));
+            }
+            if (!cancelled) markSessionError(err);
+          }
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          const raw = sessionStorage.getItem(sessionStorageKey(identifier));
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw) as {
+                sessionToken?: string;
+                tableName?: string;
+                tableToken?: string | null;
+              };
+              if (parsed.sessionToken && !parsed.tableToken) {
+                setSessionToken(parsed.sessionToken);
+                setTableName(parsed.tableName ?? null);
+                const next = await getCart(identifier, parsed.sessionToken);
+                if (!cancelled) {
+                  setCart(next);
+                  syncLocalFromCart(next);
+                }
+                return;
+              }
+            } catch {
+              sessionStorage.removeItem(sessionStorageKey(identifier));
             }
           }
         }
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Sipariş oturumu açılamadı");
-        }
+        if (!cancelled) markSessionError(err);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -239,7 +249,7 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
     return () => {
       cancelled = true;
     };
-  }, [identifier, persistSession, syncLocalFromCart, tableToken]);
+  }, [identifier, markSessionError, persistSession, syncLocalFromCart, tableToken]);
 
   const persistCart = useCallback(
     async (items: LocalCartItem[], nextNote: string, token: string) => {
@@ -431,6 +441,7 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
       publicId,
       hasTableSession: Boolean(sessionToken) && bootstrapped,
       tableName,
+      tableInactive,
       sessionToken,
       cart,
       localItems,
@@ -467,6 +478,7 @@ export function OrderingProvider({ identifier, publicId, children }: OrderingPro
       sessionToken,
       submitOrder,
       submitting,
+      tableInactive,
       tableName,
       updateQty,
     ],

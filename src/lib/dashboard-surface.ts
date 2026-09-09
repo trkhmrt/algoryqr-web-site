@@ -1,3 +1,6 @@
+export const DASHBOARD_CONTENT =
+  "mx-auto w-full max-w-5xl";
+
 export const DASHBOARD_SURFACE =
   "rounded-2xl border border-[#e5e7eb] bg-white shadow-none dark:border-border dark:bg-card";
 
