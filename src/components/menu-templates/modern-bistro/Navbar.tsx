@@ -10,6 +10,7 @@ import { MenuLanguagePicker } from "../shared/MenuLanguagePicker";
 import { useCustomerAccountUi } from "../shared/CustomerAccountMenu";
 import { useMenuLocale } from "../shared/menu-locale";
 import { useOrderingOptional } from "../shared/ordering-context";
+import { TableBadge } from "../shared/TableBadge";
 import { MaisonNoirChefNavButton } from "../maison-noir/ChefNavButton";
 
 type ModernBistroNavbarProps = {
@@ -70,6 +71,7 @@ export function ModernBistroNavbar({ menu }: ModernBistroNavbarProps) {
             </div>
 
             <div className="relative z-10 flex shrink-0 items-center justify-end gap-0.5">
+              <TableBadge variant="inline" className="mr-0.5 text-[var(--mb-muted)]" />
               <MenuLanguagePicker variant="minimal" />
               <button
                 type="button"

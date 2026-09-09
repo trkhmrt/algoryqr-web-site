@@ -57,8 +57,8 @@ import {
   DASHBOARD_ROUTES,
   getVisibleDashboardNavGroups,
   isDashboardNavActive,
-  isWideDashboardPath,
 } from "@/lib/dashboard-routes";
+import { DASHBOARD_CONTENT } from "@/lib/dashboard-surface";
 import { hasScope } from "@/lib/auth-user";
 import type { StoredUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -364,12 +364,7 @@ function DashboardShellInner({ children }: DashboardShellProps) {
             <TrialReminderHeaderBadge />
           </div>
 
-          <div
-            className={cn(
-              "mx-auto p-6 lg:p-8",
-              isWideDashboardPath(pathname) ? "max-w-5xl" : "max-w-3xl",
-            )}
-          >
+          <div className={cn(DASHBOARD_CONTENT, "p-6 lg:p-8")}>
             <DashboardBreadcrumbs pathname={pathname} currentLabel={pageLabel} />
             <SetupNextBanner />
             {children}

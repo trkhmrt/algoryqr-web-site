@@ -1,7 +1,7 @@
 import type { PublicMenuApiResponse } from "@/lib/api";
 import { buildPublicMenuUpstreamUrl } from "@/lib/public-menu-server-cache";
 import { permanentRedirect } from "next/navigation";
-import { publicMenuContentPath } from "@/lib/public-menu-paths";
+import { buildPublicMenuContentPath } from "@/lib/public-menu-paths";
 
 const MENU_OWNER_PACKAGE_INACTIVE = "MENU_OWNER_PACKAGE_INACTIVE";
 
@@ -26,7 +26,10 @@ async function resolveLegacyQrPublicId(qrId: string): Promise<string | null> {
   }
 }
 
-export async function fetchPublicMenu(identifier: string): Promise<PublicMenuFetchResult> {
+export async function fetchPublicMenu(
+  identifier: string,
+  options?: { tableToken?: string },
+): Promise<PublicMenuFetchResult> {
   const trimmed = identifier.trim();
   if (!trimmed) {
     return { status: "not_found" };
@@ -37,7 +40,7 @@ export async function fetchPublicMenu(identifier: string): Promise<PublicMenuFet
     if (!publicId) {
       return { status: "not_found" };
     }
-    permanentRedirect(publicMenuContentPath(publicId));
+    permanentRedirect(buildPublicMenuContentPath(publicId, { tableToken: options?.tableToken }));
   }
 
   try {
