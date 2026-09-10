@@ -93,29 +93,45 @@ export const SMART_REPORT_ADDON_PRODUCT_CODE = "SMART_REPORTING_ADDON";
 export const SMART_REPORT_POLL_INTERVAL_MS = 5_000;
 export const SMART_REPORT_QUOTA_ZONE = "Europe/Istanbul";
 
-export type StoredSmartReportJob = {
-  jobId: string;
-  status: SmartReportJobStatus;
-  savedAt: number;
+export type SmartReportJobScope = {
+  branchId: number | null;
+  menuId: number | null;
+  from: string;
+  to: string;
 };
-
-export function smartReportScopeKey(
-  branchId: number | null,
-  menuId: number | null,
-): string | null {
-  if (menuId != null) return `menu:${menuId}`;
-  if (branchId != null) return `branch:${branchId}`;
-  return null;
-}
-
-export function smartReportStorageKey(scope: string, from: string, to: string): string {
-  return `smart-report:${scope}:${from}:${to}`;
-}
 
 export function smartReportTitle(
   item: Pick<SmartReportListItem, "branchName" | "menuName">,
 ): string {
   return item.branchName?.trim() || item.menuName?.trim() || "Akilli rapor";
+}
+
+export function matchesSmartReportScope(
+  item: Pick<SmartReportListItem, "branchId" | "menuId" | "from" | "to">,
+  scope: SmartReportJobScope,
+): boolean {
+  if (item.from !== scope.from || item.to !== scope.to) {
+    return false;
+  }
+  if (scope.menuId != null) {
+    return item.menuId === scope.menuId;
+  }
+  if (scope.branchId != null) {
+    return item.branchId === scope.branchId;
+  }
+  return false;
+}
+
+export function findLatestSmartReportForScope(
+  items: SmartReportListItem[],
+  scope: SmartReportJobScope,
+): SmartReportListItem | null {
+  for (const item of items) {
+    if (matchesSmartReportScope(item, scope)) {
+      return item;
+    }
+  }
+  return null;
 }
 
 export function resolveSmartReportProcessId(
@@ -141,6 +157,22 @@ export function isSmartReportCompleted(
   status: SmartReportJobStatus | null | undefined,
 ): boolean {
   return status === "completed";
+}
+
+export function isSmartReportFailed(
+  status: SmartReportJobStatus | null | undefined,
+): boolean {
+  return status === "failed";
+}
+
+export function smartReportStatusLabel(
+  status: SmartReportJobStatus | null | undefined,
+): string {
+  if (status == null) return "—";
+  if (isSmartReportPending(status)) return "Hazırlanıyor";
+  if (isSmartReportCompleted(status)) return "Hazır";
+  if (isSmartReportFailed(status)) return "Başarısız";
+  return status;
 }
 
 export function toSmartReportUiStatus(
@@ -254,66 +286,6 @@ export function normalizeSmartReportResult(
     sections: [],
     rawMarkdown: text,
   };
-}
-
-function getLocalStorage(): Storage | null {
-  try {
-    const root = globalThis as typeof globalThis & {
-      window?: { localStorage?: Storage };
-      localStorage?: Storage;
-    };
-    return root.window?.localStorage ?? root.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function readStoredSmartReportJob(
-  scope: string,
-  from: string,
-  to: string,
-): StoredSmartReportJob | null {
-  const storage = getLocalStorage();
-  if (!storage) return null;
-  try {
-    const raw = storage.getItem(smartReportStorageKey(scope, from, to));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredSmartReportJob;
-    if (!parsed?.jobId || typeof parsed.jobId !== "string") return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function writeStoredSmartReportJob(
-  scope: string,
-  from: string,
-  to: string,
-  value: StoredSmartReportJob,
-): void {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  try {
-    storage.setItem(
-      smartReportStorageKey(scope, from, to),
-      JSON.stringify(value),
-    );
-  } catch {
-  }
-}
-
-export function clearStoredSmartReportJob(
-  scope: string,
-  from: string,
-  to: string,
-): void {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  try {
-    storage.removeItem(smartReportStorageKey(scope, from, to));
-  } catch {
-  }
 }
 
 export async function createSmartReportRequest(body: {
