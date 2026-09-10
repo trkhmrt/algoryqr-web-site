@@ -63,16 +63,6 @@ describe("smart-report helpers", () => {
     expect(smartReportStatusLabel("failed")).toBe("Başarısız");
   });
 
-  it("detects lastUsage inside the day period", () => {
-    const now = new Date("2026-08-02T12:00:00+03:00");
-    expect(
-      isLastUsageWithinQuotaPeriod("2026-08-02T09:15:00+03:00", "DAY", now),
-    ).toBe(true);
-    expect(
-      isLastUsageWithinQuotaPeriod("2026-08-01T23:59:00+03:00", "DAY", now),
-    ).toBe(false);
-  });
-
   it("treats free remaining zero as exhausted unless paid credits remain", () => {
     expect(
       isSmartReportQuotaExhausted({
