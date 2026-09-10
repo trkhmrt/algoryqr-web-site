@@ -35,7 +35,7 @@ async function proxy(req: Request, method: string, path: string[]) {
       headers["Content-Type"] = "application/json";
     }
   }
-  if (suffix === "/QR_MENU/qr/create" && data && typeof data === "object") {
+  if (suffix === "/QR_MENU/qrs" && data && typeof data === "object") {
     const userId = resolveSessionUserId(accessToken, cookieStore);
     data = { ...(data as Record<string, unknown>), userId };
   }

@@ -18,6 +18,7 @@ import {
   isSmartReportQuotaExhausted,
   listSmartReportsRequest,
   resolveSmartReportProcessId,
+  smartReportAddonCheckoutCode,
   smartReportTitle,
   type SmartReportQuota,
 } from "@/lib/smart-report";
@@ -97,12 +98,25 @@ function QuotaCountdownCard({
               {exhausted ? "Yenilenmeye" : "Kalan hak"}
             </p>
             {exhausted ? (
-              <p className="mt-0.5 font-mono text-sm font-semibold tracking-tight text-foreground tabular-nums">
-                {countdownDone ? "Yenileniyor…" : formatCountdown(remainingMs)}
-              </p>
+              <div className="mt-0.5 space-y-2">
+                <p className="font-mono text-sm font-semibold tracking-tight text-foreground tabular-nums">
+                  {countdownDone ? "Yenileniyor…" : formatCountdown(remainingMs)}
+                </p>
+                <Link
+                  href={DASHBOARD_ROUTES.catalogProductCheckout(
+                    smartReportAddonCheckoutCode(quota),
+                  )}
+                  className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Ek rapor al (200 TL)
+                </Link>
+              </div>
             ) : (
               <p className="mt-0.5 text-sm font-medium text-foreground">
-                {quota.remaining}/{quota.limit} hazır
+                {quota.remaining}/{quota.limit} ücretsiz
+                {(quota.paidCredits ?? 0) > 0
+                  ? ` · ${quota.paidCredits} satın alınan`
+                  : ""}
               </p>
             )}
           </div>

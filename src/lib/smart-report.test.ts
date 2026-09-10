@@ -69,7 +69,7 @@ describe("smart-report helpers", () => {
     expect(isSmartReportPending("completed")).toBe(false);
   });
 
-  it("treats lastUsage inside the day period as exhausted for limit 1", () => {
+  it("detects lastUsage inside the day period", () => {
     const now = new Date("2026-08-02T12:00:00+03:00");
     expect(
       isLastUsageWithinQuotaPeriod("2026-08-02T09:15:00+03:00", "DAY", now),
@@ -77,16 +77,28 @@ describe("smart-report helpers", () => {
     expect(
       isLastUsageWithinQuotaPeriod("2026-08-01T23:59:00+03:00", "DAY", now),
     ).toBe(false);
+  });
+
+  it("treats free remaining zero as exhausted unless paid credits remain", () => {
     expect(
       isSmartReportQuotaExhausted({
-        period: "DAY",
+        period: "WEEK",
         limit: 1,
-        used: 0,
-        remaining: 1,
-        resetsAt: "2026-08-03T00:00:00+03:00",
-        lastUsage: "2026-08-02T09:15:00+03:00",
+        used: 1,
+        remaining: 0,
+        resetsAt: "2026-08-10T00:00:00+03:00",
       }),
     ).toBe(true);
+    expect(
+      isSmartReportQuotaExhausted({
+        period: "WEEK",
+        limit: 1,
+        used: 1,
+        remaining: 0,
+        resetsAt: "2026-08-10T00:00:00+03:00",
+        paidCredits: 2,
+      }),
+    ).toBe(false);
   });
 
   it("normalizes result_text into a SmartReportResult", () => {

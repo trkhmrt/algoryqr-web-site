@@ -1224,7 +1224,7 @@ export async function createQrRequest(payload: CreateQrRequestBody): Promise<Cre
     type: payload.type,
     details: payload.details,
   };
-  const response = await api.post<CreateQrGatewayResponse>("/features/QR_MENU/qr/create", requestBody);
+  const response = await api.post<CreateQrGatewayResponse>("/features/QR_MENU/qrs", requestBody);
   const now = new Date().toISOString();
   const qrId = response.data.qrId;
 

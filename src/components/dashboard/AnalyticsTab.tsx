@@ -42,6 +42,7 @@ import {
   buildSmartReportMarkdown,
   isSmartReportQuotaExhausted,
   normalizeSmartReportResult,
+  smartReportAddonCheckoutCode,
 } from "@/lib/smart-report";
 import { getBranchRevenueReportRequest } from "@/lib/api";
 import {
@@ -203,14 +204,7 @@ export default function AnalyticsTab() {
       return;
     }
     if (quotaExhausted) {
-      toast({
-        title: "Gunluk hak doldu",
-        description:
-          quota?.period === "WEEK"
-            ? "Bu haftaki akilli rapor hakkiniz kullanildi."
-            : "Bugunku akilli rapor hakkiniz kullanildi.",
-        variant: "destructive",
-      });
+      router.push(DASHBOARD_ROUTES.catalogProductCheckout(smartReportAddonCheckoutCode(quota)));
       return;
     }
     openSmartReportConfirm();
@@ -249,11 +243,12 @@ export default function AnalyticsTab() {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         (status === 429
-          ? "Bugunku akilli rapor hakkiniz kullanildi"
+          ? "Ucretsiz hakkiniz bitti. Ek rapor icin satin alabilirsiniz."
           : "Akıllı rapor başlatılamadı.");
       toast({ title: "Hata", description: message, variant: "destructive" });
       if (status === 429) {
         await queryClient.invalidateQueries({ queryKey: ["smart-reports", "quota"] });
+        router.push(DASHBOARD_ROUTES.catalogProductCheckout(smartReportAddonCheckoutCode(quota)));
       }
     }
   }
@@ -308,13 +303,14 @@ export default function AnalyticsTab() {
         ? personnelLoading
         : visitLoading;
   const canGenerate = branches.length > 0 && !smartReport.isGenerating && !quotaExhausted;
+  const canBuyExtraReport = quotaExhausted && !smartReport.isGenerating;
   const canConfirmSmartReport = draftBranchId != null;
   const smartReportLabel = smartReport.isReady
     ? "İndirmeye hazır"
     : smartReport.isGenerating
       ? "Hazırlanıyor…"
       : quotaExhausted
-        ? "Hak doldu"
+        ? "Ek rapor al (200 TL)"
         : failed
           ? "Tekrar dene"
           : "Akıllı Rapor";
@@ -341,18 +337,18 @@ export default function AnalyticsTab() {
           <SmartFeaturePanel
             title="Akıllı Rapor"
             hint={PRODUCT_HINTS.SMART_REPORTING}
-            description="Yapay zeka destekli özet, içgörü ve PDF rapor oluşturun."
+            description="Yapay zeka destekli özet, içgörü ve PDF rapor oluşturun. Haftada 1 ücretsiz; ek rapor 200 TL."
             actionLabel={smartReportLabel}
             loading={smartReport.isGenerating}
             loadingSkeleton={accessProfileLoading}
             prominent
             disabled={
               accessProfileLoading ||
-              (smartReportLabel === "İndirmeye hazır"
+              (smartReport.isReady
                 ? false
                 : smartReport.isGenerating
                   ? true
-                  : !canGenerate)
+                  : !(canGenerate || canBuyExtraReport))
             }
             onActionClick={() => handleSmartReportClick()}
             secondaryAction={{
@@ -371,8 +367,8 @@ export default function AnalyticsTab() {
             <DialogTitle>Hangi şube için rapor oluşturulsun?</DialogTitle>
             <DialogDescription>
               {quota?.period === "WEEK"
-                ? "Seçtiğiniz şube için akıllı rapor hazırlanır. Bu haftaki hakkınızdan bir kullanım düşer."
-                : "Seçtiğiniz şube için akıllı rapor hazırlanır. Bugünkü hakkınızdan bir kullanım düşer."}
+                ? "Seçtiğiniz şube için akıllı rapor hazırlanır. Haftada 1 ücretsiz hakkınız varsa o düşer; yoksa satın alınan haktan düşer."
+                : "Seçtiğiniz şube için akıllı rapor hazırlanır. Ücretsiz hakkınız varsa o düşer; yoksa satın alınan haktan düşer."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-1">

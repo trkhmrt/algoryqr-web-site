@@ -84,16 +84,20 @@ export type SmartReportQuota = {
   remaining: number;
   resetsAt: string;
   lastUsage?: string | null;
+  paidCredits?: number;
+  addonProductCode?: string | null;
+  addonUnitPrice?: number | string | null;
 };
+
+export const SMART_REPORT_ADDON_PRODUCT_CODE = "SMART_REPORTING_ADDON";
+export const SMART_REPORT_POLL_INTERVAL_MS = 5_000;
+export const SMART_REPORT_QUOTA_ZONE = "Europe/Istanbul";
 
 export type StoredSmartReportJob = {
   jobId: string;
   status: SmartReportJobStatus;
   savedAt: number;
 };
-
-export const SMART_REPORT_POLL_INTERVAL_MS = 5_000;
-export const SMART_REPORT_QUOTA_ZONE = "Europe/Istanbul";
 
 export function smartReportScopeKey(
   branchId: number | null,
@@ -207,6 +211,7 @@ export function isLastUsageWithinQuotaPeriod(
 
 export function isSmartReportQuotaExhausted(quota: SmartReportQuota | null | undefined): boolean {
   if (!quota) return false;
+  if ((quota.paidCredits ?? 0) > 0) return false;
   if (quota.remaining <= 0) return true;
   if (quota.limit <= 0) return true;
   if (
@@ -216,6 +221,11 @@ export function isSmartReportQuotaExhausted(quota: SmartReportQuota | null | und
     return true;
   }
   return false;
+}
+
+export function smartReportAddonCheckoutCode(quota: SmartReportQuota | null | undefined): string {
+  const code = quota?.addonProductCode?.trim();
+  return code && code.length > 0 ? code : SMART_REPORT_ADDON_PRODUCT_CODE;
 }
 
 export function normalizeSmartReportResult(
@@ -315,7 +325,7 @@ export async function createSmartReportRequest(body: {
 }): Promise<SmartReportAccepted> {
   if (body.branchId != null) {
     const response = await api.post<SmartReportAccepted>(
-      `/features/SMART_REPORTING/analytics/branch/${body.branchId}/smart-reports`,
+      `/features/SMART_REPORTING/branches/${body.branchId}/reports`,
       {
         from: body.from,
         to: body.to,
@@ -357,10 +367,15 @@ export async function getSmartReportQuotaRequest(): Promise<SmartReportQuota> {
 }
 
 export function smartReportQuotaLabel(quota: SmartReportQuota): string {
-  if (quota.period === "WEEK") {
-    return `Bu hafta ${quota.used}/${quota.limit} hak kullanildi`;
+  const paid = quota.paidCredits ?? 0;
+  const freeLabel =
+    quota.period === "WEEK"
+      ? `Bu hafta ${quota.used}/${quota.limit} ucretsiz hak`
+      : `Bugun ${quota.used}/${quota.limit} ucretsiz hak`;
+  if (paid > 0) {
+    return `${freeLabel}; ${paid} satin alinan hak`;
   }
-  return `Bugun ${quota.used}/${quota.limit} hak kullanildi`;
+  return freeLabel;
 }
 
 export function buildSmartReportMarkdown(
