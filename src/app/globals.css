@@ -63,6 +63,11 @@
     --chart-red: 0 72% 55%;
     --chart-orange: 25 95% 53%;
     --chart-stone: 80 70% 45%;
+    --chart-1: 234 89% 63%;
+    --chart-2: 270 67% 60%;
+    --chart-3: 172 66% 50%;
+    --chart-4: 142 71% 45%;
+    --chart-5: 25 95% 53%;
 
     /* Overview tile surfaces */
     --surface: oklch(0.995 0 0);
@@ -136,6 +141,11 @@
     --chart-red: 0 72% 60%;
     --chart-orange: 25 95% 58%;
     --chart-stone: 80 70% 50%;
+    --chart-1: 234 89% 68%;
+    --chart-2: 270 67% 65%;
+    --chart-3: 172 66% 55%;
+    --chart-4: 142 76% 50%;
+    --chart-5: 25 95% 58%;
 
     --surface: oklch(0.22 0 0);
     --surface-muted: oklch(0.27 0 0);

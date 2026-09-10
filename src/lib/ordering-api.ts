@@ -27,6 +27,9 @@ export type OrderStatus =
   | "DRAFT"
   | "SUBMITTED"
   | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "SERVED"
   | "REJECTED"
   | "CANCELLED"
   | string;
@@ -160,10 +163,18 @@ export async function putCart(
   sessionToken: string,
   payload: UpdateCartRequest,
 ): Promise<OrderResponse> {
+  const { getOrCreateMenuSessionId, trackMenuAnalyticsEvent } = await import("@/lib/menu-analytics");
+  const analyticsSessionId = getOrCreateMenuSessionId(identifier);
+  for (const item of payload.items ?? []) {
+    trackMenuAnalyticsEvent(identifier, "ADD_TO_CART", { productId: item.productId });
+  }
   const response = await fetch(`/api/menu/public/${encodeURIComponent(identifier)}/cart`, {
     method: "PUT",
-    headers: sessionHeaders(sessionToken),
-    body: JSON.stringify(payload),
+    headers: {
+      ...sessionHeaders(sessionToken),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...payload, analyticsSessionId }),
   });
   const data = await parseJson<OrderResponse & { message?: string }>(response);
   if (!response.ok) {
@@ -176,18 +187,26 @@ export async function submitOrder(
   identifier: string,
   sessionToken: string,
 ): Promise<OrderResponse> {
+  const { getOrCreateMenuSessionId, trackMenuAnalyticsEvent } = await import("@/lib/menu-analytics");
+  const analyticsSessionId = getOrCreateMenuSessionId(identifier);
+  trackMenuAnalyticsEvent(identifier, "CHECKOUT_START");
   const response = await fetch(
     `/api/menu/public/${encodeURIComponent(identifier)}/orders/submit`,
     {
       method: "POST",
-      headers: sessionHeaders(sessionToken),
+      headers: {
+        ...sessionHeaders(sessionToken),
+        "Content-Type": "application/json",
+      },
       credentials: "same-origin",
+      body: JSON.stringify({ analyticsSessionId }),
     },
   );
   const data = await parseJson<OrderResponse & { message?: string }>(response);
   if (!response.ok) {
     throw new OrderingApiError(response.status, data.message || "Sipariş gönderilemedi");
   }
+  trackMenuAnalyticsEvent(identifier, "ORDER_SUBMITTED");
   return data;
 }
 

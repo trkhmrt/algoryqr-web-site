@@ -213,12 +213,16 @@ export default function SmartReportDetailView({ jobId }: Props) {
               branchName={detail.branchName}
               result={result}
             />
-          ) : bodyHtml ? (
+          ) : null}
+
+          {detail?.branchId == null && bodyHtml && !pending ? (
             <div
               className={`${DASHBOARD_SURFACE} p-4 text-sm text-foreground [&_h1]:mb-3 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:mb-1 [&_p]:mb-2 [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5`}
               dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
-          ) : result && !pending ? (
+          ) : null}
+
+          {detail?.branchId == null && !bodyHtml && result && !pending ? (
             <p className="text-sm text-muted-foreground">Rapor icerigi bulunamadi.</p>
           ) : null}
         </div>

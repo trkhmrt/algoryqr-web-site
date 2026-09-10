@@ -2,7 +2,12 @@ export type MenuAnalyticsEventType =
   | "MENU_OPEN"
   | "CATEGORY_VIEW"
   | "PRODUCT_VIEW"
-  | "SERVES_FILTER";
+  | "SERVES_FILTER"
+  | "QR_SCAN"
+  | "ADD_TO_CART"
+  | "REMOVE_FROM_CART"
+  | "CHECKOUT_START"
+  | "ORDER_SUBMITTED";
 export type MenuAnalyticsDeviceType = "MOBILE" | "TABLET" | "DESKTOP";
 
 export type MenuAnalyticsEventItem = {
@@ -108,4 +113,25 @@ export function postMenuAnalyticsEvents(
     body: payload,
     keepalive: true,
   }).catch(() => undefined);
+}
+
+export function trackMenuAnalyticsEvent(
+  publicId: string,
+  type: MenuAnalyticsEventType,
+  extras?: { categoryId?: number; productId?: number; servesPeople?: number },
+): void {
+  if (!publicId) {
+    return;
+  }
+  const sessionId = getOrCreateMenuSessionId(publicId);
+  postMenuAnalyticsEvents(publicId, sessionId, [
+    {
+      type,
+      categoryId: extras?.categoryId,
+      productId: extras?.productId,
+      servesPeople: extras?.servesPeople,
+      sequence: nextMenuEventSequence(publicId),
+      occurredAt: new Date().toISOString(),
+    },
+  ]);
 }

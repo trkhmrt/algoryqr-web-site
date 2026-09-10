@@ -38,8 +38,8 @@ describe("smart-report helpers", () => {
     vi.unstubAllGlobals();
   });
 
-  it("uses a 5 minute poll interval", () => {
-    expect(SMART_REPORT_POLL_INTERVAL_MS).toBe(5 * 60_000);
+  it("uses a 5 second poll interval", () => {
+    expect(SMART_REPORT_POLL_INTERVAL_MS).toBe(5_000);
   });
 
   it("resolves processId preferentially over jobId", () => {

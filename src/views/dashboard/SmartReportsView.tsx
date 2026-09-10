@@ -14,6 +14,7 @@ import { DASHBOARD_BACK, DASHBOARD_SURFACE } from "@/lib/dashboard-surface";
 import {
   getSmartReportQuotaRequest,
   isSmartReportCompleted,
+  isSmartReportPending,
   isSmartReportQuotaExhausted,
   listSmartReportsRequest,
   resolveSmartReportProcessId,
@@ -114,9 +115,13 @@ function QuotaCountdownCard({
 export default function SmartReportsView() {
   const { allowed, isLoading: accessLoading } = useRequireScope("SMART_REPORTING_OWNER");
   const listQuery = useQuery({
-    queryKey: ["smart-reports", "list", "completed"],
-    queryFn: () => listSmartReportsRequest({ page: 0, size: 50, status: "completed" }),
+    queryKey: ["smart-reports", "list", "all"],
+    queryFn: () => listSmartReportsRequest({ page: 0, size: 50, status: "all" }),
     enabled: allowed,
+    refetchInterval: (query) => {
+      const items = query.state.data?.content ?? [];
+      return items.some((item) => isSmartReportPending(item.status)) ? 5_000 : false;
+    },
   });
   const quotaQuery = useQuery({
     queryKey: ["smart-reports", "quota"],
@@ -141,12 +146,11 @@ export default function SmartReportsView() {
     );
   }
 
-  const items = (listQuery.data?.content ?? []).filter((item) =>
-    isSmartReportCompleted(item.status ?? "completed"),
-  );
+  const items = listQuery.data?.content ?? [];
   const quota = quotaQuery.data;
   const lastUsedAt =
     quota?.lastUsage ??
+    items.find((item) => isSmartReportCompleted(item.status))?.completedAt ??
     items[0]?.completedAt ??
     items[0]?.createdAt ??
     null;
@@ -197,6 +201,9 @@ export default function SmartReportsView() {
                   <p className="truncate text-sm font-medium text-foreground">{smartReportTitle(item)}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.completedAt ?? item.createdAt)}
+                    {item.status && item.status !== "completed"
+                      ? ` · ${item.status === "failed" ? "Başarısız" : item.status === "queued" ? "Kuyrukta" : "Hazırlanıyor"}`
+                      : ""}
                   </p>
                 </div>
                 <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
