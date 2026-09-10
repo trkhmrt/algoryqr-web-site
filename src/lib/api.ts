@@ -1642,6 +1642,286 @@ export async function getBranchWaiterPerformanceReportRequest(
   return response.data;
 }
 
+export interface AnalyticsCoverage {
+  kitchenMetrics: boolean;
+  discounts: boolean;
+  shifts: boolean;
+  cartToOrderFunnel: boolean;
+  coversPerTable: boolean;
+}
+
+export interface AnalyticsPeriod {
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+}
+
+export interface SummaryOverview {
+  grossRevenue?: number | string | null;
+  netRevenue?: number | string | null;
+  tipTotal?: number | string | null;
+  orderCount?: number;
+  completedOrderCount?: number;
+  cancelledOrderCount?: number;
+  avgBasket?: number | string | null;
+  activeOpenTables?: number;
+  occupancyRatio?: number | null;
+  cancelRate?: number;
+  revenueVsPreviousPct?: number | null;
+  currency?: string | null;
+}
+
+export interface SummaryAnalyticsResponse {
+  menuId?: number | null;
+  menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
+  period: AnalyticsPeriod;
+  overview: SummaryOverview;
+  salesTeaser: {
+    hourlyRevenue: { hour: number; revenue?: number | string | null; orderCount?: number }[];
+    topProducts: MenuRevenueProductRow[];
+    categoryShare: {
+      categoryId?: number | null;
+      name: string;
+      quantity: number;
+      revenue?: number | string | null;
+    }[];
+  };
+  staffTeaser: {
+    topWaitersByRevenue: MenuWaiterPerformanceRow[];
+    unassignedRevenueShare?: number | null;
+  };
+  operationsTeaser: {
+    openBills: number;
+    confirmedOrders: number;
+  };
+  tablesTeaser: {
+    topTablesByRevenue: TableAnalyticsRow[];
+    avgTurnMinutes?: number | null;
+  };
+  qrTeaser: {
+    sessions: number;
+    menuOpens: number;
+    productViews: number;
+    browseFunnel: { menuOpens: number; categoryViews: number; productViews: number };
+  };
+  coverage: AnalyticsCoverage;
+}
+
+export interface TableAnalyticsRow {
+  tableId: number;
+  tableName: string;
+  revenue?: number | string | null;
+  orderCount?: number;
+  billCount?: number;
+  avgCheck?: number | string | null;
+  avgDwellMinutes?: number | null;
+  closedBills?: number;
+  qrOrderCount?: number;
+  staffOrderCount?: number;
+  capacity?: number | null;
+  coverCountTotal?: number | null;
+  revenuePerCover?: number | string | null;
+}
+
+export interface ProductCoPurchase {
+  productId: number;
+  name: string;
+  billCount: number;
+  companions: {
+    productId: number;
+    name: string;
+    togetherCount: number;
+    sharePercent: number;
+  }[];
+}
+
+export interface FullAnalyticsResponse {
+  menuId?: number | null;
+  menuName?: string | null;
+  branchId?: number | null;
+  branchName?: string | null;
+  period: AnalyticsPeriod;
+  coverage: AnalyticsCoverage;
+  dashboard: {
+    overview: SummaryOverview;
+    daily: { date: string; revenue?: number | string | null; orderCount?: number }[];
+    hourly: { hour: number; revenue?: number | string | null; orderCount?: number }[];
+    previousPeriod: AnalyticsPeriod;
+    previousGrossRevenue?: number | string | null;
+  };
+  orders: {
+    countsByStatus: { status: string; count: number }[];
+    hourly: { hour: number; orderCount: number }[];
+    daily: { date: string; orderCount: number }[];
+    avgItemsPerOrder: number;
+    cancelRate: number;
+    aov?: number | string | null;
+    totalOrders: number;
+    completedOrders: number;
+    cancelledOrders: number;
+  };
+  staff: {
+    kpis: MenuWaiterPerformanceKpis;
+    rows: MenuWaiterPerformanceRow[];
+    ranking: {
+      waiterId?: number | null;
+      displayName: string;
+      revenue?: number | string | null;
+      orderCount?: number;
+      rank: number;
+    }[];
+    hourly: { hour: number; revenue?: number | string | null; orderCount?: number }[];
+    products: MenuWaiterPerformanceProductRow[];
+  };
+  products: {
+    top: MenuRevenueProductRow[];
+    bottom: MenuRevenueProductRow[];
+    byCategory: {
+      categoryId?: number | null;
+      name: string;
+      quantity: number;
+      revenue?: number | string | null;
+    }[];
+    hourly: { hour: number; revenue?: number | string | null; orderCount?: number }[];
+    coPurchase: ProductCoPurchase[];
+    unsold?: {
+      count?: number;
+      products?: { productId: number; name: string }[];
+    } | null;
+  };
+  tables: {
+    perTable: TableAnalyticsRow[];
+    avgDwellMinutes?: number | null;
+    turnRate?: number | null;
+    qrOrderCount?: number;
+    staffOrderCount?: number;
+    qrOrderSharePercent?: number | null;
+    occupancyRatio?: number | null;
+    avgRevenuePerCover?: number | string | null;
+  };
+  qr: {
+    kpis: MenuAnalyticsReportKpis;
+    funnel: {
+      menuOpens: number;
+      categoryViews: number;
+      productViews: number;
+      addToCart?: number;
+      checkoutStarts?: number;
+      orderSubmitted?: number;
+    };
+    devices: { name: string; value: number }[];
+    topViewed: { productId: number; name: string; views: number }[];
+    journeys: {
+      sessionId: string;
+      startedAt: string;
+      steps: { type: string; name: string; at: string }[];
+    }[];
+  };
+  finance: {
+    grossRevenue?: number | string | null;
+    tipRevenue?: number | string | null;
+    cashRevenue?: number | string | null;
+    cardRevenue?: number | string | null;
+    fixedExpenses?: number | string | null;
+    netRevenue?: number | string | null;
+    orderTotalAmount?: number | string | null;
+    collectedAmount?: number | string | null;
+    discountTotal?: number | string | null;
+    refundTotal?: number | string | null;
+    voidTotal?: number | string | null;
+    channels?: RevenueChannelShare[];
+    paymentBreakdown?: MenuRevenuePaymentBreakdown | null;
+    currency?: string | null;
+  };
+  cancellations: {
+    byStatus: { status: string; count: number }[];
+    byWaiter: {
+      waiterId?: number | null;
+      displayName: string;
+      cancelCount: number;
+    }[];
+    totalCancelled: number;
+    totalRejected: number;
+  };
+  kitchen?: {
+    kpis: {
+      avgConfirmToPrepareMinutes?: number | null;
+      avgPrepareToReadyMinutes?: number | null;
+      avgReadyToServeMinutes?: number | null;
+      avgConfirmToServeMinutes?: number | null;
+      preparingCount: number;
+      readyCount: number;
+      servedCount: number;
+      delayedCount: number;
+      delayRatePercent: number;
+    };
+    hourlyLoad: { hour: number; orderCount: number; avgPrepMinutes?: number | null }[];
+    delayThresholdMinutes: number;
+  } | null;
+  shifts?: {
+    shifts: {
+      shiftId: number;
+      openedAt: string;
+      closedAt?: string | null;
+      status: string;
+      openingFloat?: number | string | null;
+      closingCash?: number | string | null;
+      revenue?: number | string | null;
+      orderCount: number;
+      waiterCount: number;
+    }[];
+    totalRevenue?: number | string | null;
+    totalOrders: number;
+  } | null;
+  customers: {
+    identifiedCustomerOrderCount: number;
+    distinctIdentifiedCustomers: number;
+    anonymousSessions: number;
+    repeatAnonymousSessions: number;
+    newAnonymousVisitors?: number;
+    returningAnonymousVisitors?: number;
+    identifiedOrderSharePercent?: number | null;
+  };
+  drillDownHints: {
+    billId?: number | null;
+    orderId?: number | null;
+    tableId?: number | null;
+    waiterId?: number | null;
+    productId?: number | null;
+    paidAt?: string | null;
+    amount?: number | string | null;
+  }[];
+}
+
+export async function getBranchSummaryAnalyticsRequest(
+  branchId: number | string,
+  from: string,
+  to: string,
+  menuId?: number | null,
+): Promise<SummaryAnalyticsResponse> {
+  const response = await api.get<SummaryAnalyticsResponse>(
+    `/analytics/branch/${branchId}/summary`,
+    { params: branchReportParams(from, to, menuId) },
+  );
+  return response.data;
+}
+
+export async function getBranchFullAnalyticsRequest(
+  branchId: number | string,
+  from: string,
+  to: string,
+  menuId?: number | null,
+): Promise<FullAnalyticsResponse> {
+  const response = await api.get<FullAnalyticsResponse>(
+    `/analytics/branch/${branchId}/full`,
+    { params: branchReportParams(from, to, menuId) },
+  );
+  return response.data;
+}
+
 export type FeedbackTypeFilter = "all" | "menu" | "product";
 
 export interface FeedbackItemApi {

@@ -12,7 +12,7 @@ export type SmartReportUiStatus = "idle" | "pending" | "ready" | "failed";
 export type SmartReportResult = {
   title: string;
   summary: string;
-  sections: { heading: string; body: string }[];
+  sections: { key?: string; heading: string; body: string }[];
   rawMarkdown: string;
   model?: string | null;
   promptVersion?: string | null;
@@ -92,7 +92,7 @@ export type StoredSmartReportJob = {
   savedAt: number;
 };
 
-export const SMART_REPORT_POLL_INTERVAL_MS = 5 * 60_000;
+export const SMART_REPORT_POLL_INTERVAL_MS = 5_000;
 export const SMART_REPORT_QUOTA_ZONE = "Europe/Istanbul";
 
 export function smartReportScopeKey(
@@ -338,14 +338,14 @@ export async function getSmartReportJobRequest(
 export async function listSmartReportsRequest(params?: {
   page?: number;
   size?: number;
-  status?: SmartReportJobStatus;
+  status?: SmartReportJobStatus | "all";
 }): Promise<SmartReportListPage> {
   const response = await api.get<SmartReportListPage>("/smart-reports", {
     params: {
       page: params?.page ?? 0,
       size: params?.size ?? 20,
       sort: "createdAt,desc",
-      status: params?.status ?? "completed",
+      status: params?.status ?? "all",
     },
   });
   return response.data;

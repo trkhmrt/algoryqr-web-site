@@ -9,7 +9,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { RequireScope } from "@/components/auth/RequireScope";
 import { BranchReportPicker, useBranchReportSelection } from "@/components/dashboard/BranchReportPicker";
 import BranchSmartReportStory from "@/components/dashboard/BranchSmartReportStory";
-import AnalyticsRevenuePanel from "@/components/dashboard/AnalyticsRevenuePanel";
+import BranchReportDashboard from "@/components/dashboard/smart-report/BranchReportDashboard";
 import AnalyticsVisitsPanel from "@/components/dashboard/AnalyticsVisitsPanel";
 import AnalyticsWaiterPerformancePanel from "@/components/dashboard/AnalyticsWaiterPerformancePanel";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
@@ -45,7 +45,6 @@ import {
 } from "@/lib/smart-report";
 import { getBranchRevenueReportRequest } from "@/lib/api";
 import {
-  buildVisitReportView,
   reportingPeriodRange,
   type AnalyticsPeriod,
 } from "@/reporting";
@@ -122,14 +121,20 @@ export default function AnalyticsTab() {
     menuId,
     range.from,
     range.to,
-    canUseRevenue && branchId != null && activeReportView === "revenue",
+    canUseRevenue &&
+      branchId != null &&
+      (activeReportView === "revenue" ||
+        activeReportView === "visits" ||
+        activeReportView === "personnel"),
   );
   const personnelQuery = useBranchWaiterPerformanceReport(
     branchId,
     menuId,
     range.from,
     range.to,
-    canUseRevenue && branchId != null && activeReportView === "personnel",
+    canUseRevenue &&
+      branchId != null &&
+      (activeReportView === "personnel" || activeReportView === "revenue"),
   );
   const report = reportQuery.data;
   const smartReport = useSmartReportJob({
@@ -163,11 +168,13 @@ export default function AnalyticsTab() {
     if (!smartReport.isReady || !wasGeneratingRef.current) return;
     wasGeneratingRef.current = false;
     setDialogOpen(true);
+    void queryClient.invalidateQueries({ queryKey: ["smart-reports", "list"] });
+    void queryClient.invalidateQueries({ queryKey: ["smart-reports", "quota"] });
     toast({
       title: "Rapor indirmeye hazır",
       description: "Akıllı raporunuz hazır. PDF olarak indirebilirsiniz.",
     });
-  }, [smartReport.isReady, toast]);
+  }, [smartReport.isReady, toast, queryClient]);
 
   function handleSmartReportHistoryClick() {
     router.push(DASHBOARD_ROUTES.smartReports);
@@ -291,7 +298,6 @@ export default function AnalyticsTab() {
     }
   }
 
-  const visit = buildVisitReportView(report);
   const visitLoading = selectionLoading || reportQuery.isLoading;
   const revenueLoading = selectionLoading || revenueQuery.isLoading;
   const personnelLoading = selectionLoading || personnelQuery.isLoading;
@@ -580,7 +586,14 @@ export default function AnalyticsTab() {
       ) : null}
 
       {activeReportView === "revenue" && branchId != null && canUseRevenue && !revenueLoading && !revenueQuery.isError && revenueQuery.data ? (
-        <AnalyticsRevenuePanel report={revenueQuery.data} tooltipStyle={tooltipStyle} />
+        <BranchReportDashboard
+          revenue={revenueQuery.data}
+          visits={reportQuery.data}
+          waiter={personnelQuery.data}
+          loading={revenueLoading}
+          allowedTabs={["overview", "revenue", "channels", "products"]}
+          initialTab="overview"
+        />
       ) : null}
 
       {activeReportView === "personnel" && branchId != null && !canUseRevenue ? (
@@ -602,11 +615,32 @@ export default function AnalyticsTab() {
       ) : null}
 
       {activeReportView === "personnel" && branchId != null && canUseRevenue && !personnelLoading && !personnelQuery.isError && personnelQuery.data ? (
-        <AnalyticsWaiterPerformancePanel report={personnelQuery.data} tooltipStyle={tooltipStyle} />
+        revenueQuery.data ? (
+          <BranchReportDashboard
+            revenue={revenueQuery.data}
+            waiter={personnelQuery.data}
+            allowedTabs={["staff"]}
+            initialTab="staff"
+          />
+        ) : (
+          <AnalyticsWaiterPerformancePanel
+            report={personnelQuery.data}
+            tooltipStyle={tooltipStyle}
+          />
+        )
       ) : null}
 
       {activeReportView === "visits" && branchId != null && !visitLoading && !reportQuery.isError ? (
-        <AnalyticsVisitsPanel report={report} tooltipStyle={tooltipStyle} />
+        revenueQuery.data ? (
+          <BranchReportDashboard
+            revenue={revenueQuery.data}
+            visits={report}
+            allowedTabs={["traffic"]}
+            initialTab="traffic"
+          />
+        ) : (
+          <AnalyticsVisitsPanel report={report} tooltipStyle={tooltipStyle} />
+        )
       ) : null}
     </div>
   );
