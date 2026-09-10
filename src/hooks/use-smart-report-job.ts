@@ -1,20 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   SMART_REPORT_POLL_INTERVAL_MS,
-  clearStoredSmartReportJob,
   createSmartReportRequest,
+  findLatestSmartReportForScope,
   getSmartReportJobRequest,
   isSmartReportPending,
+  listSmartReportsRequest,
   normalizeSmartReportResult,
-  readStoredSmartReportJob,
   resolveSmartReportProcessId,
-  smartReportScopeKey,
   toSmartReportUiStatus,
-  writeStoredSmartReportJob,
   type SmartReportAccepted,
   type SmartReportJobResponse,
   type SmartReportUiStatus,
@@ -35,45 +33,38 @@ type SmartReportStartBody = {
   locale?: string;
 };
 
+function isNotFoundError(error: unknown): boolean {
+  const status = (error as { response?: { status?: number } } | null)?.response?.status;
+  return status === 404;
+}
+
 export function useSmartReportJob(scope: SmartReportScope) {
+  const queryClient = useQueryClient();
   const { branchId, menuId, from, to } = scope;
-  const storageScope = smartReportScopeKey(branchId, menuId);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const scopeReady = branchId != null || menuId != null;
+  const [startedJobId, setStartedJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (storageScope == null) {
-      setJobId(null);
-      return;
-    }
-    const stored = readStoredSmartReportJob(storageScope, from, to);
-    setJobId(stored?.jobId ?? null);
-  }, [storageScope, from, to]);
+    setStartedJobId(null);
+  }, [branchId, menuId, from, to]);
 
-  const persist = useCallback(
-    (nextJobId: string, status: SmartReportJobResponse["status"]) => {
-      if (storageScope == null) return;
-      writeStoredSmartReportJob(storageScope, from, to, {
-        jobId: nextJobId,
-        status,
-        savedAt: Date.now(),
-      });
-    },
-    [storageScope, from, to],
-  );
+  const scopeJobQuery = useQuery({
+    queryKey: ["smart-reports", "scope", branchId, menuId, from, to],
+    queryFn: () => listSmartReportsRequest({ page: 0, size: 30, status: "all" }),
+    enabled: scopeReady,
+    select: (page) => findLatestSmartReportForScope(page.content, scope),
+  });
+
+  const scopedJobId = resolveSmartReportProcessId(scopeJobQuery.data);
+  const jobId = startedJobId ?? scopedJobId;
 
   const createMutation = useMutation({
     mutationFn: createSmartReportRequest,
-    onSuccess: (data: SmartReportAccepted, variables: SmartReportStartBody) => {
+    onSuccess: async (data: SmartReportAccepted) => {
       const id = resolveSmartReportProcessId(data);
-      if (!id) return;
-      setJobId(id);
-      const nextScope = smartReportScopeKey(variables.branchId ?? null, variables.menuId ?? null);
-      if (nextScope == null) return;
-      writeStoredSmartReportJob(nextScope, variables.from, variables.to, {
-        jobId: id,
-        status: data.status,
-        savedAt: Date.now(),
-      });
+      if (id == null) return;
+      setStartedJobId(id);
+      await queryClient.invalidateQueries({ queryKey: ["smart-reports"] });
     },
   });
 
@@ -82,37 +73,44 @@ export function useSmartReportJob(scope: SmartReportScope) {
     queryFn: () => getSmartReportJobRequest(jobId as string),
     enabled: jobId != null,
     refetchInterval: (query) => {
+      if (query.state.error && isNotFoundError(query.state.error)) {
+        return false;
+      }
       const status = query.state.data?.status;
-      if (isSmartReportPending(status) || status == null) {
+      if (isSmartReportPending(status)) {
         return SMART_REPORT_POLL_INTERVAL_MS;
       }
       return false;
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    retry: 1,
+    retry: (failureCount, error) => !isNotFoundError(error) && failureCount < 1,
   });
 
-  const job: SmartReportJobResponse | undefined = jobQuery.data;
-
   useEffect(() => {
-    if (jobId == null || job == null || storageScope == null) return;
-    persist(jobId, job.status);
-  }, [job, jobId, storageScope, persist]);
+    if (!jobQuery.isError || !isNotFoundError(jobQuery.error)) return;
+    setStartedJobId(null);
+    void queryClient.invalidateQueries({
+      queryKey: ["smart-reports", "scope", branchId, menuId, from, to],
+    });
+  }, [jobQuery.isError, jobQuery.error, queryClient, branchId, menuId, from, to]);
 
-  const uiStatus: SmartReportUiStatus =
-    createMutation.isPending
-      ? "pending"
-      : toSmartReportUiStatus(job?.status ?? (jobId != null ? "queued" : null));
+  const job: SmartReportJobResponse | undefined = jobQuery.isError
+    ? undefined
+    : jobQuery.data;
+  const status = job?.status ?? scopeJobQuery.data?.status;
+
+  const uiStatus: SmartReportUiStatus = createMutation.isPending
+    ? "pending"
+    : toSmartReportUiStatus(status);
 
   const isGenerating =
-    createMutation.isPending ||
-    (jobId != null && (job == null || isSmartReportPending(job.status)));
+    createMutation.isPending || isSmartReportPending(status);
 
   const isReady =
-    job?.status === "completed" && !!normalizeSmartReportResult(job);
+    status === "completed" && !!normalizeSmartReportResult(job ?? null);
   const isFailed =
-    job?.status === "failed" || createMutation.isError;
+    status === "failed" || createMutation.isError;
 
   async function start(body: SmartReportStartBody) {
     if (isGenerating) return null;
@@ -121,11 +119,12 @@ export function useSmartReportJob(scope: SmartReportScope) {
   }
 
   function clearJob() {
-    if (storageScope != null) {
-      clearStoredSmartReportJob(storageScope, from, to);
-    }
-    setJobId(null);
+    setStartedJobId(null);
     createMutation.reset();
+    void queryClient.removeQueries({ queryKey: ["smart-report-job", jobId] });
+    void queryClient.invalidateQueries({
+      queryKey: ["smart-reports", "scope", branchId, menuId, from, to],
+    });
   }
 
   async function retry(body: SmartReportStartBody) {

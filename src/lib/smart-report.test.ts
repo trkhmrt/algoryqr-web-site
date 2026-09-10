@@ -1,43 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   SMART_REPORT_POLL_INTERVAL_MS,
-  clearStoredSmartReportJob,
+  findLatestSmartReportForScope,
   isLastUsageWithinQuotaPeriod,
   isSmartReportPending,
   isSmartReportQuotaExhausted,
+  matchesSmartReportScope,
   normalizeSmartReportResult,
-  readStoredSmartReportJob,
   resolveSmartReportProcessId,
-  smartReportScopeKey,
-  smartReportStorageKey,
+  smartReportStatusLabel,
   smartReportTitle,
   toSmartReportUiStatus,
-  writeStoredSmartReportJob,
+  type SmartReportListItem,
 } from "./smart-report";
 
+function listItem(
+  overrides: Partial<SmartReportListItem> & Pick<SmartReportListItem, "jobId" | "from" | "to" | "createdAt">,
+): SmartReportListItem {
+  return {
+    menuId: null,
+    menuName: null,
+    branchId: null,
+    branchName: null,
+    status: "completed",
+    ...overrides,
+  };
+}
+
 describe("smart-report helpers", () => {
-  const memory = new Map<string, string>();
-
-  beforeEach(() => {
-    memory.clear();
-    vi.stubGlobal("window", {
-      localStorage: {
-        getItem: (key: string) => memory.get(key) ?? null,
-        setItem: (key: string, value: string) => {
-          memory.set(key, value);
-        },
-        removeItem: (key: string) => {
-          memory.delete(key);
-        },
-      },
-    });
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("uses a 5 second poll interval", () => {
     expect(SMART_REPORT_POLL_INTERVAL_MS).toBe(5_000);
   });
@@ -67,6 +58,10 @@ describe("smart-report helpers", () => {
     expect(isSmartReportPending("queued")).toBe(true);
     expect(isSmartReportPending("processing")).toBe(true);
     expect(isSmartReportPending("completed")).toBe(false);
+    expect(smartReportStatusLabel("queued")).toBe("Hazırlanıyor");
+    expect(smartReportStatusLabel("processing")).toBe("Hazırlanıyor");
+    expect(smartReportStatusLabel("completed")).toBe("Hazır");
+    expect(smartReportStatusLabel("failed")).toBe("Başarısız");
   });
 
   it("detects lastUsage inside the day period", () => {
@@ -114,26 +109,70 @@ describe("smart-report helpers", () => {
     });
   });
 
-  it("persists and restores job by scope and date range", () => {
-    expect(smartReportScopeKey(3, null)).toBe("branch:3");
-    expect(smartReportScopeKey(3, 9)).toBe("menu:9");
-    const key = smartReportStorageKey("menu:1", "2026-07-01", "2026-08-01");
-    expect(key).toBe("smart-report:menu:1:2026-07-01:2026-08-01");
-
-    writeStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01", {
-      jobId: "281f830b-ec6c-4fa6-b6e1-04d8c66f1549",
+  it("matches and picks the latest job for a branch date range from the API list", () => {
+    const scope = {
+      branchId: 3,
+      menuId: null,
+      from: "2026-07-01",
+      to: "2026-08-01",
+    };
+    const newer = listItem({
+      jobId: "11111111-1111-1111-1111-111111111111",
+      branchId: 3,
+      from: "2026-07-01",
+      to: "2026-08-01",
       status: "queued",
-      savedAt: 1,
+      createdAt: "2026-08-02T10:00:00Z",
+    });
+    const older = listItem({
+      jobId: "22222222-2222-2222-2222-222222222222",
+      branchId: 3,
+      from: "2026-07-01",
+      to: "2026-08-01",
+      status: "completed",
+      createdAt: "2026-08-01T10:00:00Z",
+    });
+    const otherBranch = listItem({
+      jobId: "33333333-3333-3333-3333-333333333333",
+      branchId: 9,
+      from: "2026-07-01",
+      to: "2026-08-01",
+      status: "queued",
+      createdAt: "2026-08-03T10:00:00Z",
     });
 
-    expect(readStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01")).toEqual({
-      jobId: "281f830b-ec6c-4fa6-b6e1-04d8c66f1549",
-      status: "queued",
-      savedAt: 1,
-    });
+    expect(matchesSmartReportScope(newer, scope)).toBe(true);
+    expect(matchesSmartReportScope(otherBranch, scope)).toBe(false);
+    expect(findLatestSmartReportForScope([newer, older, otherBranch], scope)).toEqual(newer);
+    expect(findLatestSmartReportForScope([otherBranch], scope)).toBeNull();
+  });
 
-    clearStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01");
-    expect(readStoredSmartReportJob("branch:3", "2026-07-01", "2026-08-01")).toBeNull();
+  it("prefers menu scope over branch when menuId is set", () => {
+    const scope = {
+      branchId: 3,
+      menuId: 9,
+      from: "2026-07-01",
+      to: "2026-08-01",
+    };
+    const menuJob = listItem({
+      jobId: "44444444-4444-4444-4444-444444444444",
+      branchId: 3,
+      menuId: 9,
+      from: "2026-07-01",
+      to: "2026-08-01",
+      createdAt: "2026-08-02T10:00:00Z",
+    });
+    const branchOnly = listItem({
+      jobId: "55555555-5555-5555-5555-555555555555",
+      branchId: 3,
+      menuId: null,
+      from: "2026-07-01",
+      to: "2026-08-01",
+      createdAt: "2026-08-03T10:00:00Z",
+    });
+    expect(matchesSmartReportScope(menuJob, scope)).toBe(true);
+    expect(matchesSmartReportScope(branchOnly, scope)).toBe(false);
+    expect(findLatestSmartReportForScope([branchOnly, menuJob], scope)).toEqual(menuJob);
   });
 
   it("prefers branchName over menuName for titles", () => {

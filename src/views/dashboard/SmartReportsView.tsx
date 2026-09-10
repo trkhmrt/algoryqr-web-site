@@ -19,6 +19,7 @@ import {
   listSmartReportsRequest,
   resolveSmartReportProcessId,
   smartReportAddonCheckoutCode,
+  smartReportStatusLabel,
   smartReportTitle,
   type SmartReportQuota,
 } from "@/lib/smart-report";
@@ -205,6 +206,7 @@ export default function SmartReportsView() {
           {items.map((item) => {
             const id = resolveSmartReportProcessId(item);
             if (!id) return null;
+            const pending = isSmartReportPending(item.status);
             return (
               <Link
                 key={id}
@@ -215,12 +217,15 @@ export default function SmartReportsView() {
                   <p className="truncate text-sm font-medium text-foreground">{smartReportTitle(item)}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.completedAt ?? item.createdAt)}
-                    {item.status && item.status !== "completed"
-                      ? ` · ${item.status === "failed" ? "Başarısız" : item.status === "queued" ? "Kuyrukta" : "Hazırlanıyor"}`
-                      : ""}
+                    {" · "}
+                    {smartReportStatusLabel(item.status)}
                   </p>
                 </div>
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                {pending ? (
+                  <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                ) : (
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
               </Link>
             );
           })}

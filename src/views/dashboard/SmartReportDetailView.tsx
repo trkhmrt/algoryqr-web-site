@@ -16,9 +16,11 @@ import {
   buildChannelComparisonHtml,
   buildSmartReportMarkdown,
   getSmartReportJobRequest,
+  isSmartReportFailed,
   isSmartReportPending,
   normalizeSmartReportResult,
   SMART_REPORT_POLL_INTERVAL_MS,
+  smartReportStatusLabel,
   smartReportTitle,
   type SmartReportDetailResponse,
 } from "@/lib/smart-report";
@@ -44,22 +46,6 @@ function formatDateTime(value?: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function statusLabel(status?: string | null): string {
-  switch (status) {
-    case "queued":
-      return "Kuyrukta";
-    case "processing":
-    case "running":
-      return "Hazirlaniyor";
-    case "completed":
-      return "Hazir";
-    case "failed":
-      return "Basarisiz";
-    default:
-      return status || "—";
-  }
 }
 
 export default function SmartReportDetailView({ jobId }: Props) {
@@ -97,6 +83,7 @@ export default function SmartReportDetailView({ jobId }: Props) {
   const detail = detailQuery.data as SmartReportDetailResponse | undefined;
   const result = normalizeSmartReportResult(detail);
   const pending = isSmartReportPending(detail?.status);
+  const failed = isSmartReportFailed(detail?.status);
   const markdown = result ? buildSmartReportMarkdown(result) : "";
   const bodyHtml = markdown
     ? smartReportMarkdownToHtml(markdown, { inlineStyles: false })
@@ -133,7 +120,7 @@ export default function SmartReportDetailView({ jobId }: Props) {
     } catch {
       toast({
         title: "PDF indirilemedi",
-        description: "Lutfen tekrar deneyin.",
+        description: "Lütfen tekrar deneyin.",
         variant: "destructive",
       });
     } finally {
@@ -172,16 +159,16 @@ export default function SmartReportDetailView({ jobId }: Props) {
       {detailQuery.isLoading ? (
         <DashboardLoadingState label="Rapor yükleniyor…" />
       ) : detailQuery.isError ? (
-        <p className="text-sm text-destructive">Rapor yuklenemedi.</p>
+        <p className="text-sm text-destructive">Rapor yüklenemedi.</p>
       ) : (
         <div className="space-y-4">
           <div className={`${DASHBOARD_SURFACE} grid gap-2 px-3 py-2.5 text-sm sm:grid-cols-3`}>
             <div>
               <p className="text-xs text-muted-foreground">Durum</p>
-              <p className="font-medium text-foreground">{statusLabel(detail?.status)}</p>
+              <p className="font-medium text-foreground">{smartReportStatusLabel(detail?.status)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Istek</p>
+              <p className="text-xs text-muted-foreground">İstek</p>
               <p className="font-medium text-foreground">
                 {formatDateTime(detail?.requestedAt || detail?.createdAt)}
               </p>
@@ -193,15 +180,20 @@ export default function SmartReportDetailView({ jobId }: Props) {
           </div>
 
           {pending ? (
-            <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-6 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Rapor hazirlaniyor. Bu sayfa otomatik guncellenir.
+            <div className={`${DASHBOARD_SURFACE} flex flex-col items-center gap-3 px-4 py-10 text-center`}>
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Henüz hazır değil</p>
+                <p className="text-sm text-muted-foreground">
+                  Rapor hazırlanıyor. Bu sayfa tamamlanınca otomatik güncellenir.
+                </p>
+              </div>
             </div>
           ) : null}
 
-          {detail?.status === "failed" ? (
+          {failed ? (
             <p className="text-sm text-destructive">
-              {detail.errorMessage || "Rapor olusturulamadi."}
+              {detail?.errorMessage || "Rapor oluşturulamadı."}
             </p>
           ) : null}
 
@@ -223,7 +215,7 @@ export default function SmartReportDetailView({ jobId }: Props) {
           ) : null}
 
           {detail?.branchId == null && !bodyHtml && result && !pending ? (
-            <p className="text-sm text-muted-foreground">Rapor icerigi bulunamadi.</p>
+            <p className="text-sm text-muted-foreground">Rapor içeriği bulunamadı.</p>
           ) : null}
         </div>
       )}

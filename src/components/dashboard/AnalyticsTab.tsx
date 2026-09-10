@@ -42,6 +42,7 @@ import {
   buildSmartReportMarkdown,
   isSmartReportQuotaExhausted,
   normalizeSmartReportResult,
+  resolveSmartReportProcessId,
   smartReportAddonCheckoutCode,
 } from "@/lib/smart-report";
 import { getBranchRevenueReportRequest } from "@/lib/api";
@@ -195,11 +196,15 @@ export default function AnalyticsTab() {
   }
 
   function handleSmartReportClick() {
-    if (smartReport.isReady) {
-      setDialogOpen(true);
+    if (smartReport.isGenerating) {
+      if (smartReport.jobId) {
+        router.push(DASHBOARD_ROUTES.smartReportDetail(smartReport.jobId));
+        return;
+      }
+      router.push(DASHBOARD_ROUTES.smartReports);
       return;
     }
-    if (smartReport.isGenerating) {
+    if (smartReport.isReady) {
       setDialogOpen(true);
       return;
     }
@@ -226,18 +231,20 @@ export default function AnalyticsTab() {
         to: range.to,
         locale: "tr",
       };
-      if (failed) {
-        await smartReport.retry(body);
-      } else {
-        await smartReport.start(body);
-      }
-      await queryClient.invalidateQueries({ queryKey: ["smart-reports", "quota"] });
-      await queryClient.invalidateQueries({ queryKey: ["smart-reports", "list"] });
+      const accepted = failed
+        ? await smartReport.retry(body)
+        : await smartReport.start(body);
+      await queryClient.invalidateQueries({ queryKey: ["smart-reports"] });
+      const jobId = resolveSmartReportProcessId(accepted);
       toast({
         title: "Rapor hazırlanıyor",
-        description: "İşlem arka planda devam ediyor. Hazır olunca indirmeye açılacak.",
+        description: "Liste ve detay sayfasından durumunu takip edebilirsiniz.",
       });
-      setDialogOpen(true);
+      if (jobId) {
+        router.push(DASHBOARD_ROUTES.smartReportDetail(jobId));
+        return;
+      }
+      router.push(DASHBOARD_ROUTES.smartReports);
     } catch (error) {
       const status = (error as { response?: { status?: number } })?.response?.status;
       const message =
@@ -461,15 +468,15 @@ export default function AnalyticsTab() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Kapat
             </Button>
-            {smartReport.job?.jobId ? (
+            {smartReport.jobId ? (
               <Button variant="outline" asChild>
-                <Link href={DASHBOARD_ROUTES.smartReportDetail(smartReport.job.jobId)}>
+                <Link href={DASHBOARD_ROUTES.smartReportDetail(smartReport.jobId)}>
                   Detaya git
                 </Link>
               </Button>
             ) : (
               <Button variant="outline" asChild>
-                <Link href={DASHBOARD_ROUTES.smartReports}>Rapor gecmisi</Link>
+                <Link href={DASHBOARD_ROUTES.smartReports}>Rapor geçmişi</Link>
               </Button>
             )}
             {failed && !smartReport.isGenerating ? (
