@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   SMART_REPORT_POLL_INTERVAL_MS,
   findLatestSmartReportForScope,
-  isLastUsageWithinQuotaPeriod,
   isSmartReportPending,
   isSmartReportQuotaExhausted,
   matchesSmartReportScope,
@@ -92,6 +91,16 @@ describe("smart-report helpers", () => {
         remaining: 0,
         resetsAt: "2026-08-10T00:00:00+03:00",
         paidCredits: 2,
+      }),
+    ).toBe(false);
+    expect(
+      isSmartReportQuotaExhausted({
+        period: "WEEK",
+        limit: 1,
+        used: 0,
+        remaining: 1,
+        resetsAt: "2026-08-10T00:00:00+03:00",
+        lastUsage: "2026-08-09T12:00:00+03:00",
       }),
     ).toBe(false);
   });
