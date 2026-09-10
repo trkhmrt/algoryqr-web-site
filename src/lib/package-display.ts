@@ -481,6 +481,9 @@ export function addonProductLabel(packageCode?: string | null, packageName?: str
     case "QR_MENU":
     case "QR_MENU_ADDON":
       return "Ek menü";
+    case "SMART_REPORTING":
+    case "SMART_REPORTING_ADDON":
+      return "Ek akıllı rapor";
     case "QR_CREATE":
       return "Ek QR hakkı";
     case "MENU_PRODUCT":

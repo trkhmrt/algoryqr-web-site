@@ -57,7 +57,8 @@ Quota / reporting UI uses `last_usage` (and/or quota DTO `lastUsage`) to decide 
 
 | Endpoint | Behavior |
 | --- | --- |
-| `POST /analytics/menu/{menuId}/smart-reports` | Insert event `queued`; return `{ jobId, status: "queued" }` |
+| `POST /features/SMART_REPORTING/menus/{menuId}/reports` | Insert event `queued`; return `{ jobId, status: "queued" }` |
+| `POST /features/SMART_REPORTING/branches/{branchId}/reports` | Branch-scoped enqueue (same contract) |
 | Status consumer | On AI success: write `tbl_smart_report_results`, set event `completed`, update entitlement `last_usage` if not already |
 | `GET /analytics/smart-reports` | History: **completed** events for user (optional `status=completed`) |
 | `GET /analytics/smart-reports/{jobId}` | Event metadata + result from results table |

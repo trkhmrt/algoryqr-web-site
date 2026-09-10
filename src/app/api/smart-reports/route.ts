@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     const userId = getUserIdFromAccessToken(accessToken);
 
     const upstream = await axios.post(
-      `${API_BASE_URL}/features/SMART_REPORTING/analytics/menu/${menuId}/smart-reports`,
+      `${API_BASE_URL}/features/SMART_REPORTING/menus/${menuId}/reports`,
       {
         from,
         to,

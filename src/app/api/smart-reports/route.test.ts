@@ -67,7 +67,7 @@ describe("smart-reports BFF", () => {
     expect(body.jobId).toBe("11111111-1111-1111-1111-111111111111");
     expect(axiosGet).not.toHaveBeenCalled();
     expect(axiosPost).toHaveBeenCalledWith(
-      "http://qr.test/analytics/menu/1/smart-reports",
+      "http://qr.test/features/SMART_REPORTING/menus/1/reports",
       expect.objectContaining({
         from: "2026-07-01",
         to: "2026-07-31",

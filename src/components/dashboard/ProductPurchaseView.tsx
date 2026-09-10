@@ -42,7 +42,15 @@ type ProductPurchaseViewProps = {
 const PRODUCT_LABELS: Record<string, string> = {
   QR_BRANCH: "Ek şube",
   QR_MENU: "Ek menü",
+  SMART_REPORTING_ADDON: "Ek akıllı rapor",
 };
+
+function successRedirectForProduct(productCode: string): string {
+  if (productCode === "SMART_REPORTING_ADDON") {
+    return DASHBOARD_ROUTES.smartReports;
+  }
+  return DASHBOARD_ROUTES.digitalMenu;
+}
 
 export default function ProductPurchaseView({ productCode, onNotify }: ProductPurchaseViewProps) {
   const router = useRouter();
@@ -76,9 +84,9 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
     if (fulfillment.summary.data?.status === "ACTIVE") {
       void refreshAccessAfterEntitlementChange(queryClient);
       onNotify("info", "Satın alma tamamlandı.");
-      router.push(DASHBOARD_ROUTES.digitalMenu);
+      router.push(successRedirectForProduct(productCode));
     }
-  }, [fulfillment.summary.data?.status, onNotify, queryClient, router]);
+  }, [fulfillment.summary.data?.status, onNotify, productCode, queryClient, router]);
 
   const pay = async () => {
     const checkout = checkoutSchema.safeParse({
@@ -144,7 +152,7 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => router.push(DASHBOARD_ROUTES.digitalMenu)}
+          onClick={() => router.push(successRedirectForProduct(productCode))}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -153,7 +161,12 @@ export default function ProductPurchaseView({ productCode, onNotify }: ProductPu
           <h1 className="text-2xl font-semibold tracking-tight">
             {PRODUCT_LABELS[productCode] ?? product?.name ?? "Ek ürün"}
           </h1>
-          <p className="text-sm text-muted-foreground">{product?.description ?? "Ek hak satın alın."}</p>
+          <p className="text-sm text-muted-foreground">
+            {product?.description ??
+              (productCode === "SMART_REPORTING_ADDON"
+                ? "Haftalık ücretsiz hakkınız bittikten sonra ek akıllı rapor hakkı."
+                : "Ek hak satın alın.")}
+          </p>
         </div>
       </div>
 
