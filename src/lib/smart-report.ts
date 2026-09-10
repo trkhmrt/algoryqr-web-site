@@ -91,7 +91,6 @@ export type SmartReportQuota = {
 
 export const SMART_REPORT_ADDON_PRODUCT_CODE = "SMART_REPORTING_ADDON";
 export const SMART_REPORT_POLL_INTERVAL_MS = 5_000;
-export const SMART_REPORT_QUOTA_ZONE = "Europe/Istanbul";
 
 export type SmartReportJobScope = {
   branchId: number | null;
@@ -184,75 +183,11 @@ export function toSmartReportUiStatus(
   return "failed";
 }
 
-function zonedParts(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  }).formatToParts(date);
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
-  return {
-    year: Number(get("year")),
-    month: Number(get("month")),
-    day: Number(get("day")),
-    weekday: get("weekday"),
-  };
-}
-
-function startOfZonedDayMs(date: Date, timeZone: string): number {
-  const { year, month, day } = zonedParts(date, timeZone);
-  return Date.parse(`${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00+03:00`);
-}
-
-function startOfZonedWeekMs(date: Date, timeZone: string): number {
-  const weekday = zonedParts(date, timeZone).weekday;
-  const dayIndex =
-    weekday === "Mon"
-      ? 0
-      : weekday === "Tue"
-        ? 1
-        : weekday === "Wed"
-          ? 2
-          : weekday === "Thu"
-            ? 3
-            : weekday === "Fri"
-              ? 4
-              : weekday === "Sat"
-                ? 5
-                : 6;
-  const dayStart = startOfZonedDayMs(date, timeZone);
-  return dayStart - dayIndex * 86_400_000;
-}
-
-export function isLastUsageWithinQuotaPeriod(
-  lastUsage: string | null | undefined,
-  period: SmartReportQuota["period"],
-  now: Date = new Date(),
-  timeZone: string = SMART_REPORT_QUOTA_ZONE,
-): boolean {
-  if (!lastUsage) return false;
-  const usageMs = new Date(lastUsage).getTime();
-  if (!Number.isFinite(usageMs)) return false;
-  if (period === "WEEK") {
-    return usageMs >= startOfZonedWeekMs(now, timeZone);
-  }
-  return usageMs >= startOfZonedDayMs(now, timeZone);
-}
-
 export function isSmartReportQuotaExhausted(quota: SmartReportQuota | null | undefined): boolean {
   if (!quota) return false;
   if ((quota.paidCredits ?? 0) > 0) return false;
-  if (quota.remaining <= 0) return true;
   if (quota.limit <= 0) return true;
-  if (
-    quota.limit === 1 &&
-    isLastUsageWithinQuotaPeriod(quota.lastUsage, quota.period)
-  ) {
-    return true;
-  }
-  return false;
+  return quota.remaining <= 0;
 }
 
 export function smartReportAddonCheckoutCode(quota: SmartReportQuota | null | undefined): string {
