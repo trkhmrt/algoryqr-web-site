@@ -112,9 +112,8 @@ export function useSmartReportJob(scope: SmartReportScope) {
   const isFailed =
     status === "failed" || createMutation.isError;
 
-  async function start(body: SmartReportStartBody) {
-    if (isGenerating) return null;
-    if (isReady) return jobId;
+  async function start(body: SmartReportStartBody): Promise<SmartReportAccepted | null> {
+    if (isGenerating || isReady) return null;
     return createMutation.mutateAsync(body);
   }
 
@@ -127,7 +126,7 @@ export function useSmartReportJob(scope: SmartReportScope) {
     });
   }
 
-  async function retry(body: SmartReportStartBody) {
+  async function retry(body: SmartReportStartBody): Promise<SmartReportAccepted> {
     clearJob();
     return createMutation.mutateAsync(body);
   }
