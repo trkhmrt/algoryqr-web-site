@@ -44,6 +44,30 @@ export type UberEatsProductPage = {
   totalPages: number;
 };
 
+export type UberEatsModifierOptionPayload = {
+  name: string;
+  price: number;
+};
+
+export type UberEatsModifierGroupPayload = {
+  name: string;
+  required: boolean;
+  minSelect: number;
+  maxSelect: number;
+  options: UberEatsModifierOptionPayload[];
+};
+
+export type CreateUberEatsProductPayload = {
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  categoryName: string;
+  imageUrl?: string;
+  available: boolean;
+  modifierGroups: UberEatsModifierGroupPayload[];
+};
+
 export type UberEatsOrderItem = {
   productId?: string | null;
   productName?: string | null;
@@ -121,6 +145,13 @@ export async function listUberEatsRestaurants() {
 export async function listUberEatsProducts(q: string, page: number, size = 20) {
   const { data } = await api.get<UberEatsProductPage>("/integrations/ubereats/products", {
     params: { q: q || undefined, page, size },
+    timeout: 25_000,
+  });
+  return data;
+}
+
+export async function createUberEatsProduct(payload: CreateUberEatsProductPayload) {
+  const { data } = await api.post<UberEatsProduct>("/integrations/ubereats/products", payload, {
     timeout: 25_000,
   });
   return data;

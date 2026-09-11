@@ -1,27 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Loader2, Plus } from "lucide-react";
 
+import { UberEatsItemEditSheet } from "@/components/dashboard/ubereats/UberEatsItemEditSheet";
+import { UberEatsProductCard } from "@/components/dashboard/ubereats/UberEatsProductCard";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { IntegrationsSectionHeader } from "@/components/dashboard/IntegrationsSectionHeader";
-import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
-import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
-import { listUberEatsProducts } from "@/lib/ubereats-api";
 import {
-  formatUberEatsAmount,
-  productAvailabilityClass,
-  productAvailabilityLabel,
+  useDigitalMenuAccess,
+  useDigitalMenuSelection,
+} from "@/components/dashboard/menu/DigitalMenuPicker";
+import { useDashboardBanners } from "@/contexts/dashboard-banners";
+import { ApiError } from "@/lib/api";
+import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
+import {
+  createUberEatsProduct,
+  listUberEatsProducts,
+  type CreateUberEatsProductPayload,
+} from "@/lib/ubereats-api";
+import {
+  groupProductsByCategory,
+  uniqueCategoryNames,
+  UNCATEGORIZED_LABEL,
   UBER_EATS_SOFT_CARD_CLASS,
 } from "@/lib/ubereats-ui";
 
 export default function UberEatsProductsView() {
+  const { notify } = useDashboardBanners();
+  const queryClient = useQueryClient();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
+  const selectionState = useDigitalMenuSelection(null, canUseDigitalMenu && !accessLoading);
+  const menuId = selectionState.selection?.menu.menuId ?? 0;
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [presetCategory, setPresetCategory] = useState("");
 
   const productsQuery = useQuery({
     queryKey: ["ubereats-products", q, page],
@@ -33,6 +56,25 @@ export default function UberEatsProductsView() {
   const products = pageData?.content ?? [];
   const availableCount = products.filter((product) => product.available).length;
   const totalPages = pageData?.totalPages ?? 0;
+  const categoryOptions = useMemo(() => uniqueCategoryNames(products), [products]);
+  const grouped = useMemo(() => groupProductsByCategory(products), [products]);
+
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateUberEatsProductPayload) => createUberEatsProduct(payload),
+    onSuccess: async () => {
+      setSheetOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["ubereats-products"] });
+      notify("info", "Ürün Uber Eats menüsüne eklendi.");
+    },
+    onError: (error) => {
+      notify("danger", error instanceof ApiError ? error.message : "Ürün eklenemedi.");
+    },
+  });
+
+  const openCreate = (categoryName = "") => {
+    setPresetCategory(categoryName === UNCATEGORIZED_LABEL ? "" : categoryName);
+    setSheetOpen(true);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -49,7 +91,7 @@ export default function UberEatsProductsView() {
           pageTitle="Ürünler"
           pageDescription="Partner menüsündeki mevcut ürünler"
         />
-        <div className="flex shrink-0 lg:pt-8">
+        <div className="flex shrink-0 gap-2 lg:pt-8">
           <Button asChild variant="outline">
             <Link href={DASHBOARD_ROUTES.uberEats}>Bağlantı</Link>
           </Button>
@@ -84,6 +126,17 @@ export default function UberEatsProductsView() {
               placeholder="Ürün adı veya kategori"
             />
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="gap-1.5" disabled={productsQuery.isError}>
+                <Plus className="h-3.5 w-3.5" />
+                Ekle
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => openCreate()}>Ürün ekle</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {productsQuery.isLoading ? (
@@ -96,49 +149,35 @@ export default function UberEatsProductsView() {
             Ürünler alınamadı. Önce restoran bağlayın.
           </div>
         ) : products.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-            Bu filtrelerle ürün bulunamadı.
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+              Bu filtrelerle ürün bulunamadı.
+            </div>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openCreate()}>
+              <Plus className="h-3.5 w-3.5" />
+              Ürün ekle
+            </Button>
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            {products.map((product) => (
-              <article key={product.id} className={`${UBER_EATS_SOFT_CARD_CLASS} p-4`}>
-                <div className="flex gap-3">
-                  {product.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={product.imageUrl}
-                      alt=""
-                      className="h-16 w-16 shrink-0 rounded-xl border border-border object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs text-muted-foreground">
-                      Görsel yok
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="font-medium text-foreground">{product.name || "İsimsiz ürün"}</p>
-                      <p className="shrink-0 text-sm font-semibold text-foreground">
-                        {formatUberEatsAmount(product.price, product.currency ?? "TRY")}
-                      </p>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {product.categoryName || "Kategori yok"}
-                      </span>
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${productAvailabilityClass(product.available)}`}
-                      >
-                        {productAvailabilityLabel(product.available)}
-                      </span>
-                    </div>
-                    {product.description ? (
-                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
-                    ) : null}
-                  </div>
+          <div className="mt-4 space-y-6">
+            {grouped.map((group) => (
+              <section key={group.categoryName} className="space-y-3">
+                <h2 className="text-sm font-semibold text-foreground">{group.categoryName}</h2>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {group.products.map((product) => (
+                    <UberEatsProductCard key={product.id} product={product} />
+                  ))}
                 </div>
-              </article>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5"
+                  onClick={() => openCreate(group.categoryName)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Ürün ekle
+                </Button>
+              </section>
             ))}
           </div>
         )}
@@ -164,6 +203,17 @@ export default function UberEatsProductsView() {
           </div>
         ) : null}
       </div>
+
+      <UberEatsItemEditSheet
+        open={sheetOpen}
+        categoryName={presetCategory}
+        categoryOptions={categoryOptions}
+        menuId={menuId}
+        saving={createMutation.isPending}
+        onOpenChange={setSheetOpen}
+        onSubmit={(payload) => createMutation.mutate(payload)}
+        onInvalid={(error) => notify("danger", error)}
+      />
     </div>
   );
 }
