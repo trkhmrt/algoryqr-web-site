@@ -22,6 +22,7 @@ export async function POST(req: Request) {
       billingAddressId?: number;
       paymentMethodId?: number;
       recurringConsent?: boolean;
+      couponCode?: string;
     };
     if (body.packageId == null) {
       return NextResponse.json({ message: "Paket id zorunludur" }, { status: 400 });

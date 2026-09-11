@@ -9,6 +9,7 @@ import { ArrowLeft, Check, CreditCard, Loader2, Lock, ShieldCheck } from "lucide
 import BillingAddressForm from "@/components/dashboard/commerce/BillingAddressForm";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
 import { invalidateBillingAddresses, useBillingAddresses } from "@/hooks/use-commerce";
 import { invalidatePackageUsage } from "@/hooks/use-package-usage";
@@ -57,6 +58,28 @@ interface PackagePurchaseViewProps {
 
 type PaymentOverlay = PaymentCheckoutOverlayContent;
 
+type CouponPreview = {
+  code: string;
+  discountType: "PERCENT" | "AMOUNT";
+  discountValue: number;
+  expiresAt: string;
+  usable: boolean;
+};
+
+function couponQuote(listAmount: number, preview: CouponPreview): { discount: number; payable: number } | null {
+  if (!preview.usable) {
+    return null;
+  }
+  const discount = preview.discountType === "PERCENT"
+    ? Math.round(listAmount * Number(preview.discountValue)) / 100
+    : Number(preview.discountValue);
+  const payable = Math.round((listAmount - discount) * 100) / 100;
+  if (payable < 0.01 || discount <= 0) {
+    return null;
+  }
+  return { discount, payable };
+}
+
 export default function PackagePurchaseView({
   packageId,
   onNotify,
@@ -71,6 +94,10 @@ export default function PackagePurchaseView({
   const [billingAddressId, setBillingAddressId] = useState<number | null>(null);
   const [creatingAddress, setCreatingAddress] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponPreview | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const [paymentOverlay, setPaymentOverlay] = useState<PaymentOverlay | null>(null);
   const [purchaseId, setPurchaseId] = useState<number | null>(null);
   const [pollStartedAt, setPollStartedAt] = useState<number | null>(null);
@@ -167,6 +194,49 @@ export default function PackagePurchaseView({
     return resolvePackagePricing(pkg, billingPeriod);
   }, [billingPeriod, pkg]);
 
+  const couponPricing = useMemo(() => {
+    if (!appliedCoupon) {
+      return null;
+    }
+    return couponQuote(pricing.amount, appliedCoupon);
+  }, [appliedCoupon, pricing.amount]);
+
+  const payableLabel = formatPackagePrice(couponPricing?.payable ?? pricing.amount, pkg?.currency);
+  const listLabel = formatPackagePrice(pricing.amount, pkg?.currency);
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (code.length < 4) {
+      setCouponError("Kupon kodu girin");
+      return;
+    }
+    setCouponBusy(true);
+    setCouponError(null);
+    try {
+      const response = await getSiteSameOriginAxios().get<CouponPreview>(
+        `/coupons/${encodeURIComponent(code)}`,
+      );
+      const preview = response.data;
+      if (!preview.usable) {
+        setAppliedCoupon(null);
+        setCouponError("Kupon kullanilamaz");
+        return;
+      }
+      const quoted = couponQuote(pricing.amount, preview);
+      if (quoted == null) {
+        setAppliedCoupon(null);
+        setCouponError("Kupon bu paket tutarina uygulanamaz");
+        return;
+      }
+      setAppliedCoupon(preview);
+    } catch (error) {
+      setAppliedCoupon(null);
+      setCouponError(error instanceof ApiError ? error.message : "Kupon dogrulanamadi");
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
   const pay = async () => {
     const checkout = checkoutSchema.safeParse({
       billingPeriod,
@@ -191,6 +261,9 @@ export default function PackagePurchaseView({
         identityNumber: resolveIdentityNumber(selectedAddress?.tckn, selectedAddress?.vkn),
         recurringConsent,
       };
+      if (appliedCoupon?.code && couponPricing) {
+        payload.couponCode = appliedCoupon.code;
+      }
       const response = await getSiteSameOriginAxios().post<PurchaseInitiateResponse>("/purchases", payload);
       if (!Number.isSafeInteger(response.data.purchaseId) || response.data.purchaseId <= 0) {
         throw new Error("Satın alım kimliği alınamadı.");
@@ -232,7 +305,6 @@ export default function PackagePurchaseView({
   if (packages.isLoading) return <div className="h-64 animate-pulse rounded-lg bg-muted" />;
   if (!pkg) return <p className="text-sm text-destructive">Paket bulunamadı veya satışta değil.</p>;
 
-  const priceLabel = formatPackagePrice(pricing.amount, pkg.currency);
   const compareLabel =
     pricing.compareAmount != null ? formatPackagePrice(pricing.compareAmount, pkg.currency) : null;
   const nextDueLabel = (() => {
@@ -264,8 +336,11 @@ export default function PackagePurchaseView({
                 {compareLabel ? (
                   <span className="text-lg text-muted-foreground line-through">{compareLabel}</span>
                 ) : null}
+                {couponPricing ? (
+                  <span className="text-lg text-muted-foreground line-through">{listLabel}</span>
+                ) : null}
                 <p className="text-2xl font-bold">
-                  {priceLabel}
+                  {payableLabel}
                   <span className="ml-1 text-sm font-normal text-muted-foreground">{pricing.suffix}</span>
                 </p>
                 {pricing.yearlySavings != null && pricing.yearlySavings > 0 ? (
@@ -364,6 +439,35 @@ export default function PackagePurchaseView({
           </div>
 
           <div className={`${DASHBOARD_SURFACE} space-y-4 p-6 shadow-none`}>
+            <h2 className="text-base font-semibold text-foreground">Kupon kodu</h2>
+            <div className="flex flex-wrap items-end gap-2">
+              <Input
+                value={couponInput}
+                onChange={(event) => {
+                  setCouponInput(event.target.value.toUpperCase());
+                  setCouponError(null);
+                }}
+                placeholder="Kupon kodu"
+                maxLength={32}
+                className="max-w-xs uppercase"
+                autoComplete="off"
+              />
+              <Button type="button" variant="outline" disabled={couponBusy} onClick={() => void applyCoupon()}>
+                {couponBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Uygula"}
+              </Button>
+            </div>
+            {couponError ? <p className="text-sm text-destructive">{couponError}</p> : null}
+            {appliedCoupon && !couponPricing ? (
+              <p className="text-sm text-destructive">Kupon bu faturalama periyoduna uygulanamaz</p>
+            ) : null}
+            {appliedCoupon && couponPricing ? (
+              <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                {appliedCoupon.code} uygulandi. Indirim {formatPackagePrice(couponPricing.discount, pkg.currency)}.
+              </p>
+            ) : null}
+          </div>
+
+          <div className={`${DASHBOARD_SURFACE} space-y-4 p-6 shadow-none`}>
             <div className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
               <h2 className="text-base font-semibold text-foreground">Ödeme</h2>
@@ -401,7 +505,7 @@ export default function PackagePurchaseView({
                 <span className="font-medium text-foreground">{nextDueLabel}</span>
               </p>
               <p className="mt-1">
-                {billingPeriod === "YEARLY" ? "Yıllık" : "Aylık"} tutar: {priceLabel}. Otomatik yenileme
+                {billingPeriod === "YEARLY" ? "Yıllık" : "Aylık"} tutar: {payableLabel}. Otomatik yenileme
                 {recurringConsent ? "onayı verildi; kart ekleme adımından sonra aktif edilir." : "açık değildir; isterseniz abonelik ayarlarından sonradan aktif edebilirsiniz."}
               </p>
               <Link
@@ -419,7 +523,7 @@ export default function PackagePurchaseView({
               onClick={() => void pay()}
             >
               {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-              {isPaying ? "Ödeme işleniyor…" : `Ödemeyi Tamamla · ${priceLabel}`}
+              {isPaying ? "Ödeme işleniyor…" : `Ödemeyi Tamamla · ${payableLabel}`}
             </Button>
             {purchaseId && fulfillment.summary.data?.status === "PENDING" && (
               <p className="text-center text-xs text-muted-foreground">Ödeme sonucu doğrulanıyor…</p>
