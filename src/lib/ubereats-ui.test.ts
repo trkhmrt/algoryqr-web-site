@@ -5,9 +5,12 @@ import {
   deliveryTypeLabel,
   displayValue,
   formatOrderReference,
+  groupProductsByCategory,
   packageStatusLabel,
   paymentMethodLabel,
   shortDisplayId,
+  uniqueCategoryNames,
+  UNCATEGORIZED_LABEL,
 } from "@/lib/ubereats-ui";
 
 describe("ubereats-ui", () => {
@@ -38,5 +41,20 @@ describe("ubereats-ui", () => {
     expect(paymentMethodLabel("Online Ödeme")).toBe("Online kredi kartı");
     expect(paymentMethodLabel("Online Kredi Kartı")).toBe("Online kredi kartı");
     expect(displayValue("")).toBe("—");
+  });
+
+  it("groups products and unique category names", () => {
+    const grouped = groupProductsByCategory([
+      { categoryName: "Burger", name: "A" },
+      { categoryName: "Burger", name: "B" },
+      { categoryName: null, name: "C" },
+    ]);
+    expect(grouped).toHaveLength(2);
+    expect(grouped[0]?.categoryName).toBe("Burger");
+    expect(grouped[1]?.categoryName).toBe(UNCATEGORIZED_LABEL);
+    expect(uniqueCategoryNames([{ categoryName: "Pizza" }, { categoryName: " Burger " }])).toEqual([
+      "Burger",
+      "Pizza",
+    ]);
   });
 });

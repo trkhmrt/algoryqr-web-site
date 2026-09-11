@@ -136,6 +136,33 @@ export function productAvailabilityClass(available: boolean): string {
   return available ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground";
 }
 
+export const UNCATEGORIZED_LABEL = "Kategori yok";
+
+export function uniqueCategoryNames(products: Array<{ categoryName?: string | null }>): string[] {
+  const names = new Set<string>();
+  for (const product of products) {
+    const name = product.categoryName?.trim();
+    if (name) names.add(name);
+  }
+  return [...names].sort((left, right) => left.localeCompare(right, "tr"));
+}
+
+export function groupProductsByCategory<TProduct extends { categoryName?: string | null }>(
+  products: TProduct[],
+): Array<{ categoryName: string; products: TProduct[] }> {
+  const groups = new Map<string, TProduct[]>();
+  for (const product of products) {
+    const key = product.categoryName?.trim() || UNCATEGORIZED_LABEL;
+    const list = groups.get(key);
+    if (list) list.push(product);
+    else groups.set(key, [product]);
+  }
+  return [...groups.entries()].map(([categoryName, grouped]) => ({
+    categoryName,
+    products: grouped,
+  }));
+}
+
 const DELIVERY_TYPE_LABELS: Record<string, string> = {
   store: "Restoran teslimat",
   go: "Uber Eats kuryesi",
