@@ -19,6 +19,7 @@ export function HighlightBarChart({
   data,
   dataKey = "value",
   highlightMax = true,
+  className,
 }: {
   title: string;
   description?: string;
@@ -27,6 +28,7 @@ export function HighlightBarChart({
   data: { label: string; value: number }[];
   dataKey?: string;
   highlightMax?: boolean;
+  className?: string;
 }) {
   const config = {
     [dataKey]: { label: title, color: "hsl(var(--chart-1))" },
@@ -38,6 +40,7 @@ export function HighlightBarChart({
 
   return (
     <ReportChartCard
+      className={className}
       title={title}
       description={description}
       action={<TrendBadge value={trend} />}

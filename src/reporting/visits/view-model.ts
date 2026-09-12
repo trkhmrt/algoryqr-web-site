@@ -37,10 +37,9 @@ export type VisitDeviceRow = {
   pct: number;
 };
 
-export type VisitFunnelStep = {
-  name: string;
+export type VisitDropoffStage = {
+  label: string;
   value: number;
-  method: string;
 };
 
 export type VisitTreeNode = {
@@ -55,7 +54,6 @@ export type VisitReportView = {
   daily: VisitChartPoint[];
   hourly: VisitHourPoint[];
   devices: VisitDeviceRow[];
-  funnel: VisitFunnelStep[];
   treeData: VisitTreeNode[];
   topProducts: { name: string; views: number }[];
   topCategories: { name: string; views: number }[];
@@ -64,6 +62,39 @@ export type VisitReportView = {
 
 function kpi(id: VisitKpiId, value: number, display: string): ReportingKpiCard<VisitKpiId> {
   return { ...VISIT_METHODS[id], value, display };
+}
+
+export function visitDropoffStages(
+  report: MenuAnalyticsReportResponse,
+  orderCount?: number | null,
+): VisitDropoffStage[] {
+  const stages: VisitDropoffStage[] = [
+    {
+      label: "Menü açılış",
+      value: menuOpenCount(report.funnel?.menuOpens ?? report.kpis.menuOpens),
+    },
+    {
+      label: "Kategori",
+      value: categoryViewCount(report.funnel?.categoryViews ?? report.kpis.categoryViews),
+    },
+    {
+      label: "Ürün",
+      value: productViewCount(report.funnel?.productViews ?? report.kpis.productViews),
+    },
+    {
+      label: "Oturum",
+      value: sessionCount(report.kpis.sessions),
+    },
+  ];
+  if (orderCount == null) return stages;
+  return [...stages, { label: "Sipariş", value: orderCount }];
+}
+
+export function visitFunnelEndToEndPercent(stages: VisitDropoffStage[]): number {
+  const first = stages[0]?.value ?? 0;
+  const last = stages[stages.length - 1]?.value ?? 0;
+  if (first <= 0) return 0;
+  return Math.min(100, (last / first) * 100);
 }
 
 export function buildVisitReportView(
@@ -103,23 +134,6 @@ export function buildVisitReportView(
       value: row.value,
       pct: deviceSharePercent(row.value, totalDevices),
     })),
-    funnel: [
-      {
-        name: "Menü",
-        value: menuOpenCount(report?.funnel?.menuOpens),
-        method: "menuOpenCount",
-      },
-      {
-        name: "Kategori",
-        value: categoryViewCount(report?.funnel?.categoryViews),
-        method: "categoryViewCount",
-      },
-      {
-        name: "Ürün",
-        value: productViewCount(report?.funnel?.productViews),
-        method: "productViewCount",
-      },
-    ],
     treeData: (report?.categoryProductTree ?? []).map((node) => ({
       name: node.name,
       size: treemapSize(node.size),

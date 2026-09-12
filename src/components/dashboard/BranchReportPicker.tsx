@@ -10,11 +10,16 @@ import type { BranchItem, BranchMenuSummary } from "@/lib/branch";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 
 const BRANCH_STORAGE_KEY = "algory_selected_report_branch_id";
-const ALL_MENUS_VALUE = "all";
+const ALL_WAITERS_VALUE = "all";
 
 export type BranchReportSelection = {
   branch: BranchItem;
   menu: BranchMenuSummary | null;
+};
+
+export type ReportWaiterOption = {
+  id: number;
+  name: string;
 };
 
 function readStoredBranchId(): number | null {
@@ -119,14 +124,18 @@ export function useBranchReportSelection(
 export function BranchReportPicker({
   branches,
   selectedBranchId,
-  selectedQrId,
+  waiters,
+  selectedWaiterId,
+  showWaiterFilter = false,
   onSelect,
   disabled,
 }: {
   branches: BranchItem[];
   selectedBranchId: number | null;
-  selectedQrId: number | null;
-  onSelect: (branchId: number, qrId: number | null) => void;
+  waiters?: ReportWaiterOption[];
+  selectedWaiterId?: number | null;
+  showWaiterFilter?: boolean;
+  onSelect: (branchId: number, waiterId: number | null) => void;
   disabled?: boolean;
 }) {
   if (branches.length === 0) {
@@ -139,13 +148,12 @@ export function BranchReportPicker({
     );
   }
 
-  const selectedBranch = branches.find((item) => item.id === selectedBranchId) ?? null;
-  const menuOptions = [
-    { value: ALL_MENUS_VALUE, label: "Tüm menüler" },
-    ...(selectedBranch?.menus.map((menu) => ({
-      value: String(menu.qrId),
-      label: menu.businessName?.trim() || `Menü #${menu.menuId}`,
-    })) ?? []),
+  const waiterOptions = [
+    { value: ALL_WAITERS_VALUE, label: "Tüm personel" },
+    ...(waiters ?? []).map((waiter) => ({
+      value: String(waiter.id),
+      label: waiter.name,
+    })),
   ];
 
   return (
@@ -164,23 +172,22 @@ export function BranchReportPicker({
         emptyText="Şube bulunamadı."
         disabled={disabled}
       />
-      {selectedBranch != null && selectedBranch.menus.length > 0 ? (
+      {showWaiterFilter && selectedBranchId != null ? (
         <SearchableSelect
           className="h-9 min-w-[12rem] max-w-xs text-xs"
-          value={selectedQrId != null ? String(selectedQrId) : ALL_MENUS_VALUE}
+          value={selectedWaiterId != null ? String(selectedWaiterId) : ALL_WAITERS_VALUE}
           onValueChange={(next) => {
-            if (selectedBranchId == null) return;
-            if (next === ALL_MENUS_VALUE) {
+            if (next === ALL_WAITERS_VALUE) {
               onSelect(selectedBranchId, null);
               return;
             }
             const id = Number(next);
             if (Number.isFinite(id) && id > 0) onSelect(selectedBranchId, id);
           }}
-          options={menuOptions}
-          placeholder="Tüm menüler"
-          searchPlaceholder="Menü ara..."
-          emptyText="Menü bulunamadı."
+          options={waiterOptions}
+          placeholder="Tüm personel"
+          searchPlaceholder="Personel ara..."
+          emptyText="Personel bulunamadı."
           disabled={disabled}
         />
       ) : null}
