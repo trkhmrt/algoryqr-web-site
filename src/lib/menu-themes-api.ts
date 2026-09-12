@@ -20,3 +20,10 @@ export async function fetchMenuThemes(): Promise<MenuThemeApiItem[]> {
   const response = await api.get<MenuThemeApiItem[]>("/menu/themes");
   return Array.isArray(response.data) ? response.data : [];
 }
+
+export function sortActiveMenuThemes(themes: MenuThemeApiItem[]): MenuThemeApiItem[] {
+  return themes
+    .filter((theme) => theme.active !== false)
+    .slice()
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+}
