@@ -1,11 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DigitalMenuIcon } from "@/components/icons/DigitalMenuIcon";
-import { MenuThemePreviewDialog } from "@/components/menu-templates/MenuThemePreviewDialog";
-import { DEFAULT_MENU_THEME_ID, getMenuTemplate, getMenuTemplateOptions, type MenuThemeId } from "@/components/menu-templates/registry";
+import { DEFAULT_MENU_THEME_ID, type MenuThemeId } from "@/components/menu-templates/registry";
+import { MenuThemePicker } from "@/components/dashboard/qr-create/MenuThemePicker";
 import { DEFAULT_CHEF_DISPLAY_NAME } from "@/lib/chef/chef-identity";
 import { ApiError, getChefAvatarsRequest, type ChefAvatarApiItem } from "@/lib/api";
 import { MenuLogoField } from "@/components/dashboard/menu/MenuLogoField";
@@ -51,7 +49,6 @@ type MenuDetailsProps = {
 };
 
 export function MenuDetails({ value, onChange, menuId, section = "all", qrPreview }: MenuDetailsProps) {
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [avatars, setAvatars] = useState<ChefAvatarApiItem[]>([]);
   const [avatarsError, setAvatarsError] = useState<string | null>(null);
   const showInfo = section === "all" || section === "info";
@@ -187,57 +184,11 @@ export function MenuDetails({ value, onChange, menuId, section = "all", qrPrevie
       ) : null}
 
       {showAppearance ? (
-        <>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs text-muted-foreground">Menü Teması</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setPreviewOpen(true)}
-              >
-                Önizle
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {getMenuTemplateOptions().map((option) => {
-                const selected = value.themeId === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => onChange({ ...value, themeId: option.id as MenuThemeId })}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg border p-2.5 text-left transition",
-                      selected
-                        ? "border-foreground ring-2 ring-foreground/20"
-                        : "border-border hover:border-foreground/30",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "relative flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md",
-                        option.previewClassName,
-                      )}
-                      aria-hidden
-                    >
-                      <DigitalMenuIcon className="h-7 w-7 opacity-90" />
-                    </div>
-                    <span className="text-xs font-medium leading-tight">{option.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <MenuThemePreviewDialog
-            themeId={value.themeId}
-            themeName={getMenuTemplate(value.themeId).name}
-            open={previewOpen}
-            onOpenChange={setPreviewOpen}
-          />
-        </>
+        <MenuThemePicker
+          themeId={value.themeId}
+          onThemeIdChange={(themeId) => onChange({ ...value, themeId })}
+          autoSelectFirstAllowed={menuId == null}
+        />
       ) : null}
     </div>
   );
