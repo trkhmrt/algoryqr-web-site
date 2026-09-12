@@ -8,7 +8,7 @@ import {
   formatAverageProductsPerSession,
   isVisitReportEmpty,
 } from "./visits/methods";
-import { buildVisitReportView } from "./visits/view-model";
+import { buildVisitReportView, visitDropoffStages, visitFunnelEndToEndPercent } from "./visits/view-model";
 import type { MenuAnalyticsReportResponse, MenuRevenueReportResponse, MenuWaiterPerformanceReportResponse } from "@/lib/api";
 import { buildWaiterPerformanceReportView, filterWaiterPerformanceReportView } from "./waiter/view-model";
 
@@ -156,7 +156,33 @@ describe("view models", () => {
     ]);
     expect(view.hourly[0]).toEqual({ hour: "09", views: 4 });
     expect(view.devices[0].pct).toBe(70);
-    expect(view.funnel[1].method).toBe("categoryViewCount");
+  });
+
+  it("visitDropoffStages_startsAtMenuOpen_andAppendsOrdersWhenGiven", () => {
+    const report = {
+      menuId: 1,
+      menuName: "Test",
+      from: "2026-08-01",
+      to: "2026-08-13",
+      kpis: { sessions: 10, menuOpens: 12, productViews: 24, categoryViews: 18, avgProductsPerSession: 2.4 },
+      daily: [],
+      hourly: [],
+      devices: [],
+      topProducts: [],
+      topCategories: [],
+      categoryProductTree: [],
+      sampleJourneys: [],
+      funnel: { menuOpens: 12, categoryViews: 18, productViews: 24 },
+    } satisfies MenuAnalyticsReportResponse;
+
+    expect(visitDropoffStages(report)).toEqual([
+      { label: "Menü açılış", value: 12 },
+      { label: "Kategori", value: 18 },
+      { label: "Ürün", value: 24 },
+      { label: "Oturum", value: 10 },
+    ]);
+    expect(visitDropoffStages(report, 5).at(-1)).toEqual({ label: "Sipariş", value: 5 });
+    expect(visitFunnelEndToEndPercent(visitDropoffStages(report, 6))).toBe(50);
   });
 
   it("buildWaiterPerformanceReportView_mapsDetailedPersonnelMetrics", () => {

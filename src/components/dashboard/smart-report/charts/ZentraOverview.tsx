@@ -192,38 +192,6 @@ export function GrossVolumeCard({
   );
 }
 
-export function SparkMetricCard({
-  title,
-  value,
-  deltaLabel,
-  peakLabel,
-  data,
-  color = CHART_COLORS.c1,
-}: {
-  title: string;
-  value: string;
-  deltaLabel?: string;
-  peakLabel?: string;
-  data: { label: string; value: number }[];
-  color?: string;
-}) {
-  const slice = data.slice(-14).map((row) => row.value);
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardDescription>{title}</CardDescription>
-        {deltaLabel ? <Badge variant="secondary">{deltaLabel}</Badge> : null}
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
-        <FadeLineSpark values={slice} color={color} className="h-14" />
-        {peakLabel ? <p className="text-xs text-muted-foreground">{peakLabel}</p> : null}
-      </CardContent>
-    </Card>
-  );
-}
-
 export function RetentionStepChart({
   title = "Günlük ritim",
   data,

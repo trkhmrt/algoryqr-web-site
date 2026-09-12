@@ -1,5 +1,13 @@
 export type { AnalyticsPeriod, ReportingKpiCard, ReportingMethodDef } from "./types";
-export { reportingPeriodRange, formatReportingDate } from "./period";
+export {
+  COMPARE_PERIOD_MODES,
+  comparePeriodRange,
+  eachIsoDate,
+  formatReportingDate,
+  parseIsoDate,
+  reportingPeriodRange,
+} from "./period";
+export type { ComparePeriodMode, DateRange } from "./period";
 export { toAmount, roundMoney, revenueShare, roundedSharePercent } from "./numbers";
 
 export {
@@ -50,8 +58,8 @@ export {
   sessionCount,
 } from "./visits/methods";
 export type { VisitKpiId } from "./visits/methods";
-export { buildVisitReportView } from "./visits/view-model";
-export type { VisitReportView } from "./visits/view-model";
+export { buildVisitReportView, visitDropoffStages, visitFunnelEndToEndPercent } from "./visits/view-model";
+export type { VisitDropoffStage, VisitReportView } from "./visits/view-model";
 
 export {
   WAITER_PERFORMANCE_METHODS,

@@ -73,52 +73,6 @@ export function RadialProgressChart({
   );
 }
 
-export function SegmentProgressCard({
-  title,
-  description,
-  leftLabel,
-  rightLabel,
-  segments,
-}: {
-  title: string;
-  description?: string;
-  leftLabel: string;
-  rightLabel: string;
-  segments: { label: string; percent: number; color: string }[];
-}) {
-  return (
-    <ReportChartCard title={title} description={description}>
-      <div className="mb-3 flex justify-between text-sm font-medium">
-        <span>{leftLabel}</span>
-        <span className="text-muted-foreground">{rightLabel}</span>
-      </div>
-      <div className="flex h-3 overflow-hidden rounded-full bg-secondary">
-        {segments
-          .filter((s) => s.percent > 0)
-          .map((s) => (
-            <div
-              key={s.label}
-              className="h-full"
-              style={{ width: `${Math.max(3, s.percent)}%`, background: s.color }}
-              title={`${s.label} %${s.percent.toFixed(0)}`}
-            />
-          ))}
-      </div>
-      <ul className="mt-4 flex flex-wrap gap-2">
-        {segments.map((s) => (
-          <li key={s.label}>
-            <Badge variant="outline" className="gap-1.5 font-normal">
-              <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
-              {s.label}
-              <span className="font-semibold tabular-nums">%{s.percent.toFixed(0)}</span>
-            </Badge>
-          </li>
-        ))}
-      </ul>
-    </ReportChartCard>
-  );
-}
-
 export function RankListCard({
   title,
   description,
@@ -148,35 +102,6 @@ export function RankListCard({
           </li>
         ))}
       </ul>
-    </ReportChartCard>
-  );
-}
-
-export function FunnelStepsCard({
-  title,
-  description,
-  stages,
-}: {
-  title: string;
-  description?: string;
-  stages: { label: string; value: number }[];
-}) {
-  const max = Math.max(...stages.map((s) => s.value), 1);
-  return (
-    <ReportChartCard title={title} description={description}>
-      <div className="space-y-3">
-        {stages.map((stage) => (
-          <div key={stage.label} className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="font-medium text-muted-foreground">{stage.label}</span>
-              <span className="font-semibold tabular-nums">
-                {stage.value.toLocaleString("tr-TR")}
-              </span>
-            </div>
-            <Progress value={Math.max(6, (stage.value / max) * 100)} className="h-2" />
-          </div>
-        ))}
-      </div>
     </ReportChartCard>
   );
 }

@@ -22,6 +22,7 @@ export function TrendAreaChart({
   data,
   series,
   heightClass = "h-[200px] sm:h-[240px]",
+  className,
 }: {
   title: string;
   description?: string;
@@ -30,11 +31,13 @@ export function TrendAreaChart({
   data: Record<string, string | number>[];
   series: { key: string; label: string; color?: string; dashed?: boolean }[];
   heightClass?: string;
+  className?: string;
 }) {
   const config: ChartConfig = seriesConfig(series);
 
   return (
     <ReportChartCard
+      className={className}
       title={title}
       description={description}
       action={<TrendBadge value={trend} />}

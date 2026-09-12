@@ -10,7 +10,7 @@ import { RequireScope } from "@/components/auth/RequireScope";
 import { BranchReportPicker, useBranchReportSelection } from "@/components/dashboard/BranchReportPicker";
 import BranchSmartReportStory from "@/components/dashboard/BranchSmartReportStory";
 import BranchReportDashboard from "@/components/dashboard/smart-report/BranchReportDashboard";
-import AnalyticsVisitsPanel from "@/components/dashboard/AnalyticsVisitsPanel";
+import TrafficSection from "@/components/dashboard/smart-report/TrafficSection";
 import AnalyticsWaiterPerformancePanel from "@/components/dashboard/AnalyticsWaiterPerformancePanel";
 import { SmartFeaturePanel } from "@/components/dashboard/SmartFeaturePanel";
 import { SearchableSelect } from "@/components/dashboard/menu/SearchableSelect";
@@ -46,6 +46,8 @@ import {
   smartReportAddonCheckoutCode,
 } from "@/lib/smart-report";
 import { getBranchRevenueReportRequest } from "@/lib/api";
+import { listMenuUsers } from "@/lib/waiter-api";
+import { filterStaffReport } from "@/components/dashboard/smart-report/staff-metrics";
 import {
   reportingPeriodRange,
   type AnalyticsPeriod,
@@ -88,6 +90,7 @@ export default function AnalyticsTab() {
   }, [searchParams]);
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
   const [reportView, setReportView] = useState<ReportView>("visits");
+  const [waiterId, setWaiterId] = useState<number | null>(null);
   const activeReportView: ReportView = reportView;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -104,8 +107,6 @@ export default function AnalyticsTab() {
     branches,
     selection,
     branchId,
-    qrId,
-    menuId,
     loading: selectionLoading,
     empty: noBranches,
     select,
@@ -113,14 +114,14 @@ export default function AnalyticsTab() {
   const range = useMemo(() => reportingPeriodRange(period), [period]);
   const reportQuery = useBranchAnalyticsReport(
     branchId,
-    menuId,
+    null,
     range.from,
     range.to,
     branchId != null,
   );
   const revenueQuery = useBranchRevenueReport(
     branchId,
-    menuId,
+    null,
     range.from,
     range.to,
     canUseRevenue &&
@@ -131,12 +132,30 @@ export default function AnalyticsTab() {
   );
   const personnelQuery = useBranchWaiterPerformanceReport(
     branchId,
-    menuId,
+    null,
     range.from,
     range.to,
-    canUseRevenue &&
-      branchId != null &&
-      (activeReportView === "personnel" || activeReportView === "revenue"),
+    canUseRevenue && branchId != null,
+  );
+  const waitersQuery = useQuery({
+    queryKey: ["menu-users", branchId],
+    queryFn: () => listMenuUsers(branchId as number),
+    enabled: canUseRevenue && branchId != null && activeReportView === "personnel",
+    retry: 1,
+  });
+  const waiterOptions = useMemo(() => {
+    const fromRoster = (waitersQuery.data?.waiters ?? [])
+      .filter((row) => row.active !== false)
+      .map((row) => ({ id: row.id, name: row.displayName }));
+    if (fromRoster.length > 0) return fromRoster;
+    return (personnelQuery.data?.waiters ?? [])
+      .filter((row) => row.waiterId != null)
+      .map((row) => ({ id: row.waiterId as number, name: row.displayName }));
+  }, [personnelQuery.data, waitersQuery.data]);
+  const staffReport = useMemo(
+    () =>
+      personnelQuery.data ? filterStaffReport(personnelQuery.data, waiterId) : undefined,
+    [personnelQuery.data, waiterId],
   );
   const report = reportQuery.data;
   const smartReport = useSmartReportJob({
@@ -159,6 +178,17 @@ export default function AnalyticsTab() {
   const result = normalizeSmartReportResult(smartReport.job);
   const failed = smartReport.isFailed;
   const wasGeneratingRef = useRef(false);
+
+  useEffect(() => {
+    setWaiterId(null);
+  }, [branchId]);
+
+  useEffect(() => {
+    if (waiterId == null) return;
+    if (!waiterOptions.some((row) => row.id === waiterId)) {
+      setWaiterId(null);
+    }
+  }, [waiterId, waiterOptions]);
 
   useEffect(() => {
     if (smartReport.isGenerating) {
@@ -519,6 +549,9 @@ export default function AnalyticsTab() {
                 if (next === "personnel" && !canUseRevenue) {
                   return;
                 }
+                if (next !== "personnel") {
+                  setWaiterId(null);
+                }
                 setReportView(next as ReportView);
               }}
               items={[
@@ -531,13 +564,20 @@ export default function AnalyticsTab() {
             <BranchReportPicker
               branches={branches}
               selectedBranchId={branchId}
-              selectedQrId={qrId}
-              onSelect={(nextBranchId, nextQrId) => {
-                select(nextBranchId, nextQrId);
-                router.replace(
-                  DASHBOARD_ROUTES.digitalMenuAnalyticsForBranch(nextBranchId, nextQrId),
-                  { scroll: false },
-                );
+              waiters={waiterOptions}
+              selectedWaiterId={waiterId}
+              showWaiterFilter={activeReportView === "personnel"}
+              onSelect={(nextBranchId, nextWaiterId) => {
+                if (nextBranchId !== branchId) {
+                  select(nextBranchId, null);
+                  setWaiterId(null);
+                  router.replace(
+                    DASHBOARD_ROUTES.digitalMenuAnalyticsForBranch(nextBranchId),
+                    { scroll: false },
+                  );
+                  return;
+                }
+                setWaiterId(nextWaiterId);
               }}
             />
             <div className="flex justify-end">
@@ -592,7 +632,7 @@ export default function AnalyticsTab() {
         <BranchReportDashboard
           revenue={revenueQuery.data}
           visits={reportQuery.data}
-          waiter={personnelQuery.data}
+          waiter={staffReport}
           loading={revenueLoading}
           allowedTabs={["overview", "revenue", "channels", "products"]}
           initialTab="overview"
@@ -621,29 +661,20 @@ export default function AnalyticsTab() {
         revenueQuery.data ? (
           <BranchReportDashboard
             revenue={revenueQuery.data}
-            waiter={personnelQuery.data}
+            waiter={staffReport}
             allowedTabs={["staff"]}
             initialTab="staff"
           />
         ) : (
           <AnalyticsWaiterPerformancePanel
-            report={personnelQuery.data}
+            report={staffReport ?? personnelQuery.data}
             tooltipStyle={tooltipStyle}
           />
         )
       ) : null}
 
-      {activeReportView === "visits" && branchId != null && !visitLoading && !reportQuery.isError ? (
-        revenueQuery.data ? (
-          <BranchReportDashboard
-            revenue={revenueQuery.data}
-            visits={report}
-            allowedTabs={["traffic"]}
-            initialTab="traffic"
-          />
-        ) : (
-          <AnalyticsVisitsPanel report={report} tooltipStyle={tooltipStyle} />
-        )
+      {activeReportView === "visits" && branchId != null && !visitLoading && !reportQuery.isError && report ? (
+        <TrafficSection visits={report} revenue={revenueQuery.data} />
       ) : null}
     </div>
   );
