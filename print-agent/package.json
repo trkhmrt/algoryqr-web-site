@@ -1,0 +1,11 @@
+{
+  "name": "algoryqr-print-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AlgoryQR kitchen receipt agent for Birch CV2-UN (LAN 9100 / USB / OS driver)",
+  "scripts": {
+    "start": "node src/index.js",
+    "pair": "node src/index.js"
+  }
+}

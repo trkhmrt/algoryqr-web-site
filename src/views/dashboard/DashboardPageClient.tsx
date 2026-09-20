@@ -50,6 +50,8 @@ import UberEatsMenuSyncView from "@/views/dashboard/UberEatsMenuSyncView";
 import UberEatsPendingView from "@/views/dashboard/UberEatsPendingView";
 import IntegrationsHubView from "@/views/dashboard/IntegrationsHubView";
 import YemekSepetiHubView from "@/views/dashboard/YemekSepetiHubView";
+import YemekSepetiOrdersView from "@/views/dashboard/YemekSepetiOrdersView";
+import PrinterHubView from "@/views/dashboard/PrinterHubView";
 import RestaurantLayoutView from "@/views/dashboard/RestaurantLayoutView";
 import SmartReportDetailView from "@/views/dashboard/SmartReportDetailView";
 import SmartReportsView from "@/views/dashboard/SmartReportsView";
@@ -275,6 +277,14 @@ export default function DashboardPageClient({ initialUser = null }: DashboardPag
 
   if (pathname === DASHBOARD_ROUTES.yemekSepeti) {
     return <YemekSepetiHubView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.yemekSepetiOrders) {
+    return <YemekSepetiOrdersView />;
+  }
+
+  if (pathname === DASHBOARD_ROUTES.printer) {
+    return <PrinterHubView />;
   }
 
   if (pathname === DASHBOARD_ROUTES.uberEats) {

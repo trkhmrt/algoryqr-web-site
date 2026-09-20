@@ -36,7 +36,12 @@ export function resolveRequiredScope(pathname: string): ProductScope | null {
     return "QR_MENU_OWNER";
   }
 
-  if (pathMatches(pathname, DASHBOARD_ROUTES.campaigns) || isUberEatsSectionActive(pathname)) {
+  if (
+    pathMatches(pathname, DASHBOARD_ROUTES.campaigns) ||
+    isUberEatsSectionActive(pathname) ||
+    pathMatches(pathname, DASHBOARD_ROUTES.yemekSepeti) ||
+    pathMatches(pathname, DASHBOARD_ROUTES.printer)
+  ) {
     return "QR_MENU_OWNER";
   }
 
@@ -70,4 +75,7 @@ export const ROUTE_SCOPES: Partial<Record<string, ProductScope>> = {
   [DASHBOARD_ROUTES.uberEatsOrders]: "QR_MENU_OWNER",
   [DASHBOARD_ROUTES.uberEatsPending]: "QR_MENU_OWNER",
   [DASHBOARD_ROUTES.uberEatsMenuSync]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.yemekSepeti]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.yemekSepetiOrders]: "QR_MENU_OWNER",
+  [DASHBOARD_ROUTES.printer]: "QR_MENU_OWNER",
 };

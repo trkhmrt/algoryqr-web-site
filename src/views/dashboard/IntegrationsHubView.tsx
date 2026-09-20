@@ -40,11 +40,8 @@ export default function IntegrationsHubView() {
         <Link
           href={DASHBOARD_ROUTES.yemekSepeti}
           aria-label="Yemek Sepeti"
-          className={`group relative flex min-h-[10rem] items-center justify-center ${DASHBOARD_TILE} sm:p-8`}
+          className={`group flex min-h-[10rem] items-center justify-center ${DASHBOARD_TILE} sm:p-8`}
         >
-          <span className="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            Yakında
-          </span>
           <Image
             src="/yemek-sepeti/wordmark.png"
             alt="Yemek Sepeti"
@@ -52,6 +49,14 @@ export default function IntegrationsHubView() {
             height={160}
             className="h-auto w-full max-w-[280px] object-contain"
           />
+        </Link>
+        <Link
+          href={DASHBOARD_ROUTES.printer}
+          aria-label="Fiş yazıcısı"
+          className={`group flex min-h-[10rem] flex-col items-center justify-center gap-2 ${DASHBOARD_TILE} sm:p-8`}
+        >
+          <span className="text-lg font-semibold">Fiş yazıcısı</span>
+          <span className="text-sm text-muted-foreground">Birch / ESC/POS otomatik basım</span>
         </Link>
       </div>
     </div>

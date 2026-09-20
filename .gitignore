@@ -29,6 +29,10 @@ yarn-error.log*
 .env*.local
 .env
 
+# printer agent / local job store
+.data/
+print-agent/config.json
+
 # vercel
 .vercel
 

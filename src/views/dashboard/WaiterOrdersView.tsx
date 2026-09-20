@@ -16,6 +16,7 @@ import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { PrintOrderButton } from "@/components/dashboard/PrintOrderButton";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter, openQueueDateRange } from "@/components/ui/date-range-filter";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ import {
   DASHBOARD_SURFACE,
 } from "@/lib/dashboard-surface";
 import {
+  listKitchenOrders,
   listMerchantOrders,
   OrderingApiError,
   type OrderResponse,
@@ -78,6 +80,15 @@ function orderCustomerName(order: OrderResponse): string {
   const waiter = order.waiterName?.trim();
   if (waiter) return waiter;
   return "Misafir";
+}
+
+function isPlatformDeliveryOrder(order: OrderResponse): boolean {
+  return order.orderSource === "UBER_EATS";
+}
+
+function orderTableLabel(order: OrderResponse): string {
+  if (isPlatformDeliveryOrder(order)) return "Yemek Sepeti";
+  return order.tableName || "Masa";
 }
 
 function statusLabel(status: OrderStatus): string {
@@ -184,8 +195,28 @@ export default function WaiterOrdersView() {
     refetchInterval: 6_000,
   });
 
+  const kitchenOrdersQuery = useQuery({
+    queryKey: ["menu-kitchen-orders", menuId],
+    enabled: menuId != null,
+    queryFn: () => listKitchenOrders(menuId!),
+    refetchInterval: 6_000,
+  });
+
+  const mergedOrders = useMemo(() => {
+    const byId = new Map<number, OrderResponse>();
+    for (const order of ordersQuery.data ?? []) {
+      byId.set(order.id, order);
+    }
+    for (const order of kitchenOrdersQuery.data ?? []) {
+      byId.set(order.id, order);
+    }
+    return Array.from(byId.values()).sort(
+      (a, b) => (orderTimestamp(b) ?? 0) - (orderTimestamp(a) ?? 0),
+    );
+  }, [kitchenOrdersQuery.data, ordersQuery.data]);
+
   const filteredOrders = useMemo(() => {
-    const orders = ordersQuery.data ?? [];
+    const orders = mergedOrders;
     const from = parseYmd(range.from, false);
     const to = parseYmd(range.to, true);
     const query = debouncedCustomer.trim().toLowerCase();
@@ -200,7 +231,7 @@ export default function WaiterOrdersView() {
       const waiter = (order.waiterName || "").trim().toLowerCase();
       return name.includes(query) || email.includes(query) || waiter.includes(query);
     });
-  }, [debouncedCustomer, ordersQuery.data, range.from, range.to]);
+  }, [debouncedCustomer, mergedOrders, range.from, range.to]);
 
   const revenueTotal = useMemo(
     () => sumOrderRevenue(filteredOrders, false),
@@ -209,7 +240,7 @@ export default function WaiterOrdersView() {
 
   const tipTotal = useMemo(() => sumTipRevenue(filteredOrders), [filteredOrders]);
 
-  const currency = filteredOrders[0]?.currency || ordersQuery.data?.[0]?.currency || "TRY";
+  const currency = filteredOrders[0]?.currency || mergedOrders[0]?.currency || "TRY";
 
   if (accessLoading || loading) {
     return (
@@ -220,7 +251,7 @@ export default function WaiterOrdersView() {
     );
   }
 
-  const orders = ordersQuery.data ?? [];
+  const orders = mergedOrders;
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
@@ -308,7 +339,7 @@ export default function WaiterOrdersView() {
             </Button>
           }
         />
-      ) : ordersQuery.isLoading ? (
+      ) : ordersQuery.isLoading || kitchenOrdersQuery.isLoading ? (
         <DashboardLoadingState label="Siparişler yükleniyor..." />
       ) : orders.length === 0 ? (
         <EmptyState
@@ -380,6 +411,7 @@ export default function WaiterOrdersView() {
                   <TableHead className="h-10">Tarih</TableHead>
                   <TableHead className="h-10">Ürünler</TableHead>
                   <TableHead className="h-10 text-right">Tutar</TableHead>
+                  <TableHead className="h-10 text-right">Fiş</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -390,9 +422,15 @@ export default function WaiterOrdersView() {
                     <TableRow
                       key={order.id}
                       className={cn("cursor-pointer", order.status === "CANCELLED" && "opacity-70")}
-                      onClick={() => router.push(href)}
+                      onClick={() => {
+                        if (isPlatformDeliveryOrder(order)) {
+                          router.push(DASHBOARD_ROUTES.yemekSepetiOrders);
+                          return;
+                        }
+                        router.push(href);
+                      }}
                     >
-                      <TableCell className="py-3 font-medium">{order.tableName || "Masa"}</TableCell>
+                      <TableCell className="py-3 font-medium">{orderTableLabel(order)}</TableCell>
                       <TableCell className="py-3">
                         <span
                           className={cn(
@@ -445,6 +483,9 @@ export default function WaiterOrdersView() {
                             ) : null}
                           </AnimatePresence>
                         </div>
+                      </TableCell>
+                      <TableCell className="py-3 text-right" onClick={(event) => event.stopPropagation()}>
+                        <PrintOrderButton kind="kitchen" order={order} />
                       </TableCell>
                     </TableRow>
                   );

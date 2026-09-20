@@ -24,6 +24,10 @@ describe("integrations routes", () => {
   it("exposes hub and partner console paths under Uber Eats", () => {
     expect(DASHBOARD_ROUTES.integrations).toBe("/dashboard/entegrasyonlar");
     expect(DASHBOARD_ROUTES.yemekSepeti).toBe("/dashboard/entegrasyonlar/yemek-sepeti");
+    expect(DASHBOARD_ROUTES.yemekSepetiOrders).toBe(
+      "/dashboard/entegrasyonlar/yemek-sepeti/siparisler",
+    );
+    expect(DASHBOARD_ROUTES.printer).toBe("/dashboard/entegrasyonlar/yazici");
     expect(DASHBOARD_ROUTES.uberEats).toBe("/dashboard/uber-eats");
     expect(DASHBOARD_ROUTES.uberEatsProducts).toBe("/dashboard/uber-eats/urunler");
     expect(DASHBOARD_ROUTES.uberEatsOrders).toBe("/dashboard/uber-eats/siparisler");

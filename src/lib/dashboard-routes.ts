@@ -69,6 +69,8 @@ export const DASHBOARD_ROUTES = {
     `/dashboard/dijital-menu/restaurant-layout?qr=${qrId}`,
   integrations: "/dashboard/entegrasyonlar",
   yemekSepeti: "/dashboard/entegrasyonlar/yemek-sepeti",
+  yemekSepetiOrders: "/dashboard/entegrasyonlar/yemek-sepeti/siparisler",
+  printer: "/dashboard/entegrasyonlar/yazici",
   uberEats: "/dashboard/uber-eats",
   uberEatsProducts: "/dashboard/uber-eats/urunler",
   uberEatsOrders: "/dashboard/uber-eats/siparisler",
@@ -376,6 +378,20 @@ export function buildDashboardBreadcrumbs(
         };
         crumbs.push({ label: labelByPath[pathname] ?? currentLabel ?? "Uber Eats" });
       }
+      return crumbs;
+    }
+    if (
+      pathname === DASHBOARD_ROUTES.yemekSepeti ||
+      pathname.startsWith(`${DASHBOARD_ROUTES.yemekSepeti}/`)
+    ) {
+      crumbs.push({ label: "Yemek Sepeti", href: DASHBOARD_ROUTES.yemekSepeti });
+      if (pathname === DASHBOARD_ROUTES.yemekSepetiOrders) {
+        crumbs.push({ label: "Siparişler" });
+      }
+      return crumbs;
+    }
+    if (pathname === DASHBOARD_ROUTES.printer) {
+      crumbs.push({ label: "Fiş yazıcısı" });
       return crumbs;
     }
     crumbs.push({ label: currentLabel ?? "Entegrasyon" });

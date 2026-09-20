@@ -7,21 +7,20 @@ import { ArrowLeft, ChevronDown, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter, type DateRangeValue } from "@/components/ui/date-range-filter";
-import { IntegrationsSectionHeader } from "@/components/dashboard/IntegrationsSectionHeader";
 import { PrintOrderButton } from "@/components/dashboard/PrintOrderButton";
 import { useDigitalMenuAccess } from "@/components/dashboard/menu/DigitalMenuPicker";
 import { useDashboardBanners } from "@/contexts/dashboard-banners";
 import { ApiError } from "@/lib/api";
 import { DASHBOARD_ROUTES } from "@/lib/dashboard-routes";
 import {
-  acceptUberEatsOrder,
-  cancelUberEatsOrder,
-  listUberEatsOrders,
-  readyUberEatsOrder,
-  rejectUberEatsOrder,
-  syncUberEatsOrders,
-  type UberEatsOrder,
-} from "@/lib/ubereats-api";
+  acceptYemekSepetiOrder,
+  cancelYemekSepetiOrder,
+  listYemekSepetiOrders,
+  readyYemekSepetiOrder,
+  rejectYemekSepetiOrder,
+  syncYemekSepetiOrders,
+  type YemekSepetiOrder,
+} from "@/lib/yemek-sepeti-api";
 import {
   deliveryTypeLabel,
   displayValue,
@@ -60,7 +59,7 @@ function formatDateRangeLabel(from: string, to: string): string {
   return from || to;
 }
 
-export default function UberEatsOrdersView() {
+export default function YemekSepetiOrdersView() {
   const { notify } = useDashboardBanners();
   const queryClient = useQueryClient();
   const { accessLoading, canUseDigitalMenu } = useDigitalMenuAccess();
@@ -70,9 +69,9 @@ export default function UberEatsOrdersView() {
   const [openId, setOpenId] = useState<number | null>(null);
 
   const ordersQuery = useQuery({
-    queryKey: ["ubereats-orders", status, dateRange.from, dateRange.to, page],
+    queryKey: ["yemeksepeti-orders", status, dateRange.from, dateRange.to, page],
     queryFn: () =>
-      listUberEatsOrders(status, page, {
+      listYemekSepetiOrders(status, page, {
         from: dateRange.from || undefined,
         to: dateRange.to || undefined,
       }),
@@ -81,12 +80,13 @@ export default function UberEatsOrdersView() {
 
   const syncMutation = useMutation({
     mutationFn: () =>
-      syncUberEatsOrders({
+      syncYemekSepetiOrders({
         from: dateRange.from || undefined,
         to: dateRange.to || undefined,
       }),
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ["ubereats-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["yemeksepeti-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["menu-kitchen-orders"] });
       const rangeLabel =
         result.from && result.to
           ? `${result.from} – ${result.to}`
@@ -100,13 +100,15 @@ export default function UberEatsOrdersView() {
 
   const actionMutation = useMutation({
     mutationFn: async ({ orderId, action }: { orderId: number; action: "accept" | "reject" | "cancel" | "ready" }) => {
-      if (action === "accept") return acceptUberEatsOrder(orderId);
-      if (action === "reject") return rejectUberEatsOrder(orderId);
-      if (action === "cancel") return cancelUberEatsOrder(orderId);
-      return readyUberEatsOrder(orderId);
+      if (action === "accept") return acceptYemekSepetiOrder(orderId);
+      if (action === "reject") return rejectYemekSepetiOrder(orderId);
+      if (action === "cancel") return cancelYemekSepetiOrder(orderId);
+      return readyYemekSepetiOrder(orderId);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["ubereats-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["yemeksepeti-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["menu-kitchen-orders"] });
+      await queryClient.invalidateQueries({ queryKey: ["menu-orders"] });
       notify("info", "Sipariş güncellendi.");
     },
     onError: (error) => {
@@ -133,35 +135,35 @@ export default function UberEatsOrdersView() {
   return (
     <div className="space-y-6 animate-fade-in">
       <Link
-        href={DASHBOARD_ROUTES.integrations}
+        href={DASHBOARD_ROUTES.yemekSepeti}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Entegrasyonlar
+        Yemek Sepeti
       </Link>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <IntegrationsSectionHeader
-          pageTitle="Siparişler"
-          pageDescription="Uber Eats sipariş takibi"
-        />
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Siparişler</h1>
+          <p className="text-sm text-muted-foreground">Yemek Sepeti sipariş takibi</p>
+        </div>
         <div className="flex shrink-0 flex-wrap gap-2 lg:pt-8">
           <Button
             variant="secondary"
             disabled={!canUseDigitalMenu || syncMutation.isPending}
             onClick={() => syncMutation.mutate()}
           >
-            {syncMutation.isPending ? "Senkronize ediliyor..." : "Uber Eats'ten senkronize et"}
+            {syncMutation.isPending ? "Senkronize ediliyor..." : "Yemek Sepeti'ten senkronize et"}
           </Button>
           <Button asChild variant="outline">
-            <Link href={DASHBOARD_ROUTES.uberEats}>Bağlantı</Link>
+            <Link href={DASHBOARD_ROUTES.yemekSepeti}>Bağlantı</Link>
           </Button>
         </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
         Liste yerel veritabanındaki senkronize siparişleri gösterir. Tarih aralığını seçin, ardından
-        &quot;Uber Eats&apos;ten senkronize et&quot; ile o dönemin siparişlerini çekin.
+        &quot;Yemek Sepeti&apos;ten senkronize et&quot; ile o dönemin siparişlerini çekin.
       </p>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -261,7 +263,7 @@ export default function UberEatsOrdersView() {
   );
 }
 
-function orderDisplayReference(order: UberEatsOrder): string {
+function orderDisplayReference(order: YemekSepetiOrder): string {
   if (order.orderNumber?.trim()) {
     return order.orderNumber.trim();
   }
@@ -275,7 +277,7 @@ function OrderCard({
   busy,
   onAction,
 }: {
-  order: UberEatsOrder;
+  order: YemekSepetiOrder;
   open: boolean;
   onToggle: () => void;
   busy: boolean;
@@ -368,7 +370,7 @@ function OrderCard({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <PrintOrderButton kind="marketplace" source="UBER_EATS" order={order} />
+            <PrintOrderButton kind="marketplace" source="YEMEK_SEPETI" order={order} />
             <Button size="sm" disabled={busy} onClick={() => onAction("accept")}>
               Kabul et
             </Button>

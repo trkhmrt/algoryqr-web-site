@@ -51,11 +51,14 @@ export type OrderCampaignSummary = {
   stampCardProgress?: StampCardProgress[];
 };
 
+export type OrderSource = "QR" | "WAITER" | "UBER_EATS" | string;
+
 export type OrderResponse = {
   id: number;
   menuId?: number;
   tableId?: number;
   tableName?: string | null;
+  orderSource?: OrderSource | null;
   tableSessionId?: string | null;
   customerId?: number | null;
   customerName?: string | null;
@@ -336,6 +339,23 @@ export async function deleteMenuTable(menuId: number, tableId: number): Promise<
     const data = await parseJson<{ message?: string }>(response);
     throw new OrderingApiError(response.status, data.message || "Masa silinemedi");
   }
+}
+
+export async function listKitchenOrders(menuId: number): Promise<OrderResponse[]> {
+  const response = await fetch(`/api/waiter-panel/menu/${menuId}/kitchen/orders`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "same-origin",
+  });
+  const data = await parseJson<OrderResponse[] | { message?: string }>(response);
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && !Array.isArray(data) && "message" in data
+        ? String(data.message)
+        : "Platform siparişleri alınamadı";
+    throw new OrderingApiError(response.status, message);
+  }
+  return Array.isArray(data) ? data : [];
 }
 
 export async function listMerchantOrders(

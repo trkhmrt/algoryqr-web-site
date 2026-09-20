@@ -15,6 +15,7 @@ import { useWaiterPanelAccess } from "@/components/dashboard/waiter/WaiterPanelA
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { PrintOrderButton } from "@/components/dashboard/PrintOrderButton";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import {
   AlertDialog,
@@ -265,6 +266,8 @@ export default function WaiterOrderDetailView({ orderId }: WaiterOrderDetailView
                 Garson notu: {order.waiterNote}
               </p>
             ) : null}
+
+            <PrintOrderButton kind="kitchen" order={order} />
 
             {canCancelOrder(order.status) ? (
               <Button
