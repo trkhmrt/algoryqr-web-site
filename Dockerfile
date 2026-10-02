@@ -27,10 +27,15 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+ARG APP_ENV=prod
+ARG API_BASE_URL=https://prod.qrapi.algorycode.com
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV APP_ENV=${APP_ENV}
+ENV API_BASE_URL=${API_BASE_URL}
 
 RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs

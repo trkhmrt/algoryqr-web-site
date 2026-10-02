@@ -3,9 +3,24 @@ const trimTrailingSlash = (s: string) => s.replace(/\/$/, "");
 const PROD_API_BASE = "https://prod.qrapi.algorycode.com";
 const STAGE_API_BASE = "https://stage.qrapi.algorycode.com";
 
+function isAbsoluteHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function readAbsoluteHttpUrl(raw: string | undefined): string | undefined {
+  const trimmed = raw?.trim();
+  if (!trimmed) return undefined;
+  const normalized = trimTrailingSlash(trimmed);
+  return isAbsoluteHttpUrl(normalized) ? normalized : undefined;
+}
+
 function readApiBaseFromEnv(): string | undefined {
-  const raw = process.env.API_BASE_URL?.trim() || process.env.API_UPSTREAM?.trim();
-  return raw ? trimTrailingSlash(raw) : undefined;
+  return readAbsoluteHttpUrl(process.env.API_BASE_URL) ?? readAbsoluteHttpUrl(process.env.API_UPSTREAM);
 }
 
 function readDeployEnv(): string {
@@ -21,13 +36,14 @@ function resolveApiBaseUrl(): string {
   if (deployEnv === "stage" || deployEnv === "staging") return STAGE_API_BASE;
 
   if (process.env.NODE_ENV === "development") return "http://localhost:8055";
+  if (process.env.NODE_ENV === "production") return PROD_API_BASE;
 
-  throw new Error("APP_ENV must be prod or stage, or set API_BASE_URL");
+  throw new Error("APP_ENV must be prod or stage, or set API_BASE_URL to an absolute http(s) URL");
 }
 
 function resolvePublicApiBaseUrl(): string {
-  const fromEnv = process.env.PUBLIC_API_BASE_URL?.trim();
-  if (fromEnv) return trimTrailingSlash(fromEnv);
+  const fromEnv = readAbsoluteHttpUrl(process.env.PUBLIC_API_BASE_URL);
+  if (fromEnv) return fromEnv;
 
   const deployEnv = readDeployEnv();
   if (deployEnv === "prod" || deployEnv === "production") return PROD_API_BASE;

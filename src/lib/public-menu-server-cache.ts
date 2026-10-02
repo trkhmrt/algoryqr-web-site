@@ -17,8 +17,16 @@ export function publicMenuCachedJson(data: unknown, status: number) {
   });
 }
 
+function requestUrl(req: Request): URL {
+  try {
+    return new URL(req.url);
+  } catch {
+    return new URL(req.url, "http://localhost");
+  }
+}
+
 export function searchParamsFromRequest(req: Request): Record<string, string | string[]> {
-  const url = new URL(req.url);
+  const url = requestUrl(req);
   const params: Record<string, string | string[]> = {};
   url.searchParams.forEach((value, key) => {
     const existing = params[key];
@@ -43,7 +51,7 @@ export function buildPublicMenuUpstreamUrl(
   path: string,
   params?: Record<string, string | string[]>,
 ) {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  const url = new URL(path, `${API_BASE_URL}/`);
   if (!params) return url.toString();
 
   for (const [key, value] of Object.entries(params)) {
