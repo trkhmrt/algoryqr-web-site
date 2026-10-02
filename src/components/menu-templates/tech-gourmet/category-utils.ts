@@ -2,10 +2,9 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode, findCategoryById } from "../types";
 
-export type TechGourmetView =
-  | { type: "home" }
-  | { type: "category"; categoryId: number }
-  | { type: "product"; productId: number; categoryId: number | null };
+import type { PublicMenuUrlViewBase } from "../shared/use-public-menu-url-state";
+
+export type TechGourmetView = PublicMenuUrlViewBase;
 
 export function getChildren(
   categories: TaxonomyNavNode[],

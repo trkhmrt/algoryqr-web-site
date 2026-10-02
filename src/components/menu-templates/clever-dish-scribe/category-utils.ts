@@ -2,10 +2,9 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode, resolveCategoryByUrlParam } from "../types";
 
-export type CleverDishScribeView =
-  | { type: "home" }
-  | { type: "category"; categoryId: number }
-  | { type: "product"; productId: number; categoryId: number | null };
+import type { PublicMenuUrlViewBase } from "../shared/use-public-menu-url-state";
+
+export type CleverDishScribeView = PublicMenuUrlViewBase;
 
 export function getBreadcrumbs(
   categories: TaxonomyNavNode[],

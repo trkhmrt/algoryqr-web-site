@@ -1,12 +1,10 @@
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { collectCategoryIds, filterProductsByNavNode, findCategoryById } from "../types";
+import type { PublicMenuUrlViewBase } from "../shared/use-public-menu-url-state";
 import { luxuryCategoryEmoji } from "./styles";
 
-export type LuxuryView =
-  | { type: "home" }
-  | { type: "category"; categoryId: number }
-  | { type: "product"; productId: number; categoryId: number | null };
+export type LuxuryView = PublicMenuUrlViewBase;
 
 export function getChildren(
   categories: TaxonomyNavNode[],

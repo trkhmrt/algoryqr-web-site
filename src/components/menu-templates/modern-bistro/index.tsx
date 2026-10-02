@@ -21,6 +21,7 @@ import {
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
+  publicMenuCategoryView,
 } from "../shared";
 import type { ModernBistroView } from "./category-utils";
 import {
@@ -100,8 +101,8 @@ export function ModernBistroMenuTemplate({
   };
 
   const selectSubCategory = (subCategoryId: number | null) => {
-    if (view.type !== "category") return;
-    setView({ type: "category", categoryId: view.categoryId, subCategoryId });
+    if (view.type !== "category" || !activeCategory) return;
+    setView(publicMenuCategoryView(activeCategory, subCategoryId));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

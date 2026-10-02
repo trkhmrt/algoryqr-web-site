@@ -17,6 +17,7 @@ import {
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
+  publicMenuCategoryView,
 } from "../shared";
 import type { TechGourmetView } from "./category-utils";
 import { TechGourmetCategoryView } from "./CategoryView";
@@ -76,7 +77,7 @@ export function TechGourmetMenuTemplate({
     setSearchQuery("");
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "category", categoryId: category.categoryId });
+    setView(publicMenuCategoryView(category));
     analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };

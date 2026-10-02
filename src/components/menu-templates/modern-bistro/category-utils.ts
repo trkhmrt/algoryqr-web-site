@@ -2,17 +2,11 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode, findCategoryById, resolveCategoryByUrlParam } from "../types";
 
+import type { PublicMenuUrlViewBase } from "../shared/use-public-menu-url-state";
+
 export const MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE = 50;
 
-export type ModernBistroView =
-  | { type: "home" }
-  | { type: "category"; categoryId: number; subCategoryId: number | null }
-  | {
-      type: "product";
-      productId: number;
-      categoryId: number | null;
-      subCategoryId: number | null;
-    };
+export type ModernBistroView = PublicMenuUrlViewBase;
 
 export function getBreadcrumbs(
   categories: TaxonomyNavNode[],

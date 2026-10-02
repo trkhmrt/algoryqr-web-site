@@ -17,6 +17,7 @@ import {
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
+  publicMenuCategoryView,
 } from "../shared";
 import type { LuxuryView } from "./category-utils";
 import { LuxuryCategoryView } from "./CategoryView";
@@ -80,7 +81,7 @@ export function LuxuryMenuTemplate({
     setSearchQuery("");
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "category", categoryId: category.categoryId });
+    setView(publicMenuCategoryView(category));
     analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };

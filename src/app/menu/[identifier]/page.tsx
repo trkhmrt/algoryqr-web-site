@@ -21,9 +21,16 @@ export default async function PublicMenuEntryRedirect({
     return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
   };
 
+  const readQueryString = (value: string | string[] | undefined): string | undefined => {
+    const rawValue = typeof value === "string" ? value : Array.isArray(value) ? value[0] : undefined;
+    const trimmed = rawValue?.trim();
+    return trimmed || undefined;
+  };
+
   redirect(
     buildPublicMenuContentPath(identifier, {
       tableToken: tableToken || undefined,
+      category: readQueryString(query.category),
       categoryId: parseId(query.categoryId),
       subCategoryId: parseId(query.subCategoryId),
       productId: parseId(query.productId),

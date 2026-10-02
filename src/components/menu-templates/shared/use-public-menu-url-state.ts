@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import type { TaxonomyNavNode } from "../types";
+import { publicMenuCategoryUrlId, publicMenuCategoryUrlName } from "../types";
+
 const TABLE_TOKEN_PARAM = "t";
+export const PUBLIC_MENU_CATEGORY_NAME_PARAM = "category";
 const CATEGORY_ID_PARAM = "categoryId";
 const SUB_CATEGORY_ID_PARAM = "subCategoryId";
 const PRODUCT_ID_PARAM = "productId";
@@ -12,11 +16,17 @@ const PRESERVED_PARAMS = new Set([TABLE_TOKEN_PARAM]);
 
 export type PublicMenuUrlViewBase =
   | { type: "home" }
-  | { type: "category"; categoryId: number; subCategoryId?: number | null }
+  | {
+      type: "category";
+      categoryId: number;
+      categoryName?: string | null;
+      subCategoryId?: number | null;
+    }
   | {
       type: "product";
       productId: number;
       categoryId: number | null;
+      categoryName?: string | null;
       subCategoryId?: number | null;
     };
 
@@ -33,12 +43,31 @@ function parsePositiveInt(value: string | null): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function readCategoryNameParam(searchParams: URLSearchParams): string | null {
+  const raw = searchParams.get(PUBLIC_MENU_CATEGORY_NAME_PARAM);
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function publicMenuCategoryView(
+  category: TaxonomyNavNode,
+  subCategoryId?: number | null,
+): Extract<PublicMenuUrlViewBase, { type: "category" }> {
+  return {
+    type: "category",
+    categoryId: publicMenuCategoryUrlId(category),
+    categoryName: publicMenuCategoryUrlName(category),
+    subCategoryId: subCategoryId ?? null,
+  };
+}
+
 export function parsePublicMenuViewFromSearchParams(
   searchParams: URLSearchParams,
   supportsSubCategory = false,
 ): PublicMenuUrlViewBase | null {
   const productId = parsePositiveInt(searchParams.get(PRODUCT_ID_PARAM));
   const categoryId = parsePositiveInt(searchParams.get(CATEGORY_ID_PARAM));
+  const categoryName = readCategoryNameParam(searchParams);
   const subCategoryId = supportsSubCategory
     ? parsePositiveInt(searchParams.get(SUB_CATEGORY_ID_PARAM))
     : null;
@@ -48,7 +77,17 @@ export function parsePublicMenuViewFromSearchParams(
       type: "product",
       productId,
       categoryId,
+      categoryName,
       subCategoryId,
+    };
+  }
+
+  if (categoryName != null) {
+    return {
+      type: "category",
+      categoryId: categoryId ?? 0,
+      categoryName,
+      subCategoryId: supportsSubCategory ? subCategoryId : null,
     };
   }
 
@@ -77,7 +116,12 @@ function buildSearchParamsForView(
   }
 
   if (view.type === "category") {
-    next.set(CATEGORY_ID_PARAM, String(view.categoryId));
+    const name = view.categoryName?.trim();
+    if (name) {
+      next.set(PUBLIC_MENU_CATEGORY_NAME_PARAM, name);
+    } else if (view.categoryId > 0) {
+      next.set(CATEGORY_ID_PARAM, String(view.categoryId));
+    }
     if (supportsSubCategory && view.subCategoryId != null) {
       next.set(SUB_CATEGORY_ID_PARAM, String(view.subCategoryId));
     }
@@ -86,7 +130,10 @@ function buildSearchParamsForView(
 
   if (view.type === "product") {
     next.set(PRODUCT_ID_PARAM, String(view.productId));
-    if (view.categoryId != null) {
+    const name = view.categoryName?.trim();
+    if (name) {
+      next.set(PUBLIC_MENU_CATEGORY_NAME_PARAM, name);
+    } else if (view.categoryId != null) {
       next.set(CATEGORY_ID_PARAM, String(view.categoryId));
     }
     if (supportsSubCategory && view.subCategoryId != null) {
@@ -104,6 +151,7 @@ function viewsEqual(a: PublicMenuUrlViewBase, b: PublicMenuUrlViewBase): boolean
   if (a.type === "category" && b.type === "category") {
     return (
       a.categoryId === b.categoryId &&
+      (a.categoryName ?? null) === (b.categoryName ?? null) &&
       (a.subCategoryId ?? null) === (b.subCategoryId ?? null)
     );
   }
@@ -111,6 +159,7 @@ function viewsEqual(a: PublicMenuUrlViewBase, b: PublicMenuUrlViewBase): boolean
     return (
       a.productId === b.productId &&
       (a.categoryId ?? null) === (b.categoryId ?? null) &&
+      (a.categoryName ?? null) === (b.categoryName ?? null) &&
       (a.subCategoryId ?? null) === (b.subCategoryId ?? null)
     );
   }

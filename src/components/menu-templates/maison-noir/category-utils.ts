@@ -2,17 +2,11 @@ import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
 import { filterProductsByNavNode, findCategoryById, resolveCategoryByUrlParam } from "../types";
 
+import type { PublicMenuUrlViewBase } from "../shared/use-public-menu-url-state";
+
 export const MAISON_CATEGORY_PRODUCT_PAGE_SIZE = 50;
 
-export type MaisonNoirView =
-  | { type: "home" }
-  | { type: "category"; categoryId: number; subCategoryId: number | null }
-  | {
-      type: "product";
-      productId: number;
-      categoryId: number | null;
-      subCategoryId: number | null;
-    };
+export type MaisonNoirView = PublicMenuUrlViewBase;
 
 export function getBreadcrumbs(
   categories: TaxonomyNavNode[],

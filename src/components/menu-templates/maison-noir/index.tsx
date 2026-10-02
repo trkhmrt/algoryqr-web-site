@@ -20,6 +20,7 @@ import {
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
+  publicMenuCategoryView,
 } from "../shared";
 import type { MaisonNoirView } from "./category-utils";
 import { MaisonNoirCategoryView } from "./CategoryView";
@@ -91,20 +92,24 @@ export function MaisonNoirMenuTemplate({
   const selectCategory = (category: TaxonomyNavNode) => {
     setPinnedProduct(null);
     feedback.syncProductState(null);
-    setView({ type: "category", categoryId: category.categoryId, subCategoryId: null });
+    setView(publicMenuCategoryView(category, null));
     analytics?.trackCategoryView(trackIdForNavNode(category));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const selectSubCategory = (subCategoryId: number | null) => {
-    if (view.type !== "category") return;
-    setView({ type: "category", categoryId: view.categoryId, subCategoryId });
+    if (view.type !== "category" || !categoryForView) return;
+    setView(publicMenuCategoryView(categoryForView, subCategoryId));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
     const categoryId = productCategory?.categoryId ?? categoryForView?.categoryId ?? null;
+    const categoryName =
+      (productCategory?.kind === "main"
+        ? productCategory.name
+        : categoryForView?.name ?? productCategory?.name) ?? null;
     const subCategoryId =
       view.type === "category"
         ? view.subCategoryId
@@ -120,6 +125,7 @@ export function MaisonNoirMenuTemplate({
       type: "product",
       productId: product.productId,
       categoryId,
+      categoryName: categoryName?.trim() || null,
       subCategoryId,
     });
     analytics?.trackProductView(

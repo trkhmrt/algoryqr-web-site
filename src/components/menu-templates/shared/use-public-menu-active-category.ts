@@ -5,13 +5,18 @@ import { useSearchParams } from "next/navigation";
 
 import {
   publicMenuCategoryUrlId,
+  publicMenuCategoryUrlName,
   resolveCategoryByUrlParam,
+  resolveMainCategoryByNameLike,
   resolveMainCategoryByUrlParam,
   resolveSubCategoryByUrlParam,
   type TaxonomyNavNode,
 } from "../types";
 
-import type { PublicMenuUrlViewBase } from "./use-public-menu-url-state";
+import {
+  PUBLIC_MENU_CATEGORY_NAME_PARAM,
+  type PublicMenuUrlViewBase,
+} from "./use-public-menu-url-state";
 
 function parseLinkId(param: string | null): number | null {
   if (!param) return null;
@@ -26,6 +31,21 @@ type UsePublicMenuActiveCategoryArgs = {
   supportsSubCategory?: boolean;
 };
 
+function resolveMainFromLink(
+  categories: TaxonomyNavNode[],
+  categoryName: string | null,
+  categoryId: number | null,
+): TaxonomyNavNode | null {
+  if (categoryName) {
+    const byName = resolveMainCategoryByNameLike(categories, categoryName);
+    if (byName) return byName;
+  }
+  if (categoryId != null) {
+    return resolveMainCategoryByUrlParam(categories, categoryId);
+  }
+  return null;
+}
+
 export function usePublicMenuActiveCategory({
   categories,
   view,
@@ -34,11 +54,16 @@ export function usePublicMenuActiveCategory({
 }: UsePublicMenuActiveCategoryArgs): {
   activeCategoryId: number | null;
   activeSubCategoryId: number | null;
-  /** Main taxonomy node — use for page title and product API mainCategoryId. */
   activeMainCategory: TaxonomyNavNode | null;
   activeCategory: TaxonomyNavNode | null;
 } {
   const searchParams = useSearchParams();
+
+  const linkCategoryName = useMemo(() => {
+    const raw = searchParams.get(PUBLIC_MENU_CATEGORY_NAME_PARAM);
+    const trimmed = raw?.trim();
+    return trimmed ? trimmed : null;
+  }, [searchParams]);
 
   const linkCategoryId = useMemo(
     () => parseLinkId(searchParams.get("categoryId")),
@@ -49,10 +74,23 @@ export function usePublicMenuActiveCategory({
     return parseLinkId(searchParams.get("subCategoryId"));
   }, [searchParams, supportsSubCategory]);
 
+  const viewCategoryName = useMemo(() => {
+    if (view.type === "category") return view.categoryName?.trim() || null;
+    if (view.type === "product") return view.categoryName?.trim() || null;
+    return null;
+  }, [view]);
+
+  const rawCategoryName = useMemo(() => {
+    if (linkCategoryName != null) return linkCategoryName;
+    return viewCategoryName;
+  }, [linkCategoryName, viewCategoryName]);
+
   const rawCategoryId = useMemo(() => {
     if (linkCategoryId != null) return linkCategoryId;
-    if (view.type === "category") return view.categoryId;
-    if (view.type === "product" && view.categoryId != null) return view.categoryId;
+    if (view.type === "category" && view.categoryId > 0) return view.categoryId;
+    if (view.type === "product" && view.categoryId != null && view.categoryId > 0) {
+      return view.categoryId;
+    }
     return null;
   }, [linkCategoryId, view]);
 
@@ -64,35 +102,39 @@ export function usePublicMenuActiveCategory({
   }, [linkSubCategoryId, view]);
 
   const activeMainCategory = useMemo(() => {
-    if (rawCategoryId == null) return null;
-    return resolveMainCategoryByUrlParam(categories, rawCategoryId);
-  }, [categories, rawCategoryId]);
+    return resolveMainFromLink(categories, rawCategoryName, rawCategoryId);
+  }, [categories, rawCategoryName, rawCategoryId]);
 
   const activeSubCategoryId = useMemo(() => {
     if (rawSubCategoryId != null && activeMainCategory) {
       const sub = resolveSubCategoryByUrlParam(activeMainCategory, rawSubCategoryId);
       if (sub) return sub.subCategoryId;
     }
-    const resolved = rawCategoryId == null ? null : resolveCategoryByUrlParam(categories, rawCategoryId);
-    if (resolved?.kind === "sub") return resolved.subCategoryId;
+    if (rawCategoryId != null) {
+      const resolved = resolveCategoryByUrlParam(categories, rawCategoryId);
+      if (resolved?.kind === "sub") return resolved.subCategoryId;
+    }
     return rawSubCategoryId;
   }, [activeMainCategory, categories, rawCategoryId, rawSubCategoryId]);
 
   useEffect(() => {
-    if (linkCategoryId == null) return;
+    const hasLink = linkCategoryName != null || linkCategoryId != null;
+    if (!hasLink) return;
     if (view.type === "product" && parseLinkId(searchParams.get("productId")) != null) {
       return;
     }
 
-    const main = resolveMainCategoryByUrlParam(categories, linkCategoryId);
+    const main = resolveMainFromLink(categories, linkCategoryName, linkCategoryId);
     if (!main) return;
 
     const canonicalId = publicMenuCategoryUrlId(main);
+    const canonicalName = publicMenuCategoryUrlName(main);
     const subCategoryId = supportsSubCategory ? linkSubCategoryId : null;
 
     if (
       view.type === "category" &&
       view.categoryId === canonicalId &&
+      (view.categoryName ?? null) === canonicalName &&
       (view.subCategoryId ?? null) === subCategoryId
     ) {
       return;
@@ -101,17 +143,31 @@ export function usePublicMenuActiveCategory({
     replaceView({
       type: "category",
       categoryId: canonicalId,
+      categoryName: canonicalName,
       subCategoryId,
     });
-  }, [categories, linkCategoryId, linkSubCategoryId, replaceView, searchParams, supportsSubCategory, view]);
+  }, [
+    categories,
+    linkCategoryId,
+    linkCategoryName,
+    linkSubCategoryId,
+    replaceView,
+    searchParams,
+    supportsSubCategory,
+    view,
+  ]);
 
   useEffect(() => {
     if (view.type !== "category" || !activeMainCategory) return;
     const canonicalId = publicMenuCategoryUrlId(activeMainCategory);
-    if (view.categoryId === canonicalId) return;
+    const canonicalName = publicMenuCategoryUrlName(activeMainCategory);
+    if (view.categoryId === canonicalId && (view.categoryName ?? null) === canonicalName) {
+      return;
+    }
     replaceView({
       type: "category",
       categoryId: canonicalId,
+      categoryName: canonicalName,
       subCategoryId: view.subCategoryId ?? null,
     });
   }, [activeMainCategory, replaceView, view]);
@@ -119,11 +175,15 @@ export function usePublicMenuActiveCategory({
   useEffect(() => {
     if (view.type !== "product" || !activeMainCategory || view.categoryId == null) return;
     const canonicalId = publicMenuCategoryUrlId(activeMainCategory);
-    if (view.categoryId === canonicalId) return;
+    const canonicalName = publicMenuCategoryUrlName(activeMainCategory);
+    if (view.categoryId === canonicalId && (view.categoryName ?? null) === canonicalName) {
+      return;
+    }
     replaceView({
       type: "product",
       productId: view.productId,
       categoryId: canonicalId,
+      categoryName: canonicalName,
       subCategoryId: view.subCategoryId ?? null,
     });
   }, [activeMainCategory, replaceView, view]);

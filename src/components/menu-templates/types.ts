@@ -126,6 +126,7 @@ export function decodeMainNavCategoryId(categoryId: number): number | null {
 export type TaxonomyNavNode = {
   categoryId: number;
   name: string;
+  slug?: string | null;
   parentId: number | null;
   sortOrder: number;
   kind: "main" | "sub";
@@ -141,6 +142,7 @@ export function taxonomyAsNavTree(mains: MainCategoryApiItem[] = []): TaxonomyNa
     return {
       categoryId: mainNavId,
       name: main.name,
+      slug: main.slug ?? null,
       parentId: null,
       sortOrder: main.sortOrder,
       kind: "main" as const,
@@ -150,6 +152,7 @@ export function taxonomyAsNavTree(mains: MainCategoryApiItem[] = []): TaxonomyNa
       children: (main.subs ?? []).map((sub) => ({
         categoryId: sub.id,
         name: sub.name,
+        slug: sub.slug ?? null,
         parentId: mainNavId,
         sortOrder: sub.sortOrder,
         kind: "sub" as const,
@@ -170,6 +173,88 @@ function sameTaxonomyId(left?: number | null, right?: number | null): boolean {
 /** Canonical `categoryId` query value for a resolved nav node (DB id + offset for mains). */
 export function publicMenuCategoryUrlId(category: TaxonomyNavNode): number {
   return category.categoryId;
+}
+
+/** Query param value when navigating by category label (human-readable name). */
+export function publicMenuCategoryUrlName(category: TaxonomyNavNode): string {
+  return category.name.trim();
+}
+
+export function normalizeMenuCategorySearchText(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function categoryNameLikeMatches(candidate: string, query: string): boolean {
+  const normalizedCandidate = normalizeMenuCategorySearchText(candidate);
+  const normalizedQuery = normalizeMenuCategorySearchText(query);
+  if (!normalizedCandidate || !normalizedQuery) return false;
+  if (normalizedCandidate === normalizedQuery) return true;
+  return (
+    normalizedCandidate.includes(normalizedQuery) ||
+    normalizedQuery.includes(normalizedCandidate)
+  );
+}
+
+function slugLikeMatches(slug: string | null | undefined, query: string): boolean {
+  if (!slug?.trim()) return false;
+  const slugAsWords = slug.replace(/_/g, " ");
+  return categoryNameLikeMatches(slugAsWords, query);
+}
+
+/**
+ * Resolve main category from a URL `category=` name (LIKE-style, Turkish-safe normalize).
+ */
+export function resolveMainCategoryByNameLike(
+  categories: TaxonomyNavNode[],
+  rawQuery: string,
+): TaxonomyNavNode | null {
+  const query = rawQuery.trim();
+  if (!query) return null;
+
+  const mains = categories.filter((node) => node.kind === "main");
+  if (mains.length === 0) return null;
+
+  const normalizedQuery = normalizeMenuCategorySearchText(query);
+
+  const exact = mains.filter(
+    (main) => normalizeMenuCategorySearchText(main.name) === normalizedQuery,
+  );
+  if (exact.length === 1) return exact[0]!;
+  if (exact.length > 1) {
+    return [...exact].sort(
+      (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "tr"),
+    )[0]!;
+  }
+
+  const slugExact = mains.filter(
+    (main) =>
+      main.slug?.trim() &&
+      normalizeMenuCategorySearchText(main.slug.replace(/_/g, " ")) === normalizedQuery,
+  );
+  if (slugExact.length === 1) return slugExact[0]!;
+
+  const like = mains.filter(
+    (main) =>
+      categoryNameLikeMatches(main.name, query) || slugLikeMatches(main.slug, query),
+  );
+  if (like.length === 1) return like[0]!;
+  if (like.length > 1) {
+    return [...like].sort(
+      (a, b) =>
+        a.name.length - b.name.length ||
+        a.sortOrder - b.sortOrder ||
+        a.name.localeCompare(b.name, "tr"),
+    )[0]!;
+  }
+
+  return null;
 }
 
 function legacySortUrlId(main: TaxonomyNavNode): number {

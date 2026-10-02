@@ -103,6 +103,8 @@ export { useLocalizedMenuProduct } from "./use-localized-menu-product";
 export {
   parsePublicMenuViewFromSearchParams,
   usePublicMenuViewState,
+  publicMenuCategoryView,
+  PUBLIC_MENU_CATEGORY_NAME_PARAM,
 } from "./use-public-menu-url-state";
 export type { PublicMenuUrlViewBase, PublicMenuViewNavigation } from "./use-public-menu-url-state";
 export { usePublicMenuDeepLinkProduct } from "./use-public-menu-deep-link-product";

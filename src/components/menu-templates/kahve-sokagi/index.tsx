@@ -20,6 +20,7 @@ import {
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
+  publicMenuCategoryView,
 } from "../shared";
 import { LuxuryCategoryView } from "../luxury/CategoryView";
 import { LuxuryProductDetailView } from "../luxury/ProductDetailView";
@@ -162,7 +163,7 @@ export function KahveSokagiMenuTemplate({
           products={displayProducts}
           onHome={backFromCategory}
           onSelectCategory={(category) => {
-            setView({ type: "category", categoryId: category.categoryId });
+            setView(publicMenuCategoryView(category));
           }}
           onOpenProduct={openProduct}
         />
@@ -179,7 +180,7 @@ export function KahveSokagiMenuTemplate({
           onBack={backFromProduct}
           onHome={goHome}
           onSelectCategory={(category) => {
-            setView({ type: "category", categoryId: category.categoryId });
+            setView(publicMenuCategoryView(category));
           }}
           feedbackControl={feedback.product}
         />

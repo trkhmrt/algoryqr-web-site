@@ -7,6 +7,7 @@ export function publicMenuContentPath(identifier: number | string) {
 }
 
 export type PublicMenuContentQuery = {
+  category?: string;
   categoryId?: number;
   subCategoryId?: number;
   productId?: number;
@@ -20,7 +21,8 @@ export function buildPublicMenuContentPath(
   const params = new URLSearchParams();
   if (query.tableToken) params.set("t", query.tableToken);
   if (query.productId != null) params.set("productId", String(query.productId));
-  if (query.categoryId != null) params.set("categoryId", String(query.categoryId));
+  if (query.category?.trim()) params.set("category", query.category.trim());
+  else if (query.categoryId != null) params.set("categoryId", String(query.categoryId));
   if (query.subCategoryId != null) params.set("subCategoryId", String(query.subCategoryId));
   const qs = params.toString();
   return qs ? `${publicMenuContentPath(identifier)}?${qs}` : publicMenuContentPath(identifier);
