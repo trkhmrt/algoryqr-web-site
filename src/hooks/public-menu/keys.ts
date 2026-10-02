@@ -6,4 +6,10 @@ export const publicMenuKeys = {
     [...publicMenuKeys.all, "category-stats", publicId, mainCategoryId] as const,
   categoryCover: (publicId: string, mainCategoryId: number) =>
     [...publicMenuKeys.all, "category-cover", publicId, mainCategoryId] as const,
+  categoryProducts: (
+    publicId: string,
+    mainCategoryId: number,
+    subCategoryId: number | null,
+  ) =>
+    [...publicMenuKeys.all, "category-products", publicId, mainCategoryId, subCategoryId] as const,
 };

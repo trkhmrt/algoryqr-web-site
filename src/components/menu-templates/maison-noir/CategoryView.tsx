@@ -4,8 +4,8 @@ import { ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { MenuProductApiItem } from "@/lib/api";
+import { usePublicMenuCategoryProducts } from "@/hooks/public-menu";
 import type { TaxonomyNavNode } from "../types";
-import { MenuProductScrollSentinel } from "../shared/MenuProductScrollSentinel";
 import { useMenuLocale } from "../shared/menu-locale";
 import { MenuCategoryName } from "../shared/MenuCategoryName";
 
@@ -17,8 +17,8 @@ import { MaisonNoirProductRow } from "./ProductRow";
 import { MaisonNoirSubcategorySlider } from "./SubcategorySlider";
 
 type CategoryViewProps = {
+  publicId: string;
   category: TaxonomyNavNode;
-  products: MenuProductApiItem[];
   subCategoryId: number | null;
   onBackToCategories: () => void;
   onSelectSubCategory: (subCategoryId: number | null) => void;
@@ -31,14 +31,19 @@ type VisibleLimitState = {
 };
 
 export function MaisonNoirCategoryView({
+  publicId,
   category,
-  products,
   subCategoryId,
   onBackToCategories,
   onSelectSubCategory,
   onOpenProduct,
 }: CategoryViewProps) {
   const { t } = useMenuLocale();
+  const categoryQuery = usePublicMenuCategoryProducts({
+    publicId,
+    mainCategoryId: category.mainCategoryId,
+  });
+  const categoryProducts = categoryQuery.products;
   const visibleLimitKey = `${category.categoryId}:${subCategoryId ?? "all"}`;
   const [visibleLimitState, setVisibleLimitState] = useState<VisibleLimitState>({
     key: visibleLimitKey,
@@ -50,8 +55,8 @@ export function MaisonNoirCategoryView({
       : MAISON_CATEGORY_PRODUCT_PAGE_SIZE;
 
   const filteredProducts = useMemo(
-    () => filterMaisonCategoryProducts(products, category, subCategoryId),
-    [products, category, subCategoryId],
+    () => filterMaisonCategoryProducts(categoryProducts, category, subCategoryId),
+    [categoryProducts, category, subCategoryId],
   );
 
   const sortedProducts = useMemo(() => {
@@ -96,7 +101,7 @@ export function MaisonNoirCategoryView({
           <div className="px-4 pb-2 sm:px-6">
             <MaisonNoirSubcategorySlider
               parentCategory={category}
-              products={products}
+              products={categoryProducts}
               activeSubCategoryId={subCategoryId}
               onSelectSubCategory={onSelectSubCategory}
               onResetFilter={() => onSelectSubCategory(null)}
@@ -108,7 +113,7 @@ export function MaisonNoirCategoryView({
       <div className="px-5 pt-4 sm:px-7">
         {displayedProducts.length === 0 ? (
           <p className="py-12 text-center mn-type-body text-[var(--mn-muted)]">
-            {t.noCategoryProducts}
+            {categoryQuery.isLoading || categoryQuery.isFetching ? "…" : t.noCategoryProducts}
           </p>
         ) : (
           <ul className="divide-y divide-[var(--mn-border)]">
@@ -140,7 +145,11 @@ export function MaisonNoirCategoryView({
           </button>
         ) : null}
 
-        <MenuProductScrollSentinel className="flex min-h-8 items-center justify-center py-4 mn-type-label text-[var(--mn-muted)]" />
+        {categoryQuery.isFetchingNextPage ? (
+          <p className="flex min-h-8 items-center justify-center py-4 mn-type-label text-[var(--mn-muted)]">
+            Yükleniyor…
+          </p>
+        ) : null}
       </div>
     </main>
   );

@@ -161,8 +161,8 @@ export function MaisonNoirMenuTemplate({
 
       {view.type === "category" && activeCategory ? (
         <MaisonNoirCategoryView
+          publicId={menu.publicId ?? ""}
           category={activeCategory}
-          products={displayProducts}
           subCategoryId={activeSubCategoryId}
           onBackToCategories={backToCategories}
           onSelectSubCategory={selectSubCategory}

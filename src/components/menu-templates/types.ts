@@ -150,12 +150,23 @@ export function taxonomyAsNavTree(mains: MainCategoryApiItem[] = []): TaxonomyNa
   });
 }
 
+function sameTaxonomyId(left?: number | null, right?: number | null): boolean {
+  if (left == null || right == null) return false;
+  return Number(left) === Number(right);
+}
+
 export function findCategoryById(
   categories: TaxonomyNavNode[],
   categoryId: number,
 ): TaxonomyNavNode | null {
   for (const category of categories) {
-    if (category.categoryId === categoryId) return category;
+    if (sameTaxonomyId(category.categoryId, categoryId)) return category;
+    if (category.kind === "main" && sameTaxonomyId(category.mainCategoryId, categoryId)) {
+      return category;
+    }
+    if (category.kind === "sub" && sameTaxonomyId(category.subCategoryId, categoryId)) {
+      return category;
+    }
     const nested = findCategoryById(category.children, categoryId);
     if (nested) return nested;
   }
@@ -186,11 +197,11 @@ export function filterProductsByNavNode(
   products: MenuProductApiItem[],
   category: TaxonomyNavNode | null,
 ): MenuProductApiItem[] {
-  if (!category) return products;
+  if (!category) return [];
   if (category.kind === "sub" && category.subCategoryId != null) {
-    return products.filter((product) => product.subCategoryId === category.subCategoryId);
+    return products.filter((product) => sameTaxonomyId(product.subCategoryId, category.subCategoryId));
   }
-  return products.filter((product) => product.mainCategoryId === category.mainCategoryId);
+  return products.filter((product) => sameTaxonomyId(product.mainCategoryId, category.mainCategoryId));
 }
 
 export function trackIdForNavNode(category: TaxonomyNavNode): number {
