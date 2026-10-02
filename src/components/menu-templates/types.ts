@@ -166,16 +166,43 @@ function sameTaxonomyId(left?: number | null, right?: number | null): boolean {
   return Number(left) === Number(right);
 }
 
-function findMainCategoryNode(
-  categories: TaxonomyNavNode[],
-  predicate: (main: TaxonomyNavNode) => boolean,
-): TaxonomyNavNode | null {
-  return categories.find((node) => node.kind === "main" && predicate(node)) ?? null;
-}
 
 /** Canonical `categoryId` query value for a resolved nav node (DB id + offset for mains). */
 export function publicMenuCategoryUrlId(category: TaxonomyNavNode): number {
   return category.categoryId;
+}
+
+function legacySortUrlId(main: TaxonomyNavNode): number {
+  return MAIN_NAV_OFFSET + main.sortOrder;
+}
+
+function collectMainUrlAliases(main: TaxonomyNavNode): number[] {
+  const canonical = main.categoryId;
+  const legacy = legacySortUrlId(main);
+  const ids = [canonical, main.mainCategoryId, legacy];
+  return [...new Set(ids)];
+}
+
+function matchesMainUrlParam(main: TaxonomyNavNode, rawCategoryId: number): boolean {
+  return collectMainUrlAliases(main).some((id) => sameTaxonomyId(id, rawCategoryId));
+}
+
+function pickMainFromUrlMatches(
+  matches: TaxonomyNavNode[],
+  rawCategoryId: number,
+): TaxonomyNavNode {
+  const exactNav = matches.find((main) => sameTaxonomyId(main.categoryId, rawCategoryId));
+  if (exactNav) return exactNav;
+
+  const legacy = matches.find((main) => sameTaxonomyId(legacySortUrlId(main), rawCategoryId));
+  if (legacy) return legacy;
+
+  const byDatabaseId = matches.find((main) =>
+    sameTaxonomyId(main.mainCategoryId, rawCategoryId),
+  );
+  if (byDatabaseId) return byDatabaseId;
+
+  return matches[0]!;
 }
 
 /**
@@ -189,32 +216,40 @@ export function resolveCategoryByUrlParam(
 ): TaxonomyNavNode | null {
   if (!Number.isFinite(rawCategoryId) || rawCategoryId <= 0) return null;
 
-  if (rawCategoryId >= MAIN_NAV_OFFSET) {
-    const delta = rawCategoryId - MAIN_NAV_OFFSET;
-
-    const byNavId = findMainCategoryNode(categories, (main) =>
-      sameTaxonomyId(main.categoryId, rawCategoryId),
-    );
-    if (byNavId) return byNavId;
-
-    const byLegacySortOrder = findMainCategoryNode(
-      categories,
-      (main) => main.sortOrder === delta,
-    );
-    if (byLegacySortOrder) return byLegacySortOrder;
-
-    const byDeltaAsMainId = findMainCategoryNode(categories, (main) =>
-      sameTaxonomyId(main.mainCategoryId, delta),
-    );
-    if (byDeltaAsMainId) return byDeltaAsMainId;
+  for (const main of categories) {
+    if (main.kind !== "main") continue;
+    for (const sub of main.children ?? []) {
+      if (
+        sameTaxonomyId(sub.categoryId, rawCategoryId) ||
+        sameTaxonomyId(sub.subCategoryId, rawCategoryId)
+      ) {
+        return sub;
+      }
+    }
   }
 
-  const byRawMainId = findMainCategoryNode(categories, (main) =>
-    sameTaxonomyId(main.mainCategoryId, rawCategoryId),
+  const mainMatches = categories.filter(
+    (node) => node.kind === "main" && matchesMainUrlParam(node, rawCategoryId),
   );
-  if (byRawMainId) return byRawMainId;
+  if (mainMatches.length > 0) {
+    return pickMainFromUrlMatches(mainMatches, rawCategoryId);
+  }
 
   return findCategoryById(categories, rawCategoryId);
+}
+
+export function resolveSubCategoryByUrlParam(
+  parent: TaxonomyNavNode | null,
+  rawSubCategoryId: number | null,
+): TaxonomyNavNode | null {
+  if (parent == null || rawSubCategoryId == null || rawSubCategoryId <= 0) return null;
+  return (
+    parent.children?.find(
+      (sub) =>
+        sameTaxonomyId(sub.categoryId, rawSubCategoryId) ||
+        sameTaxonomyId(sub.subCategoryId, rawSubCategoryId),
+    ) ?? null
+  );
 }
 
 export function findCategoryById(

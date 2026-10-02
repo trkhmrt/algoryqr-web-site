@@ -71,17 +71,11 @@ export function ModernBistroMenuTemplate({
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
   const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
 
-  const activeSubCategoryId =
-    view.type === "category"
-      ? view.subCategoryId
-      : view.type === "product"
-        ? view.subCategoryId
-        : null;
-
-  const { activeCategory } = usePublicMenuActiveCategory({
+  const { activeCategory, activeSubCategoryId } = usePublicMenuActiveCategory({
     categories: displayCategories,
     view,
     replaceView,
+    supportsSubCategory: true,
   });
 
   const selectedProduct = useMemo(() => {
