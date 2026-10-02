@@ -125,6 +125,16 @@ type UsePublicMenuViewStateOptions = {
   supportsSubCategory?: boolean;
 };
 
+function readViewFromSearchParams(
+  searchParams: URLSearchParams,
+  supportsSubCategory: boolean,
+  defaultView: PublicMenuUrlViewBase,
+): PublicMenuUrlViewBase {
+  return (
+    parsePublicMenuViewFromSearchParams(searchParams, supportsSubCategory) ?? defaultView
+  );
+}
+
 export function usePublicMenuViewState<T extends PublicMenuUrlViewBase>(
   defaultView: T,
   options: UsePublicMenuViewStateOptions = {},
@@ -133,23 +143,26 @@ export function usePublicMenuViewState<T extends PublicMenuUrlViewBase>(
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const [view, setView] = useState<T>(defaultView);
+  const [view, setView] = useState<T>(() =>
+    readViewFromSearchParams(searchParams, supportsSubCategory, defaultView) as T,
+  );
   const viewRef = useRef(view);
-  const skipViewToUrlSync = useRef(false);
+  const skipViewToUrlSync = useRef(true);
   const urlSyncModeRef = useRef<UrlSyncMode>("push");
 
   viewRef.current = view;
 
   useEffect(() => {
-    const fromUrl =
-      parsePublicMenuViewFromSearchParams(searchParams, supportsSubCategory) ??
-      ({ type: "home" } as PublicMenuUrlViewBase);
+    const fromUrl = readViewFromSearchParams(searchParams, supportsSubCategory, defaultView);
 
-    if (viewsEqual(fromUrl, viewRef.current)) return;
+    if (viewsEqual(fromUrl, viewRef.current)) {
+      skipViewToUrlSync.current = false;
+      return;
+    }
 
     skipViewToUrlSync.current = true;
     setView(fromUrl as T);
-  }, [searchParams, supportsSubCategory]);
+  }, [defaultView, searchParams, supportsSubCategory]);
 
   useEffect(() => {
     if (skipViewToUrlSync.current) {

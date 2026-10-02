@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { MenuTemplateProps } from "../types";
 import {
-  findCategoryById,
+  resolveCategoryByUrlParam,
   resolveProductNavCategory,
   taxonomyAsNavTree,
   trackIdForNavNode,
@@ -16,6 +16,7 @@ import {
   useMenuFeedback,
   useMenuLocale,
   useMenuProductFeed,
+  usePublicMenuActiveCategory,
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
@@ -65,17 +66,12 @@ export function KahveSokagiMenuTemplate({
     [taxonomySource],
   );
   const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
-  const activeCategoryId =
-    view.type === "category"
-      ? view.categoryId
-      : view.type === "product"
-        ? view.categoryId
-        : null;
 
-  const activeCategory =
-    activeCategoryId != null
-      ? findCategoryById(displayCategories, activeCategoryId)
-      : null;
+  const { activeCategory } = usePublicMenuActiveCategory({
+    categories: displayCategories,
+    view,
+    replaceView,
+  });
 
   const selectedProduct = useMemo(() => {
     if (view.type !== "product") return null;
@@ -91,7 +87,7 @@ export function KahveSokagiMenuTemplate({
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
-    const categoryId = productCategory?.categoryId ?? activeCategoryId;
+    const categoryId = productCategory?.categoryId ?? activeCategory?.categoryId ?? null;
     setPinnedProduct(product);
     feedback.syncProductState(product);
     setView({
@@ -148,7 +144,7 @@ export function KahveSokagiMenuTemplate({
             setHomeTab(tab);
             setSearchQuery("");
             if (tab.type === "category") {
-              const category = findCategoryById(displayCategories, tab.categoryId);
+              const category = resolveCategoryByUrlParam(displayCategories, tab.categoryId);
               if (category) {
                 analytics?.trackCategoryView(trackIdForNavNode(category));
               }

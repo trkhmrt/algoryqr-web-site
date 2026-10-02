@@ -1,6 +1,6 @@
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { filterProductsByNavNode, findCategoryById } from "../types";
+import { filterProductsByNavNode, resolveCategoryByUrlParam } from "../types";
 
 export type CleverDishScribeView =
   | { type: "home" }
@@ -52,5 +52,5 @@ export function findCategoryNode(
   categories: TaxonomyNavNode[],
   categoryId: number,
 ): TaxonomyNavNode | null {
-  return findCategoryById(categories, categoryId);
+  return resolveCategoryByUrlParam(categories, categoryId);
 }

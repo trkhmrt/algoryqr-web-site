@@ -1,6 +1,6 @@
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { filterProductsByNavNode, findCategoryById } from "../types";
+import { filterProductsByNavNode, findCategoryById, resolveCategoryByUrlParam } from "../types";
 
 export const MODERN_BISTRO_CATEGORY_PRODUCT_PAGE_SIZE = 50;
 
@@ -51,7 +51,7 @@ export function findCategoryNode(
   categories: TaxonomyNavNode[],
   categoryId: number,
 ): TaxonomyNavNode | null {
-  return findCategoryById(categories, categoryId);
+  return resolveCategoryByUrlParam(categories, categoryId);
 }
 
 export function listAvailableProducts(products: MenuProductApiItem[]): MenuProductApiItem[] {
@@ -131,7 +131,7 @@ export function modernBistroHomeProducts(
   if (tab.type === MODERN_BISTRO_POPULAR_TAB) {
     return modernBistroPopularProducts(products);
   }
-  const category = findCategoryById(categories, tab.categoryId);
+  const category = resolveCategoryByUrlParam(categories, tab.categoryId);
   if (!category) return [];
   return filterModernBistroCategoryProducts(products, category, null);
 }

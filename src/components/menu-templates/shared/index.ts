@@ -106,6 +106,7 @@ export {
 } from "./use-public-menu-url-state";
 export type { PublicMenuUrlViewBase, PublicMenuViewNavigation } from "./use-public-menu-url-state";
 export { usePublicMenuDeepLinkProduct } from "./use-public-menu-deep-link-product";
+export { usePublicMenuActiveCategory } from "./use-public-menu-active-category";
 export {
   MenuProductFeedContext,
   useMenuProductFeed,

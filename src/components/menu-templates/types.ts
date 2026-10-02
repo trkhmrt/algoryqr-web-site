@@ -110,7 +110,18 @@ export function findMainCategory(
   return categories.find((main) => main.id === mainCategoryId) ?? null;
 }
 
-const MAIN_NAV_OFFSET = 1_000_000;
+export const MAIN_NAV_OFFSET = 1_000_000;
+
+/** Nav `categoryId` in URLs is `MAIN_NAV_OFFSET + menu main category id`. */
+export function mainNavCategoryId(mainCategoryId: number): number {
+  return MAIN_NAV_OFFSET + mainCategoryId;
+}
+
+export function decodeMainNavCategoryId(categoryId: number): number | null {
+  if (!Number.isFinite(categoryId) || categoryId < MAIN_NAV_OFFSET) return null;
+  const mainCategoryId = categoryId - MAIN_NAV_OFFSET;
+  return mainCategoryId > 0 ? mainCategoryId : null;
+}
 
 export type TaxonomyNavNode = {
   categoryId: number;
@@ -153,6 +164,57 @@ export function taxonomyAsNavTree(mains: MainCategoryApiItem[] = []): TaxonomyNa
 function sameTaxonomyId(left?: number | null, right?: number | null): boolean {
   if (left == null || right == null) return false;
   return Number(left) === Number(right);
+}
+
+function findMainCategoryNode(
+  categories: TaxonomyNavNode[],
+  predicate: (main: TaxonomyNavNode) => boolean,
+): TaxonomyNavNode | null {
+  return categories.find((node) => node.kind === "main" && predicate(node)) ?? null;
+}
+
+/** Canonical `categoryId` query value for a resolved nav node (DB id + offset for mains). */
+export function publicMenuCategoryUrlId(category: TaxonomyNavNode): number {
+  return category.categoryId;
+}
+
+/**
+ * Resolve `categoryId` from public menu URLs against the live taxonomy tree.
+ * Supports canonical nav ids (offset + DB main id), raw DB main/sub ids, and
+ * legacy links that used offset + sortOrder before DB ids were stable.
+ */
+export function resolveCategoryByUrlParam(
+  categories: TaxonomyNavNode[],
+  rawCategoryId: number,
+): TaxonomyNavNode | null {
+  if (!Number.isFinite(rawCategoryId) || rawCategoryId <= 0) return null;
+
+  if (rawCategoryId >= MAIN_NAV_OFFSET) {
+    const delta = rawCategoryId - MAIN_NAV_OFFSET;
+
+    const byNavId = findMainCategoryNode(categories, (main) =>
+      sameTaxonomyId(main.categoryId, rawCategoryId),
+    );
+    if (byNavId) return byNavId;
+
+    const byLegacySortOrder = findMainCategoryNode(
+      categories,
+      (main) => main.sortOrder === delta,
+    );
+    if (byLegacySortOrder) return byLegacySortOrder;
+
+    const byDeltaAsMainId = findMainCategoryNode(categories, (main) =>
+      sameTaxonomyId(main.mainCategoryId, delta),
+    );
+    if (byDeltaAsMainId) return byDeltaAsMainId;
+  }
+
+  const byRawMainId = findMainCategoryNode(categories, (main) =>
+    sameTaxonomyId(main.mainCategoryId, rawCategoryId),
+  );
+  if (byRawMainId) return byRawMainId;
+
+  return findCategoryById(categories, rawCategoryId);
 }
 
 export function findCategoryById(

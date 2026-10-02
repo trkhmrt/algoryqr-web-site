@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { MenuTemplateProps, TaxonomyNavNode } from "../types";
 import {
-  findCategoryById,
   resolveProductNavCategory,
   taxonomyAsNavTree,
   trackIdForNavNode,
@@ -14,6 +13,7 @@ import {
   resolveSelectedProduct,
   useMenuCategoryFeed,
   useMenuFeedback,
+  usePublicMenuActiveCategory,
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
@@ -53,15 +53,11 @@ export function CleverDishScribeMenuTemplate({
     categoryFeed.categories.length > 0 ? categoryFeed.categories : categories;
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
 
-  const activeCategoryId =
-    view.type === "category"
-      ? view.categoryId
-      : view.type === "product"
-        ? view.categoryId
-        : null;
-
-  const activeCategory =
-    activeCategoryId != null ? findCategoryById(displayCategories, activeCategoryId) : null;
+  const { activeCategory } = usePublicMenuActiveCategory({
+    categories: displayCategories,
+    view,
+    replaceView,
+  });
 
   const selectedProduct = useMemo(() => {
     if (view.type !== "product") return null;
@@ -95,7 +91,7 @@ export function CleverDishScribeMenuTemplate({
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
-    const categoryId = productCategory?.categoryId ?? activeCategoryId;
+    const categoryId = productCategory?.categoryId ?? activeCategory?.categoryId ?? null;
     setPinnedProduct(product);
     feedback.syncProductState(product);
     setView({

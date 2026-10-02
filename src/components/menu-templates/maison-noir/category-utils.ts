@@ -1,6 +1,6 @@
 import type { MenuProductApiItem } from "@/lib/api";
 import type { TaxonomyNavNode } from "../types";
-import { filterProductsByNavNode, findCategoryById } from "../types";
+import { filterProductsByNavNode, findCategoryById, resolveCategoryByUrlParam } from "../types";
 
 export const MAISON_CATEGORY_PRODUCT_PAGE_SIZE = 50;
 
@@ -51,7 +51,7 @@ export function findCategoryNode(
   categories: TaxonomyNavNode[],
   categoryId: number,
 ): TaxonomyNavNode | null {
-  return findCategoryById(categories, categoryId);
+  return resolveCategoryByUrlParam(categories, categoryId);
 }
 
 export function listAvailableProducts(products: MenuProductApiItem[]): MenuProductApiItem[] {

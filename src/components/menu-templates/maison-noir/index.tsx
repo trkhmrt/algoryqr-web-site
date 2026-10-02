@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import type { MenuProductApiItem } from "@/lib/api";
 import type { MenuTemplateProps, TaxonomyNavNode } from "../types";
 import {
-  findCategoryById,
   resolveProductNavCategory,
   taxonomyAsNavTree,
   trackIdForNavNode,
@@ -17,6 +16,7 @@ import {
   useMenuFeedback,
   useMenuLocale,
   useLocalizedMenuProduct,
+  usePublicMenuActiveCategory,
   usePublicMenuDeepLinkProduct,
   usePublicMenuViewState,
   useRegisterChefOpenProduct,
@@ -60,13 +60,6 @@ export function MaisonNoirMenuTemplate({
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
   const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
 
-  const activeCategoryId =
-    view.type === "category"
-      ? view.categoryId
-      : view.type === "product"
-        ? view.categoryId
-        : null;
-
   const activeSubCategoryId =
     view.type === "category"
       ? view.subCategoryId
@@ -74,8 +67,11 @@ export function MaisonNoirMenuTemplate({
         ? view.subCategoryId
         : null;
 
-  const activeCategory =
-    activeCategoryId != null ? findCategoryById(displayCategories, activeCategoryId) : null;
+  const { activeCategory } = usePublicMenuActiveCategory({
+    categories: displayCategories,
+    view,
+    replaceView,
+  });
 
   const selectedProduct = useMemo(() => {
     if (view.type !== "product") return null;
@@ -112,7 +108,7 @@ export function MaisonNoirMenuTemplate({
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
-    const categoryId = productCategory?.categoryId ?? activeCategoryId;
+    const categoryId = productCategory?.categoryId ?? activeCategory?.categoryId ?? null;
     const subCategoryId =
       view.type === "category"
         ? view.subCategoryId
