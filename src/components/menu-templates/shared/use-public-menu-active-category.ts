@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   publicMenuCategoryUrlId,
   resolveCategoryByUrlParam,
+  resolveMainCategoryByUrlParam,
   resolveSubCategoryByUrlParam,
   type TaxonomyNavNode,
 } from "../types";
@@ -33,6 +34,8 @@ export function usePublicMenuActiveCategory({
 }: UsePublicMenuActiveCategoryArgs): {
   activeCategoryId: number | null;
   activeSubCategoryId: number | null;
+  /** Main taxonomy node — use for page title and product API mainCategoryId. */
+  activeMainCategory: TaxonomyNavNode | null;
   activeCategory: TaxonomyNavNode | null;
 } {
   const searchParams = useSearchParams();
@@ -60,25 +63,20 @@ export function usePublicMenuActiveCategory({
     return null;
   }, [linkSubCategoryId, view]);
 
-  const activeCategory = useMemo(() => {
-    if (rawCategoryId == null) return null;
-    const resolved = resolveCategoryByUrlParam(categories, rawCategoryId);
-    if (resolved?.kind === "sub") return resolved;
-    if (resolved?.kind === "main" && rawSubCategoryId != null) {
-      return resolveSubCategoryByUrlParam(resolved, rawSubCategoryId) ?? resolved;
-    }
-    return resolved;
-  }, [categories, rawCategoryId, rawSubCategoryId]);
-
   const activeMainCategory = useMemo(() => {
-    if (!activeCategory) return null;
-    if (activeCategory.kind === "main") return activeCategory;
-    return (
-      categories.find((node) =>
-        node.kind === "main" && node.mainCategoryId === activeCategory.mainCategoryId,
-      ) ?? null
-    );
-  }, [activeCategory, categories]);
+    if (rawCategoryId == null) return null;
+    return resolveMainCategoryByUrlParam(categories, rawCategoryId);
+  }, [categories, rawCategoryId]);
+
+  const activeSubCategoryId = useMemo(() => {
+    if (rawSubCategoryId != null && activeMainCategory) {
+      const sub = resolveSubCategoryByUrlParam(activeMainCategory, rawSubCategoryId);
+      if (sub) return sub.subCategoryId;
+    }
+    const resolved = rawCategoryId == null ? null : resolveCategoryByUrlParam(categories, rawCategoryId);
+    if (resolved?.kind === "sub") return resolved.subCategoryId;
+    return rawSubCategoryId;
+  }, [activeMainCategory, categories, rawCategoryId, rawSubCategoryId]);
 
   useEffect(() => {
     if (linkCategoryId == null) return;
@@ -86,22 +84,11 @@ export function usePublicMenuActiveCategory({
       return;
     }
 
-    const resolved = resolveCategoryByUrlParam(categories, linkCategoryId);
-    if (!resolved) return;
-
-    const main =
-      resolved.kind === "main"
-        ? resolved
-        : categories.find(
-            (node) => node.kind === "main" && node.mainCategoryId === resolved.mainCategoryId,
-          ) ?? resolved;
+    const main = resolveMainCategoryByUrlParam(categories, linkCategoryId);
+    if (!main) return;
 
     const canonicalId = publicMenuCategoryUrlId(main);
-    const subCategoryId = supportsSubCategory
-      ? resolved.kind === "sub"
-        ? resolved.subCategoryId
-        : linkSubCategoryId
-      : null;
+    const subCategoryId = supportsSubCategory ? linkSubCategoryId : null;
 
     if (
       view.type === "category" &&
@@ -141,15 +128,10 @@ export function usePublicMenuActiveCategory({
     });
   }, [activeMainCategory, replaceView, view]);
 
-  const displayCategory =
-    activeCategory?.kind === "sub" && activeMainCategory ? activeMainCategory : activeCategory;
-
   return {
-    activeCategoryId: displayCategory?.categoryId ?? rawCategoryId,
-    activeSubCategoryId:
-      activeCategory?.kind === "sub"
-        ? activeCategory.subCategoryId
-        : rawSubCategoryId,
-    activeCategory: displayCategory,
+    activeCategoryId: activeMainCategory?.categoryId ?? rawCategoryId,
+    activeSubCategoryId,
+    activeMainCategory,
+    activeCategory: activeMainCategory,
   };
 }

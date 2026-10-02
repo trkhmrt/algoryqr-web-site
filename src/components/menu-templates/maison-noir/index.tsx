@@ -60,12 +60,13 @@ export function MaisonNoirMenuTemplate({
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
   const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
 
-  const { activeCategory, activeSubCategoryId } = usePublicMenuActiveCategory({
+  const { activeCategory, activeMainCategory, activeSubCategoryId } = usePublicMenuActiveCategory({
     categories: displayCategories,
     view,
     replaceView,
     supportsSubCategory: true,
   });
+  const categoryForView = activeMainCategory ?? activeCategory;
 
   const selectedProduct = useMemo(() => {
     if (view.type !== "product") return null;
@@ -102,7 +103,7 @@ export function MaisonNoirMenuTemplate({
 
   const openProduct = (product: MenuProductApiItem) => {
     const productCategory = resolveProductNavCategory(displayCategories, product);
-    const categoryId = productCategory?.categoryId ?? activeCategory?.categoryId ?? null;
+    const categoryId = productCategory?.categoryId ?? categoryForView?.categoryId ?? null;
     const subCategoryId =
       view.type === "category"
         ? view.subCategoryId
@@ -149,10 +150,11 @@ export function MaisonNoirMenuTemplate({
         />
       ) : null}
 
-      {view.type === "category" && activeCategory ? (
+      {view.type === "category" && categoryForView ? (
         <MaisonNoirCategoryView
+          key={`${categoryForView.mainCategoryId}:${activeSubCategoryId ?? "all"}`}
           publicId={menu.publicId ?? ""}
-          category={activeCategory}
+          category={categoryForView}
           subCategoryId={activeSubCategoryId}
           onBackToCategories={backToCategories}
           onSelectSubCategory={selectSubCategory}
@@ -160,7 +162,7 @@ export function MaisonNoirMenuTemplate({
         />
       ) : null}
 
-      {view.type === "category" && !activeCategory ? (
+      {view.type === "category" && !categoryForView ? (
         <MissingState type="category" onHome={goHome} />
       ) : null}
 
