@@ -88,12 +88,17 @@ export function PublicMenuDataProvider({
   useSyncPublicMenuPage(categoryQuery);
   useSyncPublicMenuPage(productQuery);
 
-  const categories = useMemo(
-    () => flattenCategoryPages(categoryQuery.data),
-    [categoryQuery.data],
-  );
+  const categories = useMemo(() => {
+    const flattened = flattenCategoryPages(categoryQuery.data);
+    if (flattened.length > 0) return flattened;
+    return initialCategories;
+  }, [categoryQuery.data, initialCategories]);
 
-  const products = useMemo(() => flattenProductPages(productQuery.data), [productQuery.data]);
+  const products = useMemo(() => {
+    const flattened = flattenProductPages(productQuery.data);
+    if (flattened.length > 0) return flattened;
+    return initialProducts;
+  }, [productQuery.data, initialProducts]);
 
   const i18n = useGoogleTranslateOptional();
   const ensureTranslations = i18n?.ensureTranslations;

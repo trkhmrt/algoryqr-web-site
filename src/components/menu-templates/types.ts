@@ -210,20 +210,6 @@ function pickMainFromUrlMatches(
  * Supports canonical nav ids (offset + DB main id), raw DB main/sub ids, and
  * legacy links that used offset + sortOrder before DB ids were stable.
  */
-export function resolveMainCategoryByUrlParam(
-  categories: TaxonomyNavNode[],
-  rawCategoryId: number,
-): TaxonomyNavNode | null {
-  const resolved = resolveCategoryByUrlParam(categories, rawCategoryId);
-  if (!resolved) return null;
-  if (resolved.kind === "main") return resolved;
-  return (
-    categories.find(
-      (node) => node.kind === "main" && node.mainCategoryId === resolved.mainCategoryId,
-    ) ?? null
-  );
-}
-
 export function resolveCategoryByUrlParam(
   categories: TaxonomyNavNode[],
   rawCategoryId: number,
@@ -258,6 +244,23 @@ export function resolveCategoryByUrlParam(
   }
 
   return findCategoryById(categories, rawCategoryId);
+}
+
+/**
+ * Main taxonomy row for URLs — same rules as {@link resolveCategoryByUrlParam}, always a main node.
+ */
+export function resolveMainCategoryByUrlParam(
+  categories: TaxonomyNavNode[],
+  rawCategoryId: number,
+): TaxonomyNavNode | null {
+  const resolved = resolveCategoryByUrlParam(categories, rawCategoryId);
+  if (!resolved) return null;
+  if (resolved.kind === "main") return resolved;
+  return (
+    categories.find(
+      (node) => node.kind === "main" && node.mainCategoryId === resolved.mainCategoryId,
+    ) ?? null
+  );
 }
 
 export function resolveSubCategoryByUrlParam(

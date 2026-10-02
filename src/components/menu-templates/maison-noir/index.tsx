@@ -59,6 +59,7 @@ export function MaisonNoirMenuTemplate({
     categoryFeed.categories.length > 0 ? categoryFeed.categories : categories;
   const displayCategories = useMemo(() => taxonomyAsNavTree(taxonomySource), [taxonomySource]);
   const displayProducts = productFeed.products.length > 0 ? productFeed.products : products;
+  const categoriesReady = displayCategories.length > 0;
 
   const { activeCategory, activeMainCategory, activeSubCategoryId } = usePublicMenuActiveCategory({
     categories: displayCategories,
@@ -162,7 +163,7 @@ export function MaisonNoirMenuTemplate({
         />
       ) : null}
 
-      {view.type === "category" && !categoryForView ? (
+      {view.type === "category" && !categoryForView && categoriesReady ? (
         <MissingState type="category" onHome={goHome} />
       ) : null}
 
